@@ -1,0 +1,43 @@
+name: Deploy Agent (Vercel preflight)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Enforce single lockfile
+        run: |
+          COUNT=0
+          [ -f package-lock.json ] && COUNT=$((COUNT+1))
+          [ -f yarn.lock ] && COUNT=$((COUNT+1))
+          [ -f pnpm-lock.yaml ] && COUNT=$((COUNT+1))
+          if [ "$COUNT" -ne 1 ]; then
+            echo "❌ Expected exactly 1 lockfile (npm/yarn/pnpm). Found $COUNT."
+            ls -la
+            exit 1
+          fi
+
+      - name: Install
+        run: npm ci
+
+      - name: Build (Vercel-like)
+        run: npm run build
+
+      - name: Check executable scripts
+        run: |
+          if grep -R "\"build\": \"\./" -n package.json; then
+            echo "⚠️ Build script calls a local file directly. Consider 'bash ./script.sh' or chmod +x."
+          fi
