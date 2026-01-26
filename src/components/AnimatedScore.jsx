@@ -1,5 +1,5 @@
 import React from 'react';
-import { useCountUp } from '../../hooks/useCountUp';
+import { useCountUp } from '../hooks/useCountUp';
 
 export function AnimatedScore({ value, max, color, label, delay = 0 }) {
     const animatedValue = useCountUp(value, 800 + delay);

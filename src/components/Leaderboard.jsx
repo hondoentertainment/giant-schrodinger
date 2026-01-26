@@ -1,5 +1,5 @@
 import React from 'react';
-import { getHighScores } from '../../services/storage';
+import { getHighScores } from '../services/storage';
 
 export function Leaderboard() {
     const scores = getHighScores();
@@ -21,9 +21,9 @@ export function Leaderboard() {
                 {scores.map((entry, index) => (
                     <div key={index} className="flex items-center gap-3 p-2 rounded-lg bg-white/5">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
-                                index === 1 ? 'bg-gray-300 text-black' :
-                                    index === 2 ? 'bg-amber-700 text-white' :
-                                        'bg-white/10 text-white/60'
+                            index === 1 ? 'bg-gray-300 text-black' :
+                                index === 2 ? 'bg-amber-700 text-white' :
+                                    'bg-white/10 text-white/60'
                             }`}>
                             {index + 1}
                         </div>
