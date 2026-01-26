@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { VennDiagram } from './VennDiagram';
 import { useGame } from '../../context/GameContext';
+import { useSound } from '../../hooks/useSound';
 
 // Mock Assets
 const MOCK_ASSETS = [
@@ -11,7 +12,8 @@ const MOCK_ASSETS = [
 ];
 
 export function Round({ onSubmit }) {
-    const { setGameState } = useGame();
+    const { setGameState, currentRound, maxRounds } = useGame();
+    const { playTick, playSubmit } = useSound();
     const [assets, setAssets] = useState({ left: null, right: null });
     const [submission, setSubmission] = useState('');
     const [timer, setTimer] = useState(60);
@@ -24,7 +26,15 @@ export function Round({ onSubmit }) {
 
     useEffect(() => {
         if (timer > 0) {
-            const interval = setInterval(() => setTimer(t => t - 1), 1000);
+            const interval = setInterval(() => {
+                setTimer(t => {
+                    // Play tick sound in last 10 seconds
+                    if (t <= 10 && t > 0) {
+                        playTick();
+                    }
+                    return t - 1;
+                });
+            }, 1000);
             return () => clearInterval(interval);
         } else {
             // Time's up!
@@ -34,8 +44,7 @@ export function Round({ onSubmit }) {
 
     const handleSubmit = (e) => {
         if (e) e.preventDefault();
-        // console.log("Submitted:", submission);
-        // setGameState('REVEAL'); // Moved to parent callback potentially, or keep here but pass data
+        playSubmit();
 
         if (onSubmit) {
             onSubmit({ submission, assets });
@@ -48,7 +57,9 @@ export function Round({ onSubmit }) {
     return (
         <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-700">
             <div className="w-full flex justify-between items-center px-8 mb-4">
-                <div className="text-2xl font-bold text-white/40">ROUND 1</div>
+                <div className="text-2xl font-bold text-white/40">
+                    ROUND {currentRound} {maxRounds > 1 && <span className="text-white/20">of {maxRounds}</span>}
+                </div>
                 <div className={`text-4xl font-black font-display ${timer < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
                     {timer}s
                 </div>
