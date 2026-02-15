@@ -8,9 +8,17 @@ export function VennDiagram({ leftAsset, rightAsset }) {
                 <img
                     src={leftAsset.url}
                     alt={leftAsset.label}
-                    className="w-full h-full object-cover opacity-80"
+                    className="w-full h-full object-cover brightness-110"
+                    referrerPolicy="no-referrer"
+                    data-fallback={leftAsset.fallbackUrl}
+                    onError={(event) => {
+                        const fallback = event.currentTarget.dataset.fallback;
+                        if (fallback && event.currentTarget.src !== fallback) {
+                            event.currentTarget.src = fallback;
+                        }
+                    }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-transparent mix-blend-overlay" />
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-transparent opacity-60" />
                 <div className="absolute bottom-8 left-8 text-2xl font-bold text-white uppercase tracking-widest drop-shadow-md">
                     {leftAsset.label}
                 </div>
@@ -21,9 +29,17 @@ export function VennDiagram({ leftAsset, rightAsset }) {
                 <img
                     src={rightAsset.url}
                     alt={rightAsset.label}
-                    className="w-full h-full object-cover opacity-80"
+                    className="w-full h-full object-cover brightness-110"
+                    referrerPolicy="no-referrer"
+                    data-fallback={rightAsset.fallbackUrl}
+                    onError={(event) => {
+                        const fallback = event.currentTarget.dataset.fallback;
+                        if (fallback && event.currentTarget.src !== fallback) {
+                            event.currentTarget.src = fallback;
+                        }
+                    }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-l from-pink-500/30 to-transparent mix-blend-overlay" />
+                <div className="absolute inset-0 bg-gradient-to-l from-pink-500/20 to-transparent opacity-60" />
                 <div className="absolute bottom-8 right-8 text-2xl font-bold text-white uppercase tracking-widest drop-shadow-md">
                     {rightAsset.label}
                 </div>

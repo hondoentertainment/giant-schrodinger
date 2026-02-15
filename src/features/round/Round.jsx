@@ -1,26 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { VennDiagram } from './VennDiagram';
 import { useGame } from '../../context/GameContext';
-
-// Mock Assets
-const MOCK_ASSETS = [
-    { id: 1, label: 'Cyberpunk', url: 'https://images.unsplash.com/photo-1555680202-c86f0e12f086?q=80&w=1000&auto=format&fit=crop' },
-    { id: 2, label: 'Nature', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1000&auto=format&fit=crop' },
-    { id: 3, label: 'Industrial', url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop' },
-    { id: 4, label: 'Neon', url: 'https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=1000&auto=format&fit=crop' },
-];
+import { THEMES, buildThemeAssets, getThemeById } from '../../data/themes';
+import { getStats, isThemeUnlocked } from '../../services/stats';
 
 export function Round({ onSubmit }) {
-    const { setGameState } = useGame();
+    const { setGameState, user, roundNumber, totalRounds } = useGame();
     const [assets, setAssets] = useState({ left: null, right: null });
     const [submission, setSubmission] = useState('');
     const [timer, setTimer] = useState(60);
+    const stats = getStats();
+    const rawTheme = getThemeById(user?.themeId);
+    const theme = isThemeUnlocked(rawTheme?.id, stats)
+        ? rawTheme
+        : getThemeById(THEMES.find((t) => isThemeUnlocked(t.id, stats))?.id) || rawTheme;
+    const timeLimit = theme?.modifier?.timeLimit || 60;
+    const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
 
     useEffect(() => {
-        // Pick 2 random unique assets
-        const shuffled = [...MOCK_ASSETS].sort(() => 0.5 - Math.random());
-        setAssets({ left: shuffled[0], right: shuffled[1] });
-    }, []);
+        const [left, right] = buildThemeAssets(theme, 2);
+        setAssets({ left, right });
+        setTimer(timeLimit);
+    }, [user?.themeId, timeLimit]);
 
     useEffect(() => {
         if (timer > 0) {
@@ -48,10 +49,23 @@ export function Round({ onSubmit }) {
     return (
         <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-700">
             <div className="w-full flex justify-between items-center px-8 mb-4">
-                <div className="text-2xl font-bold text-white/40">ROUND 1</div>
+                <div className="text-2xl font-bold text-white/40">ROUND {roundNumber} / {totalRounds}</div>
                 <div className={`text-4xl font-black font-display ${timer < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
                     {timer}s
                 </div>
+            </div>
+            <div className="mb-6 flex flex-wrap items-center justify-center gap-3 text-sm text-white/60">
+                <div className="rounded-full bg-white/10 px-3 py-1">
+                    Time Limit: <span className="text-white">{timeLimit}s</span>
+                </div>
+                <div className="rounded-full bg-white/10 px-3 py-1">
+                    Score Multiplier: <span className="text-white">x{scoreMultiplier.toFixed(2)}</span>
+                </div>
+                {theme?.modifier?.hint && (
+                    <div className="rounded-full bg-white/10 px-3 py-1">
+                        {theme.modifier.hint}
+                    </div>
+                )}
             </div>
 
             <VennDiagram leftAsset={assets.left} rightAsset={assets.right} />
