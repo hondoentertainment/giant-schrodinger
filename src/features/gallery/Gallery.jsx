@@ -24,7 +24,7 @@ export function Gallery() {
     return (
         <div className="w-full max-w-6xl animate-in fade-in duration-700">
             <div className="flex justify-between items-center mb-8">
-                <h2 className="text-4xl font-display font-bold text-white">Collision Gallery</h2>
+                <h2 className="text-4xl font-display font-bold text-white">Connection Gallery</h2>
                 <button
                     onClick={() => setGameState('LOBBY')}
                     className="px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
@@ -35,7 +35,7 @@ export function Gallery() {
 
             {collisions.length === 0 ? (
                 <div className="text-center py-20 bg-white/5 rounded-3xl">
-                    <p className="text-white/40 text-xl">No collisions yet. Play a game!</p>
+                    <p className="text-white/40 text-xl">No connections yet. Play a game!</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -46,7 +46,7 @@ export function Gallery() {
                                 alt={c.submission}
                                 className="w-full h-full object-cover"
                                 referrerPolicy="no-referrer"
-                                data-fallback={c.fallbackImageUrl || 'https://source.unsplash.com/featured/1200x1200?abstract art'}
+                                data-fallback={c.fallbackImageUrl || 'https://picsum.photos/seed/venn-fallback/800/800'}
                                 onError={(event) => {
                                     const fallback = event.currentTarget.dataset.fallback;
                                     if (fallback && event.currentTarget.src !== fallback) {

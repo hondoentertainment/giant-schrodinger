@@ -40,6 +40,9 @@ npm-shrinkwrap.json
 # Vite
 .vite/
 
+# Vercel
+.vercel/
+
 # Temporary files
 *.tmp
 *.temp

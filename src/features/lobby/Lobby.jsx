@@ -4,7 +4,8 @@ import { useRoom } from '../../context/RoomContext';
 import { THEMES, getThemeById } from '../../data/themes';
 import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked } from '../../services/stats';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Users, Wifi, WifiOff } from 'lucide-react';
+import { Users, Wifi, WifiOff, HelpCircle } from 'lucide-react';
+import { OnboardingModal } from '../../components/OnboardingModal';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -32,6 +33,8 @@ export function Lobby() {
     const [scoringMode] = useState('ai');
     const [sessionLength, setSessionLength] = useState(3);
     const [inviteCopied, setInviteCopied] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [onboardingDismissCallback, setOnboardingDismissCallback] = useState(null);
 
     // Multiplayer state
     const [showMultiplayer, setShowMultiplayer] = useState(false);
@@ -60,6 +63,13 @@ export function Lobby() {
     };
 
     const startGame = () => {
+        // First-time players: show onboarding before first round
+        if (!sessionId && stats.totalRounds === 0) {
+            setOnboardingDismissCallback(() => handleOnboardingDismiss);
+            setShowOnboarding(true);
+            return;
+        }
+
         if (!sessionId) {
             startSession(sessionLength);
             beginRound();
@@ -76,6 +86,12 @@ export function Lobby() {
             return;
         }
 
+        beginRound();
+    };
+
+    const handleOnboardingDismiss = () => {
+        setShowOnboarding(false);
+        startSession(sessionLength);
         beginRound();
     };
 
@@ -103,6 +119,10 @@ export function Lobby() {
     // ============================================================
     if (user) {
         return (
+            <>
+                {showOnboarding && onboardingDismissCallback && (
+                    <OnboardingModal onDismiss={onboardingDismissCallback} />
+                )}
             <div className="w-full max-w-md space-y-8 glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
                 <div className="text-center">
                     <div className={`mx-auto w-24 h-24 rounded-full bg-gradient-to-br ${getThemeById(user?.themeId).gradient} flex items-center justify-center text-5xl mb-4 shadow-lg`}>
@@ -112,6 +132,9 @@ export function Lobby() {
                         Hi, {user.name}!
                     </h2>
                     <p className="text-white/60 mb-4">Ready to make some connections?</p>
+                    <p className="text-white/40 text-sm mb-4">
+                        Complete {sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.
+                    </p>
                     <div className="mb-4 flex flex-wrap gap-3 justify-center text-sm text-white/60">
                         <span>Scoring: <span className="text-white font-semibold">AI Judge</span></span>
                         {stats.currentStreak > 0 && (
@@ -119,12 +142,24 @@ export function Lobby() {
                         )}
                         <span>{stats.totalRounds} rounds played</span>
                     </div>
-                    <button
-                        onClick={handleInvite}
-                        className="mb-4 text-sm text-white/50 hover:text-white underline"
-                    >
-                        {inviteCopied ? 'Copied!' : 'Invite friends to play'}
-                    </button>
+                    <div className="flex flex-wrap gap-4 justify-center mb-4">
+                        <button
+                            onClick={handleInvite}
+                            className="text-sm text-white/50 hover:text-white underline"
+                        >
+                            {inviteCopied ? 'Copied!' : 'Invite friends to play'}
+                        </button>
+                        <button
+                            onClick={() => {
+                                setOnboardingDismissCallback(() => () => setShowOnboarding(false));
+                                setShowOnboarding(true);
+                            }}
+                            className="text-sm text-white/50 hover:text-white underline flex items-center gap-1"
+                        >
+                            <HelpCircle className="w-4 h-4" />
+                            How it works
+                        </button>
+                    </div>
                     {sessionId && (
                         <div className="mb-6 text-sm text-white/60">
                             Session: <span className="text-white font-semibold">Round {roundNumber} of {totalRounds}</span> ·
@@ -150,7 +185,7 @@ export function Lobby() {
                                 <button
                                     onClick={() => setGameState('GALLERY')}
                                     className="px-4 py-4 bg-white/10 text-white font-bold text-xl rounded-xl hover:bg-white/20 transition-colors"
-                                    title="Gallery"
+                                    title="Connection Gallery"
                                 >
                                     🖼️
                                 </button>
@@ -171,11 +206,14 @@ export function Lobby() {
                     {/* Multiplayer panel */}
                     {showMultiplayer && (
                         <div className="animate-in slide-in-from-bottom-4 duration-300">
-                            <div className="flex items-center gap-2 justify-center mb-4 text-white/60 text-sm">
+                            <div className="flex flex-col items-center gap-1 mb-4 text-white/60 text-sm">
                                 {backendReady ? (
                                     <><Wifi className="w-4 h-4 text-emerald-400" /> Connected</>
                                 ) : (
-                                    <><WifiOff className="w-4 h-4 text-red-400" /> Backend not configured</>
+                                    <>
+                                        <span className="flex items-center gap-2"><WifiOff className="w-4 h-4 text-amber-400" /> Multiplayer needs server</span>
+                                        <span className="text-white/40 text-xs">Play solo above — it works without setup</span>
+                                    </>
                                 )}
                             </div>
 
@@ -217,8 +255,12 @@ export function Lobby() {
                     )}
 
                     {sessionId && roundComplete && roundNumber === totalRounds && (
-                        <div className="mt-4 text-sm text-white/60">
-                            Session complete! Average score: <span className="text-white font-semibold">{(sessionScore / sessionResults.length).toFixed(1)}</span>
+                        <div className="mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
+                            <div className="text-2xl mb-1">🎉</div>
+                            <div className="text-white font-semibold">Session complete!</div>
+                            <div className="text-white/70 text-sm mt-1">
+                                Average score: <span className="text-amber-400 font-bold">{(sessionScore / sessionResults.length).toFixed(1)}</span>/10
+                            </div>
                         </div>
                     )}
 
@@ -238,6 +280,7 @@ export function Lobby() {
                     )}
                 </div>
             </div>
+            </>
         );
     }
 
@@ -290,6 +333,11 @@ export function Lobby() {
                     <div className="flex gap-2 justify-between flex-wrap">
                         {THEMES.map((t) => {
                             const locked = !isThemeUnlocked(t.id, stats);
+                            const timeLimit = t.modifier?.timeLimit || 60;
+                            const mult = t.modifier?.scoreMultiplier || 1;
+                            const title = locked
+                                ? 'Play 1 round per day for 7 days to unlock'
+                                : `${t.label}: ${timeLimit}s · x${mult.toFixed(1)} multiplier`;
                             return (
                                 <button
                                     key={t.id}
@@ -300,7 +348,7 @@ export function Lobby() {
                                         ${locked ? 'opacity-40 cursor-not-allowed grayscale' : ''}
                                         ${themeId === t.id ? 'ring-2 ring-white scale-110 shadow-lg' : 'opacity-50 hover:opacity-100'}
                                     `}
-                                    title={locked ? 'Unlock with 7-day streak' : t.label}
+                                    title={title}
                                 >
                                     {locked && <span className="absolute -top-1 -right-1 text-xs">🔒</span>}
                                 </button>
@@ -309,7 +357,10 @@ export function Lobby() {
                     </div>
                     <div className="mt-2 text-center text-white/50 text-sm">
                         {theme.label}
-                        {theme.unlockMilestone && !isThemeUnlocked(theme.id, stats) && ' (locked)'}
+                        {theme.unlockMilestone && !isThemeUnlocked(theme.id, stats)
+                            ? ` — Play 1 round/day for 7 days to unlock`
+                            : ` · ${theme.modifier?.timeLimit || 60}s · x${(theme.modifier?.scoreMultiplier || 1).toFixed(1)}`
+                        }
                     </div>
                 </div>
 
@@ -325,6 +376,9 @@ export function Lobby() {
 
                 <div>
                     <label className="block text-sm font-medium text-white/60 mb-2">Progress</label>
+                    <p className="text-white/50 text-xs mb-2">
+                        Streak = play at least 1 round per day. Mystery Box unlocks at 7-day streak!
+                    </p>
                     <div className="space-y-2 mb-4">
                         <div className="text-white/50 text-xs flex justify-between">
                             <span>Rounds: {stats.totalRounds}</span>
@@ -333,6 +387,7 @@ export function Lobby() {
                         {milestones.filter((m) => !stats.milestonesUnlocked.includes(m.id)).slice(0, 2).map((m) => (
                             <div key={m.id} className="text-xs text-white/40">
                                 🔒 {m.label}: {m.type === 'rounds' ? stats.totalRounds : stats.currentStreak}/{m.threshold}
+                                {m.type === 'streak' && m.rewardId === 'mystery' && ' — Play daily to unlock!'}
                             </div>
                         ))}
                     </div>

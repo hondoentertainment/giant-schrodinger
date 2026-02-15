@@ -7,6 +7,8 @@ import { recordPlay } from '../../services/stats';
 import { createJudgeShareUrl } from '../../services/share';
 import { saveSharedRound } from '../../services/backend';
 import { getThemeById } from '../../data/themes';
+import { getScoreBand } from '../../lib/scoreBands';
+import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 
 export function Reveal({ submission, assets }) {
     const { setGameState, user, completeRound, roundNumber, totalRounds } = useGame();
@@ -19,6 +21,7 @@ export function Reveal({ submission, assets }) {
     const [humanCommentary, setHumanCommentary] = useState('');
     const [savedCollision, setSavedCollision] = useState(null);
     const [shareCopied, setShareCopied] = useState(false);
+    const [newlyUnlocked, setNewlyUnlocked] = useState([]);
     const savedRef = useRef(false);
     const scoringMode = user?.scoringMode || 'ai';
     const theme = getThemeById(user?.themeId);
@@ -73,7 +76,8 @@ export function Reveal({ submission, assets }) {
                         scoreMultiplier,
                     });
                     setSavedCollision(collision);
-                    recordPlay();
+                    const { newlyUnlocked: unlocked } = recordPlay();
+                    if (unlocked?.length) setNewlyUnlocked(unlocked);
                     savedRef.current = true;
                 }
                 completeRound({ score: finalScore, baseScore: scoreResult.score, breakdown: scoreResult.breakdown });
@@ -118,7 +122,7 @@ export function Reveal({ submission, assets }) {
         if (url && navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(url);
             setShareCopied(true);
-            toast.success('Share link copied to clipboard!');
+            toast.success('Link copied — send to a friend and they\'ll score your connection!');
             setTimeout(() => setShareCopied(false), 2500);
         } else {
             toast.error('Could not copy link — try again');
@@ -155,7 +159,8 @@ export function Reveal({ submission, assets }) {
                 scoreMultiplier,
             });
             setSavedCollision(collision);
-            recordPlay();
+            const { newlyUnlocked: unlocked } = recordPlay();
+            if (unlocked?.length) setNewlyUnlocked(unlocked);
             savedRef.current = true;
         }
         completeRound({ score: finalScore, baseScore: scoreValue });
@@ -249,12 +254,20 @@ export function Reveal({ submission, assets }) {
         );
     }
 
+    const scoreBand = result && getScoreBand(result.finalScore || result.score);
+
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
+            {newlyUnlocked.length > 0 && (
+                <MilestoneCelebration
+                    newlyUnlocked={newlyUnlocked}
+                    onDismiss={() => setNewlyUnlocked([])}
+                />
+            )}
             <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl">
                 <div className="glass-panel rounded-[22px] p-8 text-center max-w-2xl">
                     <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-6 border border-white/10">
-                        WINNER ANNOUNCEMENT
+                        YOUR SCORE
                     </div>
 
                     <div className="relative aspect-square w-full max-w-sm mx-auto rounded-2xl overflow-hidden mb-8 shadow-2xl ring-1 ring-white/20">
@@ -280,10 +293,12 @@ export function Reveal({ submission, assets }) {
 
                     <div className="grid grid-cols-2 gap-4 mb-8">
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-amber-600">
+                            <div className={`text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br ${scoreBand?.color || 'from-yellow-300 to-amber-600'}`}>
                                 {result.finalScore || result.score}/10
                             </div>
-                            <div className="text-white/40 text-xs uppercase tracking-widest mt-1">Final Score</div>
+                            <div className="text-white/40 text-xs uppercase tracking-widest mt-1">
+                                {scoreBand?.label || 'Final Score'}
+                            </div>
                         </div>
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                             <div className="text-lg font-bold text-white/90">
@@ -292,16 +307,21 @@ export function Reveal({ submission, assets }) {
                         </div>
                     </div>
                     {result.breakdown && (
-                        <div className="grid grid-cols-2 gap-3 mb-6 text-sm text-white/70">
-                            <div className="rounded-xl bg-white/5 border border-white/10 p-3">Wit: <span className="text-white">{result.breakdown.wit}/10</span></div>
-                            <div className="rounded-xl bg-white/5 border border-white/10 p-3">Logic: <span className="text-white">{result.breakdown.logic}/10</span></div>
-                            <div className="rounded-xl bg-white/5 border border-white/10 p-3">Originality: <span className="text-white">{result.breakdown.originality}/10</span></div>
-                            <div className="rounded-xl bg-white/5 border border-white/10 p-3">Clarity: <span className="text-white">{result.breakdown.clarity}/10</span></div>
+                        <>
+                            <p className="text-white/50 text-xs mb-2">Your connection was scored on:</p>
+                            <div className="grid grid-cols-2 gap-3 mb-4 text-sm text-white/70">
+                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Wit: <span className="text-white">{result.breakdown.wit}/10</span></div>
+                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Logic: <span className="text-white">{result.breakdown.logic}/10</span></div>
+                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Originality: <span className="text-white">{result.breakdown.originality}/10</span></div>
+                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Clarity: <span className="text-white">{result.breakdown.clarity}/10</span></div>
+                            </div>
+                        </>
+                    )}
+                    {scoreMultiplier !== 1 && (
+                        <div className="mb-6 text-sm text-white/50">
+                            Base {(result.baseScore ?? result.score)?.toFixed(1)} × {scoreMultiplier.toFixed(2)} = <span className="text-white">{result.finalScore || result.score}/10</span>
                         </div>
                     )}
-                    <div className="mb-6 text-sm text-white/50">
-                        Theme multiplier applied: <span className="text-white">x{scoreMultiplier.toFixed(2)}</span>
-                    </div>
 
                     <blockquote className="text-xl italic text-white/80 font-serif mb-8 border-l-4 border-purple-500 pl-4 py-2 bg-white/5 rounded-r-xl">
                         &ldquo;{result.commentary}&rdquo;
@@ -315,8 +335,9 @@ export function Reveal({ submission, assets }) {
                             onClick={handleShareForJudging}
                             disabled={!savedCollision}
                             className="px-8 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-50"
+                            title="Send this link to a friend — they'll score your connection and you'll see their feedback"
                         >
-                            {shareCopied ? 'Link copied!' : 'Share for judging'}
+                            {shareCopied ? 'Link copied! Send to a friend' : 'Share for friend to judge'}
                         </button>
                         <button
                             onClick={handleNext}

@@ -19,6 +19,12 @@ export function Round({ onSubmit }) {
 
     useEffect(() => {
         const [left, right] = buildThemeAssets(theme, 2);
+        [left, right].forEach((a) => {
+            if (a?.url) {
+                const img = new Image();
+                img.src = a.url;
+            }
+        });
         setAssets({ left, right });
         setTimer(timeLimit);
     }, [user?.themeId, timeLimit]);
@@ -71,6 +77,9 @@ export function Round({ onSubmit }) {
             <VennDiagram leftAsset={assets.left} rightAsset={assets.right} />
 
             <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 relative z-20">
+                <p className="text-center text-white/60 text-sm mb-3">
+                    One witty phrase that connects both concepts
+                </p>
                 <input
                     type="text"
                     value={submission}
@@ -79,8 +88,11 @@ export function Round({ onSubmit }) {
                     className="w-full bg-black/40 backdrop-blur-xl border-2 border-white/20 rounded-full px-8 py-6 text-2xl text-center text-white placeholder-white/20 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-2xl"
                     autoFocus
                 />
-                <div className="mt-4 text-center text-white/40 text-sm">
-                    Press <span className="font-bold text-white">Enter</span> to submit
+                <div className="mt-4 text-center text-white/40 text-sm space-y-1">
+                    <div>Press <span className="font-bold text-white">Enter</span> to submit</div>
+                    <div className="text-white/30 text-xs">
+                        Scored on Wit · Logic · Originality · Clarity
+                    </div>
                 </div>
             </form>
         </div>

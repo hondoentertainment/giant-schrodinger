@@ -53,6 +53,10 @@ export function RoomLobby() {
                     </button>
                 </div>
                 <p className="text-white/50 text-sm">Share this code with friends to join</p>
+                <div className="mt-4 p-3 rounded-xl bg-white/5 border border-white/10 text-left text-sm text-white/60">
+                    <div className="font-semibold text-white/80 mb-1">How to invite</div>
+                    <p>Friends join from the main lobby: click &quot;Play with Friends&quot; → enter this code → Join. Everyone sees the same concepts and plays simultaneously.</p>
+                </div>
             </div>
 
             {/* Room info */}

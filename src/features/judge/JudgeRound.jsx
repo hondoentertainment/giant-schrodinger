@@ -101,7 +101,7 @@ export function JudgeRound({ payload, onDone }) {
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-in zoom-in-95 duration-500">
                 <div className="text-6xl mb-4">✅</div>
                 <h2 className="text-3xl font-display font-bold text-white mb-2">Thanks for judging!</h2>
-                <p className="text-white/60">Your score has been recorded. Redirecting...</p>
+                <p className="text-white/60">Your friend will see your score. Redirecting...</p>
             </div>
         );
     }
@@ -110,7 +110,7 @@ export function JudgeRound({ payload, onDone }) {
         <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-700">
             <div className="mb-6 text-center">
                 <h2 className="text-2xl font-display font-bold text-white mb-1">Judge a Friend&apos;s Connection</h2>
-                <p className="text-white/60 text-sm">Score their Venn connection and leave feedback.</p>
+                <p className="text-white/60 text-sm">Score their connection — they&apos;ll see your feedback in their gallery.</p>
             </div>
 
             <VennDiagram leftAsset={effectivePayload.assets.left} rightAsset={effectivePayload.assets.right} />

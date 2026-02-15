@@ -1,7 +1,14 @@
 const DEFAULT_KEYWORDS = ["abstract art", "texture", "colorful pattern", "surreal", "dreamscape"];
 
-function buildUnsplashUrl(id, width = 1200) {
+const IMG_WIDTH = 800;
+
+function buildUnsplashUrl(id, width = IMG_WIDTH) {
     return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${width}&q=80`;
+}
+
+function buildPicsumFallback(labelOrKeyword) {
+    const slug = String(labelOrKeyword || 'placeholder').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    return `https://picsum.photos/seed/${slug || 'venn'}/${IMG_WIDTH}/${IMG_WIDTH}`;
 }
 
 function createImage({ id, label, fallback }) {
@@ -9,7 +16,7 @@ function createImage({ id, label, fallback }) {
         id,
         label,
         url: buildUnsplashUrl(id),
-        fallbackUrl: `https://source.unsplash.com/featured/1200x1200?${encodeURIComponent(fallback || label)}`
+        fallbackUrl: buildPicsumFallback(fallback || label),
     };
 }
 
@@ -96,7 +103,7 @@ export const THEMES = [
             createImage({ id: "1507525428034-b723cf961d3e", label: "Ocean Swell", fallback: "ocean waves" }),
             createImage({ id: "1470770841072-f978cf4d019e", label: "Storm Horizon", fallback: "sea storm" }),
             createImage({ id: "1500534314209-a25ddb2bd429", label: "Coastal Light", fallback: "coastline" }),
-            createImage({ id: "1507525428034-b723cf961d3e", label: "Deep Blue", fallback: "deep ocean" }),
+            createImage({ id: "1544551763-77a2d1f5b107", label: "Deep Blue", fallback: "deep ocean" }),
         ],
         fusionImages: [
             createImage({ id: "1507525428034-b723cf961d3e", label: "Tidal Merge", fallback: "ocean abstract" }),
@@ -170,7 +177,13 @@ export function buildThemeAssets(theme, count = 2) {
     const seed = Date.now();
     const curated = Array.isArray(theme?.assets) && theme.assets.length > 0 ? theme.assets : null;
     if (curated) {
-        const picked = shuffle(curated).slice(0, count);
+        const byUrl = new Map();
+        for (const a of curated) {
+            if (!byUrl.has(a.url)) byUrl.set(a.url, a);
+        }
+        const unique = [...byUrl.values()];
+        const shuffled = shuffle(unique);
+        const picked = shuffled.slice(0, count);
         return picked.map((asset, index) => ({
             ...asset,
             id: asset.id || `${theme?.id || "theme"}-${seed}-${index}`,
@@ -182,8 +195,8 @@ export function buildThemeAssets(theme, count = 2) {
     return chosen.map((keyword, index) => ({
         id: `${theme?.id || "theme"}-${seed}-${index}`,
         label: keyword,
-        url: `https://source.unsplash.com/featured/1200x1200?${encodeURIComponent(keyword)}&sig=${seed + index}`,
-        fallbackUrl: `https://source.unsplash.com/featured/1200x1200?${encodeURIComponent(keyword)}`,
+        url: buildPicsumFallback(`${keyword}-${seed + index}`),
+        fallbackUrl: buildPicsumFallback(keyword),
     }));
 }
 
