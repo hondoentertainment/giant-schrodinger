@@ -239,7 +239,7 @@ export function RoomProvider({ children }) {
         } else if (scoringMode === 'human' || scoringMode === 'hybrid' || scoringMode === 'friends') {
             // Handle human scoring - create shared round for friends to judge
             try {
-                const { saveSharedRound, setRoomStatus } = await import('./backend');
+                const { saveSharedRound } = await import('../services/backend');
                 
                 const subs = await getRoundSubmissions(room.id, room.round_number);
                 
