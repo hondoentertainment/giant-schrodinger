@@ -9,6 +9,7 @@ import { saveSharedRound } from '../../services/backend';
 import { getThemeById } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
+import SocialShareButtons from '../../components/SocialShareButtons';
 
 export function Reveal({ submission, assets }) {
     const { setGameState, user, completeRound, roundNumber, totalRounds } = useGame();
@@ -329,6 +330,23 @@ export function Reveal({ submission, assets }) {
                             — {scoringMode === 'human' ? 'Human Judge' : 'Gemini AI Host'}
                         </footer>
                     </blockquote>
+
+                    {/* Social sharing */}
+                    {savedCollision && (
+                        <div className="mb-6">
+                            <SocialShareButtons
+                                shareData={{
+                                    submission,
+                                    score: result.finalScore || result.score,
+                                    scoreBand: scoreBand?.label,
+                                    commentary: result.commentary,
+                                    assets,
+                                }}
+                                imageUrl={fusionImage?.url}
+                                onToast={(type, msg) => toast[type]?.(msg)}
+                            />
+                        </div>
+                    )}
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <button
