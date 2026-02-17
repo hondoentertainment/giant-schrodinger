@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { VennDiagram } from '../round/VennDiagram';
 import { useToast } from '../../context/ToastContext';
 import { saveJudgement } from '../../services/judgements';
 import { saveJudgementToBackend, getSharedRound } from '../../services/backend';
 import { clearJudgeFromUrl } from '../../services/share';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export function JudgeRound({ payload, onDone }) {
     const { toast } = useToast();
@@ -14,7 +15,12 @@ export function JudgeRound({ payload, onDone }) {
     const [resolvedPayload, setResolvedPayload] = useState(payload?.backendId ? null : payload);
     const [loading, setLoading] = useState(!!payload?.backendId);
     const [error, setError] = useState(null);
+    const [errorType, setErrorType] = useState(null); // 'not_found' | 'network' | 'invalid'
     const [judgeName, setJudgeName] = useState('');
+    const formRef = useRef(null);
+    const effectivePayload = resolvedPayload || payload;
+    const hasValidPayload = effectivePayload?.assets?.left && effectivePayload?.assets?.right && effectivePayload?.submission;
+    useFocusTrap(!loading && !error && hasValidPayload && !submitted, formRef);
 
     useEffect(() => {
         if (!payload?.backendId) return;
@@ -25,6 +31,7 @@ export function JudgeRound({ payload, onDone }) {
                     setResolvedPayload(data);
                     if (!data) {
                         setError('Round not found');
+                        setErrorType('not_found');
                         toast.error('Could not load this round — it may have expired');
                     }
                 }
@@ -32,6 +39,7 @@ export function JudgeRound({ payload, onDone }) {
             .catch(() => {
                 if (!cancelled) {
                     setError('Failed to load round');
+                    setErrorType('network');
                     toast.error('Failed to load round — check your connection');
                 }
             })
@@ -40,8 +48,6 @@ export function JudgeRound({ payload, onDone }) {
             });
         return () => { cancelled = true; };
     }, [payload?.backendId]);
-
-    const effectivePayload = resolvedPayload || payload;
 
     if (loading) {
         return (
@@ -52,13 +58,21 @@ export function JudgeRound({ payload, onDone }) {
         );
     }
 
-    if (error || !effectivePayload?.assets?.left || !effectivePayload?.assets?.right || !effectivePayload?.submission) {
+    if (error || !hasValidPayload) {
+        const errorMessage =
+            errorType === 'not_found'
+                ? 'This judging link has expired or the round was removed. Ask your friend to share a fresh link.'
+                : errorType === 'network'
+                ? 'Couldn\'t load the round — check your internet connection and try again.'
+                : 'This link is invalid or malformed. Make sure you copied the full URL from your friend.';
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                <p className="text-white/60 text-xl">Invalid or expired judge link.</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md px-4">
+                <div className="text-6xl mb-4" role="img" aria-hidden="true">🔗</div>
+                <h2 className="text-2xl font-display font-bold text-white mb-2">Can&apos;t load this round</h2>
+                <p className="text-white/60 mb-6">{errorMessage}</p>
                 <button
                     onClick={() => { clearJudgeFromUrl(); onDone?.(); }}
-                    className="mt-6 px-8 py-3 bg-white/20 text-white rounded-xl hover:bg-white/30"
+                    className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform"
                 >
                     Play Venn
                 </button>
@@ -107,7 +121,7 @@ export function JudgeRound({ payload, onDone }) {
     }
 
     return (
-        <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-700">
+        <div ref={formRef} className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-700">
             <div className="mb-6 text-center">
                 <h2 className="text-2xl font-display font-bold text-white mb-1">Judge a Friend&apos;s Connection</h2>
                 <p className="text-white/60 text-sm">Score their connection — they&apos;ll see your feedback in their gallery.</p>

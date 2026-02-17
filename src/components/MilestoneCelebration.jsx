@@ -1,11 +1,17 @@
 import React from 'react';
 import { getMilestones } from '../services/stats';
+import { haptic } from '../lib/haptics';
 
 export function MilestoneCelebration({ newlyUnlocked, onDismiss }) {
     const milestones = getMilestones();
     const unlocked = milestones.filter((m) => newlyUnlocked.includes(m.id));
 
     if (unlocked.length === 0) return null;
+
+    const handleDismiss = () => {
+        haptic('success');
+        onDismiss();
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
@@ -31,7 +37,7 @@ export function MilestoneCelebration({ newlyUnlocked, onDismiss }) {
                     ))}
                 </div>
                 <button
-                    onClick={onDismiss}
+                    onClick={handleDismiss}
                     className="w-full py-3 bg-white text-black font-bold rounded-xl hover:scale-[1.02] transition-transform"
                 >
                     Awesome!

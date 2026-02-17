@@ -7,8 +7,8 @@ const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 const SCORING_PROMPT = `You are a witty judge for a game where players connect two concepts using a creative phrase.
 
 Given:
-- Left concept: {{left}}
-- Right concept: {{right}}
+- Left concept ({{mediaType}}): {{left}}
+- Right concept ({{mediaType}}): {{right}}
 - Player's connecting phrase: "{{submission}}"
 
 Score the connection from 1-10 on four criteria (each 1-10):
@@ -40,16 +40,19 @@ function mockScore(submission, asset1, asset2) {
     };
 }
 
-export async function scoreSubmission(submission, asset1, asset2) {
+export async function scoreSubmission(submission, asset1, asset2, mediaType = 'image') {
     if (!ai || !submission || !asset1 || !asset2) {
         await new Promise((r) => setTimeout(r, 1500));
         return { ...mockScore(submission, asset1, asset2), isMock: true };
     }
 
+    const mediaLabel = mediaType === 'video' ? 'video clip' : mediaType === 'audio' ? 'audio clip' : 'image';
+
     try {
         const prompt = SCORING_PROMPT.replace(/\{\{left\}\}/g, asset1.label)
             .replace(/\{\{right\}\}/g, asset2.label)
-            .replace(/\{\{submission\}\}/g, submission.replace(/"/g, '\\"'));
+            .replace(/\{\{submission\}\}/g, submission.replace(/"/g, '\\"'))
+            .replace(/\{\{mediaType\}\}/g, mediaLabel);
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.0-flash',

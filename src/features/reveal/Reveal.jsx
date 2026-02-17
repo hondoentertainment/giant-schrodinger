@@ -6,13 +6,14 @@ import { saveCollision } from '../../services/storage';
 import { recordPlay } from '../../services/stats';
 import { createJudgeShareUrl } from '../../services/share';
 import { saveSharedRound } from '../../services/backend';
-import { getThemeById } from '../../data/themes';
+import { getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import SocialShareButtons from '../../components/SocialShareButtons';
+import { haptic } from '../../lib/haptics';
 
 export function Reveal({ submission, assets }) {
-    const { setGameState, user, completeRound, roundNumber, totalRounds } = useGame();
+    const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound } = useGame();
     const { toast } = useToast();
     const [result, setResult] = useState(null);
     const [fusionImage, setFusionImage] = useState(null);
@@ -23,85 +24,113 @@ export function Reveal({ submission, assets }) {
     const [savedCollision, setSavedCollision] = useState(null);
     const [shareCopied, setShareCopied] = useState(false);
     const [newlyUnlocked, setNewlyUnlocked] = useState([]);
+    const [processError, setProcessError] = useState(null);
+    const [retryTrigger, setRetryTrigger] = useState(0);
     const savedRef = useRef(false);
-    const scoringMode = user?.scoringMode || 'ai';
+    const scoringMode = user?.scoringMode || 'human';
     const theme = getThemeById(user?.themeId);
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
+    const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
+    const mod = currentModifier;
 
     useEffect(() => {
         let mounted = true;
+        setProcessError(null);
 
         async function processRound() {
             if (savedRef.current) return;
 
-            if (scoringMode === 'ai') {
-                // 1. Score
-                setStatus("Gemini is judging your wit...");
-                const scoreResult = await scoreSubmission(submission, assets.left, assets.right);
-                if (!mounted) return;
-                if (scoreResult.isMock) {
-                    toast.warn(scoreResult.errorReason || 'AI unavailable — using mock scoring');
-                }
-                const finalScore = Math.min(10, Math.max(1, Math.round(scoreResult.score * scoreMultiplier)));
-                const resultPayload = {
-                    ...scoreResult,
-                    finalScore,
-                    scoreMultiplier,
-                };
-                setResult(resultPayload);
-
-                // 2. Generate Image
-                setStatus("Dreaming up the fusion...");
-                const image = await generateFusionImage(theme, submission);
-                if (!mounted) return;
-                if (image.isFallback && image.errorReason) {
-                    toast.info(image.errorReason);
-                }
-                setFusionImage(image);
-                setStatus("Complete");
-
-                // 3. Save
-                if (!savedRef.current) {
-                    const collision = saveCollision({
-                        submission,
-                        imageUrl: image.url,
-                        fallbackImageUrl: image.fallbackUrl,
-                        score: finalScore,
-                        baseScore: scoreResult.score,
-                        breakdown: scoreResult.breakdown,
-                        commentary: scoreResult.commentary,
-                        themeId: theme?.id,
-                        scoringMode,
-                        roundNumber,
-                        totalRounds,
+            try {
+                if (scoringMode === 'ai') {
+                    // 1. Score
+                    setStatus("Gemini is judging your wit...");
+                    const scoreResult = await scoreSubmission(submission, assets.left, assets.right, mediaType);
+                    if (!mounted) return;
+                    if (scoreResult.isMock) {
+                        toast.warn(scoreResult.errorReason || 'AI unavailable — using mock scoring');
+                    }
+                    const finalScore = Math.min(10, Math.max(1, Math.round(scoreResult.score * scoreMultiplier)));
+                    const resultPayload = {
+                        ...scoreResult,
+                        finalScore,
                         scoreMultiplier,
-                    });
-                    setSavedCollision(collision);
-                    const { newlyUnlocked: unlocked } = recordPlay();
-                    if (unlocked?.length) setNewlyUnlocked(unlocked);
-                    savedRef.current = true;
+                    };
+                    setResult(resultPayload);
+
+                    // 2. Generate Image
+                    setStatus("Dreaming up the fusion...");
+                    const image = await generateFusionImage(theme, submission);
+                    if (!mounted) return;
+                    if (image.isFallback && image.errorReason) {
+                        toast.info(image.errorReason);
+                    }
+                    setFusionImage(image);
+                    setStatus("Complete");
+
+                    // 3. Save
+                    if (!savedRef.current) {
+                        const collision = saveCollision({
+                            submission,
+                            imageUrl: image.url,
+                            fallbackImageUrl: image.fallbackUrl,
+                            score: finalScore,
+                            baseScore: scoreResult.score,
+                            breakdown: scoreResult.breakdown,
+                            commentary: scoreResult.commentary,
+                            themeId: theme?.id,
+                            scoringMode,
+                            roundNumber,
+                            totalRounds,
+                            scoreMultiplier,
+                        });
+                        setSavedCollision(collision);
+                        const { newlyUnlocked: unlocked } = recordPlay();
+                        if (unlocked?.length) setNewlyUnlocked(unlocked);
+                        savedRef.current = true;
+                    }
+                    completeRound({ score: finalScore, baseScore: scoreResult.score, breakdown: scoreResult.breakdown });
+                } else {
+                    // Human scoring path
+                    setStatus("Dreaming up the fusion...");
+                    const image = await generateFusionImage(theme, submission);
+                    if (!mounted) return;
+                    if (image.isFallback && image.errorReason) {
+                        toast.info(image.errorReason);
+                    }
+                    setFusionImage(image);
+                    setStatus("Awaiting score");
                 }
-                completeRound({ score: finalScore, baseScore: scoreResult.score, breakdown: scoreResult.breakdown });
-            } else {
-                // Human scoring path
-                setStatus("Dreaming up the fusion...");
-                const image = await generateFusionImage(theme, submission);
-                if (!mounted) return;
-                if (image.isFallback && image.errorReason) {
-                    toast.info(image.errorReason);
+            } catch (err) {
+                if (mounted) {
+                    console.error('Reveal processRound failed:', err);
+                    setProcessError(err?.message || 'Something went wrong');
                 }
-                setFusionImage(image);
-                setStatus("Awaiting score");
             }
         }
 
         processRound();
         return () => { mounted = false; };
-    }, [submission, assets, scoringMode, theme?.id, scoreMultiplier]);
+    }, [submission, assets, scoringMode, theme?.id, scoreMultiplier, retryTrigger]);
 
     const handleNext = () => {
-        setGameState('LOBBY');
+        haptic('light');
+        nextRound();
     };
+
+    // Keyboard shortcut: S to share for judging
+    useEffect(() => {
+        if (!result || !savedCollision) return;
+        const onKey = (e) => {
+            if (e.key === 's' || e.key === 'S') {
+                const target = e.target;
+                if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
+                e.preventDefault();
+                handleShareForJudging();
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [result, savedCollision]); // handleShareForJudging is stable enough for this use
 
     const handleShareForJudging = async () => {
         if (!savedCollision || !assets?.left || !assets?.right) return;
@@ -122,6 +151,7 @@ export function Reveal({ submission, assets }) {
         const url = createJudgeShareUrl(payload);
         if (url && navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(url);
+            haptic('success');
             setShareCopied(true);
             toast.success('Link copied — send to a friend and they\'ll score your connection!');
             setTimeout(() => setShareCopied(false), 2500);
@@ -167,11 +197,33 @@ export function Reveal({ submission, assets }) {
         completeRound({ score: finalScore, baseScore: scoreValue });
     };
 
+    if (processError) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-in fade-in duration-500">
+                <div className="text-6xl mb-4" role="img" aria-hidden="true">⚠️</div>
+                <h2 className="text-2xl font-display font-bold text-white mb-2">Something went wrong</h2>
+                <p className="text-white/60 text-sm mb-6 max-w-sm">{processError}</p>
+                <button
+                    onClick={() => {
+                        setProcessError(null);
+                        savedRef.current = false;
+                        setRetryTrigger((t) => t + 1);
+                    }}
+                    className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
+
     if (!fusionImage) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-in fade-in duration-500">
-                <div className="w-24 h-24 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mb-8" />
-                <h2 className="text-3xl font-display font-bold text-white mb-2 animate-pulse">{status}</h2>
+                <div className="w-24 h-24 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mb-8" aria-hidden="true" />
+                <h2 id="reveal-status" className="text-3xl font-display font-bold text-white mb-2 animate-pulse" role="status" aria-live="polite">
+                    {status}
+                </h2>
                 <p className="text-white/40 italic">&ldquo;{submission}&rdquo;</p>
             </div>
         );
@@ -348,20 +400,48 @@ export function Reveal({ submission, assets }) {
                         </div>
                     )}
 
+                    {/* Round modifier result */}
+                    {mod && mod.id === 'doubleOrNothing' && (
+                        <div className={`mb-6 p-4 rounded-2xl border text-center animate-in zoom-in-95 duration-500 ${
+                            (result.finalScore || result.score) >= (mod.scoreThreshold || 7)
+                                ? 'bg-emerald-500/10 border-emerald-500/30'
+                                : 'bg-red-500/10 border-red-500/30'
+                        }`}>
+                            <div className="text-2xl mb-1">
+                                {(result.finalScore || result.score) >= (mod.scoreThreshold || 7) ? '🎲 DOUBLED!' : '🎲 BUST!'}
+                            </div>
+                            <div className="text-white/60 text-sm">
+                                {(result.finalScore || result.score) >= (mod.scoreThreshold || 7)
+                                    ? `Scored ${result.finalScore || result.score}+ — your points are doubled!`
+                                    : `Needed ${mod.scoreThreshold || 7}+ to keep your points.`}
+                            </div>
+                        </div>
+                    )}
+
+                    {mod && mod.id === 'showdown' && (
+                        <div className="mb-6 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-center animate-in zoom-in-95 duration-500">
+                            <div className="text-2xl mb-1">🏆 Final Showdown Complete!</div>
+                            <div className="text-white/60 text-sm">2x points applied to your final round.</div>
+                        </div>
+                    )}
+
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        <button
-                            onClick={handleShareForJudging}
-                            disabled={!savedCollision}
-                            className="px-8 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-50"
-                            title="Send this link to a friend — they'll score your connection and you'll see their feedback"
-                        >
-                            {shareCopied ? 'Link copied! Send to a friend' : 'Share for friend to judge'}
-                        </button>
+                        <div>
+                            <button
+                                onClick={handleShareForJudging}
+                                disabled={!savedCollision}
+                                className="px-8 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-50"
+                                title="Send this link to a friend — they'll score your connection. Press S for shortcut."
+                            >
+                                {shareCopied ? 'Link copied! Send to a friend' : 'Share for friend to judge'}
+                            </button>
+                            <p className="text-white/30 text-xs mt-1.5">Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-white/50">S</kbd> to copy link</p>
+                        </div>
                         <button
                             onClick={handleNext}
                             className="px-12 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)]"
                         >
-                            {roundNumber >= totalRounds ? 'Back to Lobby' : 'Next Round Setup'}
+                            {roundNumber >= totalRounds ? 'See Results' : 'Next Round →'}
                         </button>
                     </div>
                 </div>

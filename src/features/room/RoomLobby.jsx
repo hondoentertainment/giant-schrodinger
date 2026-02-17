@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRoom } from '../../context/RoomContext';
 import { useToast } from '../../context/ToastContext';
 import { Copy, Users, Crown, LogOut, Play } from 'lucide-react';
+import { haptic } from '../../lib/haptics';
 
 export function RoomLobby() {
     const {
@@ -14,22 +15,35 @@ export function RoomLobby() {
     } = useRoom();
     const { toast } = useToast();
     const [starting, setStarting] = useState(false);
+    const [countdown, setCountdown] = useState(null);
+
+    useEffect(() => {
+        if (countdown === null) return;
+        if (countdown <= 0) {
+            setCountdown(null);
+            startMultiplayerRound().finally(() => setStarting(false));
+            return;
+        }
+        haptic('light');
+        const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+        return () => clearTimeout(t);
+    }, [countdown, startMultiplayerRound]);
 
     const copyCode = () => {
         if (roomCode && navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(roomCode);
+            haptic('light');
             toast.success('Room code copied!');
         }
     };
 
-    const handleStart = async () => {
+    const handleStart = () => {
         if (players.length < 2) {
             toast.warn('Need at least 2 players to start');
             return;
         }
         setStarting(true);
-        const ok = await startMultiplayerRound();
-        if (!ok) setStarting(false);
+        setCountdown(3);
     };
 
     return (
@@ -46,7 +60,8 @@ export function RoomLobby() {
                     </span>
                     <button
                         onClick={copyCode}
-                        className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                        className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                        aria-label="Copy room code"
                         title="Copy room code"
                     >
                         <Copy className="w-5 h-5 text-white/70" />
@@ -66,7 +81,7 @@ export function RoomLobby() {
                     <div className="text-xs">Rounds</div>
                 </div>
                 <div className="flex-1 rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                    <div className="text-white font-semibold">AI</div>
+                    <div className="text-white font-semibold">{room?.scoring_mode === 'human' ? 'Manual' : 'AI'}</div>
                     <div className="text-xs">Judge</div>
                 </div>
                 <div className="flex-1 rounded-xl bg-white/5 border border-white/10 p-3 text-center">
@@ -81,7 +96,7 @@ export function RoomLobby() {
                     <Users className="w-4 h-4" />
                     <span>Players ({players.length})</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2" role="list" aria-label="Players in room" aria-live="polite">
                     {players.map((p) => (
                         <div
                             key={p.id}
@@ -102,6 +117,15 @@ export function RoomLobby() {
                 </div>
             </div>
 
+            {/* Countdown overlay */}
+            {countdown !== null && countdown > 0 && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="text-8xl font-black text-white animate-in zoom-in-95 duration-300" role="status" aria-live="polite">
+                        {countdown}
+                    </div>
+                </div>
+            )}
+
             {/* Actions */}
             <div className="space-y-3">
                 {isHost && (
@@ -111,12 +135,13 @@ export function RoomLobby() {
                         className="w-full py-4 bg-white text-black font-bold text-xl rounded-xl hover:scale-105 transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
                     >
                         <Play className="w-6 h-6" />
-                        {starting ? 'Starting...' : 'Start Game'}
+                        {starting && countdown === null ? 'Starting...' : countdown !== null && countdown > 0 ? `${countdown}...` : 'Start Game'}
                     </button>
                 )}
                 {!isHost && (
-                    <div className="text-center py-4 text-white/50 text-sm">
-                        Waiting for host to start the game...
+                    <div className="text-center py-4 px-4 rounded-xl bg-white/5 border border-white/10">
+                        <p className="text-white/70 font-medium mb-1">Waiting for the host to start</p>
+                        <p className="text-white/40 text-xs">The host can start once everyone has joined</p>
                     </div>
                 )}
                 <button

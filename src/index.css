@@ -30,4 +30,11 @@
   .text-gradient-vibrant {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-[oklch(0.7_0.2_320)] via-[oklch(0.8_0.2_200)] to-[oklch(0.7_0.2_150)];
   }
+
+  .skip-link {
+    @apply absolute -left-[9999px] z-[100] px-4 py-2;
+  }
+  .skip-link:focus {
+    @apply left-4 top-4 bg-white text-black font-bold rounded-xl outline-none ring-4 ring-purple-500;
+  }
 }

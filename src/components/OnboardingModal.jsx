@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const EXAMPLE = {
     left: 'COFFEE',
@@ -7,10 +8,26 @@ const EXAMPLE = {
 };
 
 export function OnboardingModal({ onDismiss }) {
+    const containerRef = useRef(null);
+    useFocusTrap(true, containerRef);
+
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') onDismiss();
+        };
+        window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [onDismiss]);
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="w-full max-w-lg glass-panel rounded-3xl p-8 animate-in zoom-in-95 duration-300 border border-white/10 shadow-2xl">
-                <h2 className="text-2xl font-display font-bold text-white mb-4 text-center">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="onboarding-modal-title"
+        >
+            <div ref={containerRef} className="w-full max-w-lg glass-panel rounded-3xl p-8 animate-in zoom-in-95 duration-300 border border-white/10 shadow-2xl">
+                <h2 id="onboarding-modal-title" className="text-2xl font-display font-bold text-white mb-4 text-center">
                     How Venn Works
                 </h2>
                 <p className="text-white/80 mb-4 text-center">

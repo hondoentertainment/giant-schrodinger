@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { ToastProvider } from './context/ToastContext'
 import { ToastContainer } from './components/Toast'
@@ -8,6 +9,7 @@ import { Lobby } from './features/lobby/Lobby'
 import { Round } from './features/round/Round'
 import { Reveal } from './features/reveal/Reveal'
 import { Gallery } from './features/gallery/Gallery'
+import { SessionSummary } from './features/summary/SessionSummary'
 import { JudgeRound } from './features/judge/JudgeRound'
 import { RoomLobby } from './features/room/RoomLobby'
 import { MultiplayerRound } from './features/room/MultiplayerRound'
@@ -61,7 +63,7 @@ function GameContent() {
         );
     }
 
-    // Solo mode (original flow)
+    // Solo mode
     return (
         <Layout>
             <div className="mb-8 text-center">
@@ -74,20 +76,23 @@ function GameContent() {
             {gameState === 'REVEAL' && roundData && (
                 <Reveal submission={roundData.submission} assets={roundData.assets} />
             )}
+            {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
         </Layout>
     );
 }
 
 function App() {
     return (
-        <ToastProvider>
-            <GameProvider>
-                <RoomProvider>
-                    <GameContent />
-                    <ToastContainer />
-                </RoomProvider>
-            </GameProvider>
-        </ToastProvider>
+        <ErrorBoundary>
+            <ToastProvider>
+                <GameProvider>
+                    <RoomProvider>
+                        <GameContent />
+                        <ToastContainer />
+                    </RoomProvider>
+                </GameProvider>
+            </ToastProvider>
+        </ErrorBoundary>
     )
 }
 

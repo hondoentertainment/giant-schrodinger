@@ -13,13 +13,22 @@ import {
     updateSubmissionScore,
     subscribeToRoom,
 } from '../services/multiplayer';
-import { buildThemeAssets, getThemeById } from '../data/themes';
+import { buildThemeAssets, getThemeById, MEDIA_TYPES } from '../data/themes';
 import { scoreSubmission } from '../services/gemini';
+import { getCustomImages } from '../services/customImages';
+import { useGame } from './GameContext';
 
 const RoomContext = createContext();
 
+function createAggregateSubmission(submissions) {
+    if (!submissions || submissions.length === 0) return 'No submissions';
+    if (submissions.length === 1) return submissions[0].submission;
+    return submissions.map((s) => `${s.player_name}: "${s.submission}"`).join(' | ');
+}
+
 export function RoomProvider({ children }) {
     const { toast } = useToast();
+    const { user } = useGame();
 
     // Room state
     const [room, setRoom] = useState(null);           // The room DB row
@@ -184,7 +193,22 @@ export function RoomProvider({ children }) {
         if (!room || !isHost) return false;
 
         const theme = getThemeById(room.theme_id);
-        const [left, right] = buildThemeAssets(theme, 2);
+        const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
+        let left, right;
+        const customPool = getCustomImages();
+        const useCustom = mediaType === MEDIA_TYPES.IMAGE && user?.useCustomImages && customPool.length >= 2;
+        if (useCustom) {
+            const shuffled = [...customPool].sort(() => Math.random() - 0.5);
+            [left, right] = shuffled.slice(0, 2).map((img) => ({
+                id: img.id,
+                label: img.label,
+                type: MEDIA_TYPES.IMAGE,
+                url: img.url,
+                fallbackUrl: img.url,
+            }));
+        } else {
+            [left, right] = buildThemeAssets(theme, 2, mediaType);
+        }
         const assets = { left, right };
 
         const success = await startRoundApi(room.id, room.round_number, assets);
@@ -193,7 +217,7 @@ export function RoomProvider({ children }) {
             return false;
         }
         return true;
-    }, [room, isHost, toast]);
+    }, [room, isHost, toast, user?.useCustomImages, user?.mediaType]);
 
     const submitMultiplayerAnswer = useCallback(async (submission) => {
         if (!room || !playerName) return false;

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { VennDiagram } from '../round/VennDiagram';
 import { useRoom } from '../../context/RoomContext';
 import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
 import { CheckCircle, Clock, Users } from 'lucide-react';
+import { haptic } from '../../lib/haptics';
 
 export function MultiplayerRound() {
     const {
@@ -11,6 +12,7 @@ export function MultiplayerRound() {
         players,
         submissions,
         isHost,
+        playerName,
         submitMultiplayerAnswer,
         scoreAllSubmissions,
     } = useRoom();
@@ -19,6 +21,7 @@ export function MultiplayerRound() {
     const [submission, setSubmission] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [scoring, setScoring] = useState(false);
+    const prevSubmissionCountRef = useRef(submissions.length);
 
     const theme = getThemeById(room?.theme_id);
     const timeLimit = theme?.modifier?.timeLimit || 60;
@@ -38,8 +41,23 @@ export function MultiplayerRound() {
 
         const answer = submission.trim() || '(no answer)';
         setSubmitted(true);
+        haptic('success');
         await submitMultiplayerAnswer(answer);
     }, [submission, submitted, submitMultiplayerAnswer]);
+
+    // Toast when another player submits (while we're waiting)
+    useEffect(() => {
+        if (!submitted || scoring) return;
+        const prev = prevSubmissionCountRef.current;
+        if (submissions.length > prev && submissions.length < players.length) {
+            const newSub = submissions[submissions.length - 1];
+            if (newSub?.player_name !== playerName) {
+                const name = newSub?.player_name || 'A player';
+                toast.info(`${name} submitted!`);
+            }
+        }
+        prevSubmissionCountRef.current = submissions.length;
+    }, [submitted, submissions, submissions.length, players.length, scoring, playerName, toast]);
 
     useEffect(() => {
         if (submitted) return undefined;
@@ -101,6 +119,9 @@ export function MultiplayerRound() {
                 <div className="rounded-full bg-white/10 px-3 py-1">
                     x{(theme?.modifier?.scoreMultiplier || 1).toFixed(2)}
                 </div>
+                <div className="rounded-full bg-white/10 px-3 py-1">
+                    {room?.scoring_mode === 'human' ? 'Manual' : 'AI'} Judge
+                </div>
             </div>
 
             {/* Venn Diagram */}
@@ -123,7 +144,10 @@ export function MultiplayerRound() {
                     <div className="mt-4 text-center text-white/40 text-sm space-y-1">
                         <div>Press <span className="font-bold text-white">Enter</span> to submit</div>
                         <div className="text-white/30 text-xs">
-                            Scored on Wit · Logic · Originality · Clarity
+                            {room?.scoring_mode === 'human'
+                                ? 'Your friends will judge your connection'
+                                : 'Scored on Wit · Logic · Originality · Clarity'
+                            }
                         </div>
                     </div>
                 </form>
@@ -156,8 +180,13 @@ export function MultiplayerRound() {
                     )}
 
                     {scoring && (
-                        <div className="mt-6 flex items-center justify-center gap-2 text-purple-400">
-                            <div className="w-5 h-5 rounded-full border-2 border-t-purple-500 border-white/10 animate-spin" />
+                        <div
+                            className="mt-6 flex items-center justify-center gap-2 text-purple-400 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20"
+                            role="status"
+                            aria-live="polite"
+                            aria-label="Scoring submissions, please wait"
+                        >
+                            <div className="w-5 h-5 rounded-full border-2 border-t-purple-500 border-white/10 animate-spin" aria-hidden="true" />
                             <span className="text-sm font-medium">Scoring submissions...</span>
                         </div>
                     )}
