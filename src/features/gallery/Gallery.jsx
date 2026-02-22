@@ -28,14 +28,14 @@ export function Gallery() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {collisions.map((c) => (
-                        <div key={c.id} className="group relative aspect-square rounded-2xl overflow-hidden glass-panel transition-transform hover:scale-[1.02]">
-                            <img src={c.imageUrl} alt={c.submission} className="w-full h-full object-cover" />
+                    {(collisions || []).map((c) => (
+                        <div key={c?.id || Math.random()} className="group relative aspect-square rounded-2xl overflow-hidden glass-panel btn-kinetic">
+                            <img src={c?.imageUrl || ''} alt={c?.submission || 'Collision'} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-                                <div className="text-2xl font-bold text-white mb-1">{c.submission}</div>
+                                <div className="text-2xl font-bold text-white mb-1">{c?.submission || 'Untitled'}</div>
                                 <div className="flex justify-between items-center">
-                                    <div className="text-white/60 text-sm">{new Date(c.timestamp).toLocaleDateString()}</div>
-                                    <div className="text-yellow-400 font-bold">{c.score}/10</div>
+                                    <div className="text-white/60 text-sm">{c?.timestamp ? new Date(c.timestamp).toLocaleDateString() : 'Unknown date'}</div>
+                                    <div className="text-yellow-400 font-bold">{c?.score || 0}/10</div>
                                 </div>
                             </div>
                         </div>

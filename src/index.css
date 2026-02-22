@@ -24,10 +24,59 @@
   }
 
   .glass-panel {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-xl;
+    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
   }
 
   .text-gradient-vibrant {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-[oklch(0.7_0.2_320)] via-[oklch(0.8_0.2_200)] to-[oklch(0.7_0.2_150)];
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400;
+    /* Lightened colors for better contrast on dark backgrounds */
+  }
+
+  .text-glow {
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+  }
+
+  .btn-kinetic {
+    @apply transition-all duration-300 active:scale-95 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-white/50;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-float-delayed {
+    animation: float 6s ease-in-out infinite;
+    animation-delay: 3s;
+  }
+
+  .animate-bounce-slow {
+    animation: bounce-slow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes bounce-slow {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
   }
 }

@@ -7,12 +7,33 @@ import { Reveal } from './features/reveal/Reveal'
 import { Gallery } from './features/gallery/Gallery'
 import { FinalResults } from './features/results/FinalResults'
 import { OnboardingModal } from './components/OnboardingModal'
+import { ChallengeIntro } from './features/challenge/ChallengeIntro'
+import { getChallenge } from './services/challenge'
 import logo from './assets/logo.png'
 
 function GameContent() {
-    const { gameState } = useGame();
+    const { gameState, setGameState, startChallenge } = useGame();
     const [roundData, setRoundData] = useState(null);
     const [showOnboarding, setShowOnboarding] = useState(false);
+    const [pendingChallenge, setPendingChallenge] = useState(null);
+    const [loadingChallenge, setLoadingChallenge] = useState(false);
+
+    // Check for challenge URL parameter on mount
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const challengeId = params.get('challenge');
+
+        if (challengeId) {
+            setLoadingChallenge(true);
+            getChallenge(challengeId).then(challenge => {
+                if (challenge) {
+                    setPendingChallenge(challenge);
+                    setGameState('CHALLENGE_INTRO');
+                }
+                setLoadingChallenge(false);
+            });
+        }
+    }, []);
 
     useEffect(() => {
         const hasSeenOnboarding = localStorage.getItem('vwf_onboarded');
@@ -30,6 +51,24 @@ function GameContent() {
         setRoundData(data);
     };
 
+    const handleAcceptChallenge = () => {
+        if (pendingChallenge) {
+            startChallenge(pendingChallenge);
+        }
+    };
+
+    // Show loading while fetching challenge
+    if (loadingChallenge) {
+        return (
+            <Layout>
+                <div className="flex flex-col items-center justify-center h-[60vh]">
+                    <div className="w-16 h-16 border-4 border-t-purple-500 border-white/10 rounded-full animate-spin mb-4" />
+                    <p className="text-white/60">Loading challenge...</p>
+                </div>
+            </Layout>
+        );
+    }
+
     return (
         <Layout>
             {showOnboarding && <OnboardingModal onClose={handleCloseOnboarding} />}
@@ -46,6 +85,9 @@ function GameContent() {
 
             {gameState === 'LOBBY' && <Lobby />}
             {gameState === 'GALLERY' && <Gallery />}
+            {gameState === 'CHALLENGE_INTRO' && pendingChallenge && (
+                <ChallengeIntro challenge={pendingChallenge} onAccept={handleAcceptChallenge} />
+            )}
             {gameState === 'ROUND' && <Round onSubmit={handleRoundSubmit} />}
             {gameState === 'REVEAL' && roundData && (
                 <Reveal submission={roundData.submission} assets={roundData.assets} />

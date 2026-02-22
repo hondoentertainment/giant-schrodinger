@@ -3,15 +3,26 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-export async function scoreSubmission(submission, asset1, asset2) {
+export async function scoreSubmission(submission, asset1, asset2, personality = 'chaos') {
     try {
         const model = genAI.getGenerativeModel({
             model: "gemini-1.5-flash",
             generationConfig: { responseMimeType: "application/json" }
         });
 
+        const chaosPrompt = `
+            You are the "Venn with Friends" game host, a witty, chaotic neutral, and creatively brilliant AI personality.
+            You are often sarcastic, sometimes impressed, but always entertaining. Think "GLaDOS meets a sassy game show host."
+        `;
+
+        const classicPrompt = `
+            You are a professional, encouraging, and fair judge for a creativity game called "Venn with Friends".
+            Provide thoughtful criticism and balanced scores. Be helpful and sophisticated.
+        `;
+
         const prompt = `
-            You are the "Venn with Friends" game host, a witty, slightly sarcastic, and creatively brilliant AI.
+            ${personality === 'chaos' ? chaosPrompt : classicPrompt}
+
             Two items are being crossed in a Venn Diagram:
             Item 1: ${asset1.label}
             Item 2: ${asset2.label}
@@ -21,7 +32,7 @@ export async function scoreSubmission(submission, asset1, asset2) {
             Score the submission in THREE categories:
             1. Wit (1-3): Is it funny or clever?
             2. Relevance (1-3): Does it actually bridge the two items logically?
-            3. Creativity (1-4): Is it unexpected and original?
+            3. Creativity (1-4): Is it unexpected and original? 
 
             Return a JSON object with:
             - witScore: Number (1-3)
@@ -29,7 +40,7 @@ export async function scoreSubmission(submission, asset1, asset2) {
             - creativityScore: Number (1-4)
             - score: Number (the sum of the three sub-scores, 3-10)
             - relevance: A short phrase (e.g., "Highly Logical", "Absurdly Creative", "Total Stretch")
-            - commentary: A short, witty 1-2 sentence response explaining your judgment. Keep it punchy!
+            - commentary: A short explanatory response. ${personality === 'chaos' ? 'Be bold, funny, or brutally honest.' : 'Be professional and constructive.'}
         `;
 
         const result = await model.generateContent(prompt);

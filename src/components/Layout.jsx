@@ -1,8 +1,10 @@
 import React from 'react';
+import { ServiceStatus } from './ServiceStatus';
 
 export function Layout({ children }) {
     return (
         <div className="relative min-h-screen w-full flex flex-col items-center overflow-x-hidden">
+            <ServiceStatus />
             {/* Dynamic Background */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[oklch(0.6_0.2_300)] opacity-20 blur-[120px] animate-pulse" />

@@ -56,7 +56,7 @@ export function FinalResults() {
 
                     <button
                         onClick={resetGame}
-                        className="px-12 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)]"
+                        className="px-12 py-4 bg-white text-black font-bold text-xl rounded-full btn-kinetic shadow-[0_0_40px_rgba(255,255,255,0.4)]"
                     >
                         🎮 Play Again
                     </button>

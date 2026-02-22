@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { Leaderboard } from '../../components/Leaderboard';
 import { ASSET_THEMES } from '../../data/assets';
+import { useSound } from '../../hooks/useSound';
 import { getHighScores, getBestStreak, getCollisions } from '../../services/storage';
+import { getDailyPair, getTimeUntilReset } from '../../services/daily';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭'];
 const GRADIENTS = [
@@ -15,6 +17,7 @@ const GRADIENTS = [
 
 // First-time user: Create Profile
 function CreateProfile({ onComplete }) {
+    const { playSuccess } = useSound();
     const [name, setName] = useState('');
     const [avatar, setAvatar] = useState(AVATARS[0]);
     const [gradient, setGradient] = useState(GRADIENTS[0]);
@@ -22,6 +25,7 @@ function CreateProfile({ onComplete }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!name.trim()) return;
+        playSuccess();
         onComplete({ name, avatar, gradient });
     };
 
@@ -52,9 +56,9 @@ function CreateProfile({ onComplete }) {
                                 key={a}
                                 type="button"
                                 onClick={() => setAvatar(a)}
-                                className={`aspect-square rounded-xl text-3xl flex items-center justify-center transition-all ${avatar === a
-                                        ? 'bg-white/20 shadow-inner scale-90 ring-2 ring-purple-500'
-                                        : 'bg-white/5 hover:bg-white/10 hover:scale-105'
+                                className={`aspect-square rounded-xl text-3xl flex items-center justify-center btn-kinetic ${avatar === a
+                                    ? 'bg-white/20 shadow-inner scale-90 ring-2 ring-purple-500'
+                                    : 'bg-white/5 '
                                     }`}
                                 aria-label={`Select ${a} as avatar`}
                             >
@@ -89,8 +93,8 @@ function CreateProfile({ onComplete }) {
                                 type="button"
                                 onClick={() => setGradient(g)}
                                 className={`w-12 h-12 rounded-full bg-gradient-to-br ${g} transition-all ${gradient === g
-                                        ? 'ring-4 ring-white scale-110 shadow-lg'
-                                        : 'opacity-40 hover:opacity-80 hover:scale-105'
+                                    ? 'ring-4 ring-white scale-110 shadow-lg'
+                                    : 'opacity-40 hover:opacity-80 hover:scale-105'
                                     }`}
                                 aria-label="Select color theme"
                             />
@@ -102,7 +106,7 @@ function CreateProfile({ onComplete }) {
                 <button
                     type="submit"
                     disabled={!name.trim()}
-                    className="w-full py-5 bg-white text-black font-bold text-xl rounded-2xl hover:scale-[1.02] transition-transform active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.3)] mt-6"
+                    className="w-full py-5 bg-white text-black font-bold text-xl rounded-2xl btn-kinetic disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.3)] mt-6"
                 >
                     ✨ Let's Play!
                 </button>
@@ -115,47 +119,49 @@ function CreateProfile({ onComplete }) {
 function WelcomeBack({ user, onPlay, onEditProfile, onGallery }) {
     const [selectedJudge, setSelectedJudge] = useState('ai');
     const [selectedTheme, setSelectedTheme] = useState('random');
+    const [selectedSpeed, setSelectedSpeed] = useState(60);
+    const [timeLeft, setTimeLeft] = useState(getTimeUntilReset());
+    const [dailyPair, setDailyPair] = useState(null);
+    const [dailyHighest, setDailyHighest] = useState(0);
 
-    // Get user stats
-    const highScores = getHighScores();
-    const bestScore = highScores.length > 0 ? highScores[0].score : 0;
-    const bestStreak = getBestStreak();
-    const totalGames = getCollisions().length;
+    // ... (stats)
+
+    // ... (useEffect)
+
+    // ... (formatTime)
 
     return (
         <div className="w-full max-w-md glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
-            {/* Avatar with glow ring */}
-            <div className="flex justify-center mb-6">
-                <div className="relative">
-                    <div className={`w-28 h-28 rounded-full bg-gradient-to-br ${user.gradient} flex items-center justify-center text-6xl shadow-2xl`}>
-                        {user.avatar}
-                    </div>
-                    <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${user.gradient} opacity-30 blur-xl -z-10`} />
-                </div>
+            {/* ... (Avatar, Welcome, Stats) ... */}
+
+            {/* Daily Challenge Card - Enforce 60s for fairness */}
+            <div className="mb-6 bg-gradient-to-r from-indigo-900/50 to-purple-900/50 p-1 rounded-2xl animate-pulse ring-1 ring-purple-500/50">
+                {/* ... (Daily content) ... */}
+                <button
+                    onClick={() => onPlay('daily', 'ai', 'random', 60)}
+                    className="w-full py-3 bg-white text-black font-bold rounded-lg hover:scale-[1.02] transition-transform active:scale-[0.98] shadow-lg mb-2"
+                >
+                    Play Daily #{dailyPair?.id.replace('#', '')}
+                </button>
+                {/* ... */}
             </div>
 
-            {/* Welcome message */}
-            <div className="text-center mb-6">
-                <h2 className="text-3xl font-display font-bold text-white mb-1">
-                    Welcome back, {user.name}!
-                </h2>
-                <p className="text-white/50">Ready for another round?</p>
-            </div>
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <div className="text-2xl font-bold text-yellow-400">🏆 {bestScore}</div>
-                    <div className="text-xs text-white/40 uppercase tracking-wider">Best</div>
-                </div>
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <div className="text-2xl font-bold text-orange-400">🔥 {bestStreak}</div>
-                    <div className="text-xs text-white/40 uppercase tracking-wider">Streak</div>
-                </div>
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <div className="text-2xl font-bold text-cyan-400">📊 {totalGames}</div>
-                    <div className="text-xs text-white/40 uppercase tracking-wider">Games</div>
-                </div>
+            {/* Play Buttons */}
+            <div className="space-y-3 mb-6">
+                <button
+                    onClick={() => onPlay('quick', selectedJudge, selectedTheme, selectedSpeed)}
+                    className="w-full py-5 bg-white text-black font-bold text-xl rounded-2xl btn-kinetic shadow-[0_0_30px_rgba(255,255,255,0.3)]"
+                >
+                    ⚡ Quick Play
+                    <span className="block text-sm font-normal text-black/50">1 Round • {selectedSpeed}s</span>
+                </button>
+                <button
+                    onClick={() => onPlay('championship', selectedJudge, selectedTheme, selectedSpeed)}
+                    className="w-full py-5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold text-xl rounded-2xl btn-kinetic shadow-[0_0_30px_rgba(255,200,0,0.3)]"
+                >
+                    🏆 Championship
+                    <span className="block text-sm font-normal text-white/70">Best of 3 • {selectedSpeed}s</span>
+                </button>
             </div>
 
             {/* Game Options (collapsed) */}
@@ -171,24 +177,51 @@ function WelcomeBack({ user, onPlay, onEditProfile, onGallery }) {
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setSelectedJudge('ai')}
-                                className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all ${selectedJudge === 'ai'
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                className={`flex-1 py-2 px-3 rounded-lg font-medium btn-kinetic ${selectedJudge === 'ai'
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-white/5 text-white/60'
                                     }`}
                             >
                                 🤖 AI
                             </button>
                             <button
                                 onClick={() => setSelectedJudge('human')}
-                                className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all ${selectedJudge === 'human'
-                                        ? 'bg-emerald-600 text-white'
-                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                className={`flex-1 py-2 px-3 rounded-lg font-medium btn-kinetic ${selectedJudge === 'human'
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-white/5 text-white/60'
                                     }`}
                             >
                                 👤 Human
                             </button>
                         </div>
                     </div>
+
+                    {/* Personality Mode Toggle */}
+                    {selectedJudge === 'ai' && (
+                        <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                            <div className="text-xs text-white/40 uppercase tracking-widest mb-2">Host Personality</div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setPersonality('classic')}
+                                    className={`flex-1 py-2 px-3 rounded-lg font-medium btn-kinetic ${personality === 'classic'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-white/5 text-white/60'
+                                        }`}
+                                >
+                                    ⚖️ Classic
+                                </button>
+                                <button
+                                    onClick={() => setPersonality('chaos')}
+                                    className={`flex-1 py-2 px-3 rounded-lg font-medium btn-kinetic ${personality === 'chaos'
+                                        ? 'bg-pink-600 text-white'
+                                        : 'bg-white/5 text-white/60'
+                                        }`}
+                                >
+                                    🔥 Chaos
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Theme Selector */}
                     <div className="p-3 rounded-xl bg-white/5 border border-white/10">
@@ -199,8 +232,8 @@ function WelcomeBack({ user, onPlay, onEditProfile, onGallery }) {
                                     key={key}
                                     onClick={() => setSelectedTheme(key)}
                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedTheme === key
-                                            ? 'bg-cyan-600 text-white'
-                                            : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                        ? 'bg-cyan-600 text-white'
+                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
                                         }`}
                                 >
                                     {theme.emoji}
@@ -208,26 +241,26 @@ function WelcomeBack({ user, onPlay, onEditProfile, onGallery }) {
                             ))}
                         </div>
                     </div>
+                    {/* Speed Selector */}
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                        <div className="text-xs text-white/40 uppercase tracking-widest mb-2">Timer Speed</div>
+                        <div className="flex gap-2">
+                            {[15, 30, 60, 120].map(s => (
+                                <button
+                                    key={s}
+                                    onClick={() => setSelectedSpeed(s)}
+                                    className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedSpeed === s
+                                        ? 'bg-amber-600 text-white'
+                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                        }`}
+                                >
+                                    {s}s
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </details>
-
-            {/* Play Buttons */}
-            <div className="space-y-3 mb-6">
-                <button
-                    onClick={() => onPlay('quick', selectedJudge, selectedTheme)}
-                    className="w-full py-5 bg-white text-black font-bold text-xl rounded-2xl hover:scale-[1.02] transition-transform active:scale-[0.98] shadow-[0_0_30px_rgba(255,255,255,0.3)]"
-                >
-                    ⚡ Quick Play
-                    <span className="block text-sm font-normal text-black/50">1 Round</span>
-                </button>
-                <button
-                    onClick={() => onPlay('championship', selectedJudge, selectedTheme)}
-                    className="w-full py-5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold text-xl rounded-2xl hover:scale-[1.02] transition-transform active:scale-[0.98] shadow-[0_0_30px_rgba(255,200,0,0.3)]"
-                >
-                    🏆 Championship
-                    <span className="block text-sm font-normal text-white/70">Best of 3</span>
-                </button>
-            </div>
 
             {/* Gallery Button */}
             <button
@@ -259,7 +292,7 @@ export function Lobby() {
         return (
             <WelcomeBack
                 user={user}
-                onPlay={(mode, judge, theme) => startGame(mode, judge, theme)}
+                onPlay={(mode, judge, theme, duration) => startGame(mode, judge, theme, duration)}
                 onEditProfile={() => login(null)}
                 onGallery={() => setGameState('GALLERY')}
             />

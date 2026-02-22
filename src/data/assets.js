@@ -5,6 +5,34 @@ export const ASSET_THEMES = {
         emoji: '🎲',
         assets: [] // Will pull from all themes
     },
+    trending: {
+        name: 'Trending',
+        emoji: '🔥',
+        assets: [
+            // Pop Culture & Viral
+            { id: 'tr1', label: 'Neon City', url: 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=600&q=80' },
+            { id: 'tr2', label: 'Arcade', url: 'https://images.unsplash.com/photo-1511882150382-421056c89033?w=600&q=80' },
+            { id: 'tr3', label: 'Skateboard', url: 'https://images.unsplash.com/photo-1547447134-cd3f5c716030?w=600&q=80' },
+            { id: 'tr4', label: 'Sneakers', url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80' },
+            { id: 'tr5', label: 'Vinyl', url: 'https://images.unsplash.com/photo-1539375665275-f9de415ef9ac?w=600&q=80' },
+            { id: 'tr6', label: 'Polaroid', url: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&q=80' },
+            // Aesthetic & Vibes
+            { id: 'tr7', label: 'Sunset', url: 'https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=600&q=80' },
+            { id: 'tr8', label: 'Crystals', url: 'https://images.unsplash.com/photo-1518895312237-a9e23508077d?w=600&q=80' },
+            { id: 'tr9', label: 'Plants', url: 'https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=600&q=80' },
+            { id: 'tr10', label: 'Galaxy', url: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=600&q=80' },
+            // Meme-worthy
+            { id: 'tr11', label: 'Cat', url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&q=80' },
+            { id: 'tr12', label: 'Dog', url: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&q=80' },
+            { id: 'tr13', label: 'Avocado', url: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=600&q=80' },
+            { id: 'tr14', label: 'Boba Tea', url: 'https://images.unsplash.com/photo-1558857563-c0c3e5e30e7d?w=600&q=80' },
+            // Tech & Gaming
+            { id: 'tr15', label: 'Controller', url: 'https://images.unsplash.com/photo-1592840496694-26d035b52b48?w=600&q=80' },
+            { id: 'tr16', label: 'Keyboard', url: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&q=80' },
+            { id: 'tr17', label: 'Headphones', url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80' },
+            { id: 'tr18', label: 'Camera', url: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&q=80' }
+        ]
+    },
     nature: {
         name: 'Nature',
         emoji: '🌿',
