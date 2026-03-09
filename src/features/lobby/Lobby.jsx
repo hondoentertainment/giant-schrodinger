@@ -416,7 +416,7 @@ export function Lobby() {
                                     <p className="text-center text-white/40 text-xs mt-1">{sessionLength} rounds · beat your average</p>
                                 </div>
                             )}
-                            <div className="flex gap-4 w-full">
+                            <div className="flex gap-3 w-full">
                                 <button
                                     onClick={startGame}
                                     disabled={sessionId && roundComplete && roundNumber >= totalRounds}
@@ -435,11 +435,19 @@ export function Lobby() {
                                 </button>
                                 <button
                                     onClick={() => setGameState('GALLERY')}
-                                    className="px-5 py-4 bg-white/10 text-white font-bold text-xl rounded-xl hover:bg-white/20 transition-colors min-w-[52px] min-h-[52px] flex items-center justify-center"
+                                    className="px-4 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors min-w-[48px] min-h-[52px] flex items-center justify-center"
                                     aria-label="View connection gallery"
-                                    title="Connection Gallery"
+                                    title="Gallery"
                                 >
                                     🖼️
+                                </button>
+                                <button
+                                    onClick={() => setGameState('LEADERBOARD')}
+                                    className="px-4 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors min-w-[48px] min-h-[52px] flex items-center justify-center"
+                                    aria-label="View leaderboard"
+                                    title="Leaderboard"
+                                >
+                                    <Trophy className="w-5 h-5" />
                                 </button>
                             </div>
 

@@ -9,6 +9,7 @@ import { Lobby } from './features/lobby/Lobby'
 import { Round } from './features/round/Round'
 import { Reveal } from './features/reveal/Reveal'
 import { Gallery } from './features/gallery/Gallery'
+import { Leaderboard } from './features/leaderboard/Leaderboard'
 import { SessionSummary } from './features/summary/SessionSummary'
 import { JudgeRound } from './features/judge/JudgeRound'
 import { ChallengeRound } from './features/challenge/ChallengeRound'
@@ -20,8 +21,15 @@ import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
 import { initAudio } from './services/sounds'
 import { trackEvent } from './services/analytics'
 
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
+
 function GameContent() {
-    const { gameState } = useGame();
+    const { gameState, setGameState } = useGame();
     const { isMultiplayer, roomPhase } = useRoom();
     const [roundData, setRoundData] = useState(null);
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
@@ -106,6 +114,7 @@ function GameContent() {
 
             {gameState === 'LOBBY' && <Lobby />}
             {gameState === 'GALLERY' && <Gallery />}
+            {gameState === 'LEADERBOARD' && <Leaderboard onBack={() => setGameState('LOBBY')} />}
             {gameState === 'ROUND' && <Round onSubmit={handleRoundSubmit} />}
             {gameState === 'REVEAL' && roundData && (
                 <Reveal submission={roundData.submission} assets={roundData.assets} />

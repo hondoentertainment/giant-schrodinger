@@ -464,13 +464,32 @@ export function MultiplayerReveal() {
                             </button>
                         )}
                         {(isFinished || (isHost && !hasNextRound)) && (
-                            <button
-                                onClick={leaveCurrentRoom}
-                                className="px-8 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center gap-2"
-                            >
-                                <Home className="w-5 h-5" />
-                                Back to Lobby
-                            </button>
+                            <>
+                                {isHost && (
+                                    <button
+                                        onClick={() => {
+                                            // Rematch: restart the room with same settings
+                                            setRevealPhase(REVEAL_PHASES.COUNTDOWN);
+                                            setRevealedCount(0);
+                                            setVotes({});
+                                            setHasVoted(false);
+                                            setCountdownValue(3);
+                                            advanceToNextRound();
+                                        }}
+                                        className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_rgba(168,85,247,0.4)] flex items-center gap-2"
+                                    >
+                                        <ArrowRight className="w-5 h-5" />
+                                        Rematch!
+                                    </button>
+                                )}
+                                <button
+                                    onClick={leaveCurrentRoom}
+                                    className="px-8 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center gap-2"
+                                >
+                                    <Home className="w-5 h-5" />
+                                    Back to Lobby
+                                </button>
+                            </>
                         )}
                         {!isFinished && !isHost && (
                             <div className="text-white/40 text-sm">

@@ -1,10 +1,10 @@
 import { supabase, isBackendEnabled } from '../lib/supabase';
 
-// Generate a short room code (6 uppercase alphanumeric characters)
+// Generate a short room code (4 uppercase alphanumeric characters)
 function generateRoomCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed ambiguous chars (0/O, 1/I)
     let code = '';
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 4; i++) {
         code += chars[Math.floor(Math.random() * chars.length)];
     }
     return code;

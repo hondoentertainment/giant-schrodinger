@@ -3,12 +3,67 @@ import { useGame } from '../../context/GameContext';
 import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgement } from '../../services/judgements';
+import { upvote, downvote, getVotes, hasVoted, getVoteDirection } from '../../services/votes';
 const SORT_OPTIONS = [
     { id: 'newest', label: 'Newest', fn: (a, b) => new Date(b.timestamp) - new Date(a.timestamp) },
     { id: 'oldest', label: 'Oldest', fn: (a, b) => new Date(a.timestamp) - new Date(b.timestamp) },
     { id: 'score-high', label: 'Highest score', fn: (a, b) => (b.score ?? 0) - (a.score ?? 0) },
     { id: 'score-low', label: 'Lowest score', fn: (a, b) => (a.score ?? 0) - (b.score ?? 0) },
+    { id: 'most-voted', label: 'Most voted', fn: (a, b) => (getVotes(b.id).score) - (getVotes(a.id).score) },
 ];
+
+function VoteButtons({ collisionId }) {
+    const [votes, setVotesState] = useState(() => getVotes(collisionId));
+    const [voted, setVoted] = useState(() => hasVoted(collisionId));
+    const [direction, setDirection] = useState(() => getVoteDirection(collisionId));
+
+    const handleUpvote = (e) => {
+        e.stopPropagation();
+        if (voted) return;
+        upvote(collisionId);
+        setVotesState(getVotes(collisionId));
+        setVoted(true);
+        setDirection('up');
+    };
+    const handleDownvote = (e) => {
+        e.stopPropagation();
+        if (voted) return;
+        downvote(collisionId);
+        setVotesState(getVotes(collisionId));
+        setVoted(true);
+        setDirection('down');
+    };
+
+    return (
+        <div className="flex items-center gap-2 mt-1">
+            <button
+                onClick={handleUpvote}
+                disabled={voted}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
+                    direction === 'up' ? 'bg-emerald-500/30 text-emerald-300' : 'bg-white/10 text-white/50 hover:bg-emerald-500/20 hover:text-emerald-300'
+                } disabled:cursor-default`}
+                aria-label="Upvote"
+            >
+                ▲ {votes.up}
+            </button>
+            <button
+                onClick={handleDownvote}
+                disabled={voted}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
+                    direction === 'down' ? 'bg-red-500/30 text-red-300' : 'bg-white/10 text-white/50 hover:bg-red-500/20 hover:text-red-300'
+                } disabled:cursor-default`}
+                aria-label="Downvote"
+            >
+                ▼ {votes.down}
+            </button>
+            {votes.score !== 0 && (
+                <span className={`text-xs font-bold ${votes.score > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {votes.score > 0 ? '+' : ''}{votes.score}
+                </span>
+            )}
+        </div>
+    );
+}
 
 function LazyImage({ collision, displayJudgement }) {
     const [imageStatus, setImageStatus] = useState('loading');
@@ -79,6 +134,8 @@ function LazyImage({ collision, displayJudgement }) {
                         <div className="text-white/60 text-sm">{new Date(collision.timestamp).toLocaleDateString()}</div>
                         <div className="text-yellow-400 font-bold">{collision.score}/10</div>
                     </div>
+                    {/* Voting */}
+                    <VoteButtons collisionId={collision.id} />
                     {fj && (
                         <div className="text-white/70 text-sm border-t border-white/20 pt-2 mt-2">
                             Judged by {fj.judgeName || fj.judge_name || 'a friend'}: {fj.score}/10
