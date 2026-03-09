@@ -10,6 +10,10 @@ import { Round } from './features/round/Round'
 import { Reveal } from './features/reveal/Reveal'
 import { Gallery } from './features/gallery/Gallery'
 import { Leaderboard } from './features/leaderboard/Leaderboard'
+import { Achievements } from './features/achievements/Achievements'
+import { ThemeBuilder } from './features/creator/ThemeBuilder'
+import { Shop } from './features/shop/Shop'
+import { AISettings } from './features/ai/AISettings'
 import { SessionSummary } from './features/summary/SessionSummary'
 import { JudgeRound } from './features/judge/JudgeRound'
 import { ChallengeRound } from './features/challenge/ChallengeRound'
@@ -18,6 +22,7 @@ import { MultiplayerRound } from './features/room/MultiplayerRound'
 import { MultiplayerReveal } from './features/room/MultiplayerReveal'
 import { parseJudgeShareUrl } from './services/share'
 import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
+import { parseThemeFromUrl, clearThemeFromUrl } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
 import { trackEvent } from './services/analytics'
 
@@ -39,6 +44,12 @@ function GameContent() {
         const onHashChange = () => {
             setJudgePayload(parseJudgeShareUrl());
             setChallengePayload(parseChallengeUrl());
+            // Handle shared theme links
+            const themeCode = parseThemeFromUrl();
+            if (themeCode) {
+                clearThemeFromUrl();
+                setGameState('THEME_BUILDER');
+            }
         };
         window.addEventListener('hashchange', onHashChange);
         return () => window.removeEventListener('hashchange', onHashChange);
@@ -115,6 +126,10 @@ function GameContent() {
             {gameState === 'LOBBY' && <Lobby />}
             {gameState === 'GALLERY' && <Gallery />}
             {gameState === 'LEADERBOARD' && <Leaderboard onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'ACHIEVEMENTS' && <Achievements onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'THEME_BUILDER' && <ThemeBuilder onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'SHOP' && <Shop onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'AI_SETTINGS' && <AISettings onBack={() => setGameState('LOBBY')} />}
             {gameState === 'ROUND' && <Round onSubmit={handleRoundSubmit} />}
             {gameState === 'REVEAL' && roundData && (
                 <Reveal submission={roundData.submission} assets={roundData.assets} />
