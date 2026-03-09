@@ -11,21 +11,40 @@ import { Reveal } from './features/reveal/Reveal'
 import { Gallery } from './features/gallery/Gallery'
 import { SessionSummary } from './features/summary/SessionSummary'
 import { JudgeRound } from './features/judge/JudgeRound'
+import { ChallengeRound } from './features/challenge/ChallengeRound'
 import { RoomLobby } from './features/room/RoomLobby'
 import { MultiplayerRound } from './features/room/MultiplayerRound'
 import { MultiplayerReveal } from './features/room/MultiplayerReveal'
 import { parseJudgeShareUrl } from './services/share'
+import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
+import { initAudio } from './services/sounds'
+import { trackEvent } from './services/analytics'
 
 function GameContent() {
     const { gameState } = useGame();
     const { isMultiplayer, roomPhase } = useRoom();
     const [roundData, setRoundData] = useState(null);
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
+    const [challengePayload, setChallengePayload] = useState(() => parseChallengeUrl());
 
     useEffect(() => {
-        const onHashChange = () => setJudgePayload(parseJudgeShareUrl());
+        const onHashChange = () => {
+            setJudgePayload(parseJudgeShareUrl());
+            setChallengePayload(parseChallengeUrl());
+        };
         window.addEventListener('hashchange', onHashChange);
         return () => window.removeEventListener('hashchange', onHashChange);
+    }, []);
+
+    // Initialize audio on first user interaction
+    useEffect(() => {
+        const handler = () => {
+            initAudio();
+            trackEvent('game_start');
+            document.removeEventListener('click', handler);
+        };
+        document.addEventListener('click', handler);
+        return () => document.removeEventListener('click', handler);
     }, []);
 
     const handleRoundSubmit = (data) => {
@@ -36,13 +55,32 @@ function GameContent() {
         setJudgePayload(null);
     };
 
+    const handleChallengeDone = () => {
+        clearChallengeFromUrl();
+        setChallengePayload(null);
+    };
+
+    const headerEl = (
+        <div className="mb-8 text-center">
+            <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tight"><span className="text-gradient-vibrant">VENN</span> <span className="text-xl font-light tracking-widest text-white/60 uppercase">with Friends</span></h1>
+        </div>
+    );
+
+    // Challenge mode (external link)
+    if (challengePayload) {
+        return (
+            <Layout>
+                {headerEl}
+                <ChallengeRound payload={challengePayload} onDone={handleChallengeDone} />
+            </Layout>
+        );
+    }
+
     // Judge mode (external link)
     if (judgePayload) {
         return (
             <Layout>
-                <div className="mb-8 text-center">
-                    <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tight"><span className="text-gradient-vibrant">VENN</span> <span className="text-xl font-light tracking-widest text-white/60 uppercase">with Friends</span></h1>
-                </div>
+                {headerEl}
                 <JudgeRound payload={judgePayload} onDone={handleJudgeDone} />
             </Layout>
         );
@@ -52,9 +90,7 @@ function GameContent() {
     if (isMultiplayer) {
         return (
             <Layout>
-                <div className="mb-8 text-center">
-                    <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tight"><span className="text-gradient-vibrant">VENN</span> <span className="text-xl font-light tracking-widest text-white/60 uppercase">with Friends</span></h1>
-                </div>
+                {headerEl}
                 {roomPhase === 'lobby' && <RoomLobby />}
                 {roomPhase === 'playing' && <MultiplayerRound />}
                 {roomPhase === 'revealing' && <MultiplayerReveal />}
@@ -66,9 +102,7 @@ function GameContent() {
     // Solo mode
     return (
         <Layout>
-            <div className="mb-8 text-center">
-                <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tight"><span className="text-gradient-vibrant">VENN</span> <span className="text-xl font-light tracking-widest text-white/60 uppercase">with Friends</span></h1>
-            </div>
+            {headerEl}
 
             {gameState === 'LOBBY' && <Lobby />}
             {gameState === 'GALLERY' && <Gallery />}

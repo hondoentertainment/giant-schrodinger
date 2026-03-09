@@ -2,6 +2,9 @@ import React, { useMemo } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { getScoreBand } from '../../lib/scoreBands';
+import { getStats } from '../../services/stats';
+import { getPlayerRank } from '../../services/leaderboard';
+import { trackEvent } from '../../services/analytics';
 import { Trophy, Star, Zap, ArrowRight, Home } from 'lucide-react';
 import SocialShareButtons from '../../components/SocialShareButtons';
 
@@ -44,7 +47,7 @@ function RoundCard({ result, index }) {
 }
 
 export function SessionSummary() {
-    const { sessionResults, sessionScore, totalRounds, endSession, isDailyChallenge, setGameState } = useGame();
+    const { sessionResults, sessionScore, totalRounds, endSession, isDailyChallenge, setGameState, user } = useGame();
     const { toast } = useToast();
 
     const stats = useMemo(() => {
@@ -58,6 +61,12 @@ export function SessionSummary() {
     }, [sessionResults]);
 
     const overallBand = getScoreBand(Math.round(stats?.avg || 0));
+    const playerStats = getStats();
+    const playerRank = user?.name ? getPlayerRank(user.name) : null;
+
+    useMemo(() => {
+        if (stats) trackEvent('session_complete', { avgScore: stats.avg, totalRounds, isDailyChallenge });
+    }, [stats]);
 
     const handlePlayAgain = () => {
         endSession();
@@ -114,6 +123,24 @@ export function SessionSummary() {
                             <div className="text-white/40 text-xs uppercase tracking-wider">Rounds</div>
                         </div>
                     </div>
+
+                    {/* Rank & streak info */}
+                    {(playerRank || playerStats.currentStreak > 0) && (
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                            {playerRank && playerRank.total > 0 && (
+                                <div className="p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 text-center">
+                                    <div className="text-lg font-bold text-purple-300">Top {Math.max(1, Math.round(100 - playerRank.percentile))}%</div>
+                                    <div className="text-white/40 text-xs">Today&apos;s rank</div>
+                                </div>
+                            )}
+                            {playerStats.currentStreak > 0 && (
+                                <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-center">
+                                    <div className="text-lg font-bold text-amber-400">🔥 {playerStats.currentStreak} day streak</div>
+                                    <div className="text-white/40 text-xs">Keep it going!</div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Performance verdict */}
                     <div className="mb-8 p-4 rounded-2xl bg-white/5 border border-white/10 text-center">

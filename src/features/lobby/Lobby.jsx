@@ -4,8 +4,14 @@ import { useRoom } from '../../context/RoomContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked } from '../../services/stats';
 import { getDailyChallenge, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
+import { getTimeUntilNextChallenge, formatCountdown } from '../../services/countdown';
+import { getPlayerRank, getDailyLeaderboard } from '../../services/leaderboard';
+import { getStreakBonus } from '../../services/challenges';
+import { parseReferralFromUrl, trackReferral, hasReferralBonus, claimReferralBonus, generateReferralCode } from '../../services/referrals';
+import { trackEvent } from '../../services/analytics';
+import { toggleMute, isMuted } from '../../services/sounds';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock } from 'lucide-react';
+import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { UnlockModal } from '../../components/UnlockModal';
@@ -61,19 +67,42 @@ export function Lobby() {
     const [joinCode, setJoinCode] = useState('');
     const [mpLoading, setMpLoading] = useState(false);
     const [mpLoadingAction, setMpLoadingAction] = useState(null); // 'create' | 'join'
+    const [soundMuted, setSoundMuted] = useState(isMuted());
+    const [countdown, setCountdown] = useState(() => formatCountdown(getTimeUntilNextChallenge()));
 
     const theme = getThemeById(themeId);
     const stats = getStats();
     const milestones = getMilestones();
     const backendReady = isBackendEnabled();
+    const streakBonus = getStreakBonus(stats);
+
+    // Update countdown every minute
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCountdown(formatCountdown(getTimeUntilNextChallenge()));
+        }, 60000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Handle referral on mount
+    useEffect(() => {
+        const refCode = parseReferralFromUrl();
+        if (refCode) {
+            trackReferral(refCode);
+            trackEvent('referral_click', { code: refCode });
+        }
+    }, []);
 
     const handleInvite = () => {
-        const url = window.location.origin + window.location.pathname;
+        const refCode = user?.name ? generateReferralCode(user.name) : '';
+        const base = window.location.origin + window.location.pathname;
+        const url = refCode ? `${base}?ref=${refCode}` : base;
         const msg = `Play Venn with Friends with me! ${url}`;
         if (navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(msg);
             haptic('light');
             setInviteCopied(true);
+            trackEvent('share_click', { type: 'invite' });
             setTimeout(() => setInviteCopied(false), 2500);
         }
     };
@@ -169,36 +198,74 @@ export function Lobby() {
                 {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
             <div className="w-full max-w-md space-y-8 glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
                 <div className="text-center">
-                    {/* Avatar with prominent Edit Profile */}
-                    <div className="relative inline-block mb-4 group">
-                        <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${getThemeById(user?.themeId).gradient} flex items-center justify-center text-5xl shadow-lg ring-4 ring-white/5 transition-transform group-hover:ring-white/10`}>
-                            {user.avatar}
-                        </div>
+                    {/* Top bar: Edit Profile + Sound toggle */}
+                    <div className="flex justify-between items-center mb-4">
                         <button
                             onClick={() => login(null)}
-                            className="absolute -bottom-1 -right-1 p-2.5 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm border border-white/20 transition-all hover:scale-110 active:scale-95 shadow-lg min-w-[44px] min-h-[44px] flex items-center justify-center"
+                            className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
                             aria-label="Edit profile"
                             title="Edit profile"
                         >
                             <Pencil className="w-4 h-4" />
                         </button>
+                        <button
+                            onClick={() => { const m = toggleMute(); setSoundMuted(m); }}
+                            className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+                            aria-label={soundMuted ? 'Unmute sounds' : 'Mute sounds'}
+                            title={soundMuted ? 'Unmute' : 'Mute'}
+                        >
+                            {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                        </button>
                     </div>
-                    <h2 className="text-3xl font-display font-bold text-white mb-2">
+
+                    {/* Avatar */}
+                    <div className="relative inline-block mb-3">
+                        <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${getThemeById(user?.themeId).gradient} flex items-center justify-center text-4xl shadow-lg ring-4 ring-white/5`}>
+                            {user.avatar}
+                        </div>
+                    </div>
+                    <h2 className="text-3xl font-display font-bold text-white mb-1">
                         Hi, {user.name}!
                     </h2>
-                    <p className="text-white/60 mb-4">Ready to make some connections?</p>
-                    <p className="text-white/40 text-sm mb-4">
-                        Complete {sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.
-                    </p>
+
+                    {/* Streak Hero Display */}
+                    {stats.currentStreak > 0 ? (
+                        <div className="my-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-500/25">
+                            <div className="text-5xl font-black text-amber-400 mb-1">
+                                🔥 {stats.currentStreak}
+                            </div>
+                            <div className="text-amber-300/80 text-sm font-semibold">Day Streak</div>
+                            {streakBonus > 1 && (
+                                <div className="text-amber-400/60 text-xs mt-1">
+                                    +{Math.round((streakBonus - 1) * 100)}% streak bonus active
+                                </div>
+                            )}
+                            {stats.currentStreak < 7 && (
+                                <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all"
+                                        style={{ width: `${(stats.currentStreak / 7) * 100}%` }}
+                                    />
+                                </div>
+                            )}
+                            {stats.currentStreak < 7 && (
+                                <div className="text-white/30 text-xs mt-1">{7 - stats.currentStreak} days to Mystery Box unlock</div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="my-4 p-3 rounded-xl bg-white/5 border border-white/10">
+                            <div className="text-white/50 text-sm">Play today to start a streak!</div>
+                            <div className="text-white/30 text-xs mt-1">Streaks unlock bonuses and rewards</div>
+                        </div>
+                    )}
+
                     <div className="mb-4 flex flex-wrap gap-3 justify-center text-sm text-white/60">
                         <span>Media: <span className="text-white font-semibold">
                             {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? 'Images' :
                              (user?.mediaType) === MEDIA_TYPES.VIDEO ? 'Videos' : 'Audio'}
                         </span></span>
-                        {stats.currentStreak > 0 && (
-                            <span className="text-amber-400 font-semibold">🔥 {stats.currentStreak} day streak</span>
-                        )}
                         <span>{stats.totalRounds} rounds played</span>
+                        {stats.maxStreak > 0 && <span>Best streak: <span className="text-amber-400 font-semibold">{stats.maxStreak}d</span></span>}
                     </div>
                     {/* Scoring mode toggle */}
                     <div className="mb-4">
@@ -310,9 +377,14 @@ export function Lobby() {
                         </button>
                     )}
                     {!showMultiplayer && dailyPlayed && (
-                        <div className="w-full mb-4 p-3 rounded-xl border border-white/10 bg-white/5 text-center text-white/40 text-sm">
-                            <CalendarDays className="w-4 h-4 inline mr-2" />
-                            Daily challenge completed! Come back tomorrow.
+                        <div className="w-full mb-4 p-4 rounded-2xl border border-white/10 bg-white/5 text-center">
+                            <div className="text-white/40 text-sm mb-1">
+                                <CalendarDays className="w-4 h-4 inline mr-2" />
+                                Daily challenge completed!
+                            </div>
+                            <div className="text-white/60 text-lg font-bold">
+                                Next challenge in {countdown}
+                            </div>
                         </div>
                     )}
 

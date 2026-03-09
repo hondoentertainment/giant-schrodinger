@@ -5,10 +5,15 @@ import { scoreSubmission, generateFusionImage } from '../../services/gemini';
 import { saveCollision } from '../../services/storage';
 import { recordPlay } from '../../services/stats';
 import { createJudgeShareUrl } from '../../services/share';
+import { createChallenge, createChallengeUrl } from '../../services/challenges';
+import { submitScore, getPlayerRank } from '../../services/leaderboard';
+import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
+import { trackEvent } from '../../services/analytics';
 import { saveSharedRound } from '../../services/backend';
 import { getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
+import Confetti from '../../components/Confetti';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { haptic } from '../../lib/haptics';
 
@@ -23,15 +28,58 @@ export function Reveal({ submission, assets }) {
     const [humanCommentary, setHumanCommentary] = useState('');
     const [savedCollision, setSavedCollision] = useState(null);
     const [shareCopied, setShareCopied] = useState(false);
+    const [challengeCopied, setChallengeCopied] = useState(false);
     const [newlyUnlocked, setNewlyUnlocked] = useState([]);
     const [processError, setProcessError] = useState(null);
     const [retryTrigger, setRetryTrigger] = useState(0);
+    const [showConfetti, setShowConfetti] = useState(false);
+    const [playerRank, setPlayerRank] = useState(null);
+    const [animatedScore, setAnimatedScore] = useState(0);
     const savedRef = useRef(false);
+    const soundPlayedRef = useRef(false);
     const scoringMode = user?.scoringMode || 'human';
     const theme = getThemeById(user?.themeId);
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
     const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const mod = currentModifier;
+
+    // Animate score counting up
+    useEffect(() => {
+        if (!result) return;
+        const finalScore = result.finalScore || result.score;
+        if (!finalScore) return;
+        let current = 0;
+        const step = finalScore / 20;
+        const interval = setInterval(() => {
+            current += step;
+            if (current >= finalScore) {
+                setAnimatedScore(finalScore);
+                clearInterval(interval);
+            } else {
+                setAnimatedScore(Math.round(current * 10) / 10);
+            }
+        }, 50);
+        return () => clearInterval(interval);
+    }, [result]);
+
+    // Play sound and confetti on result
+    useEffect(() => {
+        if (!result || soundPlayedRef.current) return;
+        const score = result.finalScore || result.score;
+        soundPlayedRef.current = true;
+        playScoreReveal(score);
+        if (score >= 9) {
+            setShowConfetti(true);
+            playConfettiSound();
+        }
+        // Submit to leaderboard
+        if (user?.name) {
+            submitScore(user.name, score, user.avatar, roundNumber);
+            const rank = getPlayerRank(user.name);
+            if (rank) setPlayerRank(rank);
+        }
+        trackEvent('round_complete', { score, scoringMode, roundNumber });
+    }, [result]);
 
     useEffect(() => {
         let mounted = true;
@@ -42,7 +90,6 @@ export function Reveal({ submission, assets }) {
 
             try {
                 if (scoringMode === 'ai') {
-                    // 1. Score
                     setStatus("Gemini is judging your wit...");
                     const scoreResult = await scoreSubmission(submission, assets.left, assets.right, mediaType);
                     if (!mounted) return;
@@ -57,7 +104,6 @@ export function Reveal({ submission, assets }) {
                     };
                     setResult(resultPayload);
 
-                    // 2. Generate Image
                     setStatus("Dreaming up the fusion...");
                     const image = await generateFusionImage(theme, submission);
                     if (!mounted) return;
@@ -67,7 +113,6 @@ export function Reveal({ submission, assets }) {
                     setFusionImage(image);
                     setStatus("Complete");
 
-                    // 3. Save
                     if (!savedRef.current) {
                         const collision = saveCollision({
                             submission,
@@ -90,7 +135,6 @@ export function Reveal({ submission, assets }) {
                     }
                     completeRound({ score: finalScore, baseScore: scoreResult.score, breakdown: scoreResult.breakdown });
                 } else {
-                    // Human scoring path
                     setStatus("Dreaming up the fusion...");
                     const image = await generateFusionImage(theme, submission);
                     if (!mounted) return;
@@ -130,7 +174,7 @@ export function Reveal({ submission, assets }) {
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [result, savedCollision]); // handleShareForJudging is stable enough for this use
+    }, [result, savedCollision]);
 
     const handleShareForJudging = async () => {
         if (!savedCollision || !assets?.left || !assets?.right) return;
@@ -153,8 +197,31 @@ export function Reveal({ submission, assets }) {
             await navigator.clipboard.writeText(url);
             haptic('success');
             setShareCopied(true);
+            trackEvent('share_click', { type: 'judge' });
             toast.success('Link copied — send to a friend and they\'ll score your connection!');
             setTimeout(() => setShareCopied(false), 2500);
+        } else {
+            toast.error('Could not copy link — try again');
+        }
+    };
+
+    const handleChallengeShare = async () => {
+        if (!savedCollision || !assets?.left || !assets?.right) return;
+        const challenge = createChallenge({
+            assets: { left: assets.left, right: assets.right },
+            submission,
+            score: result.finalScore || result.score,
+            playerName: user?.name || 'Anonymous',
+            themeId: theme?.id,
+        });
+        const url = createChallengeUrl(challenge);
+        if (url && navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(url);
+            haptic('success');
+            setChallengeCopied(true);
+            trackEvent('challenge_sent', { score: result.finalScore || result.score });
+            toast.success(`Challenge link copied! Your friend will try to beat your ${result.finalScore || result.score}/10.`);
+            setTimeout(() => setChallengeCopied(false), 2500);
         } else {
             toast.error('Could not copy link — try again');
         }
@@ -308,9 +375,11 @@ export function Reveal({ submission, assets }) {
     }
 
     const scoreBand = result && getScoreBand(result.finalScore || result.score);
+    const finalScoreDisplay = result.finalScore || result.score;
 
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
+            <Confetti active={showConfetti} duration={4000} particleCount={60} />
             {newlyUnlocked.length > 0 && (
                 <MilestoneCelebration
                     newlyUnlocked={newlyUnlocked}
@@ -344,10 +413,10 @@ export function Reveal({ submission, assets }) {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <div className={`text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br ${scoreBand?.color || 'from-yellow-300 to-amber-600'}`}>
-                                {result.finalScore || result.score}/10
+                            <div className={`text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br ${scoreBand?.color || 'from-yellow-300 to-amber-600'} transition-all`}>
+                                {Math.round(animatedScore)}/10
                             </div>
                             <div className="text-white/40 text-xs uppercase tracking-widest mt-1">
                                 {scoreBand?.label || 'Final Score'}
@@ -359,6 +428,19 @@ export function Reveal({ submission, assets }) {
                             </div>
                         </div>
                     </div>
+
+                    {/* Percentile rank */}
+                    {playerRank && playerRank.total > 0 && (
+                        <div className="mb-6 p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 animate-in fade-in duration-500">
+                            <div className="text-sm font-bold text-purple-300">
+                                Top {Math.max(1, Math.round(100 - playerRank.percentile))}% today!
+                            </div>
+                            <div className="text-white/40 text-xs">
+                                Rank #{playerRank.rank} of {playerRank.total} players
+                            </div>
+                        </div>
+                    )}
+
                     {result.breakdown && (
                         <>
                             <p className="text-white/50 text-xs mb-2">Your connection was scored on:</p>
@@ -372,7 +454,7 @@ export function Reveal({ submission, assets }) {
                     )}
                     {scoreMultiplier !== 1 && (
                         <div className="mb-6 text-sm text-white/50">
-                            Base {(result.baseScore ?? result.score)?.toFixed(1)} × {scoreMultiplier.toFixed(2)} = <span className="text-white">{result.finalScore || result.score}/10</span>
+                            Base {(result.baseScore ?? result.score)?.toFixed(1)} × {scoreMultiplier.toFixed(2)} = <span className="text-white">{finalScoreDisplay}/10</span>
                         </div>
                     )}
 
@@ -389,7 +471,7 @@ export function Reveal({ submission, assets }) {
                             <SocialShareButtons
                                 shareData={{
                                     submission,
-                                    score: result.finalScore || result.score,
+                                    score: finalScoreDisplay,
                                     scoreBand: scoreBand?.label,
                                     commentary: result.commentary,
                                     assets,
@@ -400,19 +482,34 @@ export function Reveal({ submission, assets }) {
                         </div>
                     )}
 
+                    {/* Challenge a friend */}
+                    {savedCollision && (
+                        <button
+                            onClick={handleChallengeShare}
+                            className="w-full mb-4 p-4 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 transition-all text-center group"
+                        >
+                            <div className="text-lg font-bold text-amber-300 group-hover:scale-105 transition-transform">
+                                {challengeCopied ? 'Challenge link copied!' : `Challenge a friend to beat your ${finalScoreDisplay}/10!`}
+                            </div>
+                            <div className="text-white/40 text-xs mt-1">
+                                They&apos;ll play the same concepts and try to outscore you
+                            </div>
+                        </button>
+                    )}
+
                     {/* Round modifier result */}
                     {mod && mod.id === 'doubleOrNothing' && (
                         <div className={`mb-6 p-4 rounded-2xl border text-center animate-in zoom-in-95 duration-500 ${
-                            (result.finalScore || result.score) >= (mod.scoreThreshold || 7)
+                            finalScoreDisplay >= (mod.scoreThreshold || 7)
                                 ? 'bg-emerald-500/10 border-emerald-500/30'
                                 : 'bg-red-500/10 border-red-500/30'
                         }`}>
                             <div className="text-2xl mb-1">
-                                {(result.finalScore || result.score) >= (mod.scoreThreshold || 7) ? '🎲 DOUBLED!' : '🎲 BUST!'}
+                                {finalScoreDisplay >= (mod.scoreThreshold || 7) ? '🎲 DOUBLED!' : '🎲 BUST!'}
                             </div>
                             <div className="text-white/60 text-sm">
-                                {(result.finalScore || result.score) >= (mod.scoreThreshold || 7)
-                                    ? `Scored ${result.finalScore || result.score}+ — your points are doubled!`
+                                {finalScoreDisplay >= (mod.scoreThreshold || 7)
+                                    ? `Scored ${finalScoreDisplay}+ — your points are doubled!`
                                     : `Needed ${mod.scoreThreshold || 7}+ to keep your points.`}
                             </div>
                         </div>
