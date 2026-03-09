@@ -17,6 +17,7 @@ export function JudgeRound({ payload, onDone }) {
     const [error, setError] = useState(null);
     const [errorType, setErrorType] = useState(null); // 'not_found' | 'network' | 'invalid'
     const [judgeName, setJudgeName] = useState('');
+    const [showDetailedForm, setShowDetailedForm] = useState(false);
     const formRef = useRef(null);
     const effectivePayload = resolvedPayload || payload;
     const hasValidPayload = effectivePayload?.assets?.left && effectivePayload?.assets?.right && effectivePayload?.submission;
@@ -142,8 +143,6 @@ export function JudgeRound({ payload, onDone }) {
             </div>
         );
     }
-
-    const [showDetailedForm, setShowDetailedForm] = useState(false);
 
     return (
         <div ref={formRef} className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-700">

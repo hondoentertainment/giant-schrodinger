@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useGame } from '../../context/GameContext';
-import { getDailyLeaderboard, getWeeklyLeaderboard, getPlayerRank } from '../../services/leaderboard';
+import { getDailyLeaderboard, getWeeklyLeaderboard, getPlayerRank, getPlayerBest } from '../../services/leaderboard';
 import { getStats } from '../../services/stats';
 import { Trophy, Crown, Star, ArrowLeft, Calendar, TrendingUp } from 'lucide-react';
 import { getScoreBand } from '../../lib/scoreBands';
@@ -59,23 +59,26 @@ export function Leaderboard({ onBack }) {
     const { user } = useGame();
     const [activeTab, setActiveTab] = useState('daily');
 
+    // Use a refresh key to force re-read when tab changes
+    const [refreshKey, setRefreshKey] = useState(0);
+    const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
     const entries = useMemo(() => {
         return activeTab === 'daily' ? getDailyLeaderboard() : getWeeklyLeaderboard();
-    }, [activeTab]);
+    }, [activeTab, refreshKey]);
 
     const playerRank = useMemo(() => {
         if (!user?.name) return null;
         return getPlayerRank(user.name);
-    }, [user?.name]);
+    }, [user?.name, refreshKey]);
 
-    const stats = useMemo(() => getStats(), []);
+    const stats = useMemo(() => getStats(), [refreshKey]);
 
     const bestScore = useMemo(() => {
-        if (!entries.length || !user?.name) return null;
-        const playerEntries = entries.filter((e) => e.playerName === user.name);
-        if (!playerEntries.length) return null;
-        return Math.max(...playerEntries.map((e) => e.score));
-    }, [entries, user?.name]);
+        if (!user?.name) return null;
+        const { bestScore: best } = getPlayerBest(user.name);
+        return best;
+    }, [user?.name, refreshKey]);
 
     return (
         <div className="w-full max-w-xl flex flex-col items-center animate-in zoom-in-95 duration-700">

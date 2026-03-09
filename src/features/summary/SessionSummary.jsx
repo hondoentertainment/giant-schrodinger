@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { getScoreBand } from '../../lib/scoreBands';
@@ -64,7 +64,7 @@ export function SessionSummary() {
     const playerStats = getStats();
     const playerRank = user?.name ? getPlayerRank(user.name) : null;
 
-    useMemo(() => {
+    useEffect(() => {
         if (stats) trackEvent('session_complete', { avgScore: stats.avg, totalRounds, isDailyChallenge });
     }, [stats]);
 

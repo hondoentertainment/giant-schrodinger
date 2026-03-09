@@ -3,26 +3,32 @@ import { useGame } from '../../context/GameContext';
 import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgement } from '../../services/judgements';
-import { upvote, downvote, getVotes, hasVoted, getVoteDirection } from '../../services/votes';
-const SORT_OPTIONS = [
-    { id: 'newest', label: 'Newest', fn: (a, b) => new Date(b.timestamp) - new Date(a.timestamp) },
-    { id: 'oldest', label: 'Oldest', fn: (a, b) => new Date(a.timestamp) - new Date(b.timestamp) },
-    { id: 'score-high', label: 'Highest score', fn: (a, b) => (b.score ?? 0) - (a.score ?? 0) },
-    { id: 'score-low', label: 'Lowest score', fn: (a, b) => (a.score ?? 0) - (b.score ?? 0) },
-    { id: 'most-voted', label: 'Most voted', fn: (a, b) => (getVotes(b.id).score) - (getVotes(a.id).score) },
-];
+import { upvote, downvote, getVotes, getAllVotes, hasVoted, getVoteDirection } from '../../services/votes';
+
+function buildSortOptions(votesMap) {
+    return [
+        { id: 'newest', label: 'Newest', fn: (a, b) => new Date(b.timestamp) - new Date(a.timestamp) },
+        { id: 'oldest', label: 'Oldest', fn: (a, b) => new Date(a.timestamp) - new Date(b.timestamp) },
+        { id: 'score-high', label: 'Highest score', fn: (a, b) => (b.score ?? 0) - (a.score ?? 0) },
+        { id: 'score-low', label: 'Lowest score', fn: (a, b) => (a.score ?? 0) - (b.score ?? 0) },
+        { id: 'most-voted', label: 'Most voted', fn: (a, b) => {
+            const va = votesMap[a.id] || { up: 0, down: 0 };
+            const vb = votesMap[b.id] || { up: 0, down: 0 };
+            return (vb.up - vb.down) - (va.up - va.down);
+        }},
+    ];
+}
 
 function VoteButtons({ collisionId }) {
     const [votes, setVotesState] = useState(() => getVotes(collisionId));
-    const [voted, setVoted] = useState(() => hasVoted(collisionId));
     const [direction, setDirection] = useState(() => getVoteDirection(collisionId));
+    const voted = direction !== null;
 
     const handleUpvote = (e) => {
         e.stopPropagation();
         if (voted) return;
         upvote(collisionId);
         setVotesState(getVotes(collisionId));
-        setVoted(true);
         setDirection('up');
     };
     const handleDownvote = (e) => {
@@ -30,7 +36,6 @@ function VoteButtons({ collisionId }) {
         if (voted) return;
         downvote(collisionId);
         setVotesState(getVotes(collisionId));
-        setVoted(true);
         setDirection('down');
     };
 
@@ -172,7 +177,9 @@ export function Gallery() {
     const getDisplayJudgement = (collision) =>
         friendJudgements[collision.id] || getJudgement(collision.id);
 
-    const sortOpt = SORT_OPTIONS.find((o) => o.id === sortBy) ?? SORT_OPTIONS[0];
+    const votesMap = getAllVotes();
+    const sortOptions = buildSortOptions(votesMap);
+    const sortOpt = sortOptions.find((o) => o.id === sortBy) ?? sortOptions[0];
     const sorted = [...collisions].sort(sortOpt.fn);
 
     return (
@@ -191,7 +198,7 @@ export function Gallery() {
                             className="bg-black/30 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                             aria-label="Sort gallery"
                         >
-                            {SORT_OPTIONS.map((opt) => (
+                            {sortOptions.map((opt) => (
                                 <option key={opt.id} value={opt.id}>
                                     {opt.label}
                                 </option>

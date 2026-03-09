@@ -71,10 +71,10 @@ export function Lobby() {
     const [countdown, setCountdown] = useState(() => formatCountdown(getTimeUntilNextChallenge()));
 
     const theme = getThemeById(themeId);
-    const stats = getStats();
-    const milestones = getMilestones();
+    const stats = useMemo(() => getStats(), [sessionId, roundNumber]);
+    const milestones = useMemo(() => getMilestones(), [sessionId, roundNumber]);
     const backendReady = isBackendEnabled();
-    const streakBonus = getStreakBonus(stats);
+    const streakBonus = useMemo(() => getStreakBonus(stats), [stats]);
 
     // Update countdown every minute
     useEffect(() => {

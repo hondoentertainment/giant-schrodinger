@@ -64,6 +64,11 @@ function writeEntries(entries) {
 export function submitScore(playerName, score, avatar, roundCount) {
   try {
     const entries = readEntries();
+
+    // Periodic cleanup: prune entries older than 30 days
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const fresh = entries.filter((e) => e.timestamp >= thirtyDaysAgo);
+
     const entry = {
       playerName,
       score,
@@ -73,8 +78,8 @@ export function submitScore(playerName, score, avatar, roundCount) {
       dateKey: getTodayKey(),
       weekKey: getWeekKey(),
     };
-    entries.push(entry);
-    writeEntries(entries);
+    fresh.push(entry);
+    writeEntries(fresh);
     return entry;
   } catch (e) {
     console.error('Failed to submit score:', e);
@@ -87,37 +92,25 @@ export function submitScore(playerName, score, avatar, roundCount) {
  *
  * @returns {Array} Sorted array of today's top entries.
  */
-export function getDailyLeaderboard() {
+function getLeaderboard(keyField, keyValue) {
   try {
-    const todayKey = getTodayKey();
     const entries = readEntries();
     return entries
-      .filter((entry) => entry.dateKey === todayKey)
+      .filter((entry) => entry[keyField] === keyValue)
       .sort((a, b) => b.score - a.score)
       .slice(0, 50);
   } catch (e) {
-    console.error('Failed to get daily leaderboard:', e);
+    console.error('Failed to get leaderboard:', e);
     return [];
   }
 }
 
-/**
- * Returns this week's leaderboard entries sorted by score descending (top 50).
- *
- * @returns {Array} Sorted array of this week's top entries.
- */
+export function getDailyLeaderboard() {
+  return getLeaderboard('dateKey', getTodayKey());
+}
+
 export function getWeeklyLeaderboard() {
-  try {
-    const weekKey = getWeekKey();
-    const entries = readEntries();
-    return entries
-      .filter((entry) => entry.weekKey === weekKey)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 50);
-  } catch (e) {
-    console.error('Failed to get weekly leaderboard:', e);
-    return [];
-  }
+  return getLeaderboard('weekKey', getWeekKey());
 }
 
 /**
