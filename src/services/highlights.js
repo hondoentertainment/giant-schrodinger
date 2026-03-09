@@ -1,3 +1,5 @@
+import { loadJSON, saveJSON } from '../lib/storage';
+
 const STORAGE_KEY = 'vwf_highlights';
 const MAX_HIGHLIGHTS = 20;
 const MIN_SCORE = 8;
@@ -5,16 +7,11 @@ const MAX_AGE_DAYS = 90;
 const WEEKLY_TOP = 3;
 
 function loadHighlights() {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
+  return loadJSON(STORAGE_KEY, []);
 }
 
 function saveHighlights(highlights) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(highlights));
+  saveJSON(STORAGE_KEY, highlights);
 }
 
 export function isHighlightWorthy(score) {

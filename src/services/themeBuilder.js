@@ -1,3 +1,5 @@
+import { loadJSON, saveJSON, generateId as _genId } from '../lib/storage';
+
 const STORAGE_KEY = 'vwf_custom_themes';
 const STATS_KEY = 'vwf_theme_stats';
 
@@ -11,36 +13,26 @@ function generateCode() {
 }
 
 function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+  return _genId('theme_');
 }
 
 function loadThemes() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return loadJSON(STORAGE_KEY, []);
 }
 
 function saveThemes(themes) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(themes));
+  saveJSON(STORAGE_KEY, themes);
 }
 
 function loadStats() {
-  try {
-    const raw = localStorage.getItem(STATS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+  return loadJSON(STATS_KEY, {});
 }
 
 function saveStats(stats) {
-  localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  saveJSON(STATS_KEY, stats);
 }
 
-function calculateMultiplier(timerSeconds) {
+export function calculateMultiplier(timerSeconds) {
   return Math.max(1.0, Math.min(1.3, 1 + (60 - timerSeconds) / 100));
 }
 

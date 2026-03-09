@@ -1,83 +1,38 @@
+import { loadJSON, saveJSON, generateId } from '../lib/storage';
+import { getWeekKey } from './leaderboard';
+
 const CHAINS_KEY = 'vwf_chains';
 const GROUPS_KEY = 'vwf_weekly_groups';
 const MAILBOX_KEY = 'vwf_mailbox';
 
 const MAILBOX_EXPIRY_DAYS = 7;
 
-function generateId() {
-    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
-}
-
-function getWeekKey() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const jan1 = new Date(year, 0, 1);
-    const week = Math.ceil(((now - jan1) / 86400000 + jan1.getDay() + 1) / 7);
-    return `${year}-W${String(week).padStart(2, '0')}`;
-}
-
 // ============================================================
 // Internal storage helpers
 // ============================================================
 
 function loadChains() {
-    try {
-        const stored = localStorage.getItem(CHAINS_KEY);
-        return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-        console.warn('Failed to load chains:', error);
-        return [];
-    }
+    return loadJSON(CHAINS_KEY, []);
 }
 
 function saveChains(chains) {
-    try {
-        localStorage.setItem(CHAINS_KEY, JSON.stringify(chains));
-        return true;
-    } catch (error) {
-        console.warn('Failed to save chains:', error);
-        return false;
-    }
+    saveJSON(CHAINS_KEY, chains);
 }
 
 function loadGroups() {
-    try {
-        const stored = localStorage.getItem(GROUPS_KEY);
-        return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-        console.warn('Failed to load groups:', error);
-        return [];
-    }
+    return loadJSON(GROUPS_KEY, []);
 }
 
 function saveGroups(groups) {
-    try {
-        localStorage.setItem(GROUPS_KEY, JSON.stringify(groups));
-        return true;
-    } catch (error) {
-        console.warn('Failed to save groups:', error);
-        return false;
-    }
+    saveJSON(GROUPS_KEY, groups);
 }
 
 function loadMailbox() {
-    try {
-        const stored = localStorage.getItem(MAILBOX_KEY);
-        return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-        console.warn('Failed to load mailbox:', error);
-        return [];
-    }
+    return loadJSON(MAILBOX_KEY, []);
 }
 
 function saveMailbox(mailbox) {
-    try {
-        localStorage.setItem(MAILBOX_KEY, JSON.stringify(mailbox));
-        return true;
-    } catch (error) {
-        console.warn('Failed to save mailbox:', error);
-        return false;
-    }
+    saveJSON(MAILBOX_KEY, mailbox);
 }
 
 // ============================================================

@@ -1,4 +1,5 @@
 // Cosmetic shop service with virtual currency (Venn Coins)
+import { loadJSON, saveJSON } from '../lib/storage';
 
 const STORAGE_KEYS = {
   coins: 'vwf_coins',
@@ -100,24 +101,6 @@ function generateBattlePassTiers() {
 }
 
 // --- Internal helpers ---
-
-function loadJSON(key, fallback) {
-  try {
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : fallback;
-  } catch (error) {
-    console.warn(`Failed to load ${key}:`, error);
-    return fallback;
-  }
-}
-
-function saveJSON(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.warn(`Failed to save ${key}:`, error);
-  }
-}
 
 function loadCoinsData() {
   return loadJSON(STORAGE_KEYS.coins, { balance: 0, transactions: [] });

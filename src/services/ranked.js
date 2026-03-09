@@ -1,3 +1,5 @@
+import { loadJSON, saveJSON } from '../lib/storage';
+
 const STORAGE_KEY = 'vwf_ranked';
 const PLACEMENT_TOTAL = 5;
 const STARTING_RATING = 1000;
@@ -37,17 +39,11 @@ const SEASON_REWARDS = [
 ];
 
 function loadData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
+  return loadJSON(STORAGE_KEY, null);
 }
 
 function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  saveJSON(STORAGE_KEY, data);
 }
 
 function getDefaultData() {

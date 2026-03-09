@@ -1,3 +1,5 @@
+import { loadJSON, saveJSON } from '../lib/storage';
+
 const STORAGE_KEY = 'vwf_achievements';
 
 const ACHIEVEMENT_DEFINITIONS = [
@@ -49,23 +51,11 @@ const ACHIEVEMENT_DEFINITIONS = [
 ];
 
 function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      return JSON.parse(raw);
-    }
-  } catch (e) {
-    // ignore corrupt data
-  }
-  return { unlocked: {}, sessionPerfectCount: 0, highScoreStreak: 0 };
+  return loadJSON(STORAGE_KEY, { unlocked: {}, sessionPerfectCount: 0, highScoreStreak: 0 });
 }
 
 function saveState(state) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    // storage full or unavailable
-  }
+  saveJSON(STORAGE_KEY, state);
 }
 
 function buildAchievement(def, unlockedAt) {

@@ -1,4 +1,6 @@
 // Party game mode service for 4-8 player sessions
+import { loadJSON, saveJSON } from '../lib/storage';
+
 const STORAGE_KEY = 'vwf_party_games';
 
 // Available party modes
@@ -44,24 +46,12 @@ function generateGameCode() {
   return code;
 }
 
-// Retrieve all party games from local storage
 function loadGames() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch (error) {
-    console.warn('Failed to load party games:', error);
-    return {};
-  }
+  return loadJSON(STORAGE_KEY, {});
 }
 
-// Persist all party games to local storage
 function saveGames(games) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
-  } catch (error) {
-    console.warn('Failed to save party games:', error);
-  }
+  saveJSON(STORAGE_KEY, games);
 }
 
 // Save a single game back into the store

@@ -1,3 +1,5 @@
+import { loadJSON, saveJSON, generateId } from '../lib/storage';
+
 const STORAGE_KEY = 'vwf_prompt_packs';
 const STATS_KEY = 'vwf_pack_stats';
 
@@ -65,29 +67,19 @@ const BUILT_IN_PACKS = [
 ];
 
 function loadCustomPacks() {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
+  return loadJSON(STORAGE_KEY, []);
 }
 
 function saveCustomPacks(packs) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(packs));
+  saveJSON(STORAGE_KEY, packs);
 }
 
 function loadPackStats() {
-  try {
-    const data = localStorage.getItem(STATS_KEY);
-    return data ? JSON.parse(data) : {};
-  } catch {
-    return {};
-  }
+  return loadJSON(STATS_KEY, {});
 }
 
 function savePackStats(stats) {
-  localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  saveJSON(STATS_KEY, stats);
 }
 
 export function getBuiltInPacks() {
@@ -108,7 +100,7 @@ export function createCustomPack({ name, description, pairings, creatorName }) {
   }
 
   const pack = {
-    id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    id: generateId('custom_'),
     name: name.trim(),
     description: (description || '').trim(),
     pairings: pairings.map((p) => ({ left: p.left.trim(), right: p.right.trim() })),

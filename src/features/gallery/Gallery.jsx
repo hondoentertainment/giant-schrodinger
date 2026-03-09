@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useGame } from '../../context/GameContext';
 import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
@@ -177,10 +177,12 @@ export function Gallery() {
     const getDisplayJudgement = (collision) =>
         friendJudgements[collision.id] || getJudgement(collision.id);
 
-    const votesMap = getAllVotes();
-    const sortOptions = buildSortOptions(votesMap);
-    const sortOpt = sortOptions.find((o) => o.id === sortBy) ?? sortOptions[0];
-    const sorted = [...collisions].sort(sortOpt.fn);
+    const votesMap = useMemo(() => getAllVotes(), [collisions]);
+    const sortOptions = useMemo(() => buildSortOptions(votesMap), [votesMap]);
+    const sorted = useMemo(() => {
+        const sortOpt = sortOptions.find((o) => o.id === sortBy) ?? sortOptions[0];
+        return [...collisions].sort(sortOpt.fn);
+    }, [collisions, sortBy, sortOptions]);
 
     return (
         <div className="w-full max-w-6xl animate-in fade-in duration-700">

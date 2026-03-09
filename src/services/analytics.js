@@ -94,34 +94,49 @@ export function getEventCount(eventName) {
 
 /**
  * Compute high-level session metrics from stored events.
+ * Single-pass bucketing for efficiency.
  */
 export function getSessionMetrics() {
   try {
     flushBuffer();
     const all = readEvents();
 
-    const sessions = all.filter((e) => e.event === 'session_complete');
-    const totalSessions = sessions.length;
+    const scores = [];
+    let shareClicks = 0;
+    let challengesSent = 0;
+    let dailyChallengesCompleted = 0;
+    const gameStartDays = new Set();
 
-    const scores = sessions
-      .map((e) => e.properties && e.properties.totalScore)
-      .filter((s) => typeof s === 'number');
+    for (const e of all) {
+      switch (e.event) {
+        case 'session_complete':
+          if (typeof e.properties?.totalScore === 'number') {
+            scores.push(e.properties.totalScore);
+          }
+          break;
+        case 'share_click':
+          shareClicks++;
+          break;
+        case 'challenge_sent':
+          challengesSent++;
+          break;
+        case 'daily_complete':
+          dailyChallengesCompleted++;
+          break;
+        case 'game_start':
+          gameStartDays.add(new Date(e.timestamp).toISOString().slice(0, 10));
+          break;
+      }
+    }
+
+    const totalSessions = scores.length;
     const avgScore =
       scores.length > 0
         ? scores.reduce((sum, s) => sum + s, 0) / scores.length
         : 0;
-
-    const shareClicks = all.filter((e) => e.event === 'share_click').length;
     const shareRate = totalSessions > 0 ? shareClicks / totalSessions : 0;
 
-    const challengesSent = all.filter((e) => e.event === 'challenge_sent').length;
-    const dailyChallengesCompleted = all.filter((e) => e.event === 'daily_complete').length;
-
-    const gameStarts = all.filter((e) => e.event === 'game_start');
-    const daySet = new Set(
-      gameStarts.map((e) => new Date(e.timestamp).toISOString().slice(0, 10))
-    );
-    const sortedDays = [...daySet].sort();
+    const sortedDays = [...gameStartDays].sort();
 
     let d1Retention = 0;
     let d7Retention = 0;
@@ -131,11 +146,11 @@ export function getSessionMetrics() {
       const dayAfterFirst = new Date(first + 24 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10);
-      d1Retention = daySet.has(dayAfterFirst) ? 1 : 0;
+      d1Retention = gameStartDays.has(dayAfterFirst) ? 1 : 0;
       const weekAfterFirst = new Date(first + 7 * 24 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10);
-      d7Retention = daySet.has(weekAfterFirst) ? 1 : 0;
+      d7Retention = gameStartDays.has(weekAfterFirst) ? 1 : 0;
     }
 
     return {
@@ -173,3 +188,6 @@ export function clearOldEvents() {
     // ignore
   }
 }
+
+// Auto-prune old events on module load
+try { clearOldEvents(); } catch { /* ignore */ }

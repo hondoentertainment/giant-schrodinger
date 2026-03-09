@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { getAchievements, getAchievementPoints, getAchievementsByCategory, getUnlockedAchievements, getAchievementProgress } from '../../services/achievements';
+import { getAchievements, getAchievementPoints, getUnlockedAchievements, getAchievementProgress } from '../../services/achievements';
 import { ArrowLeft, Trophy, Lock, Star, Zap, Users, Compass, Flame, Award } from 'lucide-react';
 
 const CATEGORIES = [
@@ -105,7 +105,7 @@ export function Achievements({ onBack }) {
 
     const filteredAchievements = useMemo(() => {
         if (activeCategory === 'ALL') return allAchievements;
-        return getAchievementsByCategory(activeCategory);
+        return allAchievements.filter(a => a.category === activeCategory);
     }, [activeCategory, allAchievements]);
 
     // Achievement of the Day: most recently unlocked

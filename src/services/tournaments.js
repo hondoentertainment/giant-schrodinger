@@ -1,38 +1,18 @@
 // Tournament system service supporting bracket and Swiss formats
+import { loadJSON, saveJSON, generateId as _genId, shuffle } from '../lib/storage';
+
 const STORAGE_KEY = 'vwf_tournaments';
 
-/**
- * Retrieves all tournaments from local storage
- * @returns {Array} Array of tournament objects
- */
 function loadTournaments() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.warn('Failed to load tournaments:', error);
-    return [];
-  }
+  return loadJSON(STORAGE_KEY, []);
 }
 
-/**
- * Persists tournaments array to local storage
- * @param {Array} tournaments
- */
 function saveTournaments(tournaments) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tournaments));
-  } catch (error) {
-    console.warn('Failed to save tournaments:', error);
-  }
+  saveJSON(STORAGE_KEY, tournaments);
 }
 
-/**
- * Generates a unique tournament ID
- * @returns {string}
- */
 function generateId() {
-  return 'tourney_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  return _genId('tourney_');
 }
 
 /**
@@ -44,20 +24,6 @@ function nextPowerOf2(n) {
   let p = 1;
   while (p < n) p *= 2;
   return p;
-}
-
-/**
- * Shuffles an array in place using Fisher-Yates
- * @param {Array} arr
- * @returns {Array}
- */
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
 
 /**

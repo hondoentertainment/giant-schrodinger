@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
-import { createCustomTheme, getCustomThemes, deleteCustomTheme, shareThemeUrl, getFeaturedThemes } from '../../services/themeBuilder';
+import { createCustomTheme, getCustomThemes, deleteCustomTheme, shareThemeUrl, getFeaturedThemes, calculateMultiplier } from '../../services/themeBuilder';
 import { ArrowLeft, Plus, Copy, Trash2, Palette, Clock, Star } from 'lucide-react';
 
 const COLOR_PALETTES = [
@@ -12,13 +12,6 @@ const COLOR_PALETTES = [
     'from-rose-400 to-purple-500',
     'from-indigo-400 to-violet-500',
 ];
-
-function calculateMultiplier(timer) {
-    // Shorter timers are harder, so they get a higher multiplier
-    const base = 1.0;
-    const bonus = ((90 - timer) / 60) * 0.5;
-    return (base + bonus).toFixed(2);
-}
 
 export function ThemeBuilder({ onBack }) {
     const { user } = useGame();
@@ -37,7 +30,7 @@ export function ThemeBuilder({ onBack }) {
     const customThemes = useMemo(() => getCustomThemes(), [refreshKey]);
     const featuredThemes = useMemo(() => getFeaturedThemes(), [refreshKey]);
 
-    const multiplier = useMemo(() => calculateMultiplier(timer), [timer]);
+    const multiplier = useMemo(() => calculateMultiplier(timer).toFixed(2), [timer]);
 
     const handleCreate = async () => {
         if (!name.trim()) {

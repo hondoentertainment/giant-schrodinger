@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useToast } from '../../context/ToastContext';
-import { getBalance, getShopItems, purchaseItem, isItemOwned, equipItem, getEquippedItems, getBattlePass, claimBattlePassReward, getBattlePassProgress } from '../../services/shop';
+import { getBalance, getShopItems, purchaseItem, getOwnedItems, equipItem, getEquippedItems, getBattlePass, claimBattlePassReward, getBattlePassProgress } from '../../services/shop';
 import { ArrowLeft, Coins, ShoppingBag, Sparkles, Crown, Star, Check, Lock } from 'lucide-react';
 
 const CATEGORIES = ['ALL', 'AVATARS', 'VENN SKINS', 'EFFECTS', 'BADGES'];
@@ -18,6 +18,7 @@ export function Shop({ onBack }) {
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [balance, setBalance] = useState(() => getBalance());
   const [shopItems, setShopItems] = useState(() => getShopItems());
+  const [ownedItemIds, setOwnedItemIds] = useState(() => new Set(getOwnedItems().map(e => e.itemId)));
   const [equippedItems, setEquippedItems] = useState(() => getEquippedItems());
   const [battlePass, setBattlePass] = useState(() => getBattlePass());
   const [battlePassProgress, setBattlePassProgress] = useState(() => getBattlePassProgress());
@@ -41,6 +42,7 @@ export function Shop({ onBack }) {
         await purchaseItem(item.id);
         setBalance(getBalance());
         setShopItems(getShopItems());
+        setOwnedItemIds(new Set(getOwnedItems().map(e => e.itemId)));
         toast?.addToast?.(`Purchased ${item.name}!`, 'success');
       } catch (err) {
         toast?.addToast?.(err.message || 'Purchase failed', 'error');
@@ -138,7 +140,7 @@ export function Shop({ onBack }) {
         {/* Items Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
           {filteredItems.map((item) => {
-            const owned = isItemOwned(item.id);
+            const owned = ownedItemIds.has(item.id);
             const equipped = isEquipped(item.id);
             const canAfford = balance >= item.price;
             const purchasing = purchasingId === item.id;
