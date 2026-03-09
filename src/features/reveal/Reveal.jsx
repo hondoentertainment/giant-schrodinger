@@ -46,6 +46,19 @@ export function Reveal({ submission, assets }) {
     const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const mod = currentModifier;
 
+    // Shared post-save logic for both AI and human scoring paths
+    const finalizeCollision = (collisionData, finalScore) => {
+        const collision = saveCollision(collisionData);
+        setSavedCollision(collision);
+        autoSaveHighlight(collision);
+        addCoins(finalScore, 'round_complete');
+        const { newlyUnlocked: unlocked } = recordPlay();
+        if (unlocked?.length) setNewlyUnlocked(unlocked);
+        try { checkAchievements({ score: finalScore }); } catch {}
+        savedRef.current = true;
+        return collision;
+    };
+
     // Animate score counting up
     useEffect(() => {
         if (!result) return;
@@ -117,7 +130,7 @@ export function Reveal({ submission, assets }) {
                     setStatus("Complete");
 
                     if (!savedRef.current) {
-                        const collision = saveCollision({
+                        finalizeCollision({
                             submission,
                             imageUrl: image.url,
                             fallbackImageUrl: image.fallbackUrl,
@@ -130,14 +143,7 @@ export function Reveal({ submission, assets }) {
                             roundNumber,
                             totalRounds,
                             scoreMultiplier,
-                        });
-                        setSavedCollision(collision);
-                        autoSaveHighlight(collision);
-                        addCoins(finalScore, 'round_complete');
-                        const { newlyUnlocked: unlocked } = recordPlay();
-                        if (unlocked?.length) setNewlyUnlocked(unlocked);
-                        try { checkAchievements({ score: finalScore }); } catch {}
-                        savedRef.current = true;
+                        }, finalScore);
                     }
                     completeRound({ score: finalScore, baseScore: scoreResult.score, breakdown: scoreResult.breakdown });
                 } else {
@@ -249,7 +255,7 @@ export function Reveal({ submission, assets }) {
         setStatus("Complete");
 
         if (fusionImage?.url && !savedRef.current) {
-            const collision = saveCollision({
+            finalizeCollision({
                 submission,
                 imageUrl: fusionImage.url,
                 fallbackImageUrl: fusionImage.fallbackUrl,
@@ -261,14 +267,7 @@ export function Reveal({ submission, assets }) {
                 roundNumber,
                 totalRounds,
                 scoreMultiplier,
-            });
-            setSavedCollision(collision);
-            autoSaveHighlight(collision);
-            addCoins(finalScore, 'round_complete');
-            const { newlyUnlocked: unlocked } = recordPlay();
-            if (unlocked?.length) setNewlyUnlocked(unlocked);
-            try { checkAchievements({ score: finalScore }); } catch {}
-            savedRef.current = true;
+            }, finalScore);
         }
         completeRound({ score: finalScore, baseScore: scoreValue });
     };

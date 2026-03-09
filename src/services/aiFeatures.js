@@ -136,7 +136,7 @@ export function getSmartPromptDifficulty(playerStats) {
     return 'hard';
   }
 
-  return 'medium';
+  return 'normal';
 }
 
 /**

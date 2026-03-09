@@ -82,7 +82,7 @@ export function Shop({ onBack }) {
   );
 
   const isEquipped = useCallback(
-    (itemId) => equippedItems.some?.((e) => e.id === itemId) ?? false,
+    (itemId) => Object.values(equippedItems).includes(itemId),
     [equippedItems]
   );
 

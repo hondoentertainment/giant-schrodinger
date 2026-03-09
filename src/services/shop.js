@@ -178,11 +178,17 @@ export function getTransactionHistory() {
 }
 
 /**
- * Returns all purchasable shop items grouped by category
- * @returns {Object} Shop items keyed by category
+ * Returns all purchasable shop items as a flat array
+ * @returns {Array<{id: string, name: string, price: number, category: string}>}
  */
 export function getShopItems() {
-  return SHOP_ITEMS;
+  const items = [];
+  for (const category of Object.values(SHOP_ITEMS)) {
+    for (const [id, item] of Object.entries(category)) {
+      items.push({ ...item, id });
+    }
+  }
+  return items;
 }
 
 /**

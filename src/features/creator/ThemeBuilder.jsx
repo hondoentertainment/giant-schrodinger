@@ -78,8 +78,8 @@ export function ThemeBuilder({ onBack }) {
         setRefreshKey((k) => k + 1);
     };
 
-    const handleCopyLink = (themeId) => {
-        const url = shareThemeUrl(themeId);
+    const handleCopyLink = (shareCode) => {
+        const url = shareThemeUrl(shareCode);
         navigator.clipboard.writeText(url).then(() => {
             addToast('Share link copied!', 'success');
         }).catch(() => {
@@ -229,7 +229,7 @@ export function ThemeBuilder({ onBack }) {
 
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => handleCopyLink(theme.id)}
+                                            onClick={() => handleCopyLink(theme.shareCode || theme.code)}
                                             className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm"
                                         >
                                             <Copy className="w-4 h-4" />

@@ -3,7 +3,7 @@ import { useGame } from '../../context/GameContext';
 import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgement } from '../../services/judgements';
-import { upvote, downvote, getVotes, getAllVotes, hasVoted, getVoteDirection } from '../../services/votes';
+import { upvote, downvote, getVotes, getAllVotes, getVoteDirection } from '../../services/votes';
 
 function buildSortOptions(votesMap) {
     return [
