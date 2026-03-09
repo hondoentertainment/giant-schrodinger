@@ -191,7 +191,6 @@ export function Lobby() {
                         Complete {sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.
                     </p>
                     <div className="mb-4 flex flex-wrap gap-3 justify-center text-sm text-white/60">
-                        <span>Scoring: <span className="text-white font-semibold">{scoringMode === 'human' ? 'Manual Judge' : 'AI Judge'}</span></span>
                         <span>Media: <span className="text-white font-semibold">
                             {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? 'Images' :
                              (user?.mediaType) === MEDIA_TYPES.VIDEO ? 'Videos' : 'Audio'}
@@ -200,6 +199,48 @@ export function Lobby() {
                             <span className="text-amber-400 font-semibold">🔥 {stats.currentStreak} day streak</span>
                         )}
                         <span>{stats.totalRounds} rounds played</span>
+                    </div>
+                    {/* Scoring mode toggle */}
+                    <div className="mb-4">
+                        <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">Scoring</label>
+                        <div className="flex gap-2 justify-center">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setScoringMode('human');
+                                    login({ ...user, scoringMode: 'human' });
+                                }}
+                                aria-pressed={scoringMode === 'human'}
+                                aria-label="Manual judge — you or a friend score each round"
+                                className={`min-h-[44px] py-2.5 px-5 rounded-xl text-sm font-semibold transition-all ${scoringMode === 'human'
+                                    ? 'bg-white text-black shadow-lg ring-2 ring-white/50'
+                                    : 'bg-white/10 text-white hover:bg-white/20'
+                                }`}
+                            >
+                                Manual Judge
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setScoringMode('ai');
+                                    login({ ...user, scoringMode: 'ai' });
+                                }}
+                                aria-pressed={scoringMode === 'ai'}
+                                aria-label="AI judge — Gemini scores your connections automatically"
+                                className={`min-h-[44px] py-2.5 px-5 rounded-xl text-sm font-semibold transition-all ${scoringMode === 'ai'
+                                    ? 'bg-white text-black shadow-lg ring-2 ring-white/50'
+                                    : 'bg-white/10 text-white hover:bg-white/20'
+                                }`}
+                            >
+                                AI Judge
+                            </button>
+                        </div>
+                        <p className="text-center text-white/40 text-xs mt-1">
+                            {scoringMode === 'human'
+                                ? 'You or a friend score each round manually.'
+                                : 'Gemini AI scores your connections automatically.'
+                            }
+                        </p>
                     </div>
                     {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE && (
                         <div className="mb-4">
