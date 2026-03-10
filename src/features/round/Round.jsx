@@ -143,8 +143,21 @@ export function Round({ onSubmit }) {
 
             {/* Header row - round info + timer */}
             <div className="w-full flex justify-between items-center mb-2">
-                <div className="text-lg sm:text-xl font-bold text-white/40 tracking-wide">
-                    {isDailyChallenge ? 'DAILY' : 'ROUND'} {roundNumber} / {totalRounds}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => {
+                            if (window.confirm('Quit this round? You\'ll return to the lobby.')) {
+                                setGameState('LOBBY');
+                            }
+                        }}
+                        className="text-white/30 hover:text-white/60 transition-colors text-xs"
+                        aria-label="Quit round"
+                    >
+                        ← Quit
+                    </button>
+                    <div className="text-lg sm:text-xl font-bold text-white/40 tracking-wide">
+                        {isDailyChallenge ? 'DAILY' : 'ROUND'} {roundNumber} / {totalRounds}
+                    </div>
                 </div>
                 {showTimeUp ? (
                     <div className="text-2xl sm:text-3xl font-black font-display text-amber-400 animate-in zoom-in-95 duration-300" role="status" aria-live="polite">
