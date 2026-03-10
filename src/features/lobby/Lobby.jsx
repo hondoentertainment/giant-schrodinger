@@ -561,7 +561,13 @@ export function Lobby() {
                     <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-4 justify-center">
                         {sessionId && (
                             <button
-                                onClick={endSession}
+                                onClick={() => {
+                                    if (roundComplete && roundNumber === totalRounds) {
+                                        endSession();
+                                    } else if (window.confirm('End current session? Your progress will be lost.')) {
+                                        endSession();
+                                    }
+                                }}
                                 className="text-sm text-white/40 hover:text-white underline min-h-[44px] flex items-center"
                                 aria-label="Start new session"
                             >

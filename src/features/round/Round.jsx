@@ -12,6 +12,7 @@ export function Round({ onSubmit }) {
     const [submission, setSubmission] = useState('');
     const [timer, setTimer] = useState(60);
     const [showTimeUp, setShowTimeUp] = useState(false);
+    const [shakeInput, setShakeInput] = useState(false);
     const submittedRef = useRef(false);
     const stats = getStats();
     const rawTheme = getThemeById(user?.themeId);
@@ -64,14 +65,23 @@ export function Round({ onSubmit }) {
         setTimer(timeLimit);
     }, [user?.themeId, user?.useCustomImages, timeLimit, mediaType, roundNumber]);
 
-    const handleSubmit = useCallback((e) => {
+    const handleSubmit = useCallback((e, { forceEmpty = false } = {}) => {
         if (e) e.preventDefault();
         if (submittedRef.current) return;
+
+        // Block empty submissions unless auto-submitted by timer
+        if (!forceEmpty && !submission.trim()) {
+            haptic('warning');
+            setShakeInput(true);
+            setTimeout(() => setShakeInput(false), 600);
+            return;
+        }
+
         submittedRef.current = true;
         haptic('success');
 
         if (onSubmit) {
-            onSubmit({ submission, assets, modifier: mod });
+            onSubmit({ submission: submission.trim() || '(no answer)', assets, modifier: mod });
             setGameState('REVEAL');
         }
     }, [submission, assets, mod, onSubmit, setGameState]);
@@ -88,7 +98,9 @@ export function Round({ onSubmit }) {
     useEffect(() => {
         if (!showTimeUp || submittedRef.current) return;
         const t = setTimeout(() => {
-            handleSubmit();
+            if (!submittedRef.current) {
+                handleSubmit(null, { forceEmpty: true });
+            }
             setShowTimeUp(false);
         }, 900);
         return () => clearTimeout(t);
@@ -101,7 +113,7 @@ export function Round({ onSubmit }) {
                     <div className="h-6 w-28 bg-white/10 rounded-lg animate-pulse" />
                     <div className="h-10 w-14 bg-white/10 rounded-lg animate-pulse" />
                 </div>
-                <div className="w-full max-w-2xl aspect-[2/1] flex justify-center items-center my-4">
+                <div className="relative w-full max-w-2xl aspect-[2/1.1] flex justify-center items-center my-4">
                     <div className="absolute left-0 w-[54%] aspect-square rounded-full border-2 border-white/10 bg-white/5 animate-pulse" />
                     <div className="absolute right-0 w-[54%] aspect-square rounded-full border-2 border-white/10 bg-white/5 animate-pulse" />
                 </div>
@@ -174,22 +186,35 @@ export function Round({ onSubmit }) {
                         ? 'One witty phrase that connects both clips'
                         : 'One witty phrase that connects both concepts'}
                 </p>
-                <input
-                    type="text"
-                    value={submission}
-                    onChange={(e) => setSubmission(e.target.value)}
-                    placeholder={
-                        mediaType === MEDIA_TYPES.AUDIO
-                            ? 'What connects these two sounds?'
-                            : mediaType === MEDIA_TYPES.VIDEO
-                            ? 'What connects these two clips?'
-                            : 'What connects these two?'
-                    }
-                    className="w-full bg-black/40 backdrop-blur-xl border-2 border-white/20 rounded-full px-5 sm:px-8 py-4 sm:py-5 text-lg sm:text-xl text-center text-white placeholder-white/20 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-2xl"
-                    autoFocus
-                />
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={submission}
+                        onChange={(e) => setSubmission(e.target.value)}
+                        placeholder={
+                            mediaType === MEDIA_TYPES.AUDIO
+                                ? 'What connects these two sounds?'
+                                : mediaType === MEDIA_TYPES.VIDEO
+                                ? 'What connects these two clips?'
+                                : 'What connects these two?'
+                        }
+                        className={`w-full bg-black/40 backdrop-blur-xl border-2 rounded-full px-5 sm:px-8 py-4 sm:py-5 text-lg sm:text-xl text-center text-white placeholder-white/20 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-2xl ${
+                            shakeInput ? 'border-red-500/60 animate-[shake_0.5s_ease-in-out]' : 'border-white/20'
+                        }`}
+                        autoFocus
+                        maxLength={200}
+                    />
+                </div>
+                {submission.trim() && (
+                    <button
+                        type="submit"
+                        className="mt-3 w-full py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-full transition-all sm:hidden active:scale-95"
+                    >
+                        Submit
+                    </button>
+                )}
                 <div className="mt-3 text-center text-white/35 text-xs space-y-0.5">
-                    <div>Press <span className="font-bold text-white/60">Enter</span> to submit</div>
+                    <div className="hidden sm:block">Press <span className="font-bold text-white/60">Enter</span> to submit</div>
                     <div className="text-white/25 text-[10px]">
                         Scored on Wit · Logic · Originality · Clarity
                     </div>
