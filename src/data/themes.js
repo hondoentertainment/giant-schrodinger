@@ -1,6 +1,6 @@
 const DEFAULT_KEYWORDS = ["abstract art", "texture", "colorful pattern", "surreal", "dreamscape"];
 
-const IMG_WIDTH = 800;
+const IMG_WIDTH = 1080;
 
 // ── Media type constants ──
 export const MEDIA_TYPES = {
@@ -70,14 +70,16 @@ export const THEMES = [
         assets: [
             createImage({ id: "1555680202-c86f0e12f086", label: "Neon Alley", fallback: "neon city" }),
             createImage({ id: "1563089145-599997674d42", label: "Neon Glow", fallback: "neon signs" }),
-            createImage({ id: "1470770841072-f978cf4d019e", label: "Night Streets", fallback: "night city" }),
-            createImage({ id: "1489515217757-5fd1be406fef", label: "Light Trails", fallback: "city lights" }),
             createImage({ id: "1514565131-fce0801e5785", label: "Tokyo Glow", fallback: "tokyo neon" }),
-            createImage({ id: "1520175480354-4c0787c55809", label: "Arcade Entrance", fallback: "arcade neon" }),
+            createImage({ id: "1489515217757-5fd1be406fef", label: "Light Trails", fallback: "city lights" }),
             createImage({ id: "1557683316-973673baf926", label: "Cyberpunk Rain", fallback: "cyber rain" }),
             createImage({ id: "1516054575922-f0b8eeadec19", label: "Purple Haze", fallback: "purple neon" }),
             createImage({ id: "1582719508461-905c673c1ae0", label: "Night Market", fallback: "night market" }),
             createImage({ id: "1534430480872-3498386e7856", label: "Neon Tunnel", fallback: "neon tunnel" }),
+            createImage({ id: "1579546929518-9e396f3cc809", label: "Laser Grid", fallback: "laser neon" }),
+            createImage({ id: "1550684848-fac1c5b4e853", label: "Electric Sign", fallback: "electric sign" }),
+            createImage({ id: "1504893524553-b855bce32c67", label: "City Reflections", fallback: "city reflections" }),
+            createImage({ id: "1551009175-8a68da93d5f9", label: "Glitch Portal", fallback: "glitch art" }),
         ],
         fusionImages: [
             createImage({ id: "1469474968028-56623f02e42e", label: "Electric Atmosphere", fallback: "neon abstract" }),
@@ -97,14 +99,16 @@ export const THEMES = [
         assets: [
             createImage({ id: "1441974231531-c6227db76b6e", label: "Forest Canopy", fallback: "forest" }),
             createImage({ id: "1501785888041-af3ef285b470", label: "Mountain Lake", fallback: "mountain lake" }),
-            createImage({ id: "1500530855697-b586d89ba3ee", label: "Pine Woods", fallback: "pine forest" }),
-            createImage({ id: "1469474968028-56623f02e42e", label: "Misty Trail", fallback: "forest path" }),
             createImage({ id: "1472396961693-142e6e269027", label: "Deer Meadow", fallback: "deer meadow" }),
             createImage({ id: "1433086966358-54859d0ed716", label: "Waterfall Pool", fallback: "waterfall" }),
             createImage({ id: "1518495973542-4542f68e80bf", label: "Mossy Stones", fallback: "mossy rocks" }),
             createImage({ id: "1507041957456-9c397ce39c97", label: "Autumn Path", fallback: "autumn forest" }),
             createImage({ id: "1426604966848-d7adac402bff", label: "Wildflowers", fallback: "wildflowers" }),
             createImage({ id: "1470071459604-3b5ec3a7fe05", label: "Fog Valley", fallback: "fog valley" }),
+            createImage({ id: "1540206395-68808572332f", label: "Aurora Sky", fallback: "northern lights" }),
+            createImage({ id: "1476610182-ceab394bead8", label: "Sunlit Fern", fallback: "fern sunlight" }),
+            createImage({ id: "1506905925346-21bda4d32df4", label: "Desert Bloom", fallback: "desert flowers" }),
+            createImage({ id: "1465146344425-f00d5f5c8f07", label: "Butterfly Garden", fallback: "butterfly garden" }),
         ],
         fusionImages: [
             createImage({ id: "1500530855697-b586d89ba3ee", label: "Natural Blend", fallback: "forest abstract" }),
@@ -124,7 +128,6 @@ export const THEMES = [
         assets: [
             createImage({ id: "1518770660439-4636190af475", label: "Circuit Board", fallback: "circuit board" }),
             createImage({ id: "1453928582365-b6ad33cbcf64", label: "Analog Console", fallback: "vintage technology" }),
-            createImage({ id: "1519681393784-d120267933ba", label: "Retro Glow", fallback: "retro neon" }),
             createImage({ id: "1487058792275-0ad4aaf24ca7", label: "Arcade Lights", fallback: "arcade" }),
             createImage({ id: "1550745165-9bc0b252726f", label: "Cassette Tape", fallback: "cassette tape" }),
             createImage({ id: "1558618666-fcd25c85f82e", label: "Old TV Static", fallback: "tv static" }),
@@ -132,6 +135,9 @@ export const THEMES = [
             createImage({ id: "1461749280684-dccba630e2f6", label: "Game Cartridge", fallback: "game cartridge" }),
             createImage({ id: "1550751827-4bd374c3f58b", label: "Vinyl Record", fallback: "vinyl record" }),
             createImage({ id: "1498050108023-c5249f4df085", label: "Code Screen", fallback: "code screen" }),
+            createImage({ id: "1526374965328-7f61d4dc18c5", label: "Rotary Phone", fallback: "rotary phone" }),
+            createImage({ id: "1585792180666-f7347c490ee2", label: "Floppy Disk", fallback: "floppy disk" }),
+            createImage({ id: "1511512578047-dfb367046420", label: "Pixel Art", fallback: "pixel art" }),
         ],
         fusionImages: [
             createImage({ id: "1518770660439-4636190af475", label: "Signal Merge", fallback: "tech abstract" }),
@@ -150,7 +156,6 @@ export const THEMES = [
         keywords: ["ocean waves", "coral reef", "sailing", "underwater", "seaside cliffs"],
         assets: [
             createImage({ id: "1507525428034-b723cf961d3e", label: "Ocean Swell", fallback: "ocean waves" }),
-            createImage({ id: "1470770841072-f978cf4d019e", label: "Storm Horizon", fallback: "sea storm" }),
             createImage({ id: "1500534314209-a25ddb2bd429", label: "Coastal Light", fallback: "coastline" }),
             createImage({ id: "1544551763-77a2d1f5b107", label: "Deep Blue", fallback: "deep ocean" }),
             createImage({ id: "1518837695005-2083093ee35b", label: "Coral Reef", fallback: "coral reef" }),
@@ -159,6 +164,9 @@ export const THEMES = [
             createImage({ id: "1437622368342-7a3d73a34c8f", label: "Sailing Boat", fallback: "sailing" }),
             createImage({ id: "1544027993-215b52db5e3c", label: "Frozen Wave", fallback: "frozen wave" }),
             createImage({ id: "1498462440456-0dba182e007b", label: "Tropical Shore", fallback: "tropical shore" }),
+            createImage({ id: "1559827260158-67a3bf3a1970", label: "Sea Turtle", fallback: "sea turtle" }),
+            createImage({ id: "1551244072-5d12893278ab", label: "Shipwreck", fallback: "shipwreck" }),
+            createImage({ id: "1520942702018-0862200e6873", label: "Tidal Pool", fallback: "tidal pool" }),
         ],
         fusionImages: [
             createImage({ id: "1507525428034-b723cf961d3e", label: "Tidal Merge", fallback: "ocean abstract" }),
@@ -186,6 +194,8 @@ export const THEMES = [
             createImage({ id: "1518998053901-5348d3961a04", label: "Window Light", fallback: "window light" }),
             createImage({ id: "1490750967868-88aa4f44baee", label: "City Rooftop", fallback: "rooftop sunset" }),
             createImage({ id: "1504701954957-2010ec3bcec1", label: "Harvest Field", fallback: "harvest field" }),
+            createImage({ id: "1476842634003-7dcca8f832de", label: "Sky Lanterns", fallback: "sky lanterns" }),
+            createImage({ id: "1508739773434-c26b3d09e071", label: "Canyon Light", fallback: "canyon sunset" }),
         ],
         fusionImages: [
             createImage({ id: "1501785888041-af3ef285b470", label: "Golden Blend", fallback: "sunset abstract" }),
