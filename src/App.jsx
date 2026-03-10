@@ -9,23 +9,61 @@ import { Lobby } from './features/lobby/Lobby'
 import { Round } from './features/round/Round'
 import { Reveal } from './features/reveal/Reveal'
 import { Gallery } from './features/gallery/Gallery'
+import { Leaderboard } from './features/leaderboard/Leaderboard'
+import { Achievements } from './features/achievements/Achievements'
+import { ThemeBuilder } from './features/creator/ThemeBuilder'
+import { Shop } from './features/shop/Shop'
+import { AISettings } from './features/ai/AISettings'
 import { SessionSummary } from './features/summary/SessionSummary'
 import { JudgeRound } from './features/judge/JudgeRound'
+import { ChallengeRound } from './features/challenge/ChallengeRound'
 import { RoomLobby } from './features/room/RoomLobby'
 import { MultiplayerRound } from './features/room/MultiplayerRound'
 import { MultiplayerReveal } from './features/room/MultiplayerReveal'
 import { parseJudgeShareUrl } from './services/share'
+import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
+import { parseThemeFromUrl, clearThemeFromUrl } from './services/themeBuilder'
+import { initAudio } from './services/sounds'
+import { trackEvent } from './services/analytics'
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
 
 function GameContent() {
-    const { gameState } = useGame();
+    const { gameState, setGameState } = useGame();
     const { isMultiplayer, roomPhase } = useRoom();
     const [roundData, setRoundData] = useState(null);
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
+    const [challengePayload, setChallengePayload] = useState(() => parseChallengeUrl());
 
     useEffect(() => {
-        const onHashChange = () => setJudgePayload(parseJudgeShareUrl());
+        const onHashChange = () => {
+            setJudgePayload(parseJudgeShareUrl());
+            setChallengePayload(parseChallengeUrl());
+            // Handle shared theme links
+            const themeCode = parseThemeFromUrl();
+            if (themeCode) {
+                clearThemeFromUrl();
+                setGameState('THEME_BUILDER');
+            }
+        };
         window.addEventListener('hashchange', onHashChange);
         return () => window.removeEventListener('hashchange', onHashChange);
+    }, []);
+
+    // Initialize audio on first user interaction
+    useEffect(() => {
+        const handler = () => {
+            initAudio();
+            trackEvent('game_start');
+            document.removeEventListener('click', handler);
+        };
+        document.addEventListener('click', handler);
+        return () => document.removeEventListener('click', handler);
     }, []);
 
     const handleRoundSubmit = (data) => {
@@ -36,13 +74,32 @@ function GameContent() {
         setJudgePayload(null);
     };
 
+    const handleChallengeDone = () => {
+        clearChallengeFromUrl();
+        setChallengePayload(null);
+    };
+
+    const headerEl = (
+        <div className="mb-8 text-center">
+            <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tight"><span className="text-gradient-vibrant">VENN</span> <span className="text-xl font-light tracking-widest text-white/60 uppercase">with Friends</span></h1>
+        </div>
+    );
+
+    // Challenge mode (external link)
+    if (challengePayload) {
+        return (
+            <Layout>
+                {headerEl}
+                <ChallengeRound payload={challengePayload} onDone={handleChallengeDone} />
+            </Layout>
+        );
+    }
+
     // Judge mode (external link)
     if (judgePayload) {
         return (
             <Layout>
-                <div className="mb-8 text-center">
-                    <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tight"><span className="text-gradient-vibrant">VENN</span> <span className="text-xl font-light tracking-widest text-white/60 uppercase">with Friends</span></h1>
-                </div>
+                {headerEl}
                 <JudgeRound payload={judgePayload} onDone={handleJudgeDone} />
             </Layout>
         );
@@ -52,9 +109,7 @@ function GameContent() {
     if (isMultiplayer) {
         return (
             <Layout>
-                <div className="mb-8 text-center">
-                    <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tight"><span className="text-gradient-vibrant">VENN</span> <span className="text-xl font-light tracking-widest text-white/60 uppercase">with Friends</span></h1>
-                </div>
+                {headerEl}
                 {roomPhase === 'lobby' && <RoomLobby />}
                 {roomPhase === 'playing' && <MultiplayerRound />}
                 {roomPhase === 'revealing' && <MultiplayerReveal />}
@@ -66,12 +121,15 @@ function GameContent() {
     // Solo mode
     return (
         <Layout>
-            <div className="mb-8 text-center">
-                <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tight"><span className="text-gradient-vibrant">VENN</span> <span className="text-xl font-light tracking-widest text-white/60 uppercase">with Friends</span></h1>
-            </div>
+            {headerEl}
 
             {gameState === 'LOBBY' && <Lobby />}
             {gameState === 'GALLERY' && <Gallery />}
+            {gameState === 'LEADERBOARD' && <Leaderboard onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'ACHIEVEMENTS' && <Achievements onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'THEME_BUILDER' && <ThemeBuilder onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'SHOP' && <Shop onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'AI_SETTINGS' && <AISettings onBack={() => setGameState('LOBBY')} />}
             {gameState === 'ROUND' && <Round onSubmit={handleRoundSubmit} />}
             {gameState === 'REVEAL' && roundData && (
                 <Reveal submission={roundData.submission} assets={roundData.assets} />

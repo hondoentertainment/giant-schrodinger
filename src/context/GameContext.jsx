@@ -130,11 +130,17 @@ export function GameProvider({ children }) {
             finalScore = finalScore >= (mod.scoreThreshold || 7) ? finalScore * 2 : 0;
         }
 
+        // Daily challenge bonus: 1.5x multiplier
+        if (isDailyChallenge) {
+            finalScore = Math.round(finalScore * 1.5);
+        }
+
         const enrichedResult = {
             ...result,
             score: finalScore,
             modifier: mod,
             roundNumber,
+            isDailyChallenge,
         };
         setSessionResults((prev) => [...prev, enrichedResult]);
         setSessionScore((prev) => prev + finalScore);
