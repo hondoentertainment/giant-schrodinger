@@ -14,9 +14,12 @@ import { Achievements } from './features/achievements/Achievements'
 import { ThemeBuilder } from './features/creator/ThemeBuilder'
 import { Shop } from './features/shop/Shop'
 import { AISettings } from './features/ai/AISettings'
+import { AIBattle } from './features/ai/AIBattle'
 import { SessionSummary } from './features/summary/SessionSummary'
 import { JudgeRound } from './features/judge/JudgeRound'
 import { ChallengeRound } from './features/challenge/ChallengeRound'
+import { TournamentLobby } from './features/tournament/TournamentLobby'
+import { AsyncChains } from './features/challenge/AsyncChains'
 import { RoomLobby } from './features/room/RoomLobby'
 import { MultiplayerRound } from './features/room/MultiplayerRound'
 import { MultiplayerReveal } from './features/room/MultiplayerReveal'
@@ -25,6 +28,10 @@ import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
 import { parseThemeFromUrl, clearThemeFromUrl } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
 import { trackEvent } from './services/analytics'
+import { AnalyticsDashboard } from './features/analytics/AnalyticsDashboard'
+import { initErrorMonitoring } from './services/errorMonitoring'
+
+initErrorMonitoring();
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
@@ -130,10 +137,14 @@ function GameContent() {
             {gameState === 'THEME_BUILDER' && <ThemeBuilder onBack={() => setGameState('LOBBY')} />}
             {gameState === 'SHOP' && <Shop onBack={() => setGameState('LOBBY')} />}
             {gameState === 'AI_SETTINGS' && <AISettings onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'AI_BATTLE' && <AIBattle onDone={() => setGameState('LOBBY')} />}
             {gameState === 'ROUND' && <Round onSubmit={handleRoundSubmit} />}
             {gameState === 'REVEAL' && roundData && (
                 <Reveal submission={roundData.submission} assets={roundData.assets} />
             )}
+            {gameState === 'TOURNAMENT' && <TournamentLobby onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'ASYNC_CHAINS' && <AsyncChains onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'ANALYTICS' && <AnalyticsDashboard onBack={() => setGameState('LOBBY')} />}
             {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
         </Layout>
     );

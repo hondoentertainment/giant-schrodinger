@@ -4,6 +4,7 @@ import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgement } from '../../services/judgements';
 import { upvote, downvote, getVotes, getAllVotes, getVoteDirection } from '../../services/votes';
+import { getHighlights, getWeeklyHighlights } from '../../services/highlights';
 
 function buildSortOptions(votesMap) {
     return [
@@ -159,6 +160,19 @@ export function Gallery() {
     const [friendJudgements, setFriendJudgements] = useState({});
     const [loadingJudgements, setLoadingJudgements] = useState(true);
     const [sortBy, setSortBy] = useState('newest');
+    const [todayHighlights, setTodayHighlights] = useState([]);
+
+    useEffect(() => {
+        // Load today's best highlights (top-scoring from all highlights)
+        const highlights = getHighlights();
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const todayItems = highlights
+            .filter(h => h.timestamp >= startOfDay)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3);
+        setTodayHighlights(todayItems.length > 0 ? todayItems : highlights.slice(0, 3));
+    }, []);
 
     useEffect(() => {
         const list = getCollisions();
@@ -216,6 +230,43 @@ export function Gallery() {
                     </button>
                 </div>
             </div>
+
+            {/* Best of Today */}
+            {todayHighlights.length > 0 && (
+                <div className="mb-8">
+                    <h3 className="text-xl font-display font-bold text-white mb-4 flex items-center gap-2">
+                        <span className="text-yellow-400">&#9733;</span> Best of Today
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {todayHighlights.map((h, i) => (
+                            <div
+                                key={h.id}
+                                className={`relative p-4 rounded-2xl border transition-all ${
+                                    i === 0
+                                        ? 'bg-gradient-to-br from-amber-500/20 to-yellow-500/10 border-amber-500/30'
+                                        : 'bg-white/5 border-white/10'
+                                }`}
+                            >
+                                {i === 0 && (
+                                    <div className="absolute -top-2 -right-2 bg-amber-500 text-black text-xs font-bold px-2 py-0.5 rounded-full">
+                                        #1
+                                    </div>
+                                )}
+                                <div className="text-lg font-bold text-white mb-1 truncate">{h.submission}</div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-white/50 text-sm">
+                                        {h.leftLabel && h.rightLabel ? `${h.leftLabel} + ${h.rightLabel}` : 'Connection'}
+                                    </span>
+                                    <span className="text-yellow-400 font-bold text-lg">{h.score}/10</span>
+                                </div>
+                                {h.playerName && (
+                                    <div className="text-white/40 text-xs mt-1">by {h.playerName}</div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {collisions.length === 0 ? (
                 <div className="text-center py-20 bg-white/5 rounded-3xl">

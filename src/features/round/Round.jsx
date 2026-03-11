@@ -4,6 +4,7 @@ import { useGame } from '../../context/GameContext';
 import { THEMES, buildThemeAssets, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getCustomImages } from '../../services/customImages';
 import { getStats, isThemeUnlocked } from '../../services/stats';
+import { getAIDifficulty, getDifficultyConfig } from '../../services/aiFeatures';
 import { haptic } from '../../lib/haptics';
 
 export function Round({ onSubmit }) {
@@ -20,7 +21,8 @@ export function Round({ onSubmit }) {
         ? rawTheme
         : getThemeById(THEMES.find((t) => isThemeUnlocked(t.id, stats))?.id) || rawTheme;
     const baseTimeLimit = theme?.modifier?.timeLimit || 60;
-    const timeLimit = Math.round(baseTimeLimit * (currentModifier?.timeFactor || 1));
+    const difficultyConfig = getDifficultyConfig(getAIDifficulty());
+    const timeLimit = Math.round(baseTimeLimit * (currentModifier?.timeFactor || 1)) + (difficultyConfig.timeBonus || 0);
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
     const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const mod = currentModifier;

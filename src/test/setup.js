@@ -36,5 +36,7 @@ Object.defineProperty(window, 'location', {
 
 // Reset localStorage between tests to avoid cross-test pollution
 beforeEach(() => {
-    localStorage.clear();
+    if (typeof localStorage.clear === 'function') {
+        localStorage.clear();
+    }
 });

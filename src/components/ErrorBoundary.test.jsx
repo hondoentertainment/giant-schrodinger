@@ -49,7 +49,8 @@ describe('ErrorBoundary', () => {
         );
         const tryAgain = screen.getByRole('button', { name: /Try Again/i });
         await user.click(tryAgain);
-        expect(tryAgain).toBeInTheDocument();
+        // After clicking Try Again, the child throws again so the error UI re-appears
+        expect(screen.getByText(/Something went wrong/i)).toBeInTheDocument();
     });
 
     it('has accessible recovery buttons', () => {

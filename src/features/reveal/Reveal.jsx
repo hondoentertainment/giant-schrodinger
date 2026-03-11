@@ -10,6 +10,8 @@ import { submitScore, getPlayerRank } from '../../services/leaderboard';
 import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
 import { trackEvent } from '../../services/analytics';
 import { autoSaveHighlight } from '../../services/highlights';
+import { getConnectionExplanation } from '../../services/aiFeatures';
+import { ShareCardCanvas } from '../../components/ShareCardCanvas';
 import { checkAchievements } from '../../services/achievements';
 import { addCoins, addBattlePassXp } from '../../services/shop';
 import { saveSharedRound } from '../../services/backend';
@@ -480,6 +482,30 @@ export function Reveal({ submission, assets }) {
                             — {scoringMode === 'human' ? 'Human Judge' : 'Gemini AI Host'}
                         </footer>
                     </blockquote>
+
+                    {/* Connection Explanation */}
+                    {result && assets?.left?.label && assets?.right?.label && (
+                        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+                            <div className="text-blue-300 text-xs uppercase tracking-wider font-bold mb-2">Why this score?</div>
+                            <p className="text-white/70 text-sm leading-relaxed">
+                                {getConnectionExplanation(submission, result.finalScore || result.score, assets.left.label, assets.right.label)}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Visual Share Card */}
+                    {savedCollision && (
+                        <div className="mb-6">
+                            <ShareCardCanvas
+                                submission={submission}
+                                score={finalScoreDisplay}
+                                leftLabel={assets?.left?.label}
+                                rightLabel={assets?.right?.label}
+                                fusionImageUrl={fusionImage?.url}
+                                playerName={user?.name}
+                            />
+                        </div>
+                    )}
 
                     {/* Social sharing */}
                     {savedCollision && (

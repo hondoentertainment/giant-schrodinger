@@ -50,12 +50,14 @@ function mockScore(submission, asset1, asset2) {
         (breakdown.wit + breakdown.logic + breakdown.originality + breakdown.clarity) / 4
     );
     const relevance = Math.random() > 0.5 ? 'Highly Logical' : 'Absurdly Creative';
+    const leftLabel = asset1?.label ?? 'Thing A';
+    const rightLabel = asset2?.label ?? 'Thing B';
     return {
         baseScore,
         breakdown,
         score: baseScore,
         relevance,
-        commentary: `An interesting bridge between ${asset1.label} and ${asset2.label}. '${submission}' is ${relevance.toLowerCase()}!`,
+        commentary: `An interesting bridge between ${leftLabel} and ${rightLabel}. '${submission || ''}' is ${relevance.toLowerCase()}!`,
     };
 }
 
