@@ -11,7 +11,7 @@ import { parseReferralFromUrl, trackReferral, hasReferralBonus, claimReferralBon
 import { trackEvent } from '../../services/analytics';
 import { toggleMute, isMuted } from '../../services/sounds';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3, Bell, BellOff } from 'lucide-react';
+import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3, Bell, BellOff, AlertTriangle } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { UnlockModal } from '../../components/UnlockModal';
@@ -654,6 +654,13 @@ export function Lobby() {
                                     title="Analytics"
                                 >
                                     <BarChart3 className="w-4 h-4" /> Analytics
+                                </button>
+                                <button
+                                    onClick={() => { haptic('light'); setGameState('ERROR_REPORT'); }}
+                                    className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
+                                    title="Error Log"
+                                >
+                                    <AlertTriangle className="w-4 h-4" /> Errors
                                 </button>
                             </div>
 

@@ -41,6 +41,7 @@ export function Reveal({ submission, assets }) {
     const [showConfetti, setShowConfetti] = useState(false);
     const [playerRank, setPlayerRank] = useState(null);
     const [animatedScore, setAnimatedScore] = useState(0);
+    const [shareCardDataUrl, setShareCardDataUrl] = useState(null);
     const savedRef = useRef(false);
     const soundPlayedRef = useRef(false);
     const scoringMode = user?.scoringMode || 'human';
@@ -516,6 +517,7 @@ export function Reveal({ submission, assets }) {
                                 rightLabel={assets?.right?.label}
                                 fusionImageUrl={fusionImage?.url}
                                 playerName={user?.name}
+                                onGenerated={setShareCardDataUrl}
                             />
                         </div>
                     )}
@@ -530,6 +532,7 @@ export function Reveal({ submission, assets }) {
                                     scoreBand: scoreBand?.label,
                                     commentary: result.commentary,
                                     assets,
+                                    imageDataUrl: shareCardDataUrl,
                                 }}
                                 imageUrl={fusionImage?.url}
                                 onToast={(type, msg) => toast[type]?.(msg)}
