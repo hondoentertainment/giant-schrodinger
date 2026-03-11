@@ -52,11 +52,11 @@ export function ThemeBuilder({ onBack }) {
         try {
             createCustomTheme({
                 name: name.trim(),
-                palette: COLOR_PALETTES[selectedPalette],
-                timer,
+                colorPalette: COLOR_PALETTES[selectedPalette],
+                timerSeconds: timer,
                 multiplier: parseFloat(multiplier),
                 imageUrls: urls,
-                createdBy: user?.name || 'Anonymous',
+                creatorName: user?.name || 'Anonymous',
             });
 
             addToast('Theme created!', 'success');
@@ -211,25 +211,25 @@ export function ThemeBuilder({ onBack }) {
                                     className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-3"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${theme.palette} shrink-0`} />
+                                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${theme.colorPalette} shrink-0`} />
                                         <div className="flex-1 min-w-0">
                                             <div className="font-semibold truncate">{theme.name}</div>
                                             <div className="text-xs text-white/40">
-                                                {theme.timer}s &middot; {theme.multiplier}x &middot; {theme.imageUrls?.length || 0} images
+                                                {theme.timerSeconds}s &middot; {theme.multiplier}x &middot; {theme.imageUrls?.length || 0} images
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-2 text-xs text-white/40">
                                         <span className="font-mono bg-white/5 px-2 py-1 rounded-lg truncate">
-                                            {theme.shareCode || 'No code'}
+                                            {theme.code || 'No code'}
                                         </span>
                                         <span className="ml-auto">{theme.playCount || 0} plays</span>
                                     </div>
 
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => handleCopyLink(theme.shareCode || theme.code)}
+                                            onClick={() => handleCopyLink(theme.code)}
                                             className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm"
                                         >
                                             <Copy className="w-4 h-4" />
@@ -262,16 +262,16 @@ export function ThemeBuilder({ onBack }) {
                                     key={theme.id}
                                     className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10"
                                 >
-                                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${theme.palette} shrink-0 flex items-center justify-center text-sm font-bold`}>
+                                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${theme.colorPalette} shrink-0 flex items-center justify-center text-sm font-bold`}>
                                         {i + 1}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="font-semibold truncate">{theme.name}</div>
                                         <div className="text-xs text-white/40">
-                                            by {theme.createdBy} &middot; {theme.playCount || 0} plays
+                                            by {theme.creatorName} &middot; {theme.playCount || 0} plays
                                         </div>
                                     </div>
-                                    <div className={`text-lg font-black text-transparent bg-clip-text bg-gradient-to-br ${theme.palette}`}>
+                                    <div className={`text-lg font-black text-transparent bg-clip-text bg-gradient-to-br ${theme.colorPalette}`}>
                                         {theme.multiplier}x
                                     </div>
                                 </div>

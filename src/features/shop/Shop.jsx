@@ -3,18 +3,26 @@ import { useToast } from '../../context/ToastContext';
 import { getBalance, getShopItems, purchaseItem, getOwnedItems, equipItem, getEquippedItems, getBattlePass, claimBattlePassReward, getBattlePassProgress } from '../../services/shop';
 import { ArrowLeft, Coins, ShoppingBag, Sparkles, Crown, Star, Check, Lock } from 'lucide-react';
 
-const CATEGORIES = ['ALL', 'AVATARS', 'VENN SKINS', 'EFFECTS', 'BADGES'];
+const CATEGORIES = ['ALL', 'AVATAR_PACKS', 'VENN_SKINS', 'SCORE_EFFECTS', 'TITLE_BADGES'];
+
+const categoryLabels = {
+  ALL: 'All',
+  AVATAR_PACKS: 'Avatars',
+  VENN_SKINS: 'Venn Skins',
+  SCORE_EFFECTS: 'Effects',
+  TITLE_BADGES: 'Badges',
+};
 
 const categoryIcons = {
   ALL: ShoppingBag,
-  AVATARS: Crown,
-  'VENN SKINS': Sparkles,
-  EFFECTS: Star,
-  BADGES: Check,
+  AVATAR_PACKS: Crown,
+  VENN_SKINS: Sparkles,
+  SCORE_EFFECTS: Star,
+  TITLE_BADGES: Check,
 };
 
 export function Shop({ onBack }) {
-  const toast = useToast();
+  const { toast } = useToast();
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [balance, setBalance] = useState(() => getBalance());
   const [shopItems, setShopItems] = useState(() => getShopItems());
@@ -27,55 +35,54 @@ export function Shop({ onBack }) {
   const filteredItems = useMemo(() => {
     if (activeCategory === 'ALL') return shopItems;
     return shopItems.filter(
-      (item) => item.category.toUpperCase() === activeCategory
+      (item) => item.category === activeCategory
     );
   }, [shopItems, activeCategory]);
 
   const handlePurchase = useCallback(
-    async (item) => {
+    (item) => {
       if (balance < item.price) {
-        toast?.addToast?.('Not enough Venn Coins!', 'error');
+        toast.error('Not enough Venn Coins!');
         return;
       }
       setPurchasingId(item.id);
-      try {
-        await purchaseItem(item.id);
+      const result = purchaseItem(item.id);
+      if (result.success) {
         setBalance(getBalance());
         setShopItems(getShopItems());
         setOwnedItemIds(new Set(getOwnedItems().map(e => e.itemId)));
-        toast?.addToast?.(`Purchased ${item.name}!`, 'success');
-      } catch (err) {
-        toast?.addToast?.(err.message || 'Purchase failed', 'error');
-      } finally {
-        setPurchasingId(null);
+        toast.success(`Purchased ${item.name}!`);
+      } else {
+        toast.error(result.error || 'Purchase failed');
       }
+      setPurchasingId(null);
     },
     [balance, toast]
   );
 
   const handleEquip = useCallback(
-    async (item) => {
-      try {
-        await equipItem(item.id);
+    (item) => {
+      const result = equipItem(item.id);
+      if (result.success) {
         setEquippedItems(getEquippedItems());
-        toast?.addToast?.(`Equipped ${item.name}!`, 'success');
-      } catch (err) {
-        toast?.addToast?.(err.message || 'Equip failed', 'error');
+        toast.success(`Equipped ${item.name}!`);
+      } else {
+        toast.error(result.error || 'Equip failed');
       }
     },
     [toast]
   );
 
   const handleClaimReward = useCallback(
-    async (tier) => {
-      try {
-        await claimBattlePassReward(tier);
+    (tier) => {
+      const result = claimBattlePassReward(tier);
+      if (result.success) {
         setBattlePass(getBattlePass());
         setBattlePassProgress(getBattlePassProgress());
         setBalance(getBalance());
-        toast?.addToast?.(`Claimed tier ${tier} reward!`, 'success');
-      } catch (err) {
-        toast?.addToast?.(err.message || 'Claim failed', 'error');
+        toast.success(`Claimed tier ${tier} reward!`);
+      } else {
+        toast.error(result.error || 'Claim failed');
       }
     },
     [toast]
@@ -131,7 +138,7 @@ export function Shop({ onBack }) {
                 }`}
               >
                 <Icon size={14} />
-                {cat}
+                {categoryLabels[cat] || cat}
               </button>
             );
           })}
@@ -267,26 +274,17 @@ export function Shop({ onBack }) {
             <div className="mb-4">
               <div className="flex justify-between text-xs text-gray-400 mb-1.5">
                 <span>
-                  Tier {battlePassProgress?.currentTier ?? 0} /{' '}
-                  {battlePassProgress?.maxTier ?? 0}
+                  Tier {battlePassProgress?.currentTier ?? 0} / 30
                 </span>
                 <span>
-                  {battlePassProgress?.xp ?? 0} /{' '}
-                  {battlePassProgress?.xpToNext ?? 0} XP
+                  {battlePassProgress?.xp ?? 0} XP
                 </span>
               </div>
               <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 rounded-full transition-all duration-500"
                   style={{
-                    width: `${
-                      battlePassProgress?.xpToNext
-                        ? Math.min(
-                            (battlePassProgress.xp / battlePassProgress.xpToNext) * 100,
-                            100
-                          )
-                        : 0
-                    }%`,
+                    width: `${Math.min(((battlePassProgress?.currentTier ?? 0) / 30) * 100, 100)}%`,
                   }}
                 />
               </div>
@@ -297,7 +295,10 @@ export function Shop({ onBack }) {
               {(battlePass.tiers ?? []).map((tier) => {
                 const reached =
                   (battlePassProgress?.currentTier ?? 0) >= tier.tier;
-                const claimed = tier.claimed;
+                const claimed = (battlePass.claimedFree ?? []).includes(tier.tier);
+                const reward = tier.freeReward;
+                const rewardIcon = reward?.type === 'coins' ? '🪙' : '🎁';
+                const rewardName = reward?.type === 'coins' ? `${reward.amount} coins` : (reward?.itemId || 'Reward');
 
                 return (
                   <div
@@ -313,9 +314,9 @@ export function Shop({ onBack }) {
                     <div className="text-[10px] text-gray-400 mb-1">
                       Tier {tier.tier}
                     </div>
-                    <div className="text-xl mb-1">{tier.icon ?? '?'}</div>
+                    <div className="text-xl mb-1">{rewardIcon}</div>
                     <div className="text-[10px] text-gray-300 truncate mb-2">
-                      {tier.name}
+                      {rewardName}
                     </div>
                     {claimed ? (
                       <span className="text-[10px] text-green-400 font-medium">

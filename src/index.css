@@ -38,3 +38,12 @@
     @apply left-4 top-4 bg-white text-black font-bold rounded-xl outline-none ring-4 ring-purple-500;
   }
 }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(5px); }
+  45% { transform: translateX(-4px); }
+  60% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+}

@@ -24,7 +24,7 @@ function VennImage({ asset }) {
             <img
                 src={asset.url}
                 alt={asset.label}
-                className={`w-full h-full object-cover brightness-110 transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
                 referrerPolicy="no-referrer"
                 data-fallback={asset.fallbackUrl}
                 onError={handleError}
@@ -88,7 +88,7 @@ function VennVideo({ asset }) {
                 ref={videoRef}
                 src={asset.url}
                 poster={asset.posterUrl || ''}
-                className={`w-full h-full object-cover brightness-110 transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
                 loop
                 muted={muted}
                 playsInline
@@ -289,45 +289,66 @@ export function VennDiagram({ leftAsset, rightAsset }) {
     const isAudio = mediaType === MEDIA_TYPES.AUDIO;
 
     return (
-        <div className="relative w-full max-w-4xl aspect-[2/1] flex justify-center items-center my-8">
-            {/* Left Circle */}
-            <div className="absolute left-0 w-[55%] aspect-square rounded-full border-4 border-white/20 overflow-hidden z-0 transition-transform hover:scale-105 duration-500">
-                <VennMedia asset={leftAsset} />
-                <div className={`absolute inset-0 bg-gradient-to-r from-blue-500/20 to-transparent opacity-60 pointer-events-none ${isAudio ? 'from-purple-500/20' : ''}`} />
-                <div className="absolute bottom-8 left-8 text-2xl font-bold text-white uppercase tracking-widest drop-shadow-md z-10">
-                    {leftAsset.label}
-                </div>
-                {mediaType !== MEDIA_TYPES.IMAGE && (
-                    <div className="absolute top-3 left-3 z-20">
-                        <span className="px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-sm text-xs font-bold text-white/70 uppercase tracking-wider border border-white/10">
-                            {mediaType === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
+        <div className="relative w-full max-w-2xl mx-auto my-4 sm:my-8">
+            {/* Circles container */}
+            <div className="relative w-full aspect-[2/1.1] flex justify-center items-center">
+                {/* Left Circle */}
+                <div className="absolute left-0 w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-105 duration-500 shadow-2xl shadow-blue-500/10"
+                    style={{ border: '3px solid rgba(255,255,255,0.15)' }}>
+                    <VennMedia asset={leftAsset} />
+                    {/* Gradient overlay for readability */}
+                    <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-t from-purple-900/70 via-transparent to-transparent' : 'bg-gradient-to-t from-black/60 via-black/10 to-transparent'}`} />
+                    <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-r from-purple-500/15 to-transparent' : 'bg-gradient-to-r from-blue-500/15 to-transparent'}`} />
+                    {/* Label */}
+                    <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 z-10">
+                        <span className="text-sm sm:text-lg md:text-xl font-black text-white uppercase tracking-wider drop-shadow-lg"
+                            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)' }}>
+                            {leftAsset.label}
                         </span>
                     </div>
-                )}
-            </div>
-
-            {/* Right Circle */}
-            <div className="absolute right-0 w-[55%] aspect-square rounded-full border-4 border-white/20 overflow-hidden z-0 transition-transform hover:scale-105 duration-500">
-                <VennMedia asset={rightAsset} />
-                <div className={`absolute inset-0 bg-gradient-to-l from-pink-500/20 to-transparent opacity-60 pointer-events-none ${isAudio ? 'from-fuchsia-500/20' : ''}`} />
-                <div className="absolute bottom-8 right-8 text-2xl font-bold text-white uppercase tracking-widest drop-shadow-md z-10">
-                    {rightAsset.label}
+                    {mediaType !== MEDIA_TYPES.IMAGE && (
+                        <div className="absolute top-2.5 left-2.5 z-20">
+                            <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[10px] font-bold text-white/80 uppercase tracking-wider border border-white/10">
+                                {mediaType === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
+                            </span>
+                        </div>
+                    )}
                 </div>
-                {mediaType !== MEDIA_TYPES.IMAGE && (
-                    <div className="absolute top-3 right-3 z-20">
-                        <span className="px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-sm text-xs font-bold text-white/70 uppercase tracking-wider border border-white/10">
-                            {mediaType === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
+
+                {/* Right Circle */}
+                <div className="absolute right-0 w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-105 duration-500 shadow-2xl shadow-pink-500/10"
+                    style={{ border: '3px solid rgba(255,255,255,0.15)' }}>
+                    <VennMedia asset={rightAsset} />
+                    {/* Gradient overlay for readability */}
+                    <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-t from-fuchsia-900/70 via-transparent to-transparent' : 'bg-gradient-to-t from-black/60 via-black/10 to-transparent'}`} />
+                    <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-l from-fuchsia-500/15 to-transparent' : 'bg-gradient-to-l from-pink-500/15 to-transparent'}`} />
+                    {/* Label */}
+                    <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 z-10 text-right">
+                        <span className="text-sm sm:text-lg md:text-xl font-black text-white uppercase tracking-wider drop-shadow-lg"
+                            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)' }}>
+                            {rightAsset.label}
                         </span>
                     </div>
-                )}
-            </div>
-
-            {/* Intersection Highlight */}
-            <div className="absolute z-10 text-center pointer-events-none">
-                <div className="text-xl font-light text-white/50 tracking-[0.5em] uppercase mb-2">
-                    The Intersection
+                    {mediaType !== MEDIA_TYPES.IMAGE && (
+                        <div className="absolute top-2.5 right-2.5 z-20">
+                            <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[10px] font-bold text-white/80 uppercase tracking-wider border border-white/10">
+                                {mediaType === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
+                            </span>
+                        </div>
+                    )}
                 </div>
-                <div className="w-16 h-16 mx-auto rounded-full bg-white/20 blur-xl animate-pulse" />
+
+                {/* Intersection Highlight - centered between circles */}
+                <div className="absolute z-10 text-center pointer-events-none flex flex-col items-center">
+                    <div className="relative">
+                        <div className="absolute -inset-4 rounded-full bg-white/5 blur-2xl animate-pulse" />
+                        <span className="relative text-[10px] sm:text-xs font-medium text-white/70 tracking-[0.35em] uppercase"
+                            style={{ textShadow: '0 1px 12px rgba(0,0,0,0.9)' }}>
+                            The Intersection
+                        </span>
+                    </div>
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 mt-1 rounded-full bg-white/10 blur-xl animate-pulse" />
+                </div>
             </div>
         </div>
     );

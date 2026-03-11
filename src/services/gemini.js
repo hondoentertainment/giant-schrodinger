@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { getFusionImage } from '../data/themes';
+import { getAIDifficulty, getDifficultyConfig } from './aiFeatures';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
@@ -20,6 +21,24 @@ Score the connection from 1-10 on four criteria (each 1-10):
 Respond with ONLY valid JSON, no other text:
 {"wit": N, "logic": N, "originality": N, "clarity": N, "relevance": "Highly Logical" or "Absurdly Creative" or "Wild Card", "commentary": "One witty sentence"}`;
 
+function applyDifficulty(result) {
+    const config = getDifficultyConfig(getAIDifficulty());
+    const strictness = config.scoringStrictness;
+    if (strictness === 1.0) return result;
+
+    const adjust = (val) => Math.min(10, Math.max(1, Math.round(val * strictness)));
+    const breakdown = {
+        wit: adjust(result.breakdown.wit),
+        logic: adjust(result.breakdown.logic),
+        originality: adjust(result.breakdown.originality),
+        clarity: adjust(result.breakdown.clarity),
+    };
+    const score = Math.min(10, Math.max(1, Math.round(
+        (breakdown.wit + breakdown.logic + breakdown.originality + breakdown.clarity) / 4
+    )));
+    return { ...result, breakdown, baseScore: score, score };
+}
+
 function mockScore(submission, asset1, asset2) {
     const breakdown = {
         wit: Math.floor(Math.random() * 4) + 7,
@@ -31,19 +50,21 @@ function mockScore(submission, asset1, asset2) {
         (breakdown.wit + breakdown.logic + breakdown.originality + breakdown.clarity) / 4
     );
     const relevance = Math.random() > 0.5 ? 'Highly Logical' : 'Absurdly Creative';
+    const leftLabel = asset1?.label ?? 'Thing A';
+    const rightLabel = asset2?.label ?? 'Thing B';
     return {
         baseScore,
         breakdown,
         score: baseScore,
         relevance,
-        commentary: `An interesting bridge between ${asset1.label} and ${asset2.label}. '${submission}' is ${relevance.toLowerCase()}!`,
+        commentary: `An interesting bridge between ${leftLabel} and ${rightLabel}. '${submission || ''}' is ${relevance.toLowerCase()}!`,
     };
 }
 
 export async function scoreSubmission(submission, asset1, asset2, mediaType = 'image') {
     if (!ai || !submission || !asset1 || !asset2) {
         await new Promise((r) => setTimeout(r, 1500));
-        return { ...mockScore(submission, asset1, asset2), isMock: true };
+        return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true });
     }
 
     const mediaLabel = mediaType === 'video' ? 'video clip' : mediaType === 'audio' ? 'audio clip' : 'image';
@@ -69,7 +90,7 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
         const baseScore = Math.round(
             (parsed.wit + parsed.logic + parsed.originality + parsed.clarity) / 4
         );
-        return {
+        return applyDifficulty({
             baseScore: Math.min(10, Math.max(1, baseScore)),
             breakdown: {
                 wit: Math.min(10, Math.max(1, parsed.wit)),
@@ -81,11 +102,11 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
             relevance: parsed.relevance || 'Highly Logical',
             commentary: parsed.commentary || `Solid connection between ${asset1.label} and ${asset2.label}!`,
             isMock: false,
-        };
+        });
     } catch (err) {
         console.warn('Gemini scoring failed, using mock:', err);
         await new Promise((r) => setTimeout(r, 500));
-        return { ...mockScore(submission, asset1, asset2), isMock: true, errorReason: 'AI scoring unavailable — using mock scores' };
+        return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true, errorReason: 'AI scoring unavailable — using mock scores' });
     }
 }
 

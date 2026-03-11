@@ -11,12 +11,13 @@ import { parseReferralFromUrl, trackReferral, hasReferralBonus, claimReferralBon
 import { trackEvent } from '../../services/analytics';
 import { toggleMute, isMuted } from '../../services/sounds';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain } from 'lucide-react';
+import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { UnlockModal } from '../../components/UnlockModal';
 import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
+import { getBuiltInPacks, getCustomPacks } from '../../services/promptPacks';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -354,6 +355,26 @@ export function Lobby() {
                         </div>
                     )}
 
+                    {/* Offline mode indicator */}
+                    {!isBackendEnabled() && (
+                        <div className="w-full max-w-md mb-4 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-amber-300 text-sm">
+                            <WifiOff size={16} />
+                            <span>Offline mode — leaderboards, multiplayer & challenges require backend</span>
+                        </div>
+                    )}
+
+                    {/* Streak Counter */}
+                    {stats?.currentStreak > 0 && (
+                        <div className="w-full max-w-md mb-4 p-4 rounded-2xl bg-gradient-to-r from-orange-500/20 via-red-500/20 to-orange-500/20 border border-orange-500/30 text-center animate-in fade-in duration-500">
+                            <div className="text-4xl mb-1">🔥</div>
+                            <div className="text-2xl font-black text-orange-300">Day {stats.currentStreak}</div>
+                            <div className="text-white/60 text-sm">
+                                {stats.currentStreak >= 5 ? 'Max streak bonus! 1.5x multiplier' :
+                                 `${((1 + stats.currentStreak * 0.1).toFixed(1))}x streak multiplier`}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Daily Challenge */}
                     {!showMultiplayer && !dailyPlayed && (
                         <button
@@ -391,6 +412,24 @@ export function Lobby() {
                     {/* Solo play */}
                     {!showMultiplayer && (
                         <>
+                            {/* Prompt Pack Selector */}
+                            <div className="w-full max-w-md mb-4">
+                                <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Concept Pack</label>
+                                <select
+                                    value={user?.promptPack || ''}
+                                    onChange={(e) => login({ ...user, promptPack: e.target.value || null })}
+                                    className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                                >
+                                    <option value="">Random (Default)</option>
+                                    {getBuiltInPacks().map(pack => (
+                                        <option key={pack.id} value={pack.id}>{pack.name} — {pack.description}</option>
+                                    ))}
+                                    {getCustomPacks().map(pack => (
+                                        <option key={pack.id} value={pack.id}>{pack.name} (Custom)</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             {/* Session length (only when not in active session) */}
                             {!sessionId && (
                                 <div className="mb-4">
@@ -451,6 +490,17 @@ export function Lobby() {
                                 </button>
                             </div>
 
+                            {/* AI Battle button */}
+                            <button
+                                onClick={() => {
+                                    if (!sessionId) startSession(sessionLength);
+                                    setGameState('AI_BATTLE');
+                                }}
+                                className="w-full py-4 bg-gradient-to-r from-red-600/80 to-orange-600/80 hover:from-red-600 hover:to-orange-600 text-white font-bold text-lg rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg border border-red-500/30"
+                            >
+                                🤖 vs AI Battle
+                            </button>
+
                             {/* Quick nav row */}
                             <div className="flex gap-2 mt-3">
                                 <button
@@ -480,6 +530,31 @@ export function Lobby() {
                                     title="AI Settings"
                                 >
                                     <Brain className="w-4 h-4" /> AI
+                                </button>
+                            </div>
+
+                            {/* Tournament & Challenge Chains */}
+                            <div className="flex gap-2 mt-3">
+                                <button
+                                    onClick={() => { haptic('light'); trackEvent('nav_tournament'); setGameState('TOURNAMENT'); }}
+                                    className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
+                                    title="Tournaments"
+                                >
+                                    <Trophy className="w-4 h-4" /> Tournaments
+                                </button>
+                                <button
+                                    onClick={() => { haptic('light'); trackEvent('nav_async_chains'); setGameState('ASYNC_CHAINS'); }}
+                                    className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
+                                    title="Challenge Chains"
+                                >
+                                    <Link className="w-4 h-4" /> Challenge Chains
+                                </button>
+                                <button
+                                    onClick={() => { haptic('light'); trackEvent('nav_analytics'); setGameState('ANALYTICS'); }}
+                                    className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
+                                    title="Analytics"
+                                >
+                                    <BarChart3 className="w-4 h-4" /> Analytics
                                 </button>
                             </div>
 
@@ -561,7 +636,13 @@ export function Lobby() {
                     <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-4 justify-center">
                         {sessionId && (
                             <button
-                                onClick={endSession}
+                                onClick={() => {
+                                    if (roundComplete && roundNumber === totalRounds) {
+                                        endSession();
+                                    } else if (window.confirm('End current session? Your progress will be lost.')) {
+                                        endSession();
+                                    }
+                                }}
                                 className="text-sm text-white/40 hover:text-white underline min-h-[44px] flex items-center"
                                 aria-label="Start new session"
                             >

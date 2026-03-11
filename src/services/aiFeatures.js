@@ -10,7 +10,7 @@ const DIFFICULTY_CONFIGS = {
   easy: {
     label: 'Easy',
     description: 'Lenient scoring - great for beginners',
-    scoringStrictness: 0.7,
+    scoringStrictness: 1.3,
     timeBonus: 15,
   },
   normal: {
@@ -22,7 +22,7 @@ const DIFFICULTY_CONFIGS = {
   hard: {
     label: 'Hard',
     description: 'Strict scoring - requires true wit',
-    scoringStrictness: 1.3,
+    scoringStrictness: 0.7,
     timeBonus: -10,
   },
 };

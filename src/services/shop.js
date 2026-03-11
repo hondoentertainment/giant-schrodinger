@@ -370,3 +370,16 @@ export function getBattlePassProgress() {
     nextTierXp,
   };
 }
+
+/**
+ * Adds XP to the battle pass. Called after completing a round.
+ * @param {number} amount - XP to add (e.g. score * 10)
+ * @returns {number} New total XP
+ */
+export function addBattlePassXp(amount) {
+  const bp = getBattlePass();
+  const { tiers: _tiers, ...bpState } = bp;
+  bpState.xp = (bpState.xp || 0) + amount;
+  saveJSON(STORAGE_KEYS.battlePass, bpState);
+  return bpState.xp;
+}

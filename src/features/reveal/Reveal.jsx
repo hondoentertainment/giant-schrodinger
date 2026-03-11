@@ -10,8 +10,10 @@ import { submitScore, getPlayerRank } from '../../services/leaderboard';
 import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
 import { trackEvent } from '../../services/analytics';
 import { autoSaveHighlight } from '../../services/highlights';
+import { getConnectionExplanation } from '../../services/aiFeatures';
+import { ShareCardCanvas } from '../../components/ShareCardCanvas';
 import { checkAchievements } from '../../services/achievements';
-import { addCoins } from '../../services/shop';
+import { addCoins, addBattlePassXp } from '../../services/shop';
 import { saveSharedRound } from '../../services/backend';
 import { getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
@@ -52,6 +54,7 @@ export function Reveal({ submission, assets }) {
         setSavedCollision(collision);
         autoSaveHighlight(collision);
         addCoins(finalScore, 'round_complete');
+        addBattlePassXp(finalScore * 10);
         const { newlyUnlocked: unlocked } = recordPlay();
         if (unlocked?.length) setNewlyUnlocked(unlocked);
         try { checkAchievements({ score: finalScore }); } catch {}
@@ -59,16 +62,19 @@ export function Reveal({ submission, assets }) {
         return collision;
     };
 
-    // Animate score counting up
+    // Animate score counting up - slower for dramatic effect
     useEffect(() => {
         if (!result) return;
         const finalScore = result.finalScore || result.score;
         if (!finalScore) return;
-        let current = 0;
-        const step = finalScore / 20;
+        let frame = 0;
+        const totalFrames = 30;
         const interval = setInterval(() => {
-            current += step;
-            if (current >= finalScore) {
+            frame++;
+            // Ease-out curve for satisfying deceleration
+            const progress = 1 - Math.pow(1 - frame / totalFrames, 3);
+            const current = finalScore * progress;
+            if (frame >= totalFrames) {
                 setAnimatedScore(finalScore);
                 clearInterval(interval);
             } else {
@@ -78,16 +84,19 @@ export function Reveal({ submission, assets }) {
         return () => clearInterval(interval);
     }, [result]);
 
-    // Play sound and confetti on result
+    // Play sound and confetti after score animation completes
     useEffect(() => {
         if (!result || soundPlayedRef.current) return;
         const score = result.finalScore || result.score;
         soundPlayedRef.current = true;
-        playScoreReveal(score);
-        if (score >= 9) {
-            setShowConfetti(true);
-            playConfettiSound();
-        }
+        // Delay sound to sync with animation end (~1.5s)
+        const soundTimer = setTimeout(() => {
+            playScoreReveal(score);
+            if (score >= 9) {
+                setShowConfetti(true);
+                playConfettiSound();
+            }
+        }, 1400);
         // Submit to leaderboard
         if (user?.name) {
             submitScore(user.name, score, user.avatar, roundNumber);
@@ -95,6 +104,7 @@ export function Reveal({ submission, assets }) {
             if (rank) setPlayerRank(rank);
         }
         trackEvent('round_complete', { score, scoringMode, roundNumber });
+        return () => clearTimeout(soundTimer);
     }, [result]);
 
     useEffect(() => {
@@ -312,7 +322,7 @@ export function Reveal({ submission, assets }) {
                         <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-6 border border-white/10">
                             HUMAN JUDGE
                         </div>
-                        <div className="relative aspect-square w-full max-w-sm mx-auto rounded-2xl overflow-hidden mb-8 shadow-2xl ring-1 ring-white/20">
+                        <div className="relative aspect-[4/3] sm:aspect-square w-full max-w-xs sm:max-w-sm mx-auto rounded-2xl overflow-hidden mb-6 sm:mb-8 shadow-2xl ring-1 ring-white/20">
                             <img
                                 src={fusionImage.url}
                                 alt="Fusion"
@@ -395,12 +405,12 @@ export function Reveal({ submission, assets }) {
                 />
             )}
             <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl">
-                <div className="glass-panel rounded-[22px] p-8 text-center max-w-2xl">
-                    <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-6 border border-white/10">
+                <div className="glass-panel rounded-[22px] p-4 sm:p-8 text-center max-w-2xl">
+                    <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 sm:mb-6 border border-white/10">
                         YOUR SCORE
                     </div>
 
-                    <div className="relative aspect-square w-full max-w-sm mx-auto rounded-2xl overflow-hidden mb-8 shadow-2xl ring-1 ring-white/20">
+                    <div className="relative aspect-[4/3] sm:aspect-square w-full max-w-xs sm:max-w-sm mx-auto rounded-2xl overflow-hidden mb-6 sm:mb-8 shadow-2xl ring-1 ring-white/20">
                         <img
                             src={fusionImage.url}
                             alt="Fusion"
@@ -472,6 +482,30 @@ export function Reveal({ submission, assets }) {
                             — {scoringMode === 'human' ? 'Human Judge' : 'Gemini AI Host'}
                         </footer>
                     </blockquote>
+
+                    {/* Connection Explanation */}
+                    {result && assets?.left?.label && assets?.right?.label && (
+                        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+                            <div className="text-blue-300 text-xs uppercase tracking-wider font-bold mb-2">Why this score?</div>
+                            <p className="text-white/70 text-sm leading-relaxed">
+                                {getConnectionExplanation(submission, result.finalScore || result.score, assets.left.label, assets.right.label)}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Visual Share Card */}
+                    {savedCollision && (
+                        <div className="mb-6">
+                            <ShareCardCanvas
+                                submission={submission}
+                                score={finalScoreDisplay}
+                                leftLabel={assets?.left?.label}
+                                rightLabel={assets?.right?.label}
+                                fusionImageUrl={fusionImage?.url}
+                                playerName={user?.name}
+                            />
+                        </div>
+                    )}
 
                     {/* Social sharing */}
                     {savedCollision && (

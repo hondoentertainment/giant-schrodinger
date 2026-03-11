@@ -70,18 +70,19 @@ export function SessionSummary() {
 
     const handlePlayAgain = () => {
         endSession();
+        // endSession already sets gameState to LOBBY where user can start a new session
     };
 
-    const handleBackToLobby = () => {
+    const handleViewGallery = () => {
         endSession();
-        setGameState('LOBBY');
+        setGameState('GALLERY');
     };
 
     if (!sessionResults.length) {
         return (
             <div className="text-center text-white/40 py-12">
                 <p>No results to show.</p>
-                <button onClick={handleBackToLobby} className="mt-4 text-white underline">
+                <button onClick={handlePlayAgain} className="mt-4 text-white underline">
                     Back to Lobby
                 </button>
             </div>
@@ -91,7 +92,7 @@ export function SessionSummary() {
     return (
         <div className="w-full max-w-xl flex flex-col items-center animate-in zoom-in-95 duration-700">
             <div className="bg-gradient-to-br from-amber-900/30 via-purple-900/40 to-pink-900/30 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                <div className="glass-panel rounded-[22px] p-8">
+                <div className="glass-panel rounded-[22px] p-4 sm:p-8">
                     {/* Header */}
                     <div className="text-center mb-8">
                         <div className="inline-block px-4 py-1 rounded-full bg-amber-500/10 text-sm font-bold tracking-widest text-amber-400 mb-4 border border-amber-500/20">
@@ -109,18 +110,18 @@ export function SessionSummary() {
                     </div>
 
                     {/* Stats grid */}
-                    <div className="grid grid-cols-3 gap-3 mb-8">
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                            <div className="text-2xl font-bold text-white">{stats.avg.toFixed(1)}</div>
-                            <div className="text-white/40 text-xs uppercase tracking-wider">Avg Score</div>
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8">
+                        <div className="p-2 sm:p-3 rounded-xl bg-white/5 border border-white/10 text-center">
+                            <div className="text-xl sm:text-2xl font-bold text-white">{stats.avg.toFixed(1)}</div>
+                            <div className="text-white/40 text-[10px] sm:text-xs uppercase tracking-wider">Avg Score</div>
                         </div>
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                            <div className="text-2xl font-bold text-emerald-400">{stats.best}</div>
-                            <div className="text-white/40 text-xs uppercase tracking-wider">Best</div>
+                        <div className="p-2 sm:p-3 rounded-xl bg-white/5 border border-white/10 text-center">
+                            <div className="text-xl sm:text-2xl font-bold text-emerald-400">{stats.best}</div>
+                            <div className="text-white/40 text-[10px] sm:text-xs uppercase tracking-wider">Best</div>
                         </div>
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                            <div className="text-2xl font-bold text-white/60">{totalRounds}</div>
-                            <div className="text-white/40 text-xs uppercase tracking-wider">Rounds</div>
+                        <div className="p-2 sm:p-3 rounded-xl bg-white/5 border border-white/10 text-center">
+                            <div className="text-xl sm:text-2xl font-bold text-white/60">{totalRounds}</div>
+                            <div className="text-white/40 text-[10px] sm:text-xs uppercase tracking-wider">Rounds</div>
                         </div>
                     </div>
 
@@ -189,11 +190,11 @@ export function SessionSummary() {
                             Play Again
                         </button>
                         <button
-                            onClick={handleBackToLobby}
+                            onClick={handleViewGallery}
                             className="w-full py-3 bg-white/10 text-white/70 font-semibold rounded-full hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
                         >
-                            <Home className="w-5 h-5" />
-                            Back to Lobby
+                            <Star className="w-5 h-5" />
+                            View Gallery
                         </button>
                     </div>
                 </div>
