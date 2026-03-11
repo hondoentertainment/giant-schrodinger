@@ -7,12 +7,20 @@
  */
 
 const STORAGE_KEY = 'vwf_analytics';
+const SESSION_START_KEY = 'vwf_session_start';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const FLUSH_INTERVAL_MS = 5000;
 
 // In-memory buffer for new events
 let _buffer = [];
 let _flushTimer = null;
+
+// Session duration tracking – record when the session started
+try {
+  if (!sessionStorage.getItem(SESSION_START_KEY)) {
+    sessionStorage.setItem(SESSION_START_KEY, String(Date.now()));
+  }
+} catch { /* ignore */ }
 
 function readEvents() {
   try {
@@ -161,6 +169,7 @@ export function getSessionMetrics() {
       dailyChallengesCompleted,
       d1Retention,
       d7Retention,
+      sessionDurationSeconds: getSessionDuration(),
     };
   } catch {
     return {
@@ -171,6 +180,7 @@ export function getSessionMetrics() {
       dailyChallengesCompleted: 0,
       d1Retention: 0,
       d7Retention: 0,
+      sessionDurationSeconds: 0,
     };
   }
 }
@@ -186,6 +196,49 @@ export function clearOldEvents() {
     writeEvents(events);
   } catch {
     // ignore
+  }
+}
+
+/**
+ * Return the current session duration in seconds.
+ */
+export function getSessionDuration() {
+  try {
+    const start = sessionStorage.getItem(SESSION_START_KEY);
+    if (!start) return 0;
+    return Math.floor((Date.now() - Number(start)) / 1000);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Return all recorded events (flushing the buffer first).
+ */
+export function getAllEvents() {
+  try {
+    flushBuffer();
+    return readEvents();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Export the full analytics dataset as a JSON object.
+ * Includes events, session metrics, and session duration.
+ */
+export function exportAnalyticsData() {
+  try {
+    flushBuffer();
+    return {
+      exportedAt: new Date().toISOString(),
+      sessionDurationSeconds: getSessionDuration(),
+      metrics: getSessionMetrics(),
+      events: readEvents(),
+    };
+  } catch {
+    return { exportedAt: new Date().toISOString(), events: [], metrics: {}, sessionDurationSeconds: 0 };
   }
 }
 

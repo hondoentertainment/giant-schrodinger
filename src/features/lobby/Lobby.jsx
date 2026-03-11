@@ -11,13 +11,14 @@ import { parseReferralFromUrl, trackReferral, hasReferralBonus, claimReferralBon
 import { trackEvent } from '../../services/analytics';
 import { toggleMute, isMuted } from '../../services/sounds';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3 } from 'lucide-react';
+import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3, Bell, BellOff } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { UnlockModal } from '../../components/UnlockModal';
 import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
-import { getBuiltInPacks, getCustomPacks } from '../../services/promptPacks';
+import { getBuiltInPacks, getCustomPacks, getPackLeaderboard, getPackById } from '../../services/promptPacks';
+import { isNotificationSupported, isNotificationEnabled, getNotificationPermission, requestNotificationPermission, disableNotifications, scheduleStreakReminder, scheduleDailyChallengeReminder } from '../../services/notifications';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -70,6 +71,8 @@ export function Lobby() {
     const [mpLoadingAction, setMpLoadingAction] = useState(null); // 'create' | 'join'
     const [soundMuted, setSoundMuted] = useState(isMuted());
     const [countdown, setCountdown] = useState(() => formatCountdown(getTimeUntilNextChallenge()));
+    const [notificationsEnabled, setNotificationsEnabled] = useState(() => isNotificationEnabled());
+    const [notificationPromptDismissed, setNotificationPromptDismissed] = useState(() => localStorage.getItem('vwf_notif_prompt_dismissed') === 'true');
 
     const theme = getThemeById(themeId);
     const stats = useMemo(() => getStats(), [sessionId, roundNumber]);
@@ -375,6 +378,47 @@ export function Lobby() {
                         </div>
                     )}
 
+                    {/* Notification permission prompt — shown after first game, non-intrusive */}
+                    {!showMultiplayer && isNotificationSupported() && !notificationsEnabled && !notificationPromptDismissed && getNotificationPermission() === 'default' && stats.totalRounds >= 1 && (
+                        <div className="w-full mb-4 p-4 rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 animate-in fade-in duration-500">
+                            <div className="flex items-center gap-3">
+                                <div className="text-2xl shrink-0">🔔</div>
+                                <div className="flex-1 text-left">
+                                    <div className="text-white text-sm font-semibold">Stay in the game</div>
+                                    <div className="text-white/50 text-xs">Get streak reminders and daily challenge alerts</div>
+                                </div>
+                            </div>
+                            <div className="flex gap-2 mt-3">
+                                <button
+                                    onClick={async () => {
+                                        const perm = await requestNotificationPermission();
+                                        if (perm === 'granted') {
+                                            setNotificationsEnabled(true);
+                                            trackEvent('notifications_enabled', { source: 'lobby_prompt' });
+                                            if (stats.currentStreak > 0) scheduleStreakReminder(stats.currentStreak);
+                                            scheduleDailyChallengeReminder();
+                                        }
+                                        setNotificationPromptDismissed(true);
+                                        localStorage.setItem('vwf_notif_prompt_dismissed', 'true');
+                                    }}
+                                    className="flex-1 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-500 transition-colors"
+                                >
+                                    Enable
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setNotificationPromptDismissed(true);
+                                        localStorage.setItem('vwf_notif_prompt_dismissed', 'true');
+                                        trackEvent('notifications_dismissed', { source: 'lobby_prompt' });
+                                    }}
+                                    className="px-4 py-2 bg-white/10 text-white/50 text-sm rounded-xl hover:bg-white/20 transition-colors"
+                                >
+                                    Not now
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Daily Challenge */}
                     {!showMultiplayer && !dailyPlayed && (
                         <button
@@ -417,7 +461,7 @@ export function Lobby() {
                                 <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Concept Pack</label>
                                 <select
                                     value={user?.promptPack || ''}
-                                    onChange={(e) => login({ ...user, promptPack: e.target.value || null })}
+                                    onChange={(e) => { const pack = e.target.value || null; login({ ...user, promptPack: pack }); trackEvent('pack_selected', { packId: pack }); }}
                                     className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                                 >
                                     <option value="">Random (Default)</option>
@@ -751,7 +795,7 @@ export function Lobby() {
                                 <button
                                     key={t.id}
                                     type="button"
-                                    onClick={() => !locked && setThemeId(t.id)}
+                                    onClick={() => { if (!locked) { setThemeId(t.id); trackEvent('theme_changed', { themeId: t.id, themeName: t.label }); } }}
                                     disabled={locked}
                                     aria-pressed={themeId === t.id}
                                     aria-label={locked ? `${t.label} — locked` : title}

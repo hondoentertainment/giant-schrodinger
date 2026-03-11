@@ -15,6 +15,7 @@ import { ShareCardCanvas } from '../../components/ShareCardCanvas';
 import { checkAchievements } from '../../services/achievements';
 import { addCoins, addBattlePassXp } from '../../services/shop';
 import { saveSharedRound } from '../../services/backend';
+import { recordPackPlay } from '../../services/promptPacks';
 import { getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
@@ -57,7 +58,19 @@ export function Reveal({ submission, assets }) {
         addBattlePassXp(finalScore * 10);
         const { newlyUnlocked: unlocked } = recordPlay();
         if (unlocked?.length) setNewlyUnlocked(unlocked);
-        try { checkAchievements({ score: finalScore }); } catch {}
+        try {
+            const newAchievements = checkAchievements({ score: finalScore });
+            if (newAchievements?.length) {
+                newAchievements.forEach((a) => {
+                    trackEvent('achievement_unlocked', { id: a.id, name: a.name, category: a.category, points: a.points });
+                });
+            }
+        } catch {}
+        // Record score to pack leaderboard if playing with a prompt pack
+        const activePackId = user?.promptPack;
+        if (activePackId) {
+            try { recordPackPlay(activePackId, finalScore); } catch {}
+        }
         savedRef.current = true;
         return collision;
     };

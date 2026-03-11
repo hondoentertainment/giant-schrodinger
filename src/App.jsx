@@ -30,6 +30,7 @@ import { initAudio } from './services/sounds'
 import { trackEvent } from './services/analytics'
 import { AnalyticsDashboard } from './features/analytics/AnalyticsDashboard'
 import { initErrorMonitoring } from './services/errorMonitoring'
+import { isNotificationEnabled, scheduleStreakReminder, scheduleDailyChallengeReminder } from './services/notifications'
 
 initErrorMonitoring();
 
@@ -71,6 +72,21 @@ function GameContent() {
         };
         document.addEventListener('click', handler);
         return () => document.removeEventListener('click', handler);
+    }, []);
+
+    // Initialize notification scheduling if permission was already granted
+    useEffect(() => {
+        if (isNotificationEnabled()) {
+            try {
+                const stats = JSON.parse(localStorage.getItem('vwf_stats') || '{}');
+                if (stats.currentStreak > 0) {
+                    scheduleStreakReminder(stats.currentStreak);
+                }
+                scheduleDailyChallengeReminder();
+            } catch {
+                // Ignore storage errors
+            }
+        }
     }, []);
 
     const handleRoundSubmit = (data) => {

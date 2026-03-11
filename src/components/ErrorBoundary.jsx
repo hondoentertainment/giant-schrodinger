@@ -1,4 +1,5 @@
 import React from 'react';
+import { logError, ErrorCategory } from '../services/errorMonitoring';
 
 export class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -12,21 +13,13 @@ export class ErrorBoundary extends React.Component {
 
     componentDidCatch(error, errorInfo) {
         console.error('ErrorBoundary caught:', error, errorInfo);
-        // Log to localStorage for analytics
-        try {
-            const errors = JSON.parse(localStorage.getItem('vwf_error_log') || '[]');
-            errors.push({
-                message: error?.message || 'Unknown error',
-                stack: error?.stack?.slice(0, 500),
-                componentStack: errorInfo?.componentStack?.slice(0, 500),
-                timestamp: Date.now(),
-                url: window.location.href,
-            });
-            // Keep last 50 errors
-            localStorage.setItem('vwf_error_log', JSON.stringify(errors.slice(-50)));
-        } catch {
-            // Don't let error logging break the error boundary
-        }
+        logError({
+            message: error?.message || 'Unknown error',
+            stack: error?.stack?.slice(0, 500),
+            componentStack: errorInfo?.componentStack?.slice(0, 500),
+            category: ErrorCategory.RENDER,
+            context: 'React component tree render',
+        });
     }
 
     handleRetry = () => {

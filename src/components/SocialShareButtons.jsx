@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     shareToTwitter,
     shareToFacebook,
@@ -6,6 +6,8 @@ import {
     copyShareLink,
     downloadFusionImage,
     shareViaWebShare,
+    updateMetaTags,
+    restoreDefaultMetaTags,
 } from '../services/socialShare';
 
 const ICON_SIZE = 20;

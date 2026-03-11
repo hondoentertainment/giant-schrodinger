@@ -1,4 +1,5 @@
 import { supabase, isBackendEnabled } from '../lib/supabase';
+import { logError, ErrorCategory } from './errorMonitoring';
 
 // Generate a short room code (4 uppercase alphanumeric characters)
 function generateRoomCode() {

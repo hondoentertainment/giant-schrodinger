@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { getFusionImage } from '../data/themes';
 import { getAIDifficulty, getDifficultyConfig } from './aiFeatures';
+import { logError, ErrorCategory } from './errorMonitoring';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
@@ -105,6 +106,12 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
         });
     } catch (err) {
         console.warn('Gemini scoring failed, using mock:', err);
+        logError({
+            message: `AI scoring failed: ${err?.message || err}`,
+            stack: err?.stack?.slice(0, 500),
+            category: ErrorCategory.SCORING,
+            context: `Scoring submission "${submission}" for ${asset1?.label} + ${asset2?.label}`,
+        });
         await new Promise((r) => setTimeout(r, 500));
         return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true, errorReason: 'AI scoring unavailable — using mock scores' });
     }
@@ -142,6 +149,12 @@ export async function generateFusionImage(theme, submission) {
         }
     } catch (err) {
         console.warn('Gemini image gen failed, using curated:', err);
+        logError({
+            message: `AI image generation failed: ${err?.message || err}`,
+            stack: err?.stack?.slice(0, 500),
+            category: ErrorCategory.SCORING,
+            context: `Generating fusion image for theme "${theme}" with submission "${submission}"`,
+        });
     }
 
     await new Promise((r) => setTimeout(r, 800));

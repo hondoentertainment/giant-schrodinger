@@ -1,3 +1,5 @@
+import { logError, ErrorCategory } from './errorMonitoring';
+
 const SHARE_HASH_PREFIX = 'judge=';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -10,7 +12,12 @@ export function createJudgeShareUrl(payload) {
         const json = JSON.stringify(payload);
         const encoded = btoa(unescape(encodeURIComponent(json)));
         return `${base}#${SHARE_HASH_PREFIX}${encoded}`;
-    } catch {
+    } catch (err) {
+        logError({
+            message: `Failed to create share URL: ${err?.message || err}`,
+            category: ErrorCategory.SHARE,
+            context: 'Creating judge share URL',
+        });
         return null;
     }
 }
@@ -36,7 +43,12 @@ export function parseJudgeShareUrl() {
     try {
         const json = decodeURIComponent(escape(atob(encoded)));
         return JSON.parse(json);
-    } catch {
+    } catch (err) {
+        logError({
+            message: `Failed to parse share URL: ${err?.message || err}`,
+            category: ErrorCategory.SHARE,
+            context: 'Parsing judge share URL from hash/search params',
+        });
         return null;
     }
 }

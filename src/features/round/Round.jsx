@@ -5,6 +5,7 @@ import { THEMES, buildThemeAssets, getThemeById, MEDIA_TYPES } from '../../data/
 import { getCustomImages } from '../../services/customImages';
 import { getStats, isThemeUnlocked } from '../../services/stats';
 import { getAIDifficulty, getDifficultyConfig } from '../../services/aiFeatures';
+import { getRandomPairing } from '../../services/promptPacks';
 import { haptic } from '../../lib/haptics';
 
 export function Round({ onSubmit }) {
@@ -30,19 +31,27 @@ export function Round({ onSubmit }) {
     useEffect(() => {
         submittedRef.current = false;
         let left, right;
-        const customPool = getCustomImages();
-        const useCustom = mediaType === MEDIA_TYPES.IMAGE && user?.useCustomImages && customPool.length >= 2;
-        if (useCustom) {
-            const shuffled = [...customPool].sort(() => Math.random() - 0.5);
-            [left, right] = shuffled.slice(0, 2).map((img, i) => ({
-                id: img.id,
-                label: img.label,
-                type: MEDIA_TYPES.IMAGE,
-                url: img.url,
-                fallbackUrl: img.url,
-            }));
+        const selectedPackId = user?.promptPack || null;
+        const packPairing = selectedPackId ? getRandomPairing(selectedPackId) : null;
+        if (packPairing) {
+            // Use concept pair from the selected prompt pack
+            left = { id: `pack-left-${Date.now()}`, label: packPairing.left, type: 'text' };
+            right = { id: `pack-right-${Date.now()}`, label: packPairing.right, type: 'text' };
         } else {
-            [left, right] = buildThemeAssets(theme, 2, mediaType);
+            const customPool = getCustomImages();
+            const useCustom = mediaType === MEDIA_TYPES.IMAGE && user?.useCustomImages && customPool.length >= 2;
+            if (useCustom) {
+                const shuffled = [...customPool].sort(() => Math.random() - 0.5);
+                [left, right] = shuffled.slice(0, 2).map((img, i) => ({
+                    id: img.id,
+                    label: img.label,
+                    type: MEDIA_TYPES.IMAGE,
+                    url: img.url,
+                    fallbackUrl: img.url,
+                }));
+            } else {
+                [left, right] = buildThemeAssets(theme, 2, mediaType);
+            }
         }
         [left, right].forEach((a) => {
             if (!a?.url) return;
