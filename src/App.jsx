@@ -29,6 +29,7 @@ import { parseThemeFromUrl, clearThemeFromUrl } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
 import { trackEvent } from './services/analytics'
 import { AnalyticsDashboard } from './features/analytics/AnalyticsDashboard'
+import { ErrorReport } from './components/ErrorReport'
 import { initErrorMonitoring } from './services/errorMonitoring'
 import { isNotificationEnabled, scheduleStreakReminder, scheduleDailyChallengeReminder } from './services/notifications'
 
@@ -161,6 +162,7 @@ function GameContent() {
             {gameState === 'TOURNAMENT' && <TournamentLobby onBack={() => setGameState('LOBBY')} />}
             {gameState === 'ASYNC_CHAINS' && <AsyncChains onBack={() => setGameState('LOBBY')} />}
             {gameState === 'ANALYTICS' && <AnalyticsDashboard onBack={() => setGameState('LOBBY')} />}
+            {gameState === 'ERROR_REPORT' && <ErrorReport onBack={() => setGameState('LOBBY')} />}
             {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
         </Layout>
     );

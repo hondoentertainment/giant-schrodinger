@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { updateMetaTags } from '../services/socialShare';
 
-export function ShareCardCanvas({ submission, score, leftLabel, rightLabel, fusionImageUrl, playerName }) {
+export function ShareCardCanvas({ submission, score, leftLabel, rightLabel, fusionImageUrl, playerName, onGenerated }) {
     const canvasRef = useRef(null);
     const [dataUrl, setDataUrl] = useState(null);
 
@@ -71,8 +72,10 @@ export function ShareCardCanvas({ submission, score, leftLabel, rightLabel, fusi
             ctx.fillText(`by ${playerName}`, W - 40, H - 20);
         }
 
-        setDataUrl(canvas.toDataURL('image/png'));
-    }, [submission, score, leftLabel, rightLabel, playerName]);
+        const url = canvas.toDataURL('image/png');
+        setDataUrl(url);
+        onGenerated?.(url);
+    }, [submission, score, leftLabel, rightLabel, playerName, onGenerated]);
 
     const handleDownload = () => {
         if (!dataUrl) return;
@@ -84,6 +87,18 @@ export function ShareCardCanvas({ submission, score, leftLabel, rightLabel, fusi
 
     const handleShare = async () => {
         if (!dataUrl) return;
+
+        // Update OG meta tags before sharing so link previews are contextual
+        updateMetaTags({
+            submission,
+            score,
+            assets: {
+                left: { label: leftLabel },
+                right: { label: rightLabel },
+            },
+            imageDataUrl: dataUrl,
+        });
+
         try {
             const blob = await (await fetch(dataUrl)).blob();
             const file = new File([blob], `venn-score-${score}.png`, { type: 'image/png' });

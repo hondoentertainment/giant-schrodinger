@@ -82,6 +82,13 @@ export default function SocialShareButtons({ shareData, imageUrl, onToast }) {
     const [copied, setCopied] = useState(false);
     const supportsWebShare = typeof navigator !== 'undefined' && !!navigator.share;
 
+    // Restore default OG tags when this component unmounts (user navigates away)
+    useEffect(() => {
+        return () => {
+            restoreDefaultMetaTags();
+        };
+    }, []);
+
     const handleTwitter = () => {
         shareToTwitter(shareData);
     };
