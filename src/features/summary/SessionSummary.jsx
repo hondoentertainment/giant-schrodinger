@@ -82,7 +82,7 @@ export function SessionSummary() {
         return (
             <div className="text-center text-white/40 py-12">
                 <p>No results to show.</p>
-                <button onClick={handleBackToLobby} className="mt-4 text-white underline">
+                <button onClick={handlePlayAgain} className="mt-4 text-white underline">
                     Back to Lobby
                 </button>
             </div>

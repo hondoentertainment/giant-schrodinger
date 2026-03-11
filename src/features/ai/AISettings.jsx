@@ -118,10 +118,14 @@ export function AISettings({ onBack }) {
                         Test your creativity against an AI opponent. The AI will generate its own
                         connection and you will see how your score compares.
                     </p>
-                    <button className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 transition-colors font-semibold text-sm flex items-center justify-center gap-2">
+                    <button
+                        onClick={onBack}
+                        className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 transition-colors font-semibold text-sm flex items-center justify-center gap-2"
+                    >
                         <Zap size={16} />
-                        Practice against AI
+                        Play with AI Judge
                     </button>
+                    <p className="text-xs text-gray-500 text-center">Set scoring to &quot;AI Judge&quot; in the lobby to play against the AI</p>
                 </section>
 
                 {/* Global Creativity Index */}
