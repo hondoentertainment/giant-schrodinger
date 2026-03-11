@@ -4,6 +4,8 @@
  * Can be replaced with Sentry/Datadog integration later.
  */
 
+import { trackEvent } from './analytics';
+
 const STORAGE_KEY = 'vwf_error_log';
 const MAX_ERRORS = 50;
 
@@ -62,6 +64,15 @@ export function logError(errorData) {
             userAgent: navigator.userAgent.slice(0, 200),
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(errors.slice(-MAX_ERRORS)));
+
+        // Also record error as an analytics event for dashboard visibility
+        try {
+            trackEvent('error_occurred', {
+                category: errorData.category || ErrorCategory.UNKNOWN,
+                message: (errorData.message || '').slice(0, 200),
+                context: errorData.context || undefined,
+            });
+        } catch { /* never let analytics break error logging */ }
     } catch {
         // Never let error logging break the app
     }

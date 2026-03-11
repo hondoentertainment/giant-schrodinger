@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { getAIDifficulty, setAIDifficulty, getDifficultyConfig, getGlobalCreativityIndex, getTrendingConnections, getPersonalInsights } from '../../services/aiFeatures';
 import { getStats } from '../../services/stats';
+import { trackEvent } from '../../services/analytics';
 import { ArrowLeft, Brain, Zap, TrendingUp, BarChart3, Globe } from 'lucide-react';
 
 const DIFFICULTY_LEVELS = ['easy', 'normal', 'hard'];
@@ -46,6 +47,7 @@ export function AISettings({ onBack }) {
     const handleDifficultyChange = (level) => {
         setAIDifficulty(level);
         setDifficulty(level);
+        trackEvent('settings_changed', { setting: 'ai_difficulty', value: level });
     };
 
     return (

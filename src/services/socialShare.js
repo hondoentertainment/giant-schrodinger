@@ -4,15 +4,21 @@ const TWITTER_BASE_URL = 'https://twitter.com/intent/tweet';
 const FACEBOOK_BASE_URL = 'https://www.facebook.com/sharer/sharer.php';
 const LINKEDIN_BASE_URL = 'https://www.linkedin.com/sharing/share-offsite';
 
+// Base URL for the deployed site
+const SITE_BASE_URL = 'https://hondoentertainment.github.io/giant-schrodinger/';
+const OG_IMAGE_URL = `${SITE_BASE_URL}og-image.svg`;
+
 // Default OG values (must match index.html)
 const DEFAULT_OG = {
   'og:title': 'Venn with Friends - The Creative Connection Game',
-  'og:description': 'Connect two random concepts with one clever phrase. Score points for wit, logic, originality, and clarity. Play solo or challenge your friends!',
-  'og:image': 'https://placehold.co/1200x630/1a0533/ffffff?text=Venn+with+Friends%0AConnect+Concepts+with+Wit',
-  'og:url': 'https://hondoentertainment.github.io/giant-schrodinger/',
+  'og:description': 'Two random concepts. One clever phrase. How creative can you get? Score points for wit, logic, originality, and clarity — then challenge your friends to beat you!',
+  'og:image': OG_IMAGE_URL,
+  'og:image:width': '1200',
+  'og:image:height': '630',
+  'og:url': SITE_BASE_URL,
   'twitter:title': 'Venn with Friends - The Creative Connection Game',
-  'twitter:description': 'Connect two random concepts with one clever phrase. Play solo or challenge your friends!',
-  'twitter:image': 'https://placehold.co/1200x630/1a0533/ffffff?text=Venn+with+Friends%0AConnect+Concepts+with+Wit',
+  'twitter:description': 'Two random concepts. One clever phrase. How creative can you get? Challenge your friends and see who connects best!',
+  'twitter:image': OG_IMAGE_URL,
 };
 
 /**
@@ -33,6 +39,7 @@ export function updateMetaTags(shareData) {
 
   setMeta('og:title', title);
   setMeta('og:description', description);
+  setMeta('og:url', window.location.href);
   setMeta('twitter:title', title);
   setMeta('twitter:description', description);
 
@@ -41,6 +48,9 @@ export function updateMetaTags(shareData) {
   // preview on some platforms does honour it, and it costs nothing to set.
   if (imageDataUrl) {
     setMeta('og:image', imageDataUrl);
+    setMeta('og:image:width', '1200');
+    setMeta('og:image:height', '630');
+    setMeta('og:image:type', 'image/png');
     setMeta('twitter:image', imageDataUrl);
   }
 }

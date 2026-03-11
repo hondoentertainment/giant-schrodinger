@@ -74,7 +74,7 @@ export function Round({ onSubmit }) {
         });
         setAssets({ left, right });
         setTimer(timeLimit);
-    }, [user?.themeId, user?.useCustomImages, timeLimit, mediaType, roundNumber]);
+    }, [user?.themeId, user?.useCustomImages, user?.promptPack, timeLimit, mediaType, roundNumber]);
 
     const handleSubmit = useCallback((e, { forceEmpty = false } = {}) => {
         if (e) e.preventDefault();

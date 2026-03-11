@@ -44,6 +44,12 @@ export async function createRoom({ hostName, themeId, totalRounds, scoringMode }
         return data;
     } catch (err) {
         console.warn('createRoom failed:', err);
+        logError({
+            message: `createRoom failed: ${err?.message || err}`,
+            stack: err?.stack?.slice(0, 500),
+            category: ErrorCategory.MULTIPLAYER,
+            context: `Creating room with host "${hostName}", theme "${themeId}"`,
+        });
         return null;
     }
 }
@@ -84,6 +90,12 @@ export async function joinRoom(code, playerName, avatar) {
         return { room };
     } catch (err) {
         console.warn('joinRoom failed:', err);
+        logError({
+            message: `joinRoom failed: ${err?.message || err}`,
+            stack: err?.stack?.slice(0, 500),
+            category: ErrorCategory.MULTIPLAYER,
+            context: `Joining room "${code}" as "${playerName}"`,
+        });
         return { error: 'Failed to join room' };
     }
 }
@@ -128,6 +140,12 @@ export async function leaveRoom(roomId, playerName) {
             .eq('player_name', playerName);
     } catch (err) {
         console.warn('leaveRoom failed:', err);
+        logError({
+            message: `leaveRoom failed: ${err?.message || err}`,
+            stack: err?.stack?.slice(0, 500),
+            category: ErrorCategory.MULTIPLAYER,
+            context: `Leaving room ${roomId} as "${playerName}"`,
+        });
     }
 }
 
@@ -150,6 +168,12 @@ export async function startRound(roomId, roundNumber, assets) {
         return true;
     } catch (err) {
         console.warn('startRound failed:', err);
+        logError({
+            message: `startRound failed: ${err?.message || err}`,
+            stack: err?.stack?.slice(0, 500),
+            category: ErrorCategory.MULTIPLAYER,
+            context: `Starting round ${roundNumber} in room ${roomId}`,
+        });
         return false;
     }
 }
@@ -165,6 +189,12 @@ export async function setRoomStatus(roomId, status) {
         return true;
     } catch (err) {
         console.warn('setRoomStatus failed:', err);
+        logError({
+            message: `setRoomStatus failed: ${err?.message || err}`,
+            stack: err?.stack?.slice(0, 500),
+            category: ErrorCategory.MULTIPLAYER,
+            context: `Setting room ${roomId} status to "${status}"`,
+        });
         return false;
     }
 }
@@ -191,6 +221,12 @@ export async function submitAnswer(roomId, roundNumber, playerName, submission) 
         return true;
     } catch (err) {
         console.warn('submitAnswer failed:', err);
+        logError({
+            message: `submitAnswer failed: ${err?.message || err}`,
+            stack: err?.stack?.slice(0, 500),
+            category: ErrorCategory.MULTIPLAYER,
+            context: `Submitting answer for round ${roundNumber} in room ${roomId} as "${playerName}"`,
+        });
         return false;
     }
 }
@@ -238,6 +274,12 @@ export async function updateSubmissionScore(submissionId, score) {
         return true;
     } catch (err) {
         console.warn('updateSubmissionScore failed:', err);
+        logError({
+            message: `updateSubmissionScore failed: ${err?.message || err}`,
+            stack: err?.stack?.slice(0, 500),
+            category: ErrorCategory.MULTIPLAYER,
+            context: `Updating score for submission ${submissionId}`,
+        });
         return false;
     }
 }

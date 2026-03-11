@@ -1,5 +1,6 @@
 import React from 'react';
 import { logError, ErrorCategory } from '../services/errorMonitoring';
+import { trackEvent } from '../services/analytics';
 
 export class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -19,6 +20,10 @@ export class ErrorBoundary extends React.Component {
             componentStack: errorInfo?.componentStack?.slice(0, 500),
             category: ErrorCategory.RENDER,
             context: 'React component tree render',
+        });
+        trackEvent('error_boundary_caught', {
+            message: (error?.message || 'Unknown error').slice(0, 200),
+            category: ErrorCategory.RENDER,
         });
     }
 

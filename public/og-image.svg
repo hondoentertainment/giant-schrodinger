@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a0533"/>
+      <stop offset="50%" stop-color="#2d1065"/>
+      <stop offset="100%" stop-color="#4a044e"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <!-- Venn circles -->
+  <circle cx="420" cy="285" r="180" fill="#a855f7" opacity="0.15"/>
+  <circle cx="780" cy="285" r="180" fill="#ec4899" opacity="0.15"/>
+  <!-- Overlap highlight -->
+  <ellipse cx="600" cy="285" rx="60" ry="140" fill="#ffffff" opacity="0.06"/>
+  <!-- Title -->
+  <text x="600" y="120" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="bold" fill="#ffffff">VENN with Friends</text>
+  <!-- Subtitle -->
+  <text x="600" y="175" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="rgba(255,255,255,0.6)">The Creative Connection Game</text>
+  <!-- Left concept -->
+  <text x="380" y="290" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#c084fc">Concept A</text>
+  <!-- Right concept -->
+  <text x="820" y="290" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#f472b6">Concept B</text>
+  <!-- Connection -->
+  <text x="600" y="400" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-style="italic" fill="#ffffff">"Your clever connection here"</text>
+  <!-- CTA -->
+  <text x="600" y="520" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="rgba(255,255,255,0.5)">Two random concepts. One clever phrase. Can you connect them?</text>
+  <!-- Score hint -->
+  <text x="600" y="470" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="40" font-weight="bold" fill="#fbbf24">?/10</text>
+</svg>

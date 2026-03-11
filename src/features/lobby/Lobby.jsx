@@ -202,7 +202,7 @@ export function Lobby() {
                 {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
             <div className="w-full max-w-md space-y-8 glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
                 <div className="text-center">
-                    {/* Top bar: Edit Profile + Sound toggle */}
+                    {/* Top bar: Edit Profile + Notification toggle + Sound toggle */}
                     <div className="flex justify-between items-center mb-4">
                         <button
                             onClick={() => login(null)}
@@ -212,14 +212,40 @@ export function Lobby() {
                         >
                             <Pencil className="w-4 h-4" />
                         </button>
-                        <button
-                            onClick={() => { const m = toggleMute(); setSoundMuted(m); }}
-                            className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
-                            aria-label={soundMuted ? 'Unmute sounds' : 'Mute sounds'}
-                            title={soundMuted ? 'Unmute' : 'Mute'}
-                        >
-                            {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                        </button>
+                        <div className="flex gap-2">
+                            {isNotificationSupported() && (
+                                <button
+                                    onClick={async () => {
+                                        if (notificationsEnabled) {
+                                            disableNotifications();
+                                            setNotificationsEnabled(false);
+                                            trackEvent('notifications_toggled', { enabled: false });
+                                        } else {
+                                            const perm = await requestNotificationPermission();
+                                            if (perm === 'granted') {
+                                                setNotificationsEnabled(true);
+                                                trackEvent('notifications_toggled', { enabled: true });
+                                                if (stats.currentStreak > 0) scheduleStreakReminder(stats.currentStreak);
+                                                scheduleDailyChallengeReminder();
+                                            }
+                                        }
+                                    }}
+                                    className={`p-2.5 rounded-full transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${notificationsEnabled ? 'bg-purple-600/30 hover:bg-purple-600/50 text-purple-300' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                                    aria-label={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+                                    title={notificationsEnabled ? 'Notifications on' : 'Notifications off'}
+                                >
+                                    {notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                                </button>
+                            )}
+                            <button
+                                onClick={() => { const m = toggleMute(); setSoundMuted(m); }}
+                                className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+                                aria-label={soundMuted ? 'Unmute sounds' : 'Mute sounds'}
+                                title={soundMuted ? 'Unmute' : 'Mute'}
+                            >
+                                {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Avatar */}
@@ -472,6 +498,35 @@ export function Lobby() {
                                         <option key={pack.id} value={pack.id}>{pack.name} (Custom)</option>
                                     ))}
                                 </select>
+                                {/* Pack Leaderboard (top scores for selected pack) */}
+                                {user?.promptPack && (() => {
+                                    const packScores = getPackLeaderboard(user.promptPack);
+                                    const packInfo = getPackById(user.promptPack);
+                                    if (!packScores.length) return null;
+                                    return (
+                                        <div className="mt-3 bg-white/5 border border-white/10 rounded-xl p-3">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Trophy className="w-4 h-4 text-amber-400" />
+                                                <span className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+                                                    {packInfo?.name || 'Pack'} Top Scores
+                                                </span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                {packScores.slice(0, 5).map((entry, i) => (
+                                                    <div key={i} className="flex items-center justify-between text-sm">
+                                                        <span className="text-white/50">
+                                                            {i === 0 ? '\u{1F947}' : i === 1 ? '\u{1F948}' : i === 2 ? '\u{1F949}' : `#${i + 1}`}
+                                                        </span>
+                                                        <span className="text-white font-semibold">{entry.score}/10</span>
+                                                        <span className="text-white/30 text-xs">
+                                                            {new Date(entry.playedAt).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             {/* Session length (only when not in active session) */}

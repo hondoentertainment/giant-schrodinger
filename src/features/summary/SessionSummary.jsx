@@ -5,6 +5,7 @@ import { getScoreBand } from '../../lib/scoreBands';
 import { getStats } from '../../services/stats';
 import { getPlayerRank } from '../../services/leaderboard';
 import { trackEvent } from '../../services/analytics';
+import { scheduleStreakReminder, scheduleDailyChallengeReminder } from '../../services/notifications';
 import { Trophy, Star, Zap, ArrowRight, Home } from 'lucide-react';
 import SocialShareButtons from '../../components/SocialShareButtons';
 
@@ -67,6 +68,19 @@ export function SessionSummary() {
     useEffect(() => {
         if (stats) trackEvent('session_complete', { avgScore: stats.avg, totalRounds, isDailyChallenge });
     }, [stats]);
+
+    // Schedule push notification reminders after session completion
+    useEffect(() => {
+        if (!stats) return;
+        // Schedule streak reminder if the player has an active streak
+        if (playerStats.currentStreak > 0) {
+            scheduleStreakReminder(playerStats.currentStreak);
+        }
+        // After completing the daily challenge, schedule tomorrow's daily reminder
+        if (isDailyChallenge) {
+            scheduleDailyChallengeReminder();
+        }
+    }, [stats, isDailyChallenge]);
 
     const handlePlayAgain = () => {
         endSession();
