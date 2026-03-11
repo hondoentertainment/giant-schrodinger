@@ -40,50 +40,49 @@ export function Shop({ onBack }) {
   }, [shopItems, activeCategory]);
 
   const handlePurchase = useCallback(
-    async (item) => {
+    (item) => {
       if (balance < item.price) {
         toast.error('Not enough Venn Coins!');
         return;
       }
       setPurchasingId(item.id);
-      try {
-        await purchaseItem(item.id);
+      const result = purchaseItem(item.id);
+      if (result.success) {
         setBalance(getBalance());
         setShopItems(getShopItems());
         setOwnedItemIds(new Set(getOwnedItems().map(e => e.itemId)));
         toast.success(`Purchased ${item.name}!`);
-      } catch (err) {
-        toast.error(err.message || 'Purchase failed');
-      } finally {
-        setPurchasingId(null);
+      } else {
+        toast.error(result.error || 'Purchase failed');
       }
+      setPurchasingId(null);
     },
     [balance, toast]
   );
 
   const handleEquip = useCallback(
-    async (item) => {
-      try {
-        await equipItem(item.id);
+    (item) => {
+      const result = equipItem(item.id);
+      if (result.success) {
         setEquippedItems(getEquippedItems());
         toast.success(`Equipped ${item.name}!`);
-      } catch (err) {
-        toast.error(err.message || 'Equip failed');
+      } else {
+        toast.error(result.error || 'Equip failed');
       }
     },
     [toast]
   );
 
   const handleClaimReward = useCallback(
-    async (tier) => {
-      try {
-        await claimBattlePassReward(tier);
+    (tier) => {
+      const result = claimBattlePassReward(tier);
+      if (result.success) {
         setBattlePass(getBattlePass());
         setBattlePassProgress(getBattlePassProgress());
         setBalance(getBalance());
         toast.success(`Claimed tier ${tier} reward!`);
-      } catch (err) {
-        toast.error(err.message || 'Claim failed');
+      } else {
+        toast.error(result.error || 'Claim failed');
       }
     },
     [toast]

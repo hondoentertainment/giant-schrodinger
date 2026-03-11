@@ -11,7 +11,7 @@ import { playScoreReveal, playConfetti as playConfettiSound } from '../../servic
 import { trackEvent } from '../../services/analytics';
 import { autoSaveHighlight } from '../../services/highlights';
 import { checkAchievements } from '../../services/achievements';
-import { addCoins } from '../../services/shop';
+import { addCoins, addBattlePassXp } from '../../services/shop';
 import { saveSharedRound } from '../../services/backend';
 import { getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
@@ -52,6 +52,7 @@ export function Reveal({ submission, assets }) {
         setSavedCollision(collision);
         autoSaveHighlight(collision);
         addCoins(finalScore, 'round_complete');
+        addBattlePassXp(finalScore * 10);
         const { newlyUnlocked: unlocked } = recordPlay();
         if (unlocked?.length) setNewlyUnlocked(unlocked);
         try { checkAchievements({ score: finalScore }); } catch {}
