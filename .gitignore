@@ -12,6 +12,9 @@ pnpm-debug.log*
 .env.test.local
 .env.production.local
 
+# Test coverage
+coverage/
+
 # Build outputs
 dist/
 dist-ssr/
