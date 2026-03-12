@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getSessionMetrics, getEventCount, getEvents, getAllEvents, getSessionDuration, exportAnalyticsData } from '../../services/analytics';
 import { getHighlightStats } from '../../services/highlights';
-import { BarChart3, TrendingUp, Share2, Target, Calendar, Users, Clock, Download, CheckCircle, Activity, Filter } from 'lucide-react';
+import { getErrorStats } from '../../services/errorMonitoring';
+import { BarChart3, TrendingUp, Share2, Target, Calendar, Users, Clock, Download, CheckCircle, Activity, Filter, AlertTriangle } from 'lucide-react';
 
 function MetricCard({ icon: Icon, label, value, subtext, color = 'purple' }) {
     const colorMap = {
@@ -395,6 +396,52 @@ export function AnalyticsDashboard({ onBack }) {
                     </div>
                 </div>
             </div>
+
+            {/* Error Monitoring */}
+            {(() => {
+                const errorStats = getErrorStats();
+                if (errorStats.total === 0) return null;
+                return (
+                    <div className="mb-6 p-4 rounded-2xl bg-gradient-to-br from-red-500/10 to-orange-500/10 border border-red-500/20">
+                        <h3 className="text-white font-bold mb-3 flex items-center gap-2">
+                            <AlertTriangle size={16} className="text-red-400" />
+                            Error Monitoring
+                        </h3>
+                        <div className="grid grid-cols-3 gap-3 mb-3">
+                            <div>
+                                <div className="text-white/60 text-xs uppercase">Total</div>
+                                <div className="text-xl font-bold text-red-400">{errorStats.total}</div>
+                            </div>
+                            <div>
+                                <div className="text-white/60 text-xs uppercase">Last 24h</div>
+                                <div className="text-xl font-bold text-white">{errorStats.last24h}</div>
+                            </div>
+                            <div>
+                                <div className="text-white/60 text-xs uppercase">Last 7d</div>
+                                <div className="text-xl font-bold text-white">{errorStats.last7d}</div>
+                            </div>
+                        </div>
+                        {Object.entries(errorStats.byCategory || {}).length > 0 && (
+                            <div className="space-y-1">
+                                <div className="text-white/50 text-xs uppercase mb-1">By Category</div>
+                                {Object.entries(errorStats.byCategory).map(([cat, count]) => (
+                                    <div key={cat} className="flex justify-between items-center text-sm">
+                                        <span className="text-white/60">{cat.replace(/_/g, ' ')}</span>
+                                        <span className="text-white font-bold">{count}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {errorStats.mostRecent && (
+                            <div className="mt-3 pt-3 border-t border-white/10">
+                                <div className="text-white/50 text-xs uppercase mb-1">Most Recent</div>
+                                <p className="text-white/70 text-sm truncate">{errorStats.mostRecent.message}</p>
+                                <p className="text-white/30 text-xs">{formatTimestamp(errorStats.mostRecent.timestamp)}</p>
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
 
             {/* Highlight Stats */}
             {highlightStats && (

@@ -296,6 +296,36 @@ export function Reveal({ submission, assets }) {
         completeRound({ score: finalScore, baseScore: scoreValue });
     };
 
+    const submitQuickScore = (scoreValue, relevance, commentary) => {
+        const finalScore = Math.min(10, Math.max(1, Math.round(scoreValue * scoreMultiplier)));
+        const scoreResult = {
+            score: finalScore,
+            baseScore: scoreValue,
+            relevance,
+            commentary,
+            scoreMultiplier,
+        };
+        setResult(scoreResult);
+        setStatus("Complete");
+
+        if (fusionImage?.url && !savedRef.current) {
+            finalizeCollision({
+                submission,
+                imageUrl: fusionImage.url,
+                fallbackImageUrl: fusionImage.fallbackUrl,
+                score: finalScore,
+                baseScore: scoreValue,
+                commentary,
+                themeId: theme?.id,
+                scoringMode,
+                roundNumber,
+                totalRounds,
+                scoreMultiplier,
+            }, finalScore);
+        }
+        completeRound({ score: finalScore, baseScore: scoreValue });
+    };
+
     if (processError) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-in fade-in duration-500">
@@ -335,6 +365,40 @@ export function Reveal({ submission, assets }) {
                     <div className="glass-panel rounded-[22px] p-8 text-center max-w-2xl">
                         <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-6 border border-white/10">
                             HUMAN JUDGE
+                        </div>
+                        {/* Quick Judge buttons */}
+                        <div className="mb-6">
+                            <p className="text-white/50 text-xs uppercase tracking-wider mb-3">Quick Score</p>
+                            <div className="flex gap-3 justify-center">
+                                <button
+                                    type="button"
+                                    onClick={() => submitQuickScore(5, 'Wild Card', 'Not bad, could be sharper.')}
+                                    className="flex-1 py-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-amber-500/10 hover:border-amber-500/30 transition-all text-center group"
+                                >
+                                    <div className="text-2xl mb-1 group-hover:scale-110 transition-transform">😐</div>
+                                    <div className="text-white font-bold text-sm">Meh</div>
+                                    <div className="text-white/40 text-xs">4-6</div>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => submitQuickScore(8, 'Highly Logical', 'Solid connection! Well done.')}
+                                    className="flex-1 py-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-blue-500/10 hover:border-blue-500/30 transition-all text-center group"
+                                >
+                                    <div className="text-2xl mb-1 group-hover:scale-110 transition-transform">👍</div>
+                                    <div className="text-white font-bold text-sm">Solid</div>
+                                    <div className="text-white/40 text-xs">7-8</div>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => submitQuickScore(10, 'Absurdly Creative', 'Absolutely brilliant connection!')}
+                                    className="flex-1 py-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all text-center group"
+                                >
+                                    <div className="text-2xl mb-1 group-hover:scale-110 transition-transform">🔥</div>
+                                    <div className="text-white font-bold text-sm">Fire</div>
+                                    <div className="text-white/40 text-xs">9-10</div>
+                                </button>
+                            </div>
+                            <p className="text-white/30 text-xs mt-2">Or score manually below</p>
                         </div>
                         <div className="relative aspect-[4/3] sm:aspect-square w-full max-w-xs sm:max-w-sm mx-auto rounded-2xl overflow-hidden mb-6 sm:mb-8 shadow-2xl ring-1 ring-white/20">
                             <img

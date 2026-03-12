@@ -108,3 +108,123 @@ export function scheduleDailyChallengeReminder() {
         );
     }
 }
+
+// ============================================================
+// Push Subscription Management (VAPID-based)
+// ============================================================
+
+const PUSH_SUB_KEY = 'vwf_push_subscription';
+
+/**
+ * Subscribe to push notifications via the service worker.
+ * Requires a VAPID public key set as VITE_VAPID_PUBLIC_KEY.
+ * @returns {PushSubscription|null} The push subscription or null
+ */
+export async function subscribeToPush() {
+    if (!isNotificationSupported()) return null;
+    const vapidKey = import.meta.env?.VITE_VAPID_PUBLIC_KEY;
+    if (!vapidKey) {
+        console.warn('VAPID public key not set — push subscriptions disabled');
+        return null;
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const existing = await registration.pushManager.getSubscription();
+        if (existing) {
+            localStorage.setItem(PUSH_SUB_KEY, JSON.stringify(existing.toJSON()));
+            return existing;
+        }
+
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        });
+
+        localStorage.setItem(PUSH_SUB_KEY, JSON.stringify(subscription.toJSON()));
+        return subscription;
+    } catch (err) {
+        console.warn('Push subscription failed:', err);
+        return null;
+    }
+}
+
+/**
+ * Unsubscribe from push notifications.
+ * @returns {boolean} Whether unsubscription succeeded
+ */
+export async function unsubscribeFromPush() {
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+            await subscription.unsubscribe();
+        }
+        localStorage.removeItem(PUSH_SUB_KEY);
+        return true;
+    } catch (err) {
+        console.warn('Push unsubscription failed:', err);
+        return false;
+    }
+}
+
+/**
+ * Get the current push subscription from localStorage.
+ * @returns {Object|null} Subscription JSON or null
+ */
+export function getPushSubscription() {
+    try {
+        const sub = localStorage.getItem(PUSH_SUB_KEY);
+        return sub ? JSON.parse(sub) : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Convert a URL-safe base64 VAPID key to a Uint8Array.
+ * @param {string} base64String
+ * @returns {Uint8Array}
+ */
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+/**
+ * Schedule a push notification for when a friend beats your score.
+ * (Uses local notification as fallback when push server isn't available)
+ * @param {string} friendName
+ * @param {number} friendScore
+ * @param {number} yourScore
+ */
+export function notifyFriendBeatScore(friendName, friendScore, yourScore) {
+    if (!isNotificationEnabled()) return;
+    scheduleNotification(
+        `${friendName} beat your score!`,
+        `They scored ${friendScore}/10 vs your ${yourScore}/10. Can you reclaim your title?`,
+        0,
+        'friend-beat-score'
+    );
+}
+
+/**
+ * Schedule a tournament starting notification.
+ * @param {string} tournamentName
+ * @param {number} delayMs
+ */
+export function notifyTournamentStarting(tournamentName, delayMs = 0) {
+    if (!isNotificationEnabled()) return;
+    scheduleNotification(
+        'Tournament Starting!',
+        `${tournamentName} is about to begin. Join now!`,
+        delayMs,
+        'tournament-start'
+    );
+}

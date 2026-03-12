@@ -10,19 +10,19 @@ const DIFFICULTY_CONFIGS = {
   easy: {
     label: 'Easy',
     description: 'Lenient scoring - great for beginners',
-    scoringStrictness: 1.3,
+    scoreMultiplier: 1.3,
     timeBonus: 15,
   },
   normal: {
     label: 'Normal',
     description: 'Standard scoring',
-    scoringStrictness: 1.0,
+    scoreMultiplier: 1.0,
     timeBonus: 0,
   },
   hard: {
     label: 'Hard',
     description: 'Strict scoring - requires true wit',
-    scoringStrictness: 0.7,
+    scoreMultiplier: 0.7,
     timeBonus: -10,
   },
 };
@@ -65,7 +65,7 @@ export function setAIDifficulty(difficulty) {
 /**
  * Returns the configuration object for a given difficulty level.
  * @param {'easy'|'normal'|'hard'} difficulty
- * @returns {{ label: string, description: string, scoringStrictness: number, timeBonus: number }}
+ * @returns {{ label: string, description: string, scoreMultiplier: number, timeBonus: number }}
  */
 export function getDifficultyConfig(difficulty) {
   return DIFFICULTY_CONFIGS[difficulty] || DIFFICULTY_CONFIGS.normal;

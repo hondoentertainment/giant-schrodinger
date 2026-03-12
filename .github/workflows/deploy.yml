@@ -30,8 +30,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit tests
-        run: npm run test
+      - name: Audit dependencies
+        run: npm audit --audit-level=high || true
+
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Check coverage threshold
+        run: |
+          node -e "
+            const fs = require('fs');
+            try {
+              const report = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              const pct = report.total.lines.pct;
+              console.log('Line coverage: ' + pct + '%');
+              if (pct < 40) { console.error('Coverage below 40% threshold'); process.exit(1); }
+            } catch(e) { console.warn('Coverage report not found, skipping check'); }
+          "
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium

@@ -27,7 +27,13 @@ self.addEventListener('activate', (event) => {
 
 // Push notification support
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : 'You have a new notification!' };
+  }
+
   const title = data.title || 'Venn with Friends';
   const options = {
     body: data.body || 'You have a new notification!',
@@ -35,13 +41,22 @@ self.addEventListener('push', (event) => {
     badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎯</text></svg>',
     tag: data.tag || 'venn-notification',
     data: data.url || '/',
-    actions: data.actions || [],
+    actions: data.actions || [
+      { action: 'play', title: 'Play Now' },
+      { action: 'dismiss', title: 'Later' },
+    ],
+    vibrate: [200, 100, 200],
+    requireInteraction: data.tag === 'streak-reminder',
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
+  // Handle action buttons
+  if (event.action === 'dismiss') return;
+
   const url = event.notification.data || '/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
@@ -52,6 +67,24 @@ self.addEventListener('notificationclick', (event) => {
       }
       return clients.openWindow(url);
     })
+  );
+});
+
+// Handle push subscription change (key rotation)
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.registration.pushManager.subscribe(event.oldSubscription.options)
+      .then((subscription) => {
+        // Notify the app about the new subscription
+        self.clients.matchAll().then((clients) => {
+          clients.forEach((client) => {
+            client.postMessage({
+              type: 'PUSH_SUBSCRIPTION_CHANGED',
+              subscription: subscription.toJSON(),
+            });
+          });
+        });
+      })
   );
 });
 

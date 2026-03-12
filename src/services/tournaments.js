@@ -1,5 +1,6 @@
 // Tournament system service supporting bracket and Swiss formats
 import { loadJSON, saveJSON, generateId as _genId, shuffle } from '../lib/storage';
+import { addCoins } from './shop';
 
 const STORAGE_KEY = 'vwf_tournaments';
 
@@ -651,4 +652,23 @@ export function getWeekendTournament() {
   saveTournaments(tournaments);
 
   return tournament;
+}
+
+/**
+ * Awards coins to tournament winners.
+ * 1st place: 500 coins, 2nd: 300, 3rd: 150
+ * @param {Array<{player: string, wins?: number, score?: number}>} standings
+ * @returns {Array<{player: string, reward: number}>}
+ */
+export function awardTournamentRewards(standings) {
+    const rewards = [500, 300, 150];
+    const awarded = [];
+    for (let i = 0; i < Math.min(standings.length, rewards.length); i++) {
+        const player = standings[i].player || standings[i].playerName;
+        if (player) {
+            addCoins(rewards[i], `Tournament ${i === 0 ? '1st' : i === 1 ? '2nd' : '3rd'} place`);
+            awarded.push({ player, reward: rewards[i] });
+        }
+    }
+    return awarded;
 }

@@ -19,6 +19,7 @@ import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
 import { getBuiltInPacks, getCustomPacks, getPackLeaderboard, getPackById } from '../../services/promptPacks';
 import { isNotificationSupported, isNotificationEnabled, getNotificationPermission, requestNotificationPermission, disableNotifications, scheduleStreakReminder, scheduleDailyChallengeReminder } from '../../services/notifications';
+import { getBestOfToday } from '../../services/bestOfToday';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -479,6 +480,31 @@ export function Lobby() {
                         </div>
                     )}
 
+                    {/* Best of Today */}
+                    {!showMultiplayer && (() => {
+                        const bestToday = getBestOfToday(3);
+                        if (!bestToday.length) return null;
+                        return (
+                            <div className="w-full mb-4 p-4 rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Trophy className="w-4 h-4 text-purple-400" />
+                                    <span className="text-white/70 text-xs font-semibold uppercase tracking-wider">Best of Today</span>
+                                </div>
+                                <div className="space-y-2">
+                                    {bestToday.map((entry, i) => (
+                                        <div key={i} className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-lg">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
+                                                <span className="text-white/80 text-sm truncate max-w-[180px]">{entry.submission}</span>
+                                            </div>
+                                            <span className="text-white font-bold text-sm">{entry.score}/10</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* Solo play */}
                     {!showMultiplayer && (
                         <>
@@ -632,7 +658,7 @@ export function Lobby() {
                                 </button>
                             </div>
 
-                            {/* Tournament & Challenge Chains */}
+                            {/* Tournament, Chains & Profile */}
                             <div className="flex gap-2 mt-3">
                                 <button
                                     onClick={() => { haptic('light'); trackEvent('nav_tournament'); setGameState('TOURNAMENT'); }}
@@ -663,6 +689,15 @@ export function Lobby() {
                                     <AlertTriangle className="w-4 h-4" /> Errors
                                 </button>
                             </div>
+
+                            {/* Profile button */}
+                            <button
+                                onClick={() => { haptic('light'); trackEvent('nav_profile'); setGameState('PLAYER_PROFILE'); }}
+                                className="mt-3 w-full py-2.5 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-white/70 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5 border border-indigo-500/20"
+                                title="View your player profile"
+                            >
+                                👤 Player Profile
+                            </button>
 
                             {/* Multiplayer button */}
                             <button

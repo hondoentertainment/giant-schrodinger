@@ -24,10 +24,10 @@ Respond with ONLY valid JSON, no other text:
 
 function applyDifficulty(result) {
     const config = getDifficultyConfig(getAIDifficulty());
-    const strictness = config.scoringStrictness;
-    if (strictness === 1.0) return result;
+    const multiplier = config.scoreMultiplier;
+    if (multiplier === 1.0) return result;
 
-    const adjust = (val) => Math.min(10, Math.max(1, Math.round(val * strictness)));
+    const adjust = (val) => Math.min(10, Math.max(1, Math.round(val * multiplier)));
     const breakdown = {
         wit: adjust(result.breakdown.wit),
         logic: adjust(result.breakdown.logic),
