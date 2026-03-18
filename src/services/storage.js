@@ -5,6 +5,7 @@ import { db, auth } from './firebase';
 const STORAGE_KEY = 'vwf_collisions';
 const HIGH_SCORES_KEY = 'vwf_high_scores';
 const BEST_STREAK_KEY = 'vwf_best_streak';
+const TOTAL_GAMES_KEY = 'vwf_total_games';
 
 // --- Authentication ---
 
@@ -58,6 +59,10 @@ export async function saveCollision(collision) {
 
     // 1. Save Local
     localStorage.setItem(STORAGE_KEY, JSON.stringify([newCollision, ...existing]));
+    
+    // Increment total games locally
+    const currentTotal = parseInt(localStorage.getItem(TOTAL_GAMES_KEY) || '0', 10);
+    localStorage.setItem(TOTAL_GAMES_KEY, (currentTotal + 1).toString());
 
     // 2. Save to High Scores (Local)
     saveHighScore({
@@ -144,6 +149,10 @@ export async function saveBestStreak(streak) {
         return true;
     }
     return false;
+}
+
+export function getTotalGames() {
+    return parseInt(localStorage.getItem(TOTAL_GAMES_KEY) || '0', 10);
 }
 
 // --- Daily Challenge ---

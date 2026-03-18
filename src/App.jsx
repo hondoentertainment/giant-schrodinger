@@ -8,6 +8,7 @@ import { Gallery } from './features/gallery/Gallery'
 import { FinalResults } from './features/results/FinalResults'
 import { OnboardingModal } from './components/OnboardingModal'
 import { ChallengeIntro } from './features/challenge/ChallengeIntro'
+import { AchievementToast } from './components/AchievementToast'
 import { getChallenge } from './services/challenge'
 import logo from './assets/logo.png'
 
@@ -71,6 +72,7 @@ function GameContent() {
 
     return (
         <Layout>
+            <AchievementToast />
             {showOnboarding && <OnboardingModal onClose={handleCloseOnboarding} />}
 
             <div className="mb-8 text-center flex flex-col items-center">

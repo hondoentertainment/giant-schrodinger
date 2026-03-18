@@ -59,24 +59,97 @@ export async function scoreSubmission(submission, asset1, asset2, personality = 
     }
 }
 
+/**
+ * THE SWARM: Multi-agent image generation orchestration
+ * 1. The Visionary: Creates a rich scene description
+ * 2. The Curator: Distills down to search terms
+ * 3. The Quality Auditor: Final check and fallback
+ */
 export async function generateFusionImage(submission) {
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+        // Agent 1: The Visionary
+        const visionaryPrompt = `
+            You are "The Visionary" in an AI Artist Swarm.
+            Your job is to take the concept: "${submission}" and describe it as a single, visually stunning, high-definition artistic scene.
+            Think in terms of lighting, composition, and mood. Be atmospheric.
+            Keep your description to 2 sentences.
+        `;
+        const visionaryResult = await model.generateContent(visionaryPrompt);
+        const scene = visionaryResult.response.text();
+
+        // Agent 2: The Curator
+        const curatorPrompt = `
+            You are "The Curator" in an AI Artist Swarm.
+            Read this scene description: "${scene}"
+            Distill this into 3-5 highly effective, visually-specific keywords for an Unsplash image search.
+            Focus on objects, colors, and textures.
+            Return ONLY the keywords separated by commas.
+        `;
+        const curatorResult = await model.generateContent(curatorPrompt);
+        let keywords = curatorResult.response.text().trim();
+
+        // Agent 3: The Quality Auditor
+        const auditorPrompt = `
+            You are "The Quality Auditor" in an AI Artist Swarm.
+            Evaluating these keywords for a search query: "${keywords}"
+            If they are too long or contain forbidden words, simplify them to 3 core nouns.
+            Otherwise, return them exactly as is.
+            Return ONLY the final keywords.
+        `;
+        const auditorResult = await model.generateContent(auditorPrompt);
+        keywords = auditorResult.response.text().trim().replace(/ /g, '-').replace(/\n/g, '');
+
+        console.log("Swarm Keywords:", keywords);
+        return `https://images.unsplash.com/featured/?${keywords}`;
+    } catch (error) {
+        console.error("Swarm Image Error:", error);
+        // Fallback to a high-quality abstract image
+        return "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1000&auto=format&fit=crop";
+    }
+}
+
+/**
+ * Game Flow Swarm Review
+ * Provides a holistic critique of the player's performance across rounds.
+ */
+export async function swarmReviewGameState(scores, submissions, personality = 'chaos') {
+    try {
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            generationConfig: { responseMimeType: "application/json" }
+        });
+
         const prompt = `
-            Describe a single, visually striking, artistic image that represents the concept: "${submission}".
-            Use 3-5 descriptive keywords that would make for a great Unsplash search query.
-            Return ONLY the keywords separated by commas. No other text.
+            You are leading a "User Experience Swarm" of AI experts.
+            Review these game rounds:
+            ${submissions.map((s, i) => `Round ${i + 1}: "${s}" (Score: ${scores[i]}/10)`).join('\n')}
+
+            Provide a consensus review from:
+            1. The UX Researcher: Notes on the player's conceptual logic.
+            2. The Game Designer: Notes on the "fun" and wit of the submissions.
+            3. The Swarm Lead: A final summary and "Swarm Grade" (S, A, B, C, or D).
+
+            Return a JSON object:
+            {
+              "researcherNotes": "...",
+              "designerNotes": "...",
+              "swarmGrade": "...",
+              "finalSummary": "..."
+            }
+            Keep notes concise and aligned with the "${personality}" personality.
         `;
 
         const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const keywords = response.text().trim().replace(/ /g, '-');
-
-        // Return a dynamic Unsplash source based on the AI's keywords
-        return `https://images.unsplash.com/featured/?${keywords}`;
+        return JSON.parse(result.response.text());
     } catch (error) {
-        console.error("Gemini Image Prompt Error:", error);
-        return "https://images.unsplash.com/photo-1549490349-8643362247b5?q=80&w=1000&auto=format&fit=crop";
+        console.error("Swarm Review Error:", error);
+        return {
+            researcherNotes: "The data is hazy.",
+            designerNotes: "Fun levels are indeterminate.",
+            swarmGrade: "A",
+            finalSummary: "The swarm thinks you did... something."
+        };
     }
 }

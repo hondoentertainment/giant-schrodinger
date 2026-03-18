@@ -11,7 +11,7 @@ import { ChallengeButton } from '../../components/ChallengeButton';
 import { ImageWithLoader } from '../../components/ImageWithLoader';
 
 export function Reveal({ submission, assets }) {
-    const { user, setGameState, recordRoundScore, nextRound, currentRound, maxRounds, judgeMode, currentStreak, gameMode, challengeData, resetGame, personality } = useGame();
+    const { user, setGameState, recordRoundResult, nextRound, currentRound, maxRounds, judgeMode, currentStreak, gameMode, challengeData, resetGame, personality } = useGame();
     const { playReveal } = useSound();
     const [result, setResult] = useState(null);
     const [fusionUrl, setFusionUrl] = useState(null);
@@ -31,17 +31,23 @@ export function Reveal({ submission, assets }) {
             if (savedRef.current) return;
 
             // 1. Score
-            setStatus("Gemini is judging your wit...");
+            setStatus("The Judge is contemplating...");
             const scoreResult = await scoreSubmission(submission, assets.left, assets.right, personality);
             if (!mounted) return;
             setResult(scoreResult);
 
-            // 2. Generate Image
-            setStatus("Dreaming up the fusion...");
+            // 2. Generate Image via Swarm
+            setStatus("The Visionary is dreaming...");
+            await new Promise(r => setTimeout(r, 800)); // Brief delay for effect
+            setStatus("The Curator is selecting colors...");
             const url = await generateFusionImage(submission);
             if (!mounted) return;
+
+            setStatus("The Auditor is verifying quality...");
+            await new Promise(r => setTimeout(r, 500));
+
             setFusionUrl(url);
-            setStatus("Complete");
+            setStatus("Swarm Consensus Reached");
 
             // 3. Save to gallery
             if (!savedRef.current) {
@@ -56,7 +62,7 @@ export function Reveal({ submission, assets }) {
 
             // 4. Record score for multi-round tracking
             if (!scoredRef.current) {
-                recordRoundScore(scoreResult.score);
+                recordRoundResult(scoreResult.score, submission);
 
                 // Submit to Daily Leaderboard if applicable
                 if (gameMode === 'daily') {
@@ -102,7 +108,7 @@ export function Reveal({ submission, assets }) {
         });
 
         // Record score for multi-round tracking
-        recordRoundScore(humanResult.score);
+        recordRoundResult(humanResult.score, submission);
         playReveal();
     };
 

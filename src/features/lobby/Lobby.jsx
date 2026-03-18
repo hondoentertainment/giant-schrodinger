@@ -5,6 +5,7 @@ import { ASSET_THEMES } from '../../data/assets';
 import { useSound } from '../../hooks/useSound';
 import { getHighScores, getBestStreak, getCollisions } from '../../services/storage';
 import { getDailyPair, getTimeUntilReset } from '../../services/daily';
+import { BADGES } from '../../services/achievements';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭'];
 const GRADIENTS = [
@@ -117,6 +118,7 @@ function CreateProfile({ onComplete }) {
 
 // Returning user: Welcome Back
 function WelcomeBack({ user, onPlay, onEditProfile, onGallery }) {
+    const { achievements } = useGame();
     const [selectedJudge, setSelectedJudge] = useState('ai');
     const [selectedTheme, setSelectedTheme] = useState('random');
     const [selectedSpeed, setSelectedSpeed] = useState(60);
@@ -132,6 +134,36 @@ function WelcomeBack({ user, onPlay, onEditProfile, onGallery }) {
 
     return (
         <div className="w-full max-w-md glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
+            {/* Swarm Status Indicator */}
+            <div className="flex justify-end mb-4">
+                <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full">
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                    </span>
+                    <span className="text-[10px] font-black tracking-widest text-purple-400 uppercase">Swarm Online</span>
+                </div>
+            </div>
+
+            {/* Achievements */}
+            {achievements && achievements.length > 0 && (
+                <div className="mb-6 bg-white/5 border border-white/10 p-4 rounded-xl">
+                    <h3 className="text-xs text-white/40 uppercase tracking-widest mb-3">Badges Unlocked</h3>
+                    <div className="flex flex-wrap gap-2">
+                        {achievements.map(aId => {
+                            const badge = BADGES[aId];
+                            if (!badge) return null;
+                            return (
+                                <div key={aId} className="flex flex-col items-center bg-black/40 p-2 rounded-lg w-[72px]" title={badge.description}>
+                                    <span className="text-2xl">{badge.emoji}</span>
+                                    <span className="text-[8px] text-white/60 text-center uppercase mt-1 leading-tight">{badge.name}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             {/* ... (Avatar, Welcome, Stats) ... */}
 
             {/* Daily Challenge Card - Enforce 60s for fairness */}

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getBestStreak, saveBestStreak, signInUser, syncUserProfile } from '../services/storage';
+import { getBestStreak, saveBestStreak, signInUser, syncUserProfile, getTotalGames } from '../services/storage';
+import { unlockAchievement, getUnlockedAchievements } from '../services/achievements';
 
 const GameContext = createContext();
 
@@ -21,13 +21,18 @@ export function GameProvider({ children }) {
     const [roundDuration, setRoundDuration] = useState(60); // Round duration in seconds
     const [currentRound, setCurrentRound] = useState(1);
     const [roundScores, setRoundScores] = useState([]);
+    const [roundSubmissions, setRoundSubmissions] = useState([]);
     const [personality, setPersonality] = useState(() => {
         return localStorage.getItem('vwf_personality') || 'chaos';
     });
 
-    // Streak tracking
     const [currentStreak, setCurrentStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(() => getBestStreak());
+
+    // Achievements
+    const [achievements, setAchievements] = useState(() => getUnlockedAchievements());
+    const [achievementQueue, setAchievementQueue] = useState([]); // Queue for popups
+    const [currentAchievement, setCurrentAchievement] = useState(null); // Active popup
 
     const maxRounds = gameMode === 'championship' ? 3 : 1;
 
@@ -71,6 +76,7 @@ export function GameProvider({ children }) {
         setRoundDuration(duration);
         setCurrentRound(1);
         setRoundScores([]);
+        setRoundSubmissions([]);
         setChallengeData(null);
         setGameState('ROUND');
     };
@@ -82,17 +88,28 @@ export function GameProvider({ children }) {
         setRoundDuration(60);
         setCurrentRound(1);
         setRoundScores([]);
+        setRoundSubmissions([]);
         setChallengeData(challenge);
         setGameState('ROUND');
     };
 
-    const recordRoundScore = (score) => {
+    const recordRoundResult = (score, submission) => {
         setRoundScores(prev => [...prev, score]);
+        setRoundSubmissions(prev => [...prev, submission]);
 
-        // Update streak: 7+ is considered a "good" score
+        let newAchievements = [];
+
+        if (score === 10) {
+            if (unlockAchievement('PERFECT_SCORE')) newAchievements.push('PERFECT_SCORE');
+        }
+
         if (score >= 7) {
             const newStreak = currentStreak + 1;
             setCurrentStreak(newStreak);
+
+            if (newStreak === 3 && unlockAchievement('STREAK_3')) newAchievements.push('STREAK_3');
+            if (newStreak === 5 && unlockAchievement('STREAK_5')) newAchievements.push('STREAK_5');
+
             if (newStreak > bestStreak) {
                 setBestStreak(newStreak);
                 saveBestStreak(newStreak);
@@ -100,7 +117,26 @@ export function GameProvider({ children }) {
         } else {
             setCurrentStreak(0);
         }
+
+        if (getTotalGames() >= 10 && unlockAchievement('GAMES_10')) newAchievements.push('GAMES_10');
+        if (unlockAchievement('FIRST_GAME')) newAchievements.push('FIRST_GAME');
+
+        if (newAchievements.length > 0) {
+            setAchievements(getUnlockedAchievements());
+            setAchievementQueue(prev => [...prev, ...newAchievements]);
+        }
     };
+
+    const clearCurrentAchievement = () => {
+        setCurrentAchievement(null);
+    };
+
+    useEffect(() => {
+        if (!currentAchievement && achievementQueue.length > 0) {
+            setCurrentAchievement(achievementQueue[0]);
+            setAchievementQueue(prev => prev.slice(1));
+        }
+    }, [achievementQueue, currentAchievement]);
 
     const nextRound = () => {
         setCurrentRound(prev => prev + 1);
@@ -110,6 +146,7 @@ export function GameProvider({ children }) {
     const resetGame = () => {
         setCurrentRound(1);
         setRoundScores([]);
+        setRoundSubmissions([]);
         setChallengeData(null);
         // Clear challenge URL parameter
         if (window.location.search.includes('challenge=')) {
@@ -136,14 +173,18 @@ export function GameProvider({ children }) {
             currentRound,
             maxRounds,
             roundScores,
+            roundSubmissions,
             currentStreak,
             bestStreak,
+            achievements,
+            currentAchievement,
+            clearCurrentAchievement,
             challengeData,
             personality,
             setPersonality,
             startGame,
             startChallenge,
-            recordRoundScore,
+            recordRoundResult,
             nextRound,
             resetGame
         }}>

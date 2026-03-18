@@ -1,0 +1,21 @@
+{
+    "name": "Venn with Friends",
+    "short_name": "Venn",
+    "description": "An AI-powered social word game",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#030712",
+    "theme_color": "#030712",
+    "icons": [
+        {
+            "src": "/src/assets/favicon.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/src/assets/favicon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

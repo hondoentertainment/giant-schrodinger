@@ -92,6 +92,36 @@ export const ASSET_THEMES = {
             { id: 'ar5', label: 'Theater', url: 'https://images.unsplash.com/photo-1507924538820-ede94a04019d?w=600&q=80' },
             { id: 'ar6', label: 'Graffiti', url: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=600&q=80' }
         ]
+    },
+    valentines: {
+        name: "Valentine's",
+        emoji: '💘',
+        assets: [
+            { id: 'v1', label: 'Heart', url: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600&q=80' },
+            { id: 'v2', label: 'Roses', url: 'https://images.unsplash.com/photo-1548247653-e5ffdfda6be4?w=600&q=80' },
+            { id: 'v3', label: 'Chocolate', url: 'https://images.unsplash.com/photo-1549420682-628d67f52554?w=600&q=80' },
+            { id: 'v4', label: 'Cupid', url: 'https://images.unsplash.com/photo-1581404094143-085e6db24ae0?w=600&q=80' }
+        ]
+    },
+    stpatricks: {
+        name: "St. Patrick's",
+        emoji: '☘️',
+        assets: [
+            { id: 'sp1', label: 'Clover', url: 'https://images.unsplash.com/photo-1551608759-3fb76f1e8e8e?w=600&q=80' },
+            { id: 'sp2', label: 'Gold', url: 'https://images.unsplash.com/photo-1611082025170-eb3ebcde1581?w=600&q=80' },
+            { id: 'sp3', label: 'Rainbow', url: 'https://images.unsplash.com/photo-1513624838384-88aa380e227a?w=600&q=80' },
+            { id: 'sp4', label: 'Beer', url: 'https://images.unsplash.com/photo-1575037614876-c385a535b91b?w=600&q=80' }
+        ]
+    },
+    summer: {
+        name: 'Summer',
+        emoji: '☀️',
+        assets: [
+            { id: 's1', label: 'Beach', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80' },
+            { id: 's2', label: 'Sunglasses', url: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&q=80' },
+            { id: 's3', label: 'Ice Pop', url: 'https://images.unsplash.com/photo-1481192994848-038202b7407d?w=600&q=80' },
+            { id: 's4', label: 'Watermelon', url: 'https://images.unsplash.com/photo-1589718423696-6f788db3d1dc?w=600&q=80' }
+        ]
     }
 };
 
