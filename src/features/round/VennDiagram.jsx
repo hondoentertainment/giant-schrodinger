@@ -2,37 +2,72 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MEDIA_TYPES } from '../../data/themes';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
+// ── Responsive srcset helper ──
+function buildSrcSet(baseUrl) {
+    if (!baseUrl?.includes('unsplash.com')) return undefined;
+    const id = baseUrl.match(/photo-([^?]+)/)?.[1];
+    if (!id) return undefined;
+    return [400, 640, 1080].map(w =>
+        `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80 ${w}w`
+    ).join(', ');
+}
+
 // ── Image circle ──
 function VennImage({ asset }) {
     const [loaded, setLoaded] = useState(false);
+    const [fallbackLevel, setFallbackLevel] = useState(0);
+    // 0 = primary, 1 = fallback URL, 2 = gradient card
 
-    const handleError = (event) => {
-        const fallback = event.currentTarget.dataset.fallback;
-        if (fallback && event.currentTarget.src !== fallback) {
-            event.currentTarget.src = fallback;
-            event.currentTarget.onerror = null;
+    const src = fallbackLevel === 0 ? asset.url : asset.fallbackUrl;
+
+    const handleError = () => {
+        if (fallbackLevel === 0 && asset.fallbackUrl) {
+            setFallbackLevel(1);
+        } else {
+            setFallbackLevel(2);
         }
     };
 
+    // Build tiny blur URL for Unsplash images
+    const blurUrl = src?.includes('unsplash.com')
+        ? src.replace(/w=\d+/, 'w=20') + '&blur=10'
+        : null;
+
+    if (fallbackLevel >= 2) {
+        return (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-800 text-white text-2xl font-bold p-4 text-center">
+                {asset.label || 'Mystery Concept'}
+            </div>
+        );
+    }
+
     return (
-        <>
-            {!loaded && (
+        <div className="relative overflow-hidden w-full h-full">
+            {/* Blur placeholder */}
+            {blurUrl && !loaded && (
+                <img src={blurUrl} alt="" aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover scale-110 blur-sm" />
+            )}
+            {/* Loading spinner when no blur available */}
+            {!blurUrl && !loaded && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/5 animate-pulse">
                     <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
                 </div>
             )}
+            {/* Full image */}
             <img
-                src={asset.url}
+                src={src}
+                srcSet={buildSrcSet(src)}
+                sizes="(max-width: 640px) 400px, (max-width: 1024px) 640px, 1080px"
                 alt={asset.label}
                 className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
                 referrerPolicy="no-referrer"
-                data-fallback={asset.fallbackUrl}
                 onError={handleError}
                 onLoad={() => setLoaded(true)}
                 loading="eager"
                 decoding="async"
             />
-        </>
+        </div>
     );
 }
 

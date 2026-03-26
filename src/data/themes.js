@@ -9,7 +9,7 @@ export const MEDIA_TYPES = {
     AUDIO: 'audio',
 };
 
-function buildUnsplashUrl(id, width = IMG_WIDTH) {
+export function buildUnsplashUrl(id, width = 1080) {
     return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${width}&q=80`;
 }
 
