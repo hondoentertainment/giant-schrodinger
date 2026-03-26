@@ -13,6 +13,7 @@ import { toggleMute, isMuted } from '../../services/sounds';
 import { isBackendEnabled } from '../../lib/supabase';
 import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
+import { TIMINGS } from '../../lib/timings';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { OnboardingTour } from '../../components/OnboardingTour';
 import { NotificationBanner } from '../../components/NotificationBanner';
@@ -110,7 +111,7 @@ export function Lobby() {
             haptic('light');
             setInviteCopied(true);
             trackEvent('share_click', { type: 'invite' });
-            setTimeout(() => setInviteCopied(false), 2500);
+            setTimeout(() => setInviteCopied(false), TIMINGS.TOAST_DISMISS);
         }
     };
 
