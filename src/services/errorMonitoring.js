@@ -12,7 +12,7 @@ const MAX_ERRORS = 50;
  * Call once at app startup.
  */
 export function initErrorMonitoring() {
-    window.addEventListener('error', (event) => {
+    const onError = (event) => {
         logError({
             message: event.message,
             filename: event.filename,
@@ -20,14 +20,22 @@ export function initErrorMonitoring() {
             colno: event.colno,
             stack: event.error?.stack?.slice(0, 500),
         });
-    });
+    };
 
-    window.addEventListener('unhandledrejection', (event) => {
+    const onUnhandledRejection = (event) => {
         logError({
             message: `Unhandled Promise Rejection: ${event.reason?.message || event.reason}`,
             stack: event.reason?.stack?.slice(0, 500),
         });
-    });
+    };
+
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandledRejection);
+
+    return () => {
+        window.removeEventListener('error', onError);
+        window.removeEventListener('unhandledrejection', onUnhandledRejection);
+    };
 }
 
 /**

@@ -190,7 +190,6 @@ function generateBracketRound(tournament) {
     // First round: random seeding with byes for non-power-of-2
     const shuffled = shuffle(tournament.players);
     const bracketSize = nextPowerOf2(shuffled.length);
-    const byeCount = bracketSize - shuffled.length;
     const matchups = [];
 
     // Assign seeds after shuffle

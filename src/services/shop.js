@@ -347,7 +347,8 @@ export function claimBattlePassReward(tier) {
   }
 
   // Save updated battle pass state (without regenerated tiers)
-  const { tiers: _tiers, ...bpState } = bp;
+  const { tiers: _bpTiers, ...bpState } = bp;
+  void _bpTiers;
   saveJSON(STORAGE_KEYS.battlePass, bpState);
 
   return { success: true, reward };
@@ -378,7 +379,8 @@ export function getBattlePassProgress() {
  */
 export function addBattlePassXp(amount) {
   const bp = getBattlePass();
-  const { tiers: _tiers, ...bpState } = bp;
+  const { tiers: _xpTiers, ...bpState } = bp;
+  void _xpTiers;
   bpState.xp = (bpState.xp || 0) + amount;
   saveJSON(STORAGE_KEYS.battlePass, bpState);
   return bpState.xp;

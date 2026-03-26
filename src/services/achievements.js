@@ -123,7 +123,6 @@ export function checkAchievements(context = {}) {
 
   const scores = stats.scores || [];
   const currentStreak = stats.currentStreak || 0;
-  const totalRounds = stats.totalRounds || 0;
   const dailyScores = stats.dailyScores || [];
   const rivalryWins = stats.rivalryWins || 0;
   const challengesSent = stats.challengesSent || 0;
