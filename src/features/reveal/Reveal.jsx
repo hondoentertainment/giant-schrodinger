@@ -15,7 +15,7 @@ import { ShareCardCanvas } from '../../components/ShareCardCanvas';
 import { checkAchievements } from '../../services/achievements';
 import { addCoins, addBattlePassXp } from '../../services/shop';
 import { saveSharedRound } from '../../services/backend';
-import { getThemeById, MEDIA_TYPES } from '../../data/themes';
+import { getThemeById, buildThemeAssets, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import Confetti from '../../components/Confetti';
@@ -106,6 +106,23 @@ export function Reveal({ submission, assets }) {
         }
         trackEvent('round_complete', { score, scoringMode, roundNumber });
         return () => clearTimeout(soundTimer);
+    }, [result]);
+
+    // After scoring completes, preload next round's assets
+    useEffect(() => {
+        if (!result || roundNumber >= totalRounds) return;
+
+        // Build next round's assets (same logic as Round.jsx)
+        const nextTheme = getThemeById(user?.themeId);
+        const nextAssets = buildThemeAssets(nextTheme, 2, mediaType);
+
+        // Preload each image
+        nextAssets.forEach(asset => {
+            if (asset?.url) {
+                const img = new Image();
+                img.src = asset.url;
+            }
+        });
     }, [result]);
 
     useEffect(() => {

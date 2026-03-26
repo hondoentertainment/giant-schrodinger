@@ -60,6 +60,13 @@ export function SessionSummary() {
         return { avg, best, worst, specialRounds };
     }, [sessionResults]);
 
+    // Find the best round
+    const bestRound = useMemo(() => sessionResults?.reduce((best, r, i) =>
+        (!best || (r.score || r.finalScore || 0) > (best.result.score || best.result.finalScore || 0))
+            ? { result: r, index: i }
+            : best
+    , null), [sessionResults]);
+
     const overallBand = getScoreBand(Math.round(stats?.avg || 0));
     const playerStats = getStats();
     const playerRank = user?.name ? getPlayerRank(user.name) : null;
@@ -156,6 +163,39 @@ export function SessionSummary() {
                                 : 'Keep playing — every round sharpens your creative instincts.'}
                         </div>
                     </div>
+
+                    {/* Best connection highlight */}
+                    {bestRound && (
+                        <div className="w-full max-w-md mb-6 p-5 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/20">
+                            <div className="text-yellow-400 text-xs uppercase tracking-wider font-bold mb-2">
+                                ⭐ Best Connection — Round {bestRound.index + 1}
+                            </div>
+                            {bestRound.result.submission && (
+                                <p className="text-white text-lg font-medium mb-2 italic">
+                                    &ldquo;{bestRound.result.submission}&rdquo;
+                                </p>
+                            )}
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl font-bold text-yellow-400">
+                                    {bestRound.result.score || bestRound.result.finalScore}/10
+                                </span>
+                                {bestRound.result.breakdown && (
+                                    <span className="text-white/50 text-sm">
+                                        W:{bestRound.result.breakdown.wit} L:{bestRound.result.breakdown.logic} O:{bestRound.result.breakdown.originality} C:{bestRound.result.breakdown.clarity}
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const text = `My best connection: "${bestRound.result.submission}" — scored ${bestRound.result.score || bestRound.result.finalScore}/10 on Venn with Friends!`;
+                                    navigator.clipboard?.writeText(text);
+                                }}
+                                className="mt-3 px-4 py-2 rounded-lg bg-yellow-500/20 text-yellow-300 text-sm font-semibold hover:bg-yellow-500/30 transition"
+                            >
+                                Share Best Connection
+                            </button>
+                        </div>
+                    )}
 
                     {/* Round-by-round breakdown */}
                     <div className="mb-8">
