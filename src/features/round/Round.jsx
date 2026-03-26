@@ -9,13 +9,21 @@ import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
 
 export function Round({ onSubmit }) {
-    const { setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge } = useGame();
+    const {
+        setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge,
+        trackUsedAssets, getUsedAssetIds,
+    } = useGame();
     const [assets, setAssets] = useState({ left: null, right: null });
     const [submission, setSubmission] = useState('');
-    const [timer, setTimer] = useState(60);
+    const [displayTime, setDisplayTime] = useState(60);
     const [showTimeUp, setShowTimeUp] = useState(false);
     const [shakeInput, setShakeInput] = useState(false);
+    const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+    const [roundPhase, setRoundPhase] = useState('ready'); // 'ready' | 'playing'
+    const [countdown, setCountdown] = useState(3);
     const submittedRef = useRef(false);
+    const endTimeRef = useRef(null);
+    const rafRef = useRef(null);
     const stats = getStats();
     const rawTheme = getThemeById(user?.themeId);
     const theme = isThemeUnlocked(rawTheme?.id, stats)
@@ -28,14 +36,20 @@ export function Round({ onSubmit }) {
     const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const mod = currentModifier;
 
+    // Task 1 & asset selection: build assets, filter out used ones, track new ones
     useEffect(() => {
         submittedRef.current = false;
+        setRoundPhase('ready');
+        setCountdown(3);
         let left, right;
+        const usedIds = getUsedAssetIds ? getUsedAssetIds() : [];
         const customPool = getCustomImages();
         const useCustom = mediaType === MEDIA_TYPES.IMAGE && user?.useCustomImages && customPool.length >= 2;
         if (useCustom) {
-            const shuffled = [...customPool].sort(() => Math.random() - 0.5);
-            [left, right] = shuffled.slice(0, 2).map((img, i) => ({
+            const available = customPool.filter((img) => !usedIds.includes(img.id));
+            const pool = available.length >= 2 ? available : customPool;
+            const shuffled = [...pool].sort(() => Math.random() - 0.5);
+            [left, right] = shuffled.slice(0, 2).map((img) => ({
                 id: img.id,
                 label: img.label,
                 type: MEDIA_TYPES.IMAGE,
@@ -43,7 +57,16 @@ export function Round({ onSubmit }) {
                 fallbackUrl: img.url,
             }));
         } else {
-            [left, right] = buildThemeAssets(theme, 2, mediaType);
+            // Build more assets than needed so we can filter out used ones
+            const candidates = buildThemeAssets(theme, Math.max(6, usedIds.length + 4), mediaType);
+            const filtered = candidates.filter((a) => !usedIds.includes(a.id));
+            // If filtering leaves fewer than 2, fall back to unfiltered
+            const pool = filtered.length >= 2 ? filtered : candidates;
+            [left, right] = pool.slice(0, 2);
+        }
+        // Track newly selected assets
+        if (trackUsedAssets) {
+            trackUsedAssets([left, right]);
         }
         [left, right].forEach((a) => {
             if (!a?.url) return;
@@ -65,7 +88,7 @@ export function Round({ onSubmit }) {
             }
         });
         setAssets({ left, right });
-        setTimer(timeLimit);
+        setDisplayTime(timeLimit);
     }, [user?.themeId, user?.useCustomImages, timeLimit, mediaType, roundNumber]);
 
     const handleSubmit = useCallback((e, { forceEmpty = false } = {}) => {
@@ -89,15 +112,48 @@ export function Round({ onSubmit }) {
         }
     }, [submission, assets, mod, onSubmit, setGameState]);
 
+    // Task 5: Get Ready countdown
     useEffect(() => {
-        if (timer > 0) {
-            const interval = setInterval(() => setTimer(t => t - 1), TIMINGS.TIMER_TICK);
-            return () => clearInterval(interval);
-        } else if (!submittedRef.current && !showTimeUp) {
+        if (roundPhase !== 'ready') return;
+        if (countdown <= 0) {
+            setRoundPhase('playing');
+            return;
+        }
+        const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+        return () => clearTimeout(t);
+    }, [roundPhase, countdown]);
+
+    // requestAnimationFrame-based timer (only runs during 'playing' phase)
+    useEffect(() => {
+        if (roundPhase !== 'playing' || submittedRef.current) return;
+
+        endTimeRef.current = performance.now() + timeLimit * 1000;
+
+        function tick() {
+            const remaining = Math.ceil((endTimeRef.current - performance.now()) / 1000);
+            setDisplayTime(Math.max(0, remaining));
+
+            if (remaining > 0) {
+                rafRef.current = requestAnimationFrame(tick);
+            }
+        }
+
+        rafRef.current = requestAnimationFrame(tick);
+
+        return () => {
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
+    }, [timeLimit, roundPhase]);
+
+    // Time-up detection
+    useEffect(() => {
+        if (roundPhase !== 'playing') return;
+        if (displayTime <= 0 && !submittedRef.current && !showTimeUp) {
             setShowTimeUp(true);
         }
-    }, [timer, showTimeUp]);
+    }, [displayTime, showTimeUp, roundPhase]);
 
+    // Task 3: Faster auto-submit (400ms instead of 900ms)
     useEffect(() => {
         if (!showTimeUp || submittedRef.current) return;
         const t = setTimeout(() => {
@@ -105,7 +161,7 @@ export function Round({ onSubmit }) {
                 handleSubmit(null, { forceEmpty: true });
             }
             setShowTimeUp(false);
-        }, TIMINGS.TIME_UP_REVEAL);
+        }, 400);
         return () => clearTimeout(t);
     }, [showTimeUp, handleSubmit]);
 
@@ -129,6 +185,30 @@ export function Round({ onSubmit }) {
 
     return (
         <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-700 px-4">
+            {/* Task 5: Get Ready countdown overlay */}
+            {roundPhase === 'ready' && (
+                <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+                    {/* Concept preview labels */}
+                    <div className="flex items-center gap-4 mb-8">
+                        <span className="text-white/80 text-lg">{assets?.left?.label}</span>
+                        <span className="text-white/40">&times;</span>
+                        <span className="text-white/80 text-lg">{assets?.right?.label}</span>
+                    </div>
+                    {/* Task 6: Modifier badge preview during countdown */}
+                    {mod && mod.id !== 'normal' && (
+                        <div className="mb-4 px-4 py-2 rounded-full bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-sm font-bold">
+                            {mod.id === 'speed' && 'SPEED ROUND — Half time, 1.5x points!'}
+                            {mod.id === 'doubleOrNothing' && 'DOUBLE OR NOTHING — Score 7+ to keep your points!'}
+                            {mod.id === 'showdown' && 'FINAL SHOWDOWN — 2x points, reduced time!'}
+                        </div>
+                    )}
+                    {/* Countdown number */}
+                    <div className="text-8xl font-bold text-white animate-pulse">
+                        {countdown > 0 ? countdown : 'GO!'}
+                    </div>
+                </div>
+            )}
+
             {/* Round modifier banner */}
             {isSpecialRound && (
                 <div className={`w-full max-w-md mb-3 animate-in slide-in-from-top-4 duration-500 ${
@@ -147,16 +227,13 @@ export function Round({ onSubmit }) {
             {/* Header row - round info + timer */}
             <div className="w-full flex justify-between items-center mb-2">
                 <div className="flex items-center gap-3">
+                    {/* Task 4: Quit confirmation */}
                     <button
-                        onClick={() => {
-                            if (window.confirm('Quit this round? You\'ll return to the lobby.')) {
-                                setGameState('LOBBY');
-                            }
-                        }}
+                        onClick={() => setShowQuitConfirm(true)}
                         className="text-white/30 hover:text-white/60 transition-colors text-xs"
                         aria-label="Quit round"
                     >
-                        ← Quit
+                        &larr; Quit
                     </button>
                     <div className="text-lg sm:text-xl font-bold text-white/40 tracking-wide">
                         {isDailyChallenge ? 'DAILY' : 'ROUND'} {roundNumber} / {totalRounds}
@@ -167,8 +244,8 @@ export function Round({ onSubmit }) {
                         Time&apos;s up!
                     </div>
                 ) : (
-                    <div className={`text-2xl sm:text-3xl font-black font-display tabular-nums ${timer < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`} aria-live="assertive" aria-atomic="true" role="timer">
-                        {timer}s
+                    <div className={`text-2xl sm:text-3xl font-black font-display tabular-nums ${displayTime < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`} aria-live="assertive" aria-atomic="true" role="timer">
+                        {displayTime}s
                     </div>
                 )}
             </div>
@@ -239,6 +316,32 @@ export function Round({ onSubmit }) {
                     </div>
                 </div>
             </form>
+
+            {/* Task 4: Quit confirmation modal */}
+            {showQuitConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                    <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-sm mx-4 text-center">
+                        <h3 className="text-xl font-bold text-white mb-2">Quit Session?</h3>
+                        <p className="text-white/60 mb-6">
+                            You&apos;ll lose progress on rounds {roundNumber}&ndash;{totalRounds}.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowQuitConfirm(false)}
+                                className="flex-1 py-3 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20 transition"
+                            >
+                                Keep Playing
+                            </button>
+                            <button
+                                onClick={() => { setShowQuitConfirm(false); setGameState('LOBBY'); }}
+                                className="flex-1 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+                            >
+                                Quit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
