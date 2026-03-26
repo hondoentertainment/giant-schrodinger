@@ -58,6 +58,33 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+function PhaseTransition({ children, phase }) {
+    const [currentChildren, setCurrentChildren] = useState(children);
+    const [animClass, setAnimClass] = useState('phase-enter-active');
+
+    useEffect(() => {
+        // Fade out
+        setAnimClass('phase-exit-active');
+        const timer = setTimeout(() => {
+            setCurrentChildren(children);
+            setAnimClass('phase-enter');
+            // Force reflow then fade in
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setAnimClass('phase-enter-active');
+                });
+            });
+        }, 150);
+        return () => clearTimeout(timer);
+    }, [phase]); // Only transition when phase changes
+
+    return (
+        <div className={animClass}>
+            {currentChildren}
+        </div>
+    );
+}
+
 function GameContent() {
     const { gameState, setGameState } = useGame();
     const { isMultiplayer, roomPhase } = useRoom();
@@ -150,6 +177,7 @@ function GameContent() {
         <Layout>
             {headerEl}
             <Suspense fallback={<LoadingFallback />}>
+            <PhaseTransition phase={gameState}>
                 {gameState === 'LOBBY' && <Lobby />}
                 {gameState === 'GALLERY' && <Gallery />}
                 {gameState === 'LEADERBOARD' && <Leaderboard onBack={() => setGameState('LOBBY')} />}
@@ -166,6 +194,7 @@ function GameContent() {
                 {gameState === 'ASYNC_CHAINS' && <AsyncChains onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'ANALYTICS' && <AnalyticsDashboard onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
+            </PhaseTransition>
             </Suspense>
         </Layout>
     );
