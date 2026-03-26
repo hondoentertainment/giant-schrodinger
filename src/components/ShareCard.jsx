@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 const CARD_WIDTH = 800;
 const CARD_HEIGHT = 420;
 
-export default function ShareCard({
+const ShareCard = React.memo(function ShareCard({
     submission,
     score,
     playerName,
@@ -178,7 +178,9 @@ export default function ShareCard({
             )}
         </div>
     );
-}
+});
+
+export default ShareCard;
 
 function roundedRect(ctx, x, y, w, h, r) {
     ctx.beginPath();

@@ -284,7 +284,7 @@ function VennMedia({ asset }) {
 }
 
 // ── Main Venn Diagram ──
-export function VennDiagram({ leftAsset, rightAsset }) {
+export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAsset }) {
     const mediaType = leftAsset?.type || MEDIA_TYPES.IMAGE;
     const isAudio = mediaType === MEDIA_TYPES.AUDIO;
 
@@ -352,4 +352,4 @@ export function VennDiagram({ leftAsset, rightAsset }) {
             </div>
         </div>
     );
-}
+})

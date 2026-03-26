@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { t, getLocale, setLocale } from '../lib/i18n';
 
 export function useTranslation() {

@@ -4,15 +4,72 @@
  * Stores events in localStorage so the game can derive engagement metrics
  * locally. Events are buffered in memory and flushed periodically to
  * avoid serializing the full event log on every call.
+ *
+ * Supports pluggable analytics providers for sending events to different
+ * backends (console, Supabase, etc.).
  */
 
 const STORAGE_KEY = 'vwf_analytics';
+const SESSION_ID_KEY = 'vwf_session_id';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const FLUSH_INTERVAL_MS = 5000;
 
 // In-memory buffer for new events
 let _buffer = [];
 let _flushTimer = null;
+
+// --- Provider system ---
+
+const providers = [];
+
+/**
+ * Register an analytics provider. Each provider must have a `track(event, props)` method.
+ */
+export function registerAnalyticsProvider(provider) {
+  providers.push(provider);
+}
+
+/**
+ * Get or create a session ID for the current browser session.
+ */
+function getSessionId() {
+  try {
+    let id = sessionStorage.getItem(SESSION_ID_KEY);
+    if (!id) {
+      id = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      sessionStorage.setItem(SESSION_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return 'unknown';
+  }
+}
+
+// --- Providers ---
+
+/**
+ * Console provider for development - logs events to the browser console.
+ */
+export const ConsoleAnalyticsProvider = {
+  track: (event, props) => {
+    if (import.meta.env.DEV) {
+      console.debug(`[Analytics] ${event}`, props);
+    }
+  },
+};
+
+/**
+ * Supabase provider - writes events to an analytics_events table when backend is available.
+ */
+export const SupabaseAnalyticsProvider = {
+  track: async () => {
+    try {
+      const { isBackendEnabled } = await import('./backend.js');
+      if (!isBackendEnabled()) return;
+      // Stub: when Supabase is configured, insert into analytics_events table
+    } catch { /* silent */ }
+  },
+};
 
 function readEvents() {
   try {
@@ -55,19 +112,66 @@ function scheduleFlush() {
 
 /**
  * Record an analytics event. Buffered in memory and flushed periodically.
+ * Also dispatched to all registered providers with enriched properties.
  */
 export function trackEvent(eventName, properties = {}) {
   try {
+    const enriched = {
+      ...properties,
+      timestamp: Date.now(),
+      sessionId: getSessionId(),
+      url: typeof window !== 'undefined' ? window.location.href : '',
+    };
+
     _buffer.push({
       event: eventName,
-      properties,
-      timestamp: Date.now(),
+      properties: enriched,
+      timestamp: enriched.timestamp,
     });
     scheduleFlush();
+
+    // Dispatch to all registered providers
+    providers.forEach((p) => {
+      try {
+        p.track(eventName, enriched);
+      } catch { /* never let a provider break the app */ }
+    });
   } catch {
     // Never let analytics break the app.
   }
 }
+
+// --- Key metric tracking functions ---
+
+/**
+ * Track completion of a round with score, mode, and duration.
+ */
+export function trackRoundComplete(score, mode, duration) {
+  trackEvent('round_complete', { score, mode, duration });
+}
+
+/**
+ * Track a share action with platform and share type.
+ */
+export function trackShare(platform, type) {
+  trackEvent('share_click', { platform, type });
+}
+
+/**
+ * Track daily challenge completion.
+ */
+export function trackDailyChallenge(completed) {
+  trackEvent('daily_complete', { completed });
+}
+
+/**
+ * Track retention - call on app load to track DAU.
+ */
+export function trackRetention() {
+  trackEvent('app_load', { date: new Date().toISOString().slice(0, 10) });
+}
+
+// --- Query functions ---
 
 /**
  * Return all recorded events of a given type.

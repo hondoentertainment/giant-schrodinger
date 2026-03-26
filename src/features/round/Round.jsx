@@ -6,6 +6,7 @@ import { getCustomImages } from '../../services/customImages';
 import { getStats, isThemeUnlocked } from '../../services/stats';
 import { getAIDifficulty, getDifficultyConfig } from '../../services/aiFeatures';
 import { haptic } from '../../lib/haptics';
+import { TIMINGS } from '../../lib/timings';
 
 export function Round({ onSubmit }) {
     const { setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge } = useGame();
@@ -75,7 +76,7 @@ export function Round({ onSubmit }) {
         if (!forceEmpty && !submission.trim()) {
             haptic('warning');
             setShakeInput(true);
-            setTimeout(() => setShakeInput(false), 600);
+            setTimeout(() => setShakeInput(false), TIMINGS.SHAKE_ANIMATION);
             return;
         }
 
@@ -90,7 +91,7 @@ export function Round({ onSubmit }) {
 
     useEffect(() => {
         if (timer > 0) {
-            const interval = setInterval(() => setTimer(t => t - 1), 1000);
+            const interval = setInterval(() => setTimer(t => t - 1), TIMINGS.TIMER_TICK);
             return () => clearInterval(interval);
         } else if (!submittedRef.current && !showTimeUp) {
             setShowTimeUp(true);
@@ -104,7 +105,7 @@ export function Round({ onSubmit }) {
                 handleSubmit(null, { forceEmpty: true });
             }
             setShowTimeUp(false);
-        }, 900);
+        }, TIMINGS.TIME_UP_REVEAL);
         return () => clearTimeout(t);
     }, [showTimeUp, handleSubmit]);
 
@@ -166,14 +167,14 @@ export function Round({ onSubmit }) {
                         Time&apos;s up!
                     </div>
                 ) : (
-                    <div className={`text-2xl sm:text-3xl font-black font-display tabular-nums ${timer < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                    <div className={`text-2xl sm:text-3xl font-black font-display tabular-nums ${timer < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`} aria-live="assertive" aria-atomic="true" role="timer">
                         {timer}s
                     </div>
                 )}
             </div>
 
             {/* Badges row */}
-            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 text-xs text-white/50">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 text-xs text-white/50" aria-live="polite">
                 <div className="rounded-full bg-white/10 px-2.5 py-0.5">
                     Time: <span className="text-white/80">{timeLimit}s</span>
                     {mod?.timeFactor !== 1 && <span className="text-cyan-400 ml-1">({mod.timeFactor}x)</span>}
@@ -194,7 +195,8 @@ export function Round({ onSubmit }) {
 
             {/* Input form */}
             <form onSubmit={handleSubmit} className="w-full max-w-md mt-2 sm:mt-4 relative z-20">
-                <p className="text-center text-white/50 text-xs sm:text-sm mb-2">
+                <label htmlFor="submission-input" className="sr-only">Your connection phrase</label>
+                <p id="submission-help" className="text-center text-white/50 text-xs sm:text-sm mb-2">
                     {mediaType === MEDIA_TYPES.AUDIO
                         ? 'One witty phrase that connects both sounds'
                         : mediaType === MEDIA_TYPES.VIDEO
@@ -203,9 +205,11 @@ export function Round({ onSubmit }) {
                 </p>
                 <div className="relative">
                     <input
+                        id="submission-input"
                         type="text"
                         value={submission}
                         onChange={(e) => setSubmission(e.target.value)}
+                        aria-describedby="submission-help"
                         placeholder={
                             mediaType === MEDIA_TYPES.AUDIO
                                 ? 'What connects these two sounds?'

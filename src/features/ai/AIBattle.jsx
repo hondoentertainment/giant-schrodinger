@@ -8,6 +8,7 @@ import { addCoins, addBattlePassXp } from '../../services/shop';
 import { recordPlay } from '../../services/stats';
 import { trackEvent } from '../../services/analytics';
 import { haptic } from '../../lib/haptics';
+import { TIMINGS } from '../../lib/timings';
 import { VennDiagram } from '../round/VennDiagram';
 import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
 import Confetti from '../../components/Confetti';
@@ -46,14 +47,14 @@ export function AIBattle({ onDone }) {
     // Timer
     useEffect(() => {
         if (phase !== 'playing' || timer <= 0) return;
-        const interval = setInterval(() => setTimer(t => t - 1), 1000);
+        const interval = setInterval(() => setTimer(t => t - 1), TIMINGS.TIMER_TICK);
         return () => clearInterval(interval);
     }, [phase, timer]);
 
     useEffect(() => {
         if (timer === 0 && phase === 'playing' && !submittedRef.current) {
             setShowTimeUp(true);
-            setTimeout(() => handleSubmit(null, { forceEmpty: true }), 900);
+            setTimeout(() => handleSubmit(null, { forceEmpty: true }), TIMINGS.TIME_UP_REVEAL);
         }
     }, [timer, phase]);
 
@@ -63,7 +64,7 @@ export function AIBattle({ onDone }) {
         if (!forceEmpty && !submission.trim()) {
             haptic('warning');
             setShakeInput(true);
-            setTimeout(() => setShakeInput(false), 600);
+            setTimeout(() => setShakeInput(false), TIMINGS.SHAKE_ANIMATION);
             return;
         }
         submittedRef.current = true;
@@ -129,7 +130,7 @@ export function AIBattle({ onDone }) {
                 setShowConfetti(true);
                 playConfettiSound();
             }
-        }, 500);
+        }, TIMINGS.PHASE_TRANSITION);
     }, [submission, assets, mediaType, difficulty, completeRound]);
 
     if (!assets.left || !assets.right) {
