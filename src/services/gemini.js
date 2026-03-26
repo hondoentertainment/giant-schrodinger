@@ -1,6 +1,10 @@
+import { TIMINGS } from '../lib/timings';
 import { GoogleGenAI } from '@google/genai';
 import { getFusionImage } from '../data/themes';
 import { getAIDifficulty, getDifficultyConfig } from './aiFeatures';
+import { createRateLimiter } from '../lib/rateLimit.js';
+
+const scoringLimiter = createRateLimiter('scoring', { maxRequests: 1, windowMs: 5000 });
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
@@ -63,8 +67,14 @@ function mockScore(submission, asset1, asset2) {
 
 export async function scoreSubmission(submission, asset1, asset2, mediaType = 'image') {
     if (!ai || !submission || !asset1 || !asset2) {
-        await new Promise((r) => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, TIMINGS.MOCK_AI_DELAY));
         return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true });
+    }
+
+    if (!scoringLimiter.canProceed()) {
+        console.warn('Rate limited — falling back to mock scoring');
+        await new Promise((r) => setTimeout(r, 500));
+        return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true, errorReason: 'Rate limited — please wait a few seconds' });
     }
 
     const mediaLabel = mediaType === 'video' ? 'video clip' : mediaType === 'audio' ? 'audio clip' : 'image';
@@ -105,14 +115,14 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
         });
     } catch (err) {
         console.warn('Gemini scoring failed, using mock:', err);
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, TIMINGS.PHASE_TRANSITION));
         return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true, errorReason: 'AI scoring unavailable — using mock scores' });
     }
 }
 
 export async function generateFusionImage(theme, submission) {
     if (!ai || !API_KEY) {
-        await new Promise((r) => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, TIMINGS.MOCK_AI_DELAY));
         return { ...getFusionImage(theme), isFallback: true };
     }
 
@@ -144,6 +154,6 @@ export async function generateFusionImage(theme, submission) {
         console.warn('Gemini image gen failed, using curated:', err);
     }
 
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, TIMINGS.COUNTDOWN_ANIM));
     return { ...getFusionImage(theme), isFallback: true, errorReason: 'AI image generation failed — using curated image' };
 }

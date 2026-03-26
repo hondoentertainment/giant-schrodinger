@@ -1,6 +1,5 @@
 const STORAGE_KEY = 'vwf_challenges';
 const CHALLENGE_HASH_PREFIX = 'challenge=';
-const MAX_STREAK_MULTIPLIER = 1.5;
 const MAX_STREAK_DAYS = 5;
 
 function generateId() {

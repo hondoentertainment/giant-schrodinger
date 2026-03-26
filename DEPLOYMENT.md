@@ -217,6 +217,63 @@ If you need environment variables in production:
 
 ---
 
+## Supabase Backend Setup
+
+### 1. Create a Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and create a new project.
+2. Note your **Project URL** and **Anon Key** from Settings > API.
+
+### 2. Run the Database Schema
+
+1. Open the SQL Editor in your Supabase dashboard.
+2. Paste the contents of `supabase/schema.sql` and run it.
+3. This creates all tables (users, rounds, leaderboard, challenges, rooms, analytics_events) with Row Level Security policies and indexes.
+
+### 3. Configure Environment Variables
+
+Add these to your `.env` (local) or GitHub Actions secrets (production):
+
+```
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+For Edge Functions (server-side scoring), set secrets via the Supabase CLI:
+
+```bash
+supabase secrets set GEMINI_API_KEY=your-gemini-api-key
+```
+
+### 4. Deploy Edge Functions
+
+Install the Supabase CLI, then deploy:
+
+```bash
+# Link to your project
+supabase link --project-ref your-project-ref
+
+# Deploy the server-side scoring function
+supabase functions deploy score-submission
+
+# Deploy the dynamic OG tags function
+supabase functions deploy og-tags
+```
+
+### 5. Enable Server-Side Scoring
+
+The `score-submission` Edge Function runs Gemini scoring server-side so the API key is never exposed to the client. To enable it:
+
+1. Deploy the function (see above).
+2. Set the `GEMINI_API_KEY` secret on your Supabase project.
+3. Update the client to call the Edge Function endpoint instead of the client-side Gemini API when `VITE_SUPABASE_URL` is configured.
+
+### 6. Dynamic OG Tags
+
+The `og-tags` Edge Function serves custom Open Graph meta tags for shared links. When a player shares a round or challenge, the link points to the Edge Function URL which returns HTML with the correct OG tags and then redirects to the app.
+
+---
+
 ## Next Steps
 
 1. Choose deployment method (GitHub Actions recommended)

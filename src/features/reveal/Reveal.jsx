@@ -21,6 +21,7 @@ import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import Confetti from '../../components/Confetti';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { haptic } from '../../lib/haptics';
+import { TIMINGS } from '../../lib/timings';
 
 export function Reveal({ submission, assets }) {
     const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound } = useGame();
@@ -221,7 +222,7 @@ export function Reveal({ submission, assets }) {
             setShareCopied(true);
             trackEvent('share_click', { type: 'judge' });
             toast.success('Link copied — send to a friend and they\'ll score your connection!');
-            setTimeout(() => setShareCopied(false), 2500);
+            setTimeout(() => setShareCopied(false), TIMINGS.TOAST_DISMISS);
         } else {
             toast.error('Could not copy link — try again');
         }
@@ -243,7 +244,7 @@ export function Reveal({ submission, assets }) {
             setChallengeCopied(true);
             trackEvent('challenge_sent', { score: result.finalScore || result.score });
             toast.success(`Challenge link copied! Your friend will try to beat your ${result.finalScore || result.score}/10.`);
-            setTimeout(() => setChallengeCopied(false), 2500);
+            setTimeout(() => setChallengeCopied(false), TIMINGS.TOAST_DISMISS);
         } else {
             toast.error('Could not copy link — try again');
         }

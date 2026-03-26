@@ -18,7 +18,6 @@ import {
     purchaseItem,
     getShopItems,
     isItemOwned,
-    getOwnedItems,
     equipItem,
     getEquippedItems,
     getTransactionHistory,

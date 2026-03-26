@@ -1,25 +1,28 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { ToastProvider } from './context/ToastContext'
 import { ToastContainer } from './components/Toast'
 import { GameProvider, useGame } from './context/GameContext'
 import { RoomProvider, useRoom } from './context/RoomContext'
+// Core flow - eagerly loaded
 import { Lobby } from './features/lobby/Lobby'
 import { Round } from './features/round/Round'
 import { Reveal } from './features/reveal/Reveal'
 import { Gallery } from './features/gallery/Gallery'
-import { Leaderboard } from './features/leaderboard/Leaderboard'
-import { Achievements } from './features/achievements/Achievements'
-import { ThemeBuilder } from './features/creator/ThemeBuilder'
-import { Shop } from './features/shop/Shop'
-import { AISettings } from './features/ai/AISettings'
-import { AIBattle } from './features/ai/AIBattle'
-import { SessionSummary } from './features/summary/SessionSummary'
 import { JudgeRound } from './features/judge/JudgeRound'
-import { ChallengeRound } from './features/challenge/ChallengeRound'
-import { TournamentLobby } from './features/tournament/TournamentLobby'
-import { AsyncChains } from './features/challenge/AsyncChains'
+// Lazy-loaded features
+const Leaderboard = lazy(() => import('./features/leaderboard/Leaderboard').then(m => ({ default: m.Leaderboard })))
+const Achievements = lazy(() => import('./features/achievements/Achievements').then(m => ({ default: m.Achievements })))
+const ThemeBuilder = lazy(() => import('./features/creator/ThemeBuilder').then(m => ({ default: m.ThemeBuilder })))
+const Shop = lazy(() => import('./features/shop/Shop').then(m => ({ default: m.Shop })))
+const AISettings = lazy(() => import('./features/ai/AISettings').then(m => ({ default: m.AISettings })))
+const AIBattle = lazy(() => import('./features/ai/AIBattle').then(m => ({ default: m.AIBattle })))
+const SessionSummary = lazy(() => import('./features/summary/SessionSummary').then(m => ({ default: m.SessionSummary })))
+const ChallengeRound = lazy(() => import('./features/challenge/ChallengeRound').then(m => ({ default: m.ChallengeRound })))
+const TournamentLobby = lazy(() => import('./features/tournament/TournamentLobby').then(m => ({ default: m.TournamentLobby })))
+const AsyncChains = lazy(() => import('./features/challenge/AsyncChains').then(m => ({ default: m.AsyncChains })))
+const AnalyticsDashboard = lazy(() => import('./features/analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })))
 import { RoomLobby } from './features/room/RoomLobby'
 import { MultiplayerRound } from './features/room/MultiplayerRound'
 import { MultiplayerReveal } from './features/room/MultiplayerReveal'
@@ -27,16 +30,31 @@ import { parseJudgeShareUrl } from './services/share'
 import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
 import { parseThemeFromUrl, clearThemeFromUrl } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
-import { trackEvent } from './services/analytics'
-import { AnalyticsDashboard } from './features/analytics/AnalyticsDashboard'
+import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider } from './services/analytics'
 import { initErrorMonitoring } from './services/errorMonitoring'
 
+function LoadingFallback() {
+    return (
+        <div className="flex items-center justify-center min-h-[200px]">
+            <div className="text-purple-400 text-lg animate-pulse">Loading...</div>
+        </div>
+    );
+}
+
 initErrorMonitoring();
+
+// Initialize analytics providers
+registerAnalyticsProvider(ConsoleAnalyticsProvider);
+
+// Track DAU on app load
+trackRetention();
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js').catch((err) => {
+            console.error('Service worker registration failed:', err);
+        });
     });
 }
 
@@ -97,7 +115,9 @@ function GameContent() {
         return (
             <Layout>
                 {headerEl}
-                <ChallengeRound payload={challengePayload} onDone={handleChallengeDone} />
+                <Suspense fallback={<LoadingFallback />}>
+                    <ChallengeRound payload={challengePayload} onDone={handleChallengeDone} />
+                </Suspense>
             </Layout>
         );
     }
@@ -129,23 +149,24 @@ function GameContent() {
     return (
         <Layout>
             {headerEl}
-
-            {gameState === 'LOBBY' && <Lobby />}
-            {gameState === 'GALLERY' && <Gallery />}
-            {gameState === 'LEADERBOARD' && <Leaderboard onBack={() => setGameState('LOBBY')} />}
-            {gameState === 'ACHIEVEMENTS' && <Achievements onBack={() => setGameState('LOBBY')} />}
-            {gameState === 'THEME_BUILDER' && <ThemeBuilder onBack={() => setGameState('LOBBY')} />}
-            {gameState === 'SHOP' && <Shop onBack={() => setGameState('LOBBY')} />}
-            {gameState === 'AI_SETTINGS' && <AISettings onBack={() => setGameState('LOBBY')} />}
-            {gameState === 'AI_BATTLE' && <AIBattle onDone={() => setGameState('LOBBY')} />}
-            {gameState === 'ROUND' && <Round onSubmit={handleRoundSubmit} />}
-            {gameState === 'REVEAL' && roundData && (
-                <Reveal submission={roundData.submission} assets={roundData.assets} />
-            )}
-            {gameState === 'TOURNAMENT' && <TournamentLobby onBack={() => setGameState('LOBBY')} />}
-            {gameState === 'ASYNC_CHAINS' && <AsyncChains onBack={() => setGameState('LOBBY')} />}
-            {gameState === 'ANALYTICS' && <AnalyticsDashboard onBack={() => setGameState('LOBBY')} />}
-            {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
+            <Suspense fallback={<LoadingFallback />}>
+                {gameState === 'LOBBY' && <Lobby />}
+                {gameState === 'GALLERY' && <Gallery />}
+                {gameState === 'LEADERBOARD' && <Leaderboard onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'ACHIEVEMENTS' && <Achievements onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'THEME_BUILDER' && <ThemeBuilder onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'SHOP' && <Shop onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'AI_SETTINGS' && <AISettings onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'AI_BATTLE' && <AIBattle onDone={() => setGameState('LOBBY')} />}
+                {gameState === 'ROUND' && <Round onSubmit={handleRoundSubmit} />}
+                {gameState === 'REVEAL' && roundData && (
+                    <Reveal submission={roundData.submission} assets={roundData.assets} />
+                )}
+                {gameState === 'TOURNAMENT' && <TournamentLobby onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'ASYNC_CHAINS' && <AsyncChains onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'ANALYTICS' && <AnalyticsDashboard onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
+            </Suspense>
         </Layout>
     );
 }
