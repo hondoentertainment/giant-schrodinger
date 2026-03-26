@@ -18,13 +18,14 @@ function buildPicsumFallback(labelOrKeyword) {
     return `https://picsum.photos/seed/${slug || 'venn'}/${IMG_WIDTH}/${IMG_WIDTH}`;
 }
 
-function createImage({ id, label, fallback }) {
+function createImage({ id, label, fallback, categories = [] }) {
     return {
         id,
         label,
         type: MEDIA_TYPES.IMAGE,
         url: buildUnsplashUrl(id),
         fallbackUrl: buildPicsumFallback(fallback || label),
+        categories,
     };
 }
 
