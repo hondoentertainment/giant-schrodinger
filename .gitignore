@@ -45,4 +45,4 @@ npm-shrinkwrap.json
 
 # Temporary files
 *.tmp
-*.temp
+*.temp.claude/
