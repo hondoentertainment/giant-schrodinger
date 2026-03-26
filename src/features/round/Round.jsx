@@ -33,10 +33,23 @@ export function Round({ onSubmit }) {
     const difficultyConfig = getDifficultyConfig(getAIDifficulty());
     const timeLimit = Math.round(baseTimeLimit * (currentModifier?.timeFactor || 1)) + (difficultyConfig.timeBonus || 0);
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
-    const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
+    const rawMediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const mod = currentModifier;
 
-    // Task 1 & asset selection: build assets, filter out used ones, track new ones
+    // Resolve 'mixed' to a concrete media type per round
+    const [resolvedMediaType, setResolvedMediaType] = useState(rawMediaType);
+    useEffect(() => {
+        if (rawMediaType === 'mixed') {
+            const types = [MEDIA_TYPES.IMAGE, MEDIA_TYPES.VIDEO, MEDIA_TYPES.AUDIO];
+            setResolvedMediaType(types[Math.floor(Math.random() * types.length)]);
+        } else {
+            setResolvedMediaType(rawMediaType);
+        }
+    }, [rawMediaType, roundNumber]);
+
+    const mediaType = resolvedMediaType;
+
+    // Asset selection: build assets, filter out used ones, track new ones
     useEffect(() => {
         submittedRef.current = false;
         setRoundPhase('ready');

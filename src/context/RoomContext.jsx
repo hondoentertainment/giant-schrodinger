@@ -28,7 +28,7 @@ function createAggregateSubmission(submissions) {
 
 export function RoomProvider({ children }) {
     const { toast } = useToast();
-    const { user } = useGame();
+    const { user, setGameState } = useGame();
 
     // Room state
     const [room, setRoom] = useState(null);           // The room DB row
@@ -186,14 +186,18 @@ export function RoomProvider({ children }) {
             await leaveRoom(room.id, playerName);
         }
         cleanup();
+        setGameState('LOBBY');
         toast.info('Left the room');
-    }, [room, playerName, cleanup, toast]);
+    }, [room, playerName, cleanup, toast, setGameState]);
 
     const startMultiplayerRound = useCallback(async () => {
         if (!room || !isHost) return false;
 
         const theme = getThemeById(room.theme_id);
-        const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
+        const rawMediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
+        const mediaType = rawMediaType === 'mixed'
+            ? [MEDIA_TYPES.IMAGE, MEDIA_TYPES.VIDEO, MEDIA_TYPES.AUDIO][Math.floor(Math.random() * 3)]
+            : rawMediaType;
         let left, right;
         const customPool = getCustomImages();
         const useCustom = mediaType === MEDIA_TYPES.IMAGE && user?.useCustomImages && customPool.length >= 2;

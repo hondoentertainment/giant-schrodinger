@@ -15,6 +15,7 @@ export function MultiplayerRound() {
         playerName,
         submitMultiplayerAnswer,
         scoreAllSubmissions,
+        leaveCurrentRoom,
     } = useRoom();
     const { toast } = useToast();
 
@@ -97,8 +98,16 @@ export function MultiplayerRound() {
         <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-700">
             {/* Header */}
             <div className="w-full flex justify-between items-center px-8 mb-4">
-                <div className="text-2xl font-bold text-white/40">
-                    ROUND {room.round_number} / {room.total_rounds}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={leaveCurrentRoom}
+                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
+                    >
+                        Leave Room
+                    </button>
+                    <div className="text-2xl font-bold text-white/40">
+                        ROUND {room.round_number} / {room.total_rounds}
+                    </div>
                 </div>
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 text-white/50 text-sm">

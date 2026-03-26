@@ -290,7 +290,8 @@ export function Lobby() {
 
                     <div className="mb-4 flex flex-wrap gap-3 justify-center text-sm text-white/60">
                         <span>Media: <span className="text-white font-semibold">
-                            {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? t('lobby.images') :
+                            {(user?.mediaType || MEDIA_TYPES.IMAGE) === 'mixed' ? t('lobby.mixed') || 'Mixed' :
+                             (user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? t('lobby.images') :
                              (user?.mediaType) === MEDIA_TYPES.VIDEO ? t('lobby.videos') : t('lobby.audio')}
                         </span></span>
                         <span>{stats.totalRounds} {t('lobby.roundsPlayed').toLowerCase()}</span>
@@ -393,6 +394,22 @@ export function Lobby() {
 
                     {/* Notification opt-in banner */}
                     <NotificationBanner />
+
+                    {/* Session resume banner */}
+                    {roundNumber > 0 && roundNumber < totalRounds && (
+                        <div className="w-full max-w-md mb-4 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 flex items-center justify-between">
+                            <div>
+                                <div className="text-blue-300 text-sm font-bold">Session in Progress</div>
+                                <div className="text-white/60 text-xs">Round {roundNumber} of {totalRounds}</div>
+                            </div>
+                            <button
+                                onClick={beginRound}
+                                className="px-4 py-2 rounded-xl bg-blue-500 text-white font-bold text-sm hover:bg-blue-600 transition"
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    )}
 
                     {/* Streak Counter */}
                     {stats?.currentStreak > 0 && (
@@ -842,7 +859,7 @@ export function Lobby() {
                     </p>
                 </section>
 
-                {mediaType === MEDIA_TYPES.IMAGE && (
+                {mediaType === MEDIA_TYPES.IMAGE && mediaType !== 'mixed' && (
                     <section aria-labelledby="profile-custom-images">
                         <CustomImagesManager
                             customImages={customImages}
@@ -855,7 +872,7 @@ export function Lobby() {
 
                 <section aria-labelledby="profile-media">
                     <label id="profile-media" className="block text-sm font-medium text-white/60 mb-2">{t('lobby.mediaType')}</label>
-                    <div className="grid grid-cols-3 gap-3" role="group">
+                    <div className="grid grid-cols-4 gap-3" role="group">
                         {[
                             { type: MEDIA_TYPES.IMAGE, label: 'Images', Icon: Image, desc: 'Classic visual Venn' },
                             { type: MEDIA_TYPES.VIDEO, label: 'Videos', Icon: Film, desc: 'Looping video clips' },
@@ -876,11 +893,25 @@ export function Lobby() {
                                 {label}
                             </button>
                         ))}
+                        <button
+                            type="button"
+                            onClick={() => setMediaType('mixed')}
+                            aria-pressed={mediaType === 'mixed'}
+                            aria-label="Mixed — random media type each round"
+                            className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 ${mediaType === 'mixed'
+                                    ? 'bg-white text-black shadow-lg'
+                                    : 'bg-white/10 text-white hover:bg-white/20'
+                                }`}
+                        >
+                            <span className="text-lg">🎲</span>
+                            Mixed
+                        </button>
                     </div>
                     <p className="mt-2 text-center text-white/50 text-xs">
                         {mediaType === MEDIA_TYPES.IMAGE && t('lobby.imagesDesc')}
                         {mediaType === MEDIA_TYPES.VIDEO && t('lobby.videosDesc')}
                         {mediaType === MEDIA_TYPES.AUDIO && t('lobby.audioDesc')}
+                        {mediaType === 'mixed' && 'Mixed mode — random media type each round.'}
                     </p>
                 </section>
 

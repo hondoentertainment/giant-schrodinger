@@ -178,6 +178,14 @@ export function MultiplayerReveal() {
     if (revealPhase === REVEAL_PHASES.COUNTDOWN && !isFinished) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center justify-center min-h-[50vh]">
+                <div className="w-full flex justify-start px-4 mb-4">
+                    <button
+                        onClick={leaveCurrentRoom}
+                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
+                    >
+                        Leave Room
+                    </button>
+                </div>
                 <div className="text-center animate-in zoom-in-95 duration-500">
                     <div className="text-white/40 text-lg uppercase tracking-widest mb-4">
                         Round {room?.round_number} Answers
@@ -202,6 +210,14 @@ export function MultiplayerReveal() {
     if (revealPhase === REVEAL_PHASES.REVEAL && !isFinished) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
+                <div className="w-full flex justify-start px-4 mb-4">
+                    <button
+                        onClick={leaveCurrentRoom}
+                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
+                    >
+                        Leave Room
+                    </button>
+                </div>
                 <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                     <div className="glass-panel rounded-[22px] p-8">
                         <div className="text-center mb-8">
@@ -248,6 +264,14 @@ export function MultiplayerReveal() {
     if (revealPhase === REVEAL_PHASES.VOTING && !isFinished) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
+                <div className="w-full flex justify-start px-4 mb-4">
+                    <button
+                        onClick={leaveCurrentRoom}
+                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
+                    >
+                        Leave Room
+                    </button>
+                </div>
                 <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                     <div className="glass-panel rounded-[22px] p-8">
                         <div className="text-center mb-8">
@@ -319,6 +343,14 @@ export function MultiplayerReveal() {
     // Results screen (final reveal with scores)
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
+            <div className="w-full flex justify-start px-4 mb-4">
+                <button
+                    onClick={leaveCurrentRoom}
+                    className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
+                >
+                    Leave Room
+                </button>
+            </div>
             <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                 <div className="glass-panel rounded-[22px] p-8">
                     {/* Header */}
