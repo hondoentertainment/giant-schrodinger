@@ -14,10 +14,14 @@ import { isBackendEnabled } from '../../lib/supabase';
 import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { OnboardingModal } from '../../components/OnboardingModal';
+import { OnboardingTour } from '../../components/OnboardingTour';
+import { NotificationBanner } from '../../components/NotificationBanner';
 import { UnlockModal } from '../../components/UnlockModal';
 import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
 import { getBuiltInPacks, getCustomPacks } from '../../services/promptPacks';
+import { useTranslation } from '../../hooks/useTranslation';
+import { LanguageSelector } from '../../components/LanguageSelector';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -38,6 +42,7 @@ export function Lobby() {
         endSession,
     } = useGame();
     const { hostRoom, joinRoomByCode } = useRoom();
+    const { t } = useTranslation();
 
     const [name, setName] = useState(user?.name || '');
     const [avatar, setAvatar] = useState(user?.avatar || AVATARS[0]);
@@ -62,6 +67,7 @@ export function Lobby() {
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [onboardingDismissCallback, setOnboardingDismissCallback] = useState(null);
     const [showUnlockModal, setShowUnlockModal] = useState(false);
+    const [showTour, setShowTour] = useState(false);
 
     // Multiplayer state
     const [showMultiplayer, setShowMultiplayer] = useState(false);
@@ -118,7 +124,14 @@ export function Lobby() {
     const dailyChallenge = useMemo(() => getDailyChallenge(), []);
     const dailyPlayed = useMemo(() => hasDailyChallengeBeenPlayed(), []);
 
+    const needsOnboarding = !localStorage.getItem('venn_onboarding_complete');
+
     const startGame = () => {
+        if (!sessionId && stats.totalRounds === 0 && needsOnboarding) {
+            setShowTour(true);
+            return;
+        }
+
         if (!sessionId && stats.totalRounds === 0) {
             setOnboardingDismissCallback(() => handleOnboardingDismiss);
             setShowOnboarding(true);
@@ -145,6 +158,10 @@ export function Lobby() {
     };
 
     const startDailyChallenge = () => {
+        if (!sessionId && stats.totalRounds === 0 && needsOnboarding) {
+            setShowTour(true);
+            return;
+        }
         if (!sessionId && stats.totalRounds === 0) {
             setOnboardingDismissCallback(() => {
                 setShowOnboarding(false);
@@ -155,6 +172,12 @@ export function Lobby() {
             return;
         }
         startSession(3, true);
+        beginRound();
+    };
+
+    const handleTourComplete = () => {
+        setShowTour(false);
+        startSession(sessionLength);
         beginRound();
     };
 
@@ -196,27 +219,31 @@ export function Lobby() {
                 {showOnboarding && onboardingDismissCallback && (
                     <OnboardingModal onDismiss={onboardingDismissCallback} />
                 )}
+                {showTour && <OnboardingTour onComplete={handleTourComplete} />}
                 {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
             <div className="w-full max-w-md space-y-8 glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
                 <div className="text-center">
-                    {/* Top bar: Edit Profile + Sound toggle */}
+                    {/* Top bar: Edit Profile + Language + Sound toggle */}
                     <div className="flex justify-between items-center mb-4">
                         <button
                             onClick={() => login(null)}
                             className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
-                            aria-label="Edit profile"
-                            title="Edit profile"
+                            aria-label={t('lobby.editProfile')}
+                            title={t('lobby.editProfile')}
                         >
                             <Pencil className="w-4 h-4" />
                         </button>
-                        <button
-                            onClick={() => { const m = toggleMute(); setSoundMuted(m); }}
-                            className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
-                            aria-label={soundMuted ? 'Unmute sounds' : 'Mute sounds'}
-                            title={soundMuted ? 'Unmute' : 'Mute'}
-                        >
-                            {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <LanguageSelector />
+                            <button
+                                onClick={() => { const m = toggleMute(); setSoundMuted(m); }}
+                                className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+                                aria-label={soundMuted ? 'Unmute sounds' : 'Mute sounds'}
+                                title={soundMuted ? 'Unmute' : 'Mute'}
+                            >
+                                {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Avatar */}
@@ -262,15 +289,15 @@ export function Lobby() {
 
                     <div className="mb-4 flex flex-wrap gap-3 justify-center text-sm text-white/60">
                         <span>Media: <span className="text-white font-semibold">
-                            {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? 'Images' :
-                             (user?.mediaType) === MEDIA_TYPES.VIDEO ? 'Videos' : 'Audio'}
+                            {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? t('lobby.images') :
+                             (user?.mediaType) === MEDIA_TYPES.VIDEO ? t('lobby.videos') : t('lobby.audio')}
                         </span></span>
-                        <span>{stats.totalRounds} rounds played</span>
-                        {stats.maxStreak > 0 && <span>Best streak: <span className="text-amber-400 font-semibold">{stats.maxStreak}d</span></span>}
+                        <span>{stats.totalRounds} {t('lobby.roundsPlayed').toLowerCase()}</span>
+                        {stats.maxStreak > 0 && <span>{t('lobby.bestStreak')}: <span className="text-amber-400 font-semibold">{stats.maxStreak}d</span></span>}
                     </div>
                     {/* Scoring mode toggle */}
                     <div className="mb-4">
-                        <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">Scoring</label>
+                        <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">{t('lobby.scoring')}</label>
                         <div className="flex gap-2 justify-center">
                             <button
                                 type="button"
@@ -279,13 +306,13 @@ export function Lobby() {
                                     login({ ...user, scoringMode: 'human' });
                                 }}
                                 aria-pressed={scoringMode === 'human'}
-                                aria-label="Manual judge — you or a friend score each round"
+                                aria-label={t('lobby.manualJudgeDesc')}
                                 className={`min-h-[44px] py-2.5 px-5 rounded-xl text-sm font-semibold transition-all ${scoringMode === 'human'
                                     ? 'bg-white text-black shadow-lg ring-2 ring-white/50'
                                     : 'bg-white/10 text-white hover:bg-white/20'
                                 }`}
                             >
-                                Manual Judge
+                                {t('lobby.manualJudge')}
                             </button>
                             <button
                                 type="button"
@@ -294,19 +321,19 @@ export function Lobby() {
                                     login({ ...user, scoringMode: 'ai' });
                                 }}
                                 aria-pressed={scoringMode === 'ai'}
-                                aria-label="AI judge — Gemini scores your connections automatically"
+                                aria-label={t('lobby.aiJudgeDesc')}
                                 className={`min-h-[44px] py-2.5 px-5 rounded-xl text-sm font-semibold transition-all ${scoringMode === 'ai'
                                     ? 'bg-white text-black shadow-lg ring-2 ring-white/50'
                                     : 'bg-white/10 text-white hover:bg-white/20'
                                 }`}
                             >
-                                AI Judge
+                                {t('lobby.aiJudge')}
                             </button>
                         </div>
                         <p className="text-center text-white/40 text-xs mt-1">
                             {scoringMode === 'human'
-                                ? 'You or a friend score each round manually.'
-                                : 'Gemini AI scores your connections automatically.'
+                                ? t('lobby.manualJudgeDesc')
+                                : t('lobby.aiJudgeDesc')
                             }
                         </p>
                     </div>
@@ -359,9 +386,12 @@ export function Lobby() {
                     {!isBackendEnabled() && (
                         <div className="w-full max-w-md mb-4 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-amber-300 text-sm">
                             <WifiOff size={16} />
-                            <span>Offline mode — leaderboards, multiplayer & challenges require backend</span>
+                            <span>{t('lobby.offlineMode')}</span>
                         </div>
                     )}
+
+                    {/* Notification opt-in banner */}
+                    <NotificationBanner />
 
                     {/* Streak Counter */}
                     {stats?.currentStreak > 0 && (
@@ -414,13 +444,13 @@ export function Lobby() {
                         <>
                             {/* Prompt Pack Selector */}
                             <div className="w-full max-w-md mb-4">
-                                <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Concept Pack</label>
+                                <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">{t('lobby.conceptPack')}</label>
                                 <select
                                     value={user?.promptPack || ''}
                                     onChange={(e) => login({ ...user, promptPack: e.target.value || null })}
                                     className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                                 >
-                                    <option value="">Random (Default)</option>
+                                    <option value="">{t('lobby.randomDefault')}</option>
                                     {getBuiltInPacks().map(pack => (
                                         <option key={pack.id} value={pack.id}>{pack.name} — {pack.description}</option>
                                     ))}
@@ -433,7 +463,7 @@ export function Lobby() {
                             {/* Session length (only when not in active session) */}
                             {!sessionId && (
                                 <div className="mb-4">
-                                    <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">Session length</label>
+                                    <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">{t('lobby.sessionLength')}</label>
                                     <div className="flex gap-2 justify-center">
                                         {[3, 5, 7].map((rounds) => (
                                             <button
@@ -452,7 +482,7 @@ export function Lobby() {
                                             </button>
                                         ))}
                                     </div>
-                                    <p className="text-center text-white/40 text-xs mt-1">{sessionLength} rounds · beat your average</p>
+                                    <p className="text-center text-white/40 text-xs mt-1">{t('lobby.nRoundsAvg', { rounds: sessionLength })}</p>
                                 </div>
                             )}
                             <div className="flex gap-3 w-full">
@@ -468,15 +498,15 @@ export function Lobby() {
                                 >
                                     {sessionId
                                         ? roundComplete && roundNumber === totalRounds
-                                            ? 'Session Complete'
-                                            : `Start Round ${roundComplete ? roundNumber + 1 : roundNumber}`
-                                        : `Solo Session (${sessionLength} rounds)`}
+                                            ? t('lobby.sessionComplete')
+                                            : t('lobby.startRound', { round: roundComplete ? roundNumber + 1 : roundNumber })
+                                        : t('lobby.soloSession', { rounds: sessionLength })}
                                 </button>
                                 <button
                                     onClick={() => setGameState('GALLERY')}
                                     className="px-4 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors min-w-[48px] min-h-[52px] flex items-center justify-center"
                                     aria-label="View connection gallery"
-                                    title="Gallery"
+                                    title={t('lobby.gallery')}
                                 >
                                     🖼️
                                 </button>
@@ -484,7 +514,7 @@ export function Lobby() {
                                     onClick={() => setGameState('LEADERBOARD')}
                                     className="px-4 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors min-w-[48px] min-h-[52px] flex items-center justify-center"
                                     aria-label="View leaderboard"
-                                    title="Leaderboard"
+                                    title={t('lobby.leaderboard')}
                                 >
                                     <Trophy className="w-5 h-5" />
                                 </button>
@@ -498,7 +528,7 @@ export function Lobby() {
                                 }}
                                 className="w-full py-4 bg-gradient-to-r from-red-600/80 to-orange-600/80 hover:from-red-600 hover:to-orange-600 text-white font-bold text-lg rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg border border-red-500/30"
                             >
-                                🤖 vs AI Battle
+                                {`🤖 ${t('lobby.aiBattle')}`}
                             </button>
 
                             {/* Quick nav row */}
@@ -506,30 +536,30 @@ export function Lobby() {
                                 <button
                                     onClick={() => setGameState('ACHIEVEMENTS')}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
-                                    title="Achievements"
+                                    title={t('lobby.achievements')}
                                 >
-                                    <Award className="w-4 h-4" /> Achievements
+                                    <Award className="w-4 h-4" /> {t('lobby.achievements')}
                                 </button>
                                 <button
                                     onClick={() => setGameState('THEME_BUILDER')}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
-                                    title="Theme Builder"
+                                    title={t('lobby.creator')}
                                 >
-                                    <Palette className="w-4 h-4" /> Creator
+                                    <Palette className="w-4 h-4" /> {t('lobby.creator')}
                                 </button>
                                 <button
                                     onClick={() => setGameState('SHOP')}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
-                                    title="Shop"
+                                    title={t('lobby.shop')}
                                 >
-                                    <ShoppingBag className="w-4 h-4" /> Shop
+                                    <ShoppingBag className="w-4 h-4" /> {t('lobby.shop')}
                                 </button>
                                 <button
                                     onClick={() => setGameState('AI_SETTINGS')}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
-                                    title="AI Settings"
+                                    title={t('lobby.aiSettings')}
                                 >
-                                    <Brain className="w-4 h-4" /> AI
+                                    <Brain className="w-4 h-4" /> {t('lobby.aiSettings')}
                                 </button>
                             </div>
 
@@ -538,23 +568,23 @@ export function Lobby() {
                                 <button
                                     onClick={() => { haptic('light'); trackEvent('nav_tournament'); setGameState('TOURNAMENT'); }}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
-                                    title="Tournaments"
+                                    title={t('lobby.tournaments')}
                                 >
-                                    <Trophy className="w-4 h-4" /> Tournaments
+                                    <Trophy className="w-4 h-4" /> {t('lobby.tournaments')}
                                 </button>
                                 <button
                                     onClick={() => { haptic('light'); trackEvent('nav_async_chains'); setGameState('ASYNC_CHAINS'); }}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
-                                    title="Challenge Chains"
+                                    title={t('lobby.challengeChains')}
                                 >
-                                    <Link className="w-4 h-4" /> Challenge Chains
+                                    <Link className="w-4 h-4" /> {t('lobby.challengeChains')}
                                 </button>
                                 <button
                                     onClick={() => { haptic('light'); trackEvent('nav_analytics'); setGameState('ANALYTICS'); }}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
-                                    title="Analytics"
+                                    title={t('lobby.analytics')}
                                 >
-                                    <BarChart3 className="w-4 h-4" /> Analytics
+                                    <BarChart3 className="w-4 h-4" /> {t('lobby.analytics')}
                                 </button>
                             </div>
 
@@ -564,7 +594,7 @@ export function Lobby() {
                                 className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2"
                             >
                                 <Users className="w-5 h-5" />
-                                Play with Friends
+                                {t('lobby.multiplayer')}
                                 {!backendReady && <WifiOff className="w-4 h-4 opacity-50" />}
                             </button>
                         </>
@@ -575,11 +605,11 @@ export function Lobby() {
                         <div className="animate-in slide-in-from-bottom-4 duration-300">
                             <div className="flex flex-col items-center gap-1 mb-4 text-white/60 text-sm">
                                 {backendReady ? (
-                                    <><Wifi className="w-4 h-4 text-emerald-400" /> Connected</>
+                                    <><Wifi className="w-4 h-4 text-emerald-400" /> {t('lobby.connected')}</>
                                 ) : (
                                     <>
-                                        <span className="flex items-center gap-2"><WifiOff className="w-4 h-4 text-amber-400" /> Multiplayer needs server</span>
-                                        <span className="text-white/40 text-xs">Play solo above — it works without setup</span>
+                                        <span className="flex items-center gap-2"><WifiOff className="w-4 h-4 text-amber-400" /> {t('lobby.multiplayerNeedsServer')}</span>
+                                        <span className="text-white/40 text-xs">{t('lobby.playSoloAbove')}</span>
                                     </>
                                 )}
                             </div>
@@ -590,7 +620,7 @@ export function Lobby() {
                                     disabled={mpLoading || !backendReady}
                                     className="w-full py-4 bg-white text-black font-bold text-xl rounded-xl hover:scale-105 transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                                 >
-                                    {mpLoading && mpLoadingAction === 'create' ? 'Creating...' : 'Create Room'}
+                                    {mpLoading && mpLoadingAction === 'create' ? t('lobby.creating') : t('lobby.createRoom')}
                                 </button>
 
                                 <div className="flex gap-2">
@@ -598,7 +628,7 @@ export function Lobby() {
                                         type="text"
                                         value={joinCode}
                                         onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                                        placeholder="Room code"
+                                        placeholder={t('lobby.roomCode')}
                                         maxLength={6}
                                         className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-lg text-center tracking-widest font-bold uppercase"
                                     />
@@ -609,7 +639,7 @@ export function Lobby() {
                                         aria-busy={mpLoading && mpLoadingAction === 'join'}
                                         aria-label={mpLoading && mpLoadingAction === 'join' ? 'Joining room...' : 'Join room'}
                                     >
-                                        {mpLoading && mpLoadingAction === 'join' ? 'Joining...' : 'Join'}
+                                        {mpLoading && mpLoadingAction === 'join' ? t('lobby.joining') : t('lobby.join')}
                                     </button>
                                 </div>
 
@@ -617,7 +647,7 @@ export function Lobby() {
                                     onClick={() => setShowMultiplayer(false)}
                                     className="w-full text-sm text-white/40 hover:text-white underline"
                                 >
-                                    Back to solo play
+                                    {t('lobby.backToSoloPlay')}
                                 </button>
                             </div>
                         </div>
@@ -626,9 +656,9 @@ export function Lobby() {
                     {sessionId && roundComplete && roundNumber === totalRounds && (
                         <div className="mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
                             <div className="text-2xl mb-1">🎉</div>
-                            <div className="text-white font-semibold">Session complete!</div>
+                            <div className="text-white font-semibold">{t('lobby.sessionCompleteMessage')}</div>
                             <div className="text-white/70 text-sm mt-1">
-                                Average score: <span className="text-amber-400 font-bold">{(sessionScore / sessionResults.length).toFixed(1)}</span>/10
+                                {t('lobby.averageScore')}: <span className="text-amber-400 font-bold">{(sessionScore / sessionResults.length).toFixed(1)}</span>/10
                             </div>
                         </div>
                     )}
@@ -639,14 +669,14 @@ export function Lobby() {
                                 onClick={() => {
                                     if (roundComplete && roundNumber === totalRounds) {
                                         endSession();
-                                    } else if (window.confirm('End current session? Your progress will be lost.')) {
+                                    } else if (window.confirm(t('lobby.endSessionConfirm'))) {
                                         endSession();
                                     }
                                 }}
                                 className="text-sm text-white/40 hover:text-white underline min-h-[44px] flex items-center"
                                 aria-label="Start new session"
                             >
-                                Start New Session
+                                {t('lobby.startNewSession')}
                             </button>
                         )}
                     </div>
@@ -662,18 +692,18 @@ export function Lobby() {
     return (
         <div className="w-full max-w-md glass-panel p-8 rounded-3xl animate-in slide-in-from-bottom-8 duration-700">
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
-            <h2 className="text-2xl font-display font-bold text-white mb-2 text-center">Create Profile</h2>
-            <p className="text-white/50 text-sm text-center mb-6">Customize your experience and unlock rewards by playing</p>
+            <h2 className="text-2xl font-display font-bold text-white mb-2 text-center">{t('lobby.createProfile')}</h2>
+            <p className="text-white/50 text-sm text-center mb-6">{t('lobby.customizeExperience')}</p>
             <form onSubmit={handleSubmit} className="space-y-6">
                 <section aria-labelledby="profile-username">
-                    <label id="profile-username" className="block text-sm font-medium text-white/60 mb-2">Username</label>
+                    <label id="profile-username" className="block text-sm font-medium text-white/60 mb-2">{t('lobby.username')}</label>
                     <div className="relative">
                         <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value.trimStart())}
                             className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-lg pr-14"
-                            placeholder="Enter your name..."
+                            placeholder={t('lobby.enterName')}
                             maxLength={12}
                             aria-describedby="name-char-count"
                             aria-invalid={!name.trim()}
@@ -690,7 +720,7 @@ export function Lobby() {
 
                 <section aria-labelledby="profile-avatar">
                     <div className="flex items-center justify-between mb-2">
-                        <label id="profile-avatar" className="block text-sm font-medium text-white/60">Avatar</label>
+                        <label id="profile-avatar" className="block text-sm font-medium text-white/60">{t('lobby.avatar')}</label>
                         <button
                             type="button"
                             onClick={() => setShowUnlockModal(true)}
@@ -698,7 +728,7 @@ export function Lobby() {
                             aria-label="How to unlock more avatars"
                         >
                             <Unlock className="w-3 h-3" />
-                            Unlock more
+                            {t('lobby.unlockMore')}
                         </button>
                     </div>
                     <div className="grid grid-cols-4 gap-2" role="group">
@@ -728,7 +758,7 @@ export function Lobby() {
 
                 <section aria-labelledby="profile-theme">
                     <div className="flex items-center justify-between mb-2">
-                        <label id="profile-theme" className="block text-sm font-medium text-white/60">Theme</label>
+                        <label id="profile-theme" className="block text-sm font-medium text-white/60">{t('lobby.theme')}</label>
                         <button
                             type="button"
                             onClick={() => setShowUnlockModal(true)}
@@ -736,7 +766,7 @@ export function Lobby() {
                             aria-label="How to unlock Mystery Box theme"
                         >
                             <Unlock className="w-3 h-3" />
-                            Unlock
+                            {t('lobby.unlock')}
                         </button>
                     </div>
                     <div className="flex gap-2 justify-between flex-wrap" role="group">
@@ -776,37 +806,37 @@ export function Lobby() {
                 </section>
 
                 <section aria-labelledby="profile-scoring">
-                    <label id="profile-scoring" className="block text-sm font-medium text-white/60 mb-2">Scoring</label>
+                    <label id="profile-scoring" className="block text-sm font-medium text-white/60 mb-2">{t('lobby.scoring')}</label>
                     <div className="grid grid-cols-2 gap-3" role="group">
                         <button
                             type="button"
                             onClick={() => setScoringMode('human')}
                             aria-pressed={scoringMode === 'human'}
-                            aria-label="Manual judge — you or a friend score each round"
+                            aria-label={t('lobby.manualJudgeDesc')}
                             className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all ${scoringMode === 'human'
                                     ? 'bg-white text-black shadow-lg'
                                     : 'bg-white/10 text-white hover:bg-white/20'
                                 }`}
                         >
-                            Manual Judge
+                            {t('lobby.manualJudge')}
                         </button>
                         <button
                             type="button"
                             onClick={() => setScoringMode('ai')}
                             aria-pressed={scoringMode === 'ai'}
-                            aria-label="AI judge — Gemini scores your connections automatically"
+                            aria-label={t('lobby.aiJudgeDesc')}
                             className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all ${scoringMode === 'ai'
                                     ? 'bg-white text-black shadow-lg'
                                     : 'bg-white/10 text-white hover:bg-white/20'
                                 }`}
                         >
-                            AI Judge
+                            {t('lobby.aiJudge')}
                         </button>
                     </div>
                     <p className="mt-2 text-center text-white/50 text-xs">
                         {scoringMode === 'human'
-                            ? 'You or a friend score each round manually.'
-                            : 'Gemini AI scores your connections automatically.'
+                            ? t('lobby.manualJudgeDesc')
+                            : t('lobby.aiJudgeDesc')
                         }
                     </p>
                 </section>
@@ -823,7 +853,7 @@ export function Lobby() {
                 )}
 
                 <section aria-labelledby="profile-media">
-                    <label id="profile-media" className="block text-sm font-medium text-white/60 mb-2">Media Type</label>
+                    <label id="profile-media" className="block text-sm font-medium text-white/60 mb-2">{t('lobby.mediaType')}</label>
                     <div className="grid grid-cols-3 gap-3" role="group">
                         {[
                             { type: MEDIA_TYPES.IMAGE, label: 'Images', Icon: Image, desc: 'Classic visual Venn' },
@@ -847,15 +877,15 @@ export function Lobby() {
                         ))}
                     </div>
                     <p className="mt-2 text-center text-white/50 text-xs">
-                        {mediaType === MEDIA_TYPES.IMAGE && 'Classic mode — connect two images with a phrase.'}
-                        {mediaType === MEDIA_TYPES.VIDEO && 'Video mode — connect two video clips with a phrase.'}
-                        {mediaType === MEDIA_TYPES.AUDIO && 'Audio mode — connect two sounds with a phrase.'}
+                        {mediaType === MEDIA_TYPES.IMAGE && t('lobby.imagesDesc')}
+                        {mediaType === MEDIA_TYPES.VIDEO && t('lobby.videosDesc')}
+                        {mediaType === MEDIA_TYPES.AUDIO && t('lobby.audioDesc')}
                     </p>
                 </section>
 
                 <section aria-labelledby="profile-progress">
                     <div className="flex items-center justify-between mb-2">
-                        <label id="profile-progress" className="block text-sm font-medium text-white/60">Progress</label>
+                        <label id="profile-progress" className="block text-sm font-medium text-white/60">{t('lobby.progress')}</label>
                         <button
                             type="button"
                             onClick={() => setShowUnlockModal(true)}
@@ -863,24 +893,24 @@ export function Lobby() {
                             aria-label="View unlock progress"
                         >
                             <Unlock className="w-3 h-3" />
-                            Details
+                            {t('lobby.details')}
                         </button>
                     </div>
                     <p className="text-white/50 text-xs mb-2">
-                        Streak = play at least 1 round per day. Mystery Box unlocks at 7-day streak!
+                        {t('lobby.streakInfo')}
                     </p>
                     <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-3">
                         <div className="flex justify-between text-xs">
-                            <span className="text-white/60">Rounds played</span>
+                            <span className="text-white/60">{t('lobby.roundsPlayed')}</span>
                             <span className="text-white font-semibold">{stats.totalRounds}</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                            <span className="text-white/60">Best streak</span>
+                            <span className="text-white/60">{t('lobby.bestStreak')}</span>
                             <span className="text-amber-400 font-semibold">{stats.maxStreak} days</span>
                         </div>
                         {stats.currentStreak > 0 && (
                             <div className="flex justify-between text-xs">
-                                <span className="text-white/60">Current streak</span>
+                                <span className="text-white/60">{t('lobby.currentStreak')}</span>
                                 <span className="text-emerald-400 font-semibold">🔥 {stats.currentStreak} days</span>
                             </div>
                         )}
@@ -908,7 +938,7 @@ export function Lobby() {
                 </section>
 
                 <section aria-labelledby="profile-session">
-                    <label id="profile-session" className="block text-sm font-medium text-white/60 mb-2">Session Length</label>
+                    <label id="profile-session" className="block text-sm font-medium text-white/60 mb-2">{t('lobby.sessionLength')}</label>
                     <div className="grid grid-cols-3 gap-3" role="group">
                         {[3, 5, 7].map((rounds) => (
                             <button
@@ -916,13 +946,13 @@ export function Lobby() {
                                 type="button"
                                 onClick={() => setSessionLength(rounds)}
                                 aria-pressed={sessionLength === rounds}
-                                aria-label={`${rounds} rounds per session`}
+                                aria-label={`${rounds} ${t('lobby.rounds').toLowerCase()}`}
                                 className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all ${sessionLength === rounds
                                         ? 'bg-white text-black shadow-lg'
                                         : 'bg-white/10 text-white hover:bg-white/20'
                                     }`}
                             >
-                                {rounds} Rounds
+                                {t('lobby.nRounds', { n: rounds })}
                             </button>
                         ))}
                     </div>
@@ -933,7 +963,7 @@ export function Lobby() {
                     disabled={!name.trim()}
                     className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xl rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-lg mt-4"
                 >
-                    Join Lobby
+                    {t('lobby.joinLobby')}
                 </button>
             </form>
         </div>
