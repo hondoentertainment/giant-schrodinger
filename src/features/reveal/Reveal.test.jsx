@@ -107,6 +107,10 @@ vi.mock('../../services/backend', () => ({
 
 vi.mock('../../data/themes', () => ({
     getThemeById: () => ({ id: 'classic', label: 'Classic', gradient: 'from-purple-500 to-pink-500', modifier: { timeLimit: 60, scoreMultiplier: 1.0 } }),
+    buildThemeAssets: () => [
+        { id: 'next1', label: 'Next1', type: 'image', url: 'https://example.com/next1.jpg' },
+        { id: 'next2', label: 'Next2', type: 'image', url: 'https://example.com/next2.jpg' },
+    ],
     MEDIA_TYPES: { IMAGE: 'image', VIDEO: 'video', AUDIO: 'audio' },
 }));
 

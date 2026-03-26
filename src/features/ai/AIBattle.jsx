@@ -192,8 +192,6 @@ export function AIBattle({ onDone }) {
             </div>
         </div>
     );
->>>>>>> 1e75956 (feat: restructure AI Battle as best-of-5 match with win tracking)
-
     if (!assets.left || !assets.right) {
         return (
             <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-500 px-4">

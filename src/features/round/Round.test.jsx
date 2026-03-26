@@ -70,17 +70,19 @@ describe('Round', () => {
         expect(screen.getByAltText('Dog')).toBeInTheDocument();
     });
 
-    it('shows timer counting down', () => {
+    it('shows get-ready countdown before timer starts', () => {
         render(<Round onSubmit={mockOnSubmit} />);
-        // Timer starts at 60 — the large timer display uses tabular-nums class
-        const timerElements = screen.getAllByText('60s');
-        expect(timerElements.length).toBeGreaterThanOrEqual(1);
+        // The round now shows a "Get Ready" countdown (3-2-1-Go) before the timer
+        // During ready phase, the countdown number should be visible
+        expect(screen.getByText('3')).toBeInTheDocument();
 
-        // Advance time by 1 second
+        // After countdown completes, timer should appear
         act(() => {
-            vi.advanceTimersByTime(1000);
+            vi.advanceTimersByTime(3500);
         });
-        expect(screen.getByText('59s')).toBeInTheDocument();
+        // Timer display should now be visible
+        const timerEl = screen.queryByRole('timer');
+        expect(timerEl).toBeTruthy();
     });
 
     it('text input accepts user submission', async () => {
