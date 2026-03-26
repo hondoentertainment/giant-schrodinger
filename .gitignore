@@ -45,4 +45,7 @@ npm-shrinkwrap.json
 
 # Temporary files
 *.tmp
-*.temp.claude/
+*.temp
+
+# Claude Code
+.claude/
