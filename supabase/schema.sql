@@ -170,3 +170,113 @@ begin
 exception
   when duplicate_object then null;
 end $$;
+
+-- ============================================================
+-- USERS (auth-linked profiles)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  display_name TEXT NOT NULL DEFAULT 'Player',
+  avatar TEXT DEFAULT '🎯',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  last_seen_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read all users" ON users FOR SELECT USING (true);
+CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (auth.uid() = id);
+
+-- ============================================================
+-- ROUNDS (scored game results)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS rounds (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  concept_left TEXT NOT NULL,
+  concept_right TEXT NOT NULL,
+  submission TEXT NOT NULL,
+  score_wit INTEGER,
+  score_logic INTEGER,
+  score_originality INTEGER,
+  score_clarity INTEGER,
+  final_score NUMERIC(3,1),
+  mode TEXT DEFAULT 'standard',
+  difficulty TEXT DEFAULT 'normal',
+  duration_seconds INTEGER,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE rounds ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read rounds" ON rounds FOR SELECT USING (true);
+CREATE POLICY "Users can insert own rounds" ON rounds FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS idx_rounds_user ON rounds(user_id);
+CREATE INDEX IF NOT EXISTS idx_rounds_created ON rounds(created_at DESC);
+
+-- ============================================================
+-- SCORED JUDGEMENTS (per-round judge feedback)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS scored_judgements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id UUID REFERENCES rounds(id),
+  judge_id UUID REFERENCES users(id),
+  score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 10),
+  commentary TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE scored_judgements ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
+-- LEADERBOARD
+-- ============================================================
+CREATE TABLE IF NOT EXISTS leaderboard (
+  user_id UUID REFERENCES users(id) PRIMARY KEY,
+  total_score NUMERIC DEFAULT 0,
+  total_rounds INTEGER DEFAULT 0,
+  avg_score NUMERIC(3,1) DEFAULT 0,
+  best_score NUMERIC(3,1) DEFAULT 0,
+  current_streak INTEGER DEFAULT 0,
+  best_streak INTEGER DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE leaderboard ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read leaderboard" ON leaderboard FOR SELECT USING (true);
+
+CREATE INDEX IF NOT EXISTS idx_leaderboard_score ON leaderboard(avg_score DESC);
+
+-- ============================================================
+-- CHALLENGES
+-- ============================================================
+CREATE TABLE IF NOT EXISTS challenges (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  challenger_id UUID REFERENCES users(id),
+  challenged_id UUID REFERENCES users(id),
+  round_id UUID REFERENCES rounds(id),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'completed', 'expired')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  expires_at TIMESTAMPTZ DEFAULT now() + INTERVAL '7 days'
+);
+
+ALTER TABLE challenges ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_challenges_status ON challenges(status) WHERE status = 'pending';
+
+-- ============================================================
+-- ANALYTICS EVENTS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  event TEXT NOT NULL,
+  properties JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_analytics_event ON analytics_events(event, created_at DESC);
