@@ -108,6 +108,11 @@ export function Reveal({ submission, assets }) {
         return () => cancelAnimationFrame(raf);
     }, [result]);
 
+    // Reset comeback check when round changes so it can trigger each round
+    useEffect(() => {
+        comebackCheckedRef.current = false;
+    }, [roundNumber]);
+
     // Detect comeback: current score >= 9 AND previous round score < 4
     useEffect(() => {
         if (!result || comebackCheckedRef.current) return;
@@ -159,7 +164,7 @@ export function Reveal({ submission, assets }) {
                 playConfettiSound();
             }
         }, 1400);
-        // Submit to leaderboard
+        // Submit to leaderboard (tracks best single-round score, not session averages)
         if (user?.name) {
             submitScore(user.name, score, user.avatar, roundNumber);
             submitSeasonalScore(user.name, score, user.avatar);

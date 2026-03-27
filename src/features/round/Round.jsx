@@ -219,7 +219,7 @@ export function Round({ onSubmit }) {
                     {/* Task 4: Quit confirmation */}
                     <button
                         onClick={() => setShowQuitConfirm(true)}
-                        className="text-white/30 hover:text-white/60 transition-colors text-xs"
+                        className="text-white/30 hover:text-white/60 transition-colors text-xs min-w-[44px] min-h-[44px] p-2.5"
                         aria-label="Quit round"
                     >
                         &larr; Quit
@@ -234,7 +234,7 @@ export function Round({ onSubmit }) {
                     </div>
                 ) : (
                     <div className={`text-2xl sm:text-3xl font-black font-display tabular-nums ${displayTime < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`} aria-live="assertive" aria-atomic="true" role="timer">
-                        {displayTime}s
+                        {displayTime > 0 ? `${displayTime}s` : ''}
                     </div>
                 )}
             </div>
@@ -286,6 +286,7 @@ export function Round({ onSubmit }) {
                         className={`w-full bg-black/40 backdrop-blur-xl border-2 rounded-full px-5 sm:px-8 py-4 sm:py-5 text-lg sm:text-xl text-center text-white placeholder-white/20 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-2xl ${
                             shakeInput ? 'border-red-500/60 animate-[shake_0.5s_ease-in-out]' : 'border-white/20'
                         }`}
+                        autoComplete="off"
                         autoFocus
                         maxLength={200}
                     />

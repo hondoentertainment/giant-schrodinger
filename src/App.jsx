@@ -230,12 +230,18 @@ function GameContent() {
                 {gameState === 'REVEAL' && roundData && (
                     <Reveal submission={roundData.submission} assets={roundData.assets} />
                 )}
+                {gameState === 'REVEAL' && !roundData && (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <p className="text-white/60 mb-4">Session data was lost.</p>
+                        <button onClick={() => setGameState('LOBBY')} className="px-6 py-3 rounded-xl bg-purple-600 text-white font-bold">Back to Lobby</button>
+                    </div>
+                )}
                 {gameState === 'TOURNAMENT' && <TournamentLobby onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'ASYNC_CHAINS' && <AsyncChains onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'ANALYTICS' && <AnalyticsView onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'MODERATION' && <ModerationDashboard onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'RANKED' && <RankedPanel onBack={() => setGameState('LOBBY')} />}
-                {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
+                {gameState === 'SESSION_SUMMARY' && <SessionSummary onBack={() => setGameState('LOBBY')} />}
             </PhaseTransition>
             </Suspense>
         </Layout>

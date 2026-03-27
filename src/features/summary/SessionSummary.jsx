@@ -53,7 +53,9 @@ function StoryShareButton({ score, sessionResults, playerName }) {
     const handleShare = async () => {
         setGenerating(true);
         try {
-            const best = sessionResults.reduce((a, b) => (a.score || 0) > (b.score || 0) ? a : b, sessionResults[0]);
+            const best = sessionResults?.length > 0
+                ? sessionResults.reduce((a, b) => ((a.score || a.finalScore || 0) > (b.score || b.finalScore || 0) ? a : b))
+                : null;
             const conceptLeft = best.conceptLeft || 'Concept A';
             const conceptRight = best.conceptRight || 'Concept B';
             const submission = best.submission || 'My best answer';
