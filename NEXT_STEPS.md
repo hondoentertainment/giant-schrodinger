@@ -761,3 +761,156 @@ Week 4:  Content moderation (#70), seasonal challenge pass (#76)
 Month 2: Push notifications (#77), milestone timeline (#78)
 Month 2: Contextual tips (#79), app store prep (#65)
 ```
+
+---
+
+## Phase 5: World-Class Polish — Ship-Ready Excellence
+
+A brutal audit revealed the truth: the game has 79 features but ships like a demo. Sharing is broken end-to-end, competitive integrity is zero (client-side scoring), multiplayer dies on disconnect, and 8% of users can't distinguish the Venn circles. Phase 5 is not about adding features — it's about making the existing ones actually work in production.
+
+**The rule: No new features until the core loop is bulletproof.**
+
+---
+
+### Ship-Blocking: Fix Before Launch
+
+#### 80. Server-persisted share links — hash-encoded URLs break across devices
+Share and challenge URLs encode round data in the URL hash (`#judge_base64...`). If the backend is down, the URL is the only source of truth — and it breaks on URL shorteners, gets truncated on Twitter, and can't be crawled. Every share is a coin flip.
+
+**Action:** All share links must write to Supabase `shared_rounds` table and use a short ID: `/rounds/{id}`. The client encodes the fallback URL only as a backup. On load, try Supabase first, then fall back to hash decode. This requires `share.js` to always attempt `saveSharedRound()` and use the returned ID as the canonical link.
+
+**Files:** `src/services/share.js`, `src/features/reveal/Reveal.jsx`, `src/services/backend.js`
+
+#### 81. Server-side scoring enforcement — client scoring enables cheating
+`scoreSubmission()` runs entirely on the client. Users can open DevTools, modify scores, and submit 10/10 to leaderboards. The `supabase/functions/score-submission/index.ts` scaffold exists but isn't wired up. The client still trusts itself.
+
+**Action:** When Supabase is configured, the client sends `{conceptLeft, conceptRight, submission}` to the Edge Function. The server calls Gemini, returns the score, and writes to the `rounds` table. Client never writes scores directly. Keep mock scoring for offline/dev mode only. Add a `scored_server_side: boolean` flag to distinguish trusted vs untrusted scores on leaderboards.
+
+**Files:** `src/services/gemini.js`, `supabase/functions/score-submission/index.ts`, `src/services/leaderboard.js`
+
+#### 82. Multiplayer disconnect recovery
+When a player's WiFi drops, the Supabase realtime subscription dies silently. Their room state goes stale, submissions are lost, and the host waits forever. No reconnection, no banner, no timeout.
+
+**Action:** Monitor `supabase.channel.state` changes. On disconnect: show "Connection lost, reconnecting..." banner, queue pending submissions locally. On reconnect: resync full room state from DB, flush queued submissions. After 30 seconds without reconnection, auto-exit room with "Game connection lost" message.
+
+**Files:** `src/context/RoomContext.jsx`, `src/services/multiplayer.js`
+
+#### 83. Colorblind mode with pattern differentiation
+The Venn diagram circles use purple (#a855f7) and indigo (#6366f1) — indistinguishable for 8% of male users with color vision deficiency. No settings toggle exists.
+
+**Action:** Add "Colorblind Mode" toggle in settings (stored in localStorage). When enabled: left circle = blue (#0ea5e9) with diagonal stripe pattern, right circle = orange (#f97316) with dot pattern. Use SVG `<pattern>` fills inside `VennDiagram.jsx`. Also apply to score breakdown bars in Reveal.
+
+**Files:** `src/features/round/VennDiagram.jsx`, `src/features/lobby/Lobby.jsx` (settings)
+
+#### 84. Error states with retry for API failures
+When `scoreSubmission()` fails and mock scoring is used, users see a toast but don't know if their round was saved. No retry button. The round may be lost silently.
+
+**Action:** Add explicit error states to Reveal.jsx: "Scoring failed — your submission is saved locally. Retry?" with a retry button. Show error ID for support. Queue failed submissions for automatic retry on next app load (integrate with existing offlineQueue.js).
+
+**Files:** `src/features/reveal/Reveal.jsx`, `src/services/offlineQueue.js`
+
+---
+
+### Viral Loop Completion
+
+#### 85. Compelling share templates with personality
+Current share text is generic: "I scored 8/10! #VennWithFriends". No personality, no FOMO, no reason to click. Wordle's emoji grid and Connections' color blocks are iconic because they're *visual proof of skill*.
+
+**Action:** Generate tiered share copy based on score:
+- 9-10: "Absolutely unhinged. I connected [X] and [Y] and scored {score}/10. Can you do better?"
+- 7-8: "Pretty sharp. Connected [X] + [Y] for {score}/10. Your turn."
+- 4-6: "Decent attempt at connecting [X] and [Y]... {score}/10. Bet you can't beat it."
+- 1-3: "I tried. [X] + [Y] = {score}/10. Surely you can do better than this."
+
+Add streak info and rank if available. Include concept labels in every share.
+
+**Files:** `src/services/socialShare.js`, `src/features/reveal/Reveal.jsx`
+
+#### 86. Post-reveal retention hooks — show what's next
+After seeing your score, the reveal screen shows "Play Again" and nothing else. No reason to stay. Wordle shows "come back tomorrow." This game should show *why the next round matters*.
+
+**Action:** After score reveal in Reveal.jsx, add a "What's Next" section:
+- Achievement progress: "2 more 8+ rounds → On Fire" (uses existing AchievementProgress)
+- Battle pass XP bar: "45/100 XP to next tier"
+- Rank delta: "+12 rating (Silver III → Silver II)"
+- Streak status: "Day 5 🔥 — play tomorrow to keep it"
+- Daily countdown: "Daily challenge resets in 4:32"
+
+**Files:** `src/features/reveal/Reveal.jsx`, `src/services/shop.js` (battle pass XP query)
+
+#### 87. Judge training and validation
+Anyone can judge a friend's round with no understanding of the scoring rubric. Users spam 10/10 for friends or 1/10 for rivals. No quality control.
+
+**Action:** Before first judge session, show a 3-example calibration: "This connection scored 3/10 — here's why." "This scored 8/10 — here's why." "Now you judge this one." If their calibration score is within ±2 of the AI score, they're certified. Track judge reputation (average delta from AI scores). Show "Trusted Judge" badge for calibrated judges.
+
+**Files:** `src/features/judge/JudgeRound.jsx`, `src/services/judgements.js`
+
+---
+
+### Accessibility Completion
+
+#### 88. Full keyboard navigation for all game modes
+You can't tab through lobby buttons, can't submit with Enter in all contexts, can't pause with spacebar, can't navigate leaderboard with arrow keys. Mouse-only.
+
+**Action:** Audit every interactive element. Add `tabIndex`, `onKeyDown` handlers for Enter/Space activation, arrow key navigation for lists/grids. Add visible focus ring (already in CSS via `:focus-visible`). Test with keyboard-only for all flows: lobby → round → reveal → summary → share.
+
+**Files:** `src/features/lobby/Lobby.jsx`, `src/features/round/Round.jsx`, `src/features/reveal/Reveal.jsx`, `src/features/gallery/Gallery.jsx`
+
+#### 89. Screen reader score announcements
+When the score rolls up via requestAnimationFrame, sighted users see the animation and hear a sound. Screen reader users get silence. The final score is visually displayed but not announced.
+
+**Action:** Add `aria-live="assertive"` region that announces: "Your score is 8 out of 10. Great connection! Wit: 8, Logic: 7, Originality: 9, Clarity: 8." Announce achievements: "Achievement unlocked: On Fire!" Announce rank changes: "You gained 15 rating points. Now Silver 2."
+
+**Files:** `src/features/reveal/Reveal.jsx`
+
+---
+
+### Competitive Integrity
+
+#### 90. Activate ELO decay via scheduled job
+`DECAY_DAYS=3` and `DECAY_AMOUNT=15` are defined in ranked.js but `checkDecay()` is never called automatically. A player parks at Platinum and never decays.
+
+**Action:** Add a check on app load: if last ranked game > 3 days ago, apply decay. Also create a Supabase pg_cron job (documented in schema.sql) that decays all inactive players daily. Show decay in the ranked panel: "You lost 15 rating from inactivity."
+
+**Files:** `src/services/ranked.js`, `src/features/ranked/RankedPanel.jsx`, `supabase/schema.sql`
+
+#### 91. Seasonal reset with configurable soft/hard mode
+Placement matches start at 1000 always — no distinction between a first-timer and a returning Diamond player. Season transitions need a soft reset (pull rating toward 1000 by 50%) so experienced players start higher but not at their peak.
+
+**Action:** Add `SEASON_RESET_TYPE: 'soft'` config. On season start: `newRating = 1000 + (oldRating - 1000) * 0.5`. Archive old season data. Show "Season X Results" summary with previous rank + rewards earned.
+
+**Files:** `src/services/ranked.js`, `src/features/ranked/RankedPanel.jsx`
+
+---
+
+### Content & Creator Economy
+
+#### 92. User-generated theme sharing with public links
+Theme Builder lets users customize colors and pick images, but themes can't be shared. A teacher can't create "History Class Edition" and send it to students. A TikToker can't make "Meme Edition" for their audience.
+
+**Action:** Add "Share Theme" button in ThemeBuilder that generates a `/theme/{id}` link. Encode theme config (colors, images, labels) in Supabase `user_themes` table. Recipients can play rounds using the shared theme. Track play count per theme for a "Popular Themes" gallery.
+
+**Files:** `src/features/creator/ThemeBuilder.jsx`, `src/services/themeBuilder.js`, `supabase/schema.sql`
+
+#### 93. Procedural concept generation via AI
+Static image pools (even at 24/theme) get stale for daily players. The game needs infinite fresh concepts.
+
+**Action:** Create `src/services/conceptGenerator.js` that calls Gemini to generate concept pair suggestions: "Give me 5 surprising concept pairs for the theme 'technology meets nature'." Cache results in localStorage with 24-hour TTL. Use as supplemental pool when static images repeat. Fall back to static pool if API unavailable.
+
+**Files:** `src/services/conceptGenerator.js` (new), `src/data/themes.js`
+
+---
+
+### Priority Order (Phase 5)
+
+```
+Week 1:  Server-persisted shares (#80), server-side scoring (#81)
+Week 1:  Multiplayer disconnect recovery (#82), error states (#84)
+Week 2:  Colorblind mode (#83), keyboard navigation (#88)
+Week 2:  Screen reader announcements (#89), share templates (#85)
+Week 3:  Post-reveal retention hooks (#86), judge training (#87)
+Week 3:  ELO decay activation (#90), seasonal reset (#91)
+Week 4:  Theme sharing (#92), procedural concepts (#93)
+```
+
+**The mandate**: No new game modes, no new progression systems, no new UI until every existing feature works reliably with real users on real networks. Phase 5 is about earning trust.
