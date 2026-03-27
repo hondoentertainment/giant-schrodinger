@@ -700,7 +700,7 @@ export function Lobby() {
                                 <Users className="w-5 h-5" />
                                 {t('lobby.multiplayer')}
                                 {!backendReady && <WifiOff className="w-4 h-4 opacity-50" />}
-                            </button>
+                            </button>}
                         </>
                     )}
 
@@ -801,6 +801,13 @@ export function Lobby() {
                             </button>
                         )}
                     </div>
+                    {/* Show All Features toggle */}
+                    <button
+                        onClick={() => { const v = !showAll; setShowAll(v); localStorage.setItem('vwf_show_all_features', v.toString()); }}
+                        className="mt-4 text-sm text-white/40 hover:text-white/60 underline transition-colors"
+                    >
+                        {showAll ? 'Hide Advanced Features' : 'Show All Features'}
+                    </button>
                 </div>
             </div>
             </>

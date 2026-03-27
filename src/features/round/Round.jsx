@@ -7,6 +7,8 @@ import { getStats, isThemeUnlocked } from '../../services/stats';
 import { getAIDifficulty, getDifficultyConfig } from '../../services/aiFeatures';
 import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
+import { useRoundTimer } from '../../hooks/useRoundTimer';
+import { validateSubmission } from '../../lib/validation';
 
 export function Round({ onSubmit }) {
     const {
@@ -15,15 +17,10 @@ export function Round({ onSubmit }) {
     } = useGame();
     const [assets, setAssets] = useState({ left: null, right: null });
     const [submission, setSubmission] = useState('');
-    const [displayTime, setDisplayTime] = useState(60);
     const [showTimeUp, setShowTimeUp] = useState(false);
     const [shakeInput, setShakeInput] = useState(false);
     const [showQuitConfirm, setShowQuitConfirm] = useState(false);
-    const [roundPhase, setRoundPhase] = useState('ready'); // 'ready' | 'playing'
-    const [countdown, setCountdown] = useState(3);
     const submittedRef = useRef(false);
-    const endTimeRef = useRef(null);
-    const rafRef = useRef(null);
     const stats = getStats();
     const rawTheme = getThemeById(user?.themeId);
     const theme = isThemeUnlocked(rawTheme?.id, stats)
@@ -35,6 +32,16 @@ export function Round({ onSubmit }) {
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
     const rawMediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const mod = currentModifier;
+
+    const handleTimeUp = useCallback(() => {
+        setShowTimeUp(true);
+    }, []);
+
+    const { displayTime, roundPhase, countdown, reset: resetTimer } = useRoundTimer({
+        timeLimit,
+        onTimeUp: handleTimeUp,
+        enabled: true,
+    });
 
     // Resolve 'mixed' to a concrete media type per round
     const [resolvedMediaType, setResolvedMediaType] = useState(rawMediaType);
