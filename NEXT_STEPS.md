@@ -372,3 +372,249 @@ Week 4:  Improved fallback chain (#26), concept category pairing (#37)
 Week 4:  Best connection highlight (#38), smooth transitions (#39)
 Month 2: Mixed media mode (#27), custom image improvements (#28)
 ```
+
+---
+
+## Phase 3: Social, Competitive & Retention (The Viral Engine)
+
+Phases 1 and 2 built a polished, feature-rich game. Phase 3 makes it *spread*. The codebase has a full ranked system, friend list, voting, and community gallery — but most of it is invisible to players. The game's biggest gap isn't features, it's **discoverability of features that already exist**.
+
+---
+
+### Social & Viral: Tier 1 (Highest ROI)
+
+#### 40. Unhide the ranked system — it's fully built but invisible
+`src/services/ranked.js` has a complete Elo system with 6 tiers (Bronze→Venn Master), placement matches, decay, and seasonal rewards. **No UI exposes any of it.** There's no ranked button in the lobby, no rating display, no placement flow.
+
+**Action:** Create `src/features/ranked/RankedPanel.jsx`:
+- Show current tier, rating, and progress bar to next tier
+- "Play 5 placement matches" flow for new players
+- Season countdown ("Season 'The Wit Awakens' ends in 12 days")
+- Seasonal reward preview (coins + badge per tier)
+- Decay warning ("You lost 15 rating due to 3 days inactivity")
+- Add a "Ranked" button to the lobby nav alongside Leaderboard/Achievements
+
+#### 41. Friend profiles with challenge button
+`src/services/friends.js` stores friends as name + timestamp — no stats, no activity, no reason to compare. Friends are ghosts.
+
+**Action:** Create `src/features/social/FriendProfile.jsx`:
+- Modal showing friend's best score, current streak, total rounds, favorite theme
+- "Challenge" button that auto-generates a challenge link
+- "Compare" view: your last 5 scores vs theirs side-by-side
+- Pull stats from Supabase (or localStorage for offline)
+
+#### 42. Community gallery — see other players' connections
+The gallery (`src/features/gallery/Gallery.jsx`) only shows YOUR submissions. There's no way to see what others connected or what's trending. The voting system exists but is isolated.
+
+**Action:** Add a "Community" tab to Gallery:
+- Browse all players' submissions (filtered by theme, score range, most voted)
+- "Trending Today" — highest-voted connections from last 24 hours
+- "Same Concepts" — see what others connected for the pair you just played
+- Upvote/downvote (existing `src/services/votes.js`) with vote count visible
+- Requires Supabase table: `community_submissions` with RLS
+
+#### 43. Spectator mode for multiplayer
+Third players can't watch live rounds. For party play (4-8 friends), spectators are essential. Currently if you're not a player, you can't see anything.
+
+**Action:** Add spectator role to `RoomContext.jsx`:
+- "Join as Spectator" option on room join screen
+- Spectators see submissions reveal in real-time but can't submit
+- Emoji reaction picker on each submission during REVEALING phase (👍❤️😂🔥)
+- "SPECTATING" banner overlay
+- Reactions stored in Supabase room_reactions table
+
+#### 44. Progressive lobby disclosure — reduce first-visit cognitive load
+New players see 15+ buttons, toggles, and panels simultaneously. Decision paralysis kills first-session conversion. The onboarding tour explains mechanics but doesn't reduce UI clutter.
+
+**Action:** Implement experience-gated UI in `Lobby.jsx`:
+- **Session 0** (new player): Name, avatar, big "Play Now" button only
+- **After session 1**: Unlock theme picker, scoring mode, session length
+- **After session 3**: Show daily challenge, achievements, leaderboard
+- **After session 5**: Reveal multiplayer, AI battle, prompt packs, custom images
+- Track unlock tier in localStorage (`venn_lobby_tier`)
+- "Show All" toggle for power users who want everything immediately
+
+---
+
+### Retention & Engagement: Tier 2
+
+#### 45. Achievement progress bars during gameplay
+Players have 51 achievements but no mid-session feedback about progress. They don't know they're 2 rounds from "Hat Trick" or 1 perfect score from "Perfection."
+
+**Action:** After each round's score reveal in `Reveal.jsx`, show nearest achievement progress:
+- "2 more 8+ rounds → On Fire achievement"
+- "Score 9+ next → Comeback Kid (you scored 3 last round)"
+- Pull from `checkAchievements()` but show PROGRESS, not just unlocks
+- Small pill badge below the score, not a modal (non-intrusive)
+
+#### 46. Weekly events and rotating challenges
+Daily challenge exists but no weekly cadence. After 7 days, the loop is just "daily + freeplay." No variety.
+
+**Action:** Create `src/services/weeklyEvents.js`:
+- **Theme Week**: All daily challenges use one theme ("Ocean Week — all ocean concepts")
+- **Speed Week**: All rounds are speed mode (0.5x time, 1.5x points)
+- **Community Challenge**: One curated "impossible" concept pair, global leaderboard
+- Rotate weekly, announce on lobby with banner
+- Track participation for weekly achievement
+
+#### 47. Score coaching — tell players WHY they scored poorly
+Low scores (1-4) get a number and nothing else. Players don't know if their connection was unclear, unoriginal, or illogical. `getConnectionExplanation()` exists but is generic.
+
+**Action:** Enhance the explanation in `Reveal.jsx` based on breakdown scores:
+- If wit < 4: "Try wordplay or puns — clever language boosts wit scores"
+- If originality < 4: "Too obvious? Think sideways — unexpected connections score higher"
+- If logic < 4: "The connection needs a clearer thread between concepts"
+- If clarity < 4: "Simpler phrasing helps — one sentence, one idea"
+- Show as coaching tip below the "Why this score?" section
+
+#### 48. Comeback celebration
+Achievement "Comeback Kid" (score 9+ after scoring below 4) exists but triggers the same generic unlock as every other achievement. This is a peak emotional moment that deserves special treatment.
+
+**Action:** In `Reveal.jsx`, when a comeback is detected:
+- Full-screen overlay: "COMEBACK KID!" with dramatic animation
+- Screen shake + special sound effect
+- Show score journey: "Round 2: 3/10 → Round 3: 9/10"
+- Extra confetti burst (2x particles)
+
+#### 49. Welcome-back message for returning players
+When a player returns after absence, there's no acknowledgment. Streak shows but no "welcome back" moment.
+
+**Action:** In `Lobby.jsx`, detect days since last play:
+- 1 day gap: "Welcome back! Your streak lives on 🔥"
+- 3+ day gap: "We missed you! Jump back in with today's daily challenge"
+- 7+ day gap: "It's been a while! Here's what's new: [weekly event name]"
+- Store last_seen in localStorage, check on lobby mount
+
+---
+
+### Game Feel & Polish: Tier 3
+
+#### 50. Screen shake on perfect 10
+A perfect score gets confetti but no physical impact. The screen should shake to make the moment feel powerful.
+
+**Action:** Add CSS shake animation triggered on 10/10 in `Reveal.jsx`:
+```css
+@keyframes screenShake {
+  0%, 100% { transform: translate(0); }
+  10% { transform: translate(-4px, 2px); }
+  30% { transform: translate(4px, -2px); }
+  50% { transform: translate(-2px, 4px); }
+  70% { transform: translate(2px, -4px); }
+}
+```
+Apply to the Layout wrapper for 300ms on perfect score.
+
+#### 51. Button click sounds for UI feedback
+Only core gameplay has sounds (submit, score reveal). No click feedback on buttons, toggles, or navigation. UI feels silent.
+
+**Action:** Add a light click tone to `sounds.js`:
+- Subtle pop sound (800Hz, 30ms, low volume) on button clicks
+- Toggle sound on mode switches
+- Apply via shared `onClick` wrapper or CSS `@media (hover: hover)` check
+- Respect existing sound toggle preference
+
+#### 52. Score roll animation
+Score currently appears instantly. A rolling counter (0 → final score over 800ms) builds anticipation and makes the reveal feel dramatic.
+
+**Action:** In `Reveal.jsx`, animate the score display:
+- Count from 0 to final score over 800ms with ease-out curve
+- Update every 50ms
+- Play escalating tone as number climbs
+- Pause briefly at final number before showing breakdown
+
+#### 53. Personal score history chart
+Stats track aggregates (total rounds, max streak) but no per-session breakdown. Players can't see their improvement arc.
+
+**Action:** Create `src/features/analytics/ScoreHistoryChart.jsx`:
+- Line chart of last 30 scores (score vs round number)
+- Running average line overlay
+- Personal best marker
+- Show in a new "My Stats" section accessible from lobby
+- Use SVG path rendering (no chart library dependency)
+
+#### 54. Seasonal leaderboard resets
+The leaderboard never resets. First players get permanent positions, discouraging newcomers.
+
+**Action:** Add monthly leaderboard reset:
+- `leaderboard_monthly` table in Supabase (existing schema can be extended)
+- Archive previous month's leaderboard
+- "March 2026 Champion" badge for #1
+- Fresh start every month with "New Season!" lobby banner
+
+---
+
+### Technical Quality: Tier 4
+
+#### 55. Split Lobby.jsx — it's 1003 lines
+The lobby handles: profile creation, logged-in view, multiplayer panel, settings, theme picker, prompt packs, custom images, and media type selection. This is unmaintainable.
+
+**Action:** Extract into sub-components:
+- `src/features/lobby/ProfileForm.jsx` (~150 lines) — name, avatar, theme picker
+- `src/features/lobby/MultiplayerPanel.jsx` (~200 lines) — room create/join
+- `src/features/lobby/GameSettings.jsx` (~150 lines) — scoring mode, session length, media type
+- `src/features/lobby/LobbyNav.jsx` (~100 lines) — nav buttons to Gallery, Leaderboard, etc.
+- Keep `Lobby.jsx` as a thin orchestrator (~200 lines)
+
+#### 56. Extract useRoundTimer hook
+Round.jsx mixes timer logic (requestAnimationFrame, get-ready countdown, time-up detection) with UI rendering. Timer logic should be a reusable hook.
+
+**Action:** Create `src/hooks/useRoundTimer.js`:
+- Accepts: `timeLimit`, `onTimeUp` callback
+- Returns: `{ displayTime, isReady, countdown, start, pause }`
+- Handles: rAF loop, ready phase countdown, cleanup
+- Used by: Round.jsx, AIBattle.jsx (both need timers)
+
+#### 57. Input validation library
+User-submitted text (connections, names, pack names) has no validation beyond `trim()`. Oversized submissions could crash ShareCard canvas rendering.
+
+**Action:** Create `src/lib/validation.js`:
+- `validateSubmission(text)` — max 200 chars, strip HTML/script tags
+- `validatePlayerName(name)` — max 30 chars, no special chars
+- `validatePackName(name)` — max 50 chars
+- `sanitizeForCanvas(text)` — escape for canvas.fillText rendering
+- Apply at form submission points in Round.jsx, Lobby.jsx
+
+#### 58. Offline submission queue
+When offline, `scoreSubmission()` fails silently. Player loses their connection text and gets no score. With the PWA targeting mobile users, offline resilience matters.
+
+**Action:** Create `src/services/offlineQueue.js`:
+- On scoreSubmission failure: save submission to IndexedDB queue
+- Show toast: "Saved offline — will score when you're back online"
+- On `online` event: process queue, score each submission, show results
+- Badge on lobby: "3 unscored rounds waiting"
+
+#### 59. JSON-LD structured data
+Google can't identify this as a game. No rich results, no knowledge panel.
+
+**Action:** Add to `index.html`:
+```html
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Venn with Friends",
+  "applicationCategory": "Game",
+  "operatingSystem": "Web",
+  "description": "Connect two random concepts with one witty phrase",
+  "offers": { "@type": "Offer", "price": "0" }
+}
+</script>
+```
+
+---
+
+### Priority Order (Phase 3)
+
+```
+Week 1:  Unhide ranked system (#40), progressive lobby (#44)
+Week 1:  Screen shake (#50), button sounds (#51), score roll (#52)
+Week 2:  Friend profiles (#41), achievement progress bars (#45)
+Week 2:  Score coaching (#47), welcome-back message (#49)
+Week 3:  Community gallery (#42), comeback celebration (#48)
+Week 3:  Score history chart (#53), seasonal leaderboards (#54)
+Week 4:  Spectator mode (#43), weekly events (#46)
+Week 4:  Split Lobby.jsx (#55), extract useRoundTimer (#56)
+Month 2: Input validation (#57), offline queue (#58), JSON-LD (#59)
+```
+
+The game is feature-complete and polished. Phase 3 is about **making existing features visible** (ranked, friends, community), **amplifying emotional moments** (comeback, perfect 10, coaching), and **building the social engine** (spectators, community gallery, friend profiles) that turns a single-player puzzle into a multiplayer phenomenon.
