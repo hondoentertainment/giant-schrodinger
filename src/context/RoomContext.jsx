@@ -38,6 +38,10 @@ export function RoomProvider({ children }) {
     const [playerName, setPlayerName] = useState('');
     const [roomPhase, setRoomPhase] = useState('none'); // none | lobby | playing | revealing | finished
 
+    // Spectator state
+    const [isSpectator, setIsSpectator] = useState(false);
+    const [reactions, setReactions] = useState(new Map()); // submissionId → array of emoji reactions
+
     const unsubRef = useRef(null);
 
     // Derived state
@@ -57,6 +61,8 @@ export function RoomProvider({ children }) {
         setPlayers([]);
         setSubmissions([]);
         setIsHost(false);
+        setIsSpectator(false);
+        setReactions(new Map());
         setRoomPhase('none');
     }, []);
 
@@ -180,6 +186,63 @@ export function RoomProvider({ children }) {
         toast.success(`Joined room ${result.room.code}!`);
         return result.room;
     }, [toast, setupSubscriptions]);
+
+    const joinAsSpectator = useCallback(async (code) => {
+        if (!isBackendEnabled()) {
+            toast.error('Multiplayer requires Supabase — check your .env');
+            return null;
+        }
+
+        // Spectators join in read-only mode — they are not added to the players list
+        try {
+            if (!supabase) {
+                toast.error('Supabase is not configured');
+                return null;
+            }
+            const { data: roomData, error } = await supabase
+                .from('rooms')
+                .select('*')
+                .eq('code', code.toUpperCase())
+                .single();
+
+            if (error || !roomData) {
+                toast.error('Room not found');
+                return null;
+            }
+
+            setRoom(roomData);
+            setIsHost(false);
+            setIsSpectator(true);
+            setPlayerName('Spectator');
+            const newStatus = roomData.status;
+            if (newStatus === 'playing') setRoomPhase('playing');
+            else if (newStatus === 'revealing') setRoomPhase('revealing');
+            else if (newStatus === 'finished') setRoomPhase('finished');
+            else setRoomPhase('lobby');
+
+            // Fetch current players
+            const roomPlayers = await getRoomPlayers(roomData.id);
+            setPlayers(roomPlayers);
+
+            // Subscribe to realtime
+            setupSubscriptions(roomData.id);
+
+            toast.success(`Spectating room ${roomData.code}!`);
+            return roomData;
+        } catch (err) {
+            toast.error('Failed to join as spectator');
+            return null;
+        }
+    }, [toast, setupSubscriptions]);
+
+    const addReaction = useCallback((submissionId, emoji) => {
+        setReactions((prev) => {
+            const next = new Map(prev);
+            const existing = next.get(submissionId) || [];
+            next.set(submissionId, [...existing, emoji]);
+            return next;
+        });
+    }, []);
 
     const leaveCurrentRoom = useCallback(async () => {
         if (room && playerName) {
@@ -332,10 +395,14 @@ export function RoomProvider({ children }) {
         playerName,
         roomPhase,
         allSubmitted,
+        isSpectator,
+        reactions,
 
         // Actions
         hostRoom,
         joinRoomByCode,
+        joinAsSpectator,
+        addReaction,
         leaveCurrentRoom,
         startMultiplayerRound,
         submitMultiplayerAnswer,

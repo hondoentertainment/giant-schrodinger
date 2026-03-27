@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getSessionMetrics, getEventCount, getEvents } from '../../services/analytics';
 import { getHighlightStats } from '../../services/highlights';
 import { BarChart3, TrendingUp, Share2, Target, Calendar, Users } from 'lucide-react';
+import { ScoreHistoryChart } from './ScoreHistoryChart';
 
 function MetricCard({ icon: Icon, label, value, subtext, color = 'purple' }) {
     const colorMap = {
@@ -58,6 +59,11 @@ export function AnalyticsDashboard({ onBack }) {
                 <MetricCard icon={TrendingUp} label="Avg Score" value={metrics.avgScore.toFixed(1)} subtext="Across all sessions" color="green" />
                 <MetricCard icon={Share2} label="Share Rate" value={`${(metrics.shareRate * 100).toFixed(0)}%`} subtext="Sessions with a share" color="blue" />
                 <MetricCard icon={Calendar} label="Daily Challenges" value={metrics.dailyChallengesCompleted} subtext="Challenges completed" color="amber" />
+            </div>
+
+            {/* Score History Chart */}
+            <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/10">
+                <ScoreHistoryChart limit={30} />
             </div>
 
             {/* Retention */}

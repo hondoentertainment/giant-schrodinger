@@ -12,6 +12,7 @@ export function MultiplayerRound() {
         players,
         submissions,
         isHost,
+        isSpectator,
         playerName,
         submitMultiplayerAnswer,
         scoreAllSubmissions,
@@ -96,6 +97,11 @@ export function MultiplayerRound() {
 
     return (
         <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-700">
+            {isSpectator && (
+                <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
+                    Spectating -- watch and react!
+                </div>
+            )}
             {/* Header */}
             <div className="w-full flex justify-between items-center px-8 mb-4">
                 <div className="flex items-center gap-3">
@@ -137,7 +143,15 @@ export function MultiplayerRound() {
             <VennDiagram leftAsset={assets.left} rightAsset={assets.right} />
 
             {/* Input or waiting state */}
-            {!submitted ? (
+            {isSpectator ? (
+                <div className="w-full max-w-xl mt-8 text-center animate-in fade-in duration-500">
+                    <div className="glass-panel rounded-2xl p-6 mb-4">
+                        <Users className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+                        <p className="text-white font-semibold text-lg mb-1">Watching the round...</p>
+                        <p className="text-white/50 text-sm">{submissions.length}/{players.length} players have submitted</p>
+                    </div>
+                </div>
+            ) : !submitted ? (
                 <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 relative z-20">
                     <p className="text-center text-white/60 text-sm mb-3">
                         One witty phrase that connects both concepts

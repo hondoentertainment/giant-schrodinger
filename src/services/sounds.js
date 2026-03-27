@@ -164,6 +164,31 @@ export function playConfetti() {
   }
 }
 
+export function playClick() {
+  if (isMuted()) return;
+  try {
+    const ctx = getCtx();
+    if (!ctx) return;
+    ensureResumed(ctx);
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 800;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.05);
+    osc.onended = () => {
+      gain.disconnect();
+      osc.disconnect();
+    };
+  } catch {
+    // Never let audio errors crash the app
+  }
+}
+
 export function playTickSound() {
   if (isMuted()) return;
   playTone({ frequency: 1000, duration: 0.05, type: 'sine', volume: 0.1 });

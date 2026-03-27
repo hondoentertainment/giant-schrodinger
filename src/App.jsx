@@ -23,6 +23,7 @@ const ChallengeRound = lazy(() => import('./features/challenge/ChallengeRound').
 const TournamentLobby = lazy(() => import('./features/tournament/TournamentLobby').then(m => ({ default: m.TournamentLobby })))
 const AsyncChains = lazy(() => import('./features/challenge/AsyncChains').then(m => ({ default: m.AsyncChains })))
 const AnalyticsDashboard = lazy(() => import('./features/analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })))
+const RankedPanel = lazy(() => import('./features/ranked/RankedPanel'))
 import { RoomLobby } from './features/room/RoomLobby'
 import { MultiplayerRound } from './features/room/MultiplayerRound'
 import { MultiplayerReveal } from './features/room/MultiplayerReveal'
@@ -32,6 +33,8 @@ import { parseThemeFromUrl, clearThemeFromUrl } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
 import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider } from './services/analytics'
 import { initErrorMonitoring } from './services/errorMonitoring'
+import { processOfflineQueue, getQueueCount } from './services/offlineQueue'
+import { scoreSubmission } from './services/gemini'
 
 function LoadingFallback() {
     return (
@@ -56,6 +59,20 @@ if ('serviceWorker' in navigator) {
             console.error('Service worker registration failed:', err);
         });
     });
+}
+
+function OfflineQueueHandler() {
+    useEffect(() => {
+        const handleOnline = async () => {
+            const count = getQueueCount();
+            if (count > 0) {
+                await processOfflineQueue(scoreSubmission);
+            }
+        };
+        window.addEventListener('online', handleOnline);
+        return () => window.removeEventListener('online', handleOnline);
+    }, []);
+    return null;
 }
 
 function PhaseTransition({ children, phase }) {
@@ -193,6 +210,7 @@ function GameContent() {
                 {gameState === 'TOURNAMENT' && <TournamentLobby onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'ASYNC_CHAINS' && <AsyncChains onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'ANALYTICS' && <AnalyticsDashboard onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'RANKED' && <RankedPanel onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
             </PhaseTransition>
             </Suspense>
@@ -207,6 +225,7 @@ function App() {
                 <GameProvider>
                     <RoomProvider>
                         <GameContent />
+                        <OfflineQueueHandler />
                         <ToastContainer />
                     </RoomProvider>
                 </GameProvider>

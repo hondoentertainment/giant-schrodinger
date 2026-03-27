@@ -193,3 +193,60 @@ export function clearOldEntries() {
     return 0;
   }
 }
+
+// ============================================================
+// Seasonal Leaderboard
+// ============================================================
+
+/**
+ * Returns the current season identifier and display name.
+ */
+export function getCurrentSeason() {
+  const now = new Date();
+  const month = now.toLocaleString('default', { month: 'long' });
+  const year = now.getFullYear();
+  return { id: `${year}-${now.getMonth() + 1}`, name: `${month} ${year}`, startDate: new Date(year, now.getMonth(), 1) };
+}
+
+/**
+ * Reads the seasonal leaderboard for the current month.
+ */
+export function getSeasonalLeaderboard() {
+  const season = getCurrentSeason();
+  const key = `venn_leaderboard_${season.id}`;
+  try {
+    return JSON.parse(localStorage.getItem(key)) || [];
+  } catch { return []; }
+}
+
+/**
+ * Submits (or updates) a player's score in the current seasonal leaderboard.
+ */
+export function submitSeasonalScore(name, score, avatar) {
+  const season = getCurrentSeason();
+  const key = `venn_leaderboard_${season.id}`;
+  const board = getSeasonalLeaderboard();
+  const existing = board.find(e => e.name === name);
+  if (existing) {
+    if (score > existing.bestScore) existing.bestScore = score;
+    existing.totalRounds++;
+    existing.totalScore += score;
+  } else {
+    board.push({ name, avatar, bestScore: score, totalScore: score, totalRounds: 1 });
+  }
+  board.sort((a, b) => b.bestScore - a.bestScore);
+  localStorage.setItem(key, JSON.stringify(board.slice(0, 100)));
+  return board;
+}
+
+/**
+ * Returns an archive of all seasonal leaderboards stored in localStorage.
+ */
+export function getSeasonArchive() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('venn_leaderboard_')) keys.push(key);
+  }
+  return keys.map(k => ({ seasonId: k.replace('venn_leaderboard_', ''), data: JSON.parse(localStorage.getItem(k) || '[]') }));
+}

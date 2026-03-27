@@ -72,6 +72,7 @@ vi.mock('../../services/challenges', () => ({
 
 vi.mock('../../services/leaderboard', () => ({
     submitScore: vi.fn(),
+    submitSeasonalScore: vi.fn(),
     getPlayerRank: vi.fn(() => null),
 }));
 
@@ -94,6 +95,7 @@ vi.mock('../../services/aiFeatures', () => ({
 
 vi.mock('../../services/achievements', () => ({
     checkAchievements: vi.fn(),
+    getNextAchievementProgress: vi.fn(() => null),
 }));
 
 vi.mock('../../services/shop', () => ({

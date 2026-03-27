@@ -71,6 +71,7 @@ vi.mock('../../services/countdown', () => ({
 vi.mock('../../services/leaderboard', () => ({
     getPlayerRank: () => null,
     getDailyLeaderboard: () => [],
+    getCurrentSeason: () => ({ id: '2026-3', name: 'March 2026', startDate: new Date() }),
 }));
 
 vi.mock('../../services/challenges', () => ({
@@ -92,6 +93,25 @@ vi.mock('../../services/analytics', () => ({
 vi.mock('../../services/sounds', () => ({
     toggleMute: vi.fn(() => false),
     isMuted: () => false,
+    playClick: vi.fn(),
+}));
+
+vi.mock('../../services/weeklyEvents', () => ({
+    getCurrentWeeklyEvent: () => null,
+    getTimeUntilNextWeek: () => 0,
+    formatWeeklyCountdown: () => '7d',
+}));
+
+vi.mock('../../lib/validation', () => ({
+    validatePlayerName: (name) => ({ valid: !!name?.trim(), value: name?.trim() }),
+}));
+
+vi.mock('../analytics/ScoreHistoryChart', () => ({
+    ScoreHistoryChart: () => null,
+}));
+
+vi.mock('../social/FriendProfile', () => ({
+    FriendProfile: () => null,
 }));
 
 let mockBackendEnabled = false;

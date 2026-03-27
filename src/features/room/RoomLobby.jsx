@@ -9,6 +9,7 @@ export function RoomLobby() {
         room,
         players,
         isHost,
+        isSpectator,
         roomCode,
         leaveCurrentRoom,
         startMultiplayerRound,
@@ -48,6 +49,11 @@ export function RoomLobby() {
 
     return (
         <div className="w-full max-w-md glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
+            {isSpectator && (
+                <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center rounded-t-3xl -mt-8 -mx-8 mb-6" style={{ width: 'calc(100% + 4rem)' }}>
+                    Spectating -- watch and react!
+                </div>
+            )}
             {/* Room header */}
             <div className="text-center mb-8">
                 <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 border border-white/10">
@@ -138,10 +144,16 @@ export function RoomLobby() {
                         {starting && countdown === null ? 'Starting...' : countdown !== null && countdown > 0 ? `${countdown}...` : 'Start Game'}
                     </button>
                 )}
-                {!isHost && (
+                {!isHost && !isSpectator && (
                     <div className="text-center py-4 px-4 rounded-xl bg-white/5 border border-white/10">
                         <p className="text-white/70 font-medium mb-1">Waiting for the host to start</p>
                         <p className="text-white/40 text-xs">The host can start once everyone has joined</p>
+                    </div>
+                )}
+                {isSpectator && (
+                    <div className="text-center py-4 px-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                        <p className="text-amber-300 font-medium mb-1">You are spectating</p>
+                        <p className="text-white/40 text-xs">You can watch the game and react to submissions</p>
                     </div>
                 )}
                 <button
@@ -149,7 +161,7 @@ export function RoomLobby() {
                     className="w-full py-3 bg-white/10 text-white/70 font-semibold rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
                 >
                     <LogOut className="w-4 h-4" />
-                    Leave Room
+                    {isSpectator ? 'Stop Watching' : 'Leave Room'}
                 </button>
             </div>
         </div>

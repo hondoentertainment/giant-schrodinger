@@ -6,13 +6,14 @@ import { saveCollision } from '../../services/storage';
 import { recordPlay } from '../../services/stats';
 import { createJudgeShareUrl } from '../../services/share';
 import { createChallenge, createChallengeUrl } from '../../services/challenges';
-import { submitScore, getPlayerRank } from '../../services/leaderboard';
+import { submitScore, getPlayerRank, submitSeasonalScore } from '../../services/leaderboard';
 import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
 import { trackEvent } from '../../services/analytics';
 import { autoSaveHighlight } from '../../services/highlights';
 import { getConnectionExplanation } from '../../services/aiFeatures';
 import { ShareCardCanvas } from '../../components/ShareCardCanvas';
 import { checkAchievements } from '../../services/achievements';
+import { AchievementProgress } from '../../components/AchievementProgress';
 import { addCoins, addBattlePassXp } from '../../services/shop';
 import { saveSharedRound } from '../../services/backend';
 import { getThemeById, buildThemeAssets, MEDIA_TYPES } from '../../data/themes';
@@ -24,7 +25,7 @@ import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
 
 export function Reveal({ submission, assets }) {
-    const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound } = useGame();
+    const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, sessionResults } = useGame();
     const { toast } = useToast();
     const [result, setResult] = useState(null);
     const [fusionImage, setFusionImage] = useState(null);
@@ -39,10 +40,15 @@ export function Reveal({ submission, assets }) {
     const [processError, setProcessError] = useState(null);
     const [retryTrigger, setRetryTrigger] = useState(0);
     const [showConfetti, setShowConfetti] = useState(false);
+    const [showComeback, setShowComeback] = useState(false);
+    const [comebackData, setComebackData] = useState(null);
     const [playerRank, setPlayerRank] = useState(null);
     const [animatedScore, setAnimatedScore] = useState(0);
+    const [shaking, setShaking] = useState(false);
+    const [rolling, setRolling] = useState(false);
     const savedRef = useRef(false);
     const soundPlayedRef = useRef(false);
+    const comebackCheckedRef = useRef(false);
     const scoringMode = user?.scoringMode || 'human';
     const theme = getThemeById(user?.themeId);
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
@@ -63,27 +69,60 @@ export function Reveal({ submission, assets }) {
         return collision;
     };
 
-    // Animate score counting up - slower for dramatic effect
+    // Animate score rolling up from 0 with requestAnimationFrame
     useEffect(() => {
         if (!result) return;
         const finalScore = result.finalScore || result.score;
         if (!finalScore) return;
-        let frame = 0;
-        const totalFrames = 30;
-        const interval = setInterval(() => {
-            frame++;
-            // Ease-out curve for satisfying deceleration
-            const progress = 1 - Math.pow(1 - frame / totalFrames, 3);
-            const current = finalScore * progress;
-            if (frame >= totalFrames) {
-                setAnimatedScore(finalScore);
-                clearInterval(interval);
+        setRolling(true);
+        const duration = 800;
+        const start = performance.now();
+        let raf;
+
+        function animate(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+            setAnimatedScore(Math.round(eased * finalScore * 10) / 10);
+
+            if (progress < 1) {
+                raf = requestAnimationFrame(animate);
             } else {
-                setAnimatedScore(Math.round(current * 10) / 10);
+                setAnimatedScore(finalScore);
+                setRolling(false);
+                // Trigger screen shake on perfect 10
+                if (finalScore >= 10) {
+                    setShaking(true);
+                    setTimeout(() => setShaking(false), 400);
+                }
             }
-        }, 50);
-        return () => clearInterval(interval);
+        }
+        raf = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(raf);
     }, [result]);
+
+    // Detect comeback: current score >= 9 AND previous round score < 4
+    useEffect(() => {
+        if (!result || comebackCheckedRef.current) return;
+        comebackCheckedRef.current = true;
+        const currentScore = result.finalScore || result.score;
+        if (currentScore >= 9 && sessionResults && sessionResults.length > 0) {
+            const prevScore = sessionResults[sessionResults.length - 1]?.score;
+            if (prevScore != null && prevScore < 4) {
+                setComebackData({ prevScore, currentScore });
+                setShowComeback(true);
+                playConfettiSound();
+                setShowConfetti(true);
+            }
+        }
+    }, [result, sessionResults]);
+
+    // Auto-dismiss comeback overlay after 2 seconds
+    useEffect(() => {
+        if (!showComeback) return;
+        const timer = setTimeout(() => setShowComeback(false), 2000);
+        return () => clearTimeout(timer);
+    }, [showComeback]);
 
     // Play sound and confetti after score animation completes
     useEffect(() => {
@@ -101,6 +140,7 @@ export function Reveal({ submission, assets }) {
         // Submit to leaderboard
         if (user?.name) {
             submitScore(user.name, score, user.avatar, roundNumber);
+            submitSeasonalScore(user.name, score, user.avatar);
             const rank = getPlayerRank(user.name);
             if (rank) setPlayerRank(rank);
         }
@@ -414,8 +454,19 @@ export function Reveal({ submission, assets }) {
     const finalScoreDisplay = result.finalScore || result.score;
 
     return (
-        <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
-            <Confetti active={showConfetti} duration={4000} particleCount={60} />
+        <div className={`w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700 ${shaking ? 'screen-shake' : ''}`}>
+            {showComeback && comebackData && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 animate-in zoom-in-95 duration-500">
+                    <div className="text-7xl mb-4 animate-bounce">&#x1F525;</div>
+                    <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 mb-2">
+                        COMEBACK KID!
+                    </h2>
+                    <p className="text-white/60 text-lg">
+                        From {comebackData.prevScore}/10 &rarr; {comebackData.currentScore}/10
+                    </p>
+                </div>
+            )}
+            <Confetti active={showConfetti} duration={4000} particleCount={comebackData ? 120 : 60} />
             {newlyUnlocked.length > 0 && (
                 <MilestoneCelebration
                     newlyUnlocked={newlyUnlocked}
@@ -465,6 +516,13 @@ export function Reveal({ submission, assets }) {
                         </div>
                     </div>
 
+                    {/* Achievement progress */}
+                    {!rolling && (
+                        <div className="flex justify-center mb-4 animate-in fade-in duration-500">
+                            <AchievementProgress score={finalScoreDisplay} stats={user?.stats} />
+                        </div>
+                    )}
+
                     {/* Percentile rank */}
                     {playerRank && playerRank.total > 0 && (
                         <div className="mb-6 p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 animate-in fade-in duration-500">
@@ -508,6 +566,27 @@ export function Reveal({ submission, assets }) {
                             <p className="text-white/70 text-sm leading-relaxed">
                                 {getConnectionExplanation(submission, result.finalScore || result.score, assets.left.label, assets.right.label)}
                             </p>
+                        </div>
+                    )}
+
+                    {/* Score coaching tips */}
+                    {result?.breakdown && (
+                        <div className="mt-3 space-y-1">
+                            {result.breakdown.wit < 4 && (
+                                <p className="text-purple-300 text-xs">Tip: Try wordplay or puns -- clever language boosts wit scores</p>
+                            )}
+                            {result.breakdown.originality < 4 && (
+                                <p className="text-purple-300 text-xs">Tip: Think sideways -- unexpected connections score higher on originality</p>
+                            )}
+                            {result.breakdown.logic < 4 && (
+                                <p className="text-purple-300 text-xs">Tip: Make the connection clearer -- the thread between concepts needs to be obvious</p>
+                            )}
+                            {result.breakdown.clarity < 4 && (
+                                <p className="text-purple-300 text-xs">Tip: Keep it simple -- one sentence, one idea scores better for clarity</p>
+                            )}
+                            {(result.score || result.finalScore) >= 8 && (
+                                <p className="text-green-300 text-xs">Great work! Your connection shows strong creative thinking</p>
+                            )}
                         </div>
                     )}
 

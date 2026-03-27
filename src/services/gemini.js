@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { getFusionImage } from '../data/themes';
 import { getAIDifficulty, getDifficultyConfig } from './aiFeatures';
 import { createRateLimiter } from '../lib/rateLimit.js';
+import { addToOfflineQueue } from './offlineQueue';
 
 const scoringLimiter = createRateLimiter('scoring', { maxRequests: 1, windowMs: 5000 });
 
@@ -115,6 +116,9 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
         });
     } catch (err) {
         console.warn('Gemini scoring failed, using mock:', err);
+        if (!navigator.onLine) {
+            addToOfflineQueue({ submission, assets: { left: asset1, right: asset2 }, mediaType });
+        }
         await new Promise((r) => setTimeout(r, TIMINGS.PHASE_TRANSITION));
         return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true, errorReason: 'AI scoring unavailable — using mock scores' });
     }

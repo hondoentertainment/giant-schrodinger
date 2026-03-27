@@ -498,6 +498,43 @@ export function getAchievementsByCategory(category) {
 }
 
 /**
+ * Helper: count how many scores of 8+ are in the high score streak.
+ */
+function countHighScores(stats) {
+  const scores = stats?.scores || [];
+  let count = 0;
+  for (let i = scores.length - 1; i >= 0; i--) {
+    if (scores[i] >= 8) count++;
+    else break;
+  }
+  return count;
+}
+
+/**
+ * Returns progress toward the nearest unearned achievement.
+ * @param {number} currentScore
+ * @param {Object} stats
+ * @returns {{ icon: string, label: string, current: number, target: number, percent: number, desc: string } | null}
+ */
+export function getNextAchievementProgress(currentScore, stats) {
+  const totalRounds = stats?.totalRounds || 0;
+  const currentStreak = stats?.currentStreak || 0;
+
+  const candidates = [
+    { icon: '\u{1F525}', label: 'On Fire', current: countHighScores(stats), target: 5, desc: 'Score 8+ five times' },
+    { icon: '\u{1F4C5}', label: `${currentStreak + 1}-day streak`, current: currentStreak, target: currentStreak < 3 ? 3 : currentStreak < 7 ? 7 : 14, desc: 'Keep your streak going' },
+    { icon: '\u{1F3AE}', label: 'Veteran', current: totalRounds, target: totalRounds < 50 ? 50 : 100, desc: 'Play more rounds' },
+  ];
+
+  const closest = candidates
+    .filter(c => c.current < c.target)
+    .sort((a, b) => (b.current / b.target) - (a.current / a.target))[0];
+
+  if (!closest) return null;
+  return { ...closest, percent: Math.round((closest.current / closest.target) * 100) };
+}
+
+/**
  * Returns share text for an achievement.
  * @param {Object} achievement
  * @returns {string}

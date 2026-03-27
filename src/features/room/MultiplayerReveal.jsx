@@ -35,8 +35,11 @@ export function MultiplayerReveal() {
         players,
         submissions,
         isHost,
+        isSpectator,
         roomPhase,
         playerName,
+        reactions,
+        addReaction,
         advanceToNextRound,
         leaveCurrentRoom,
     } = useRoom();
@@ -210,6 +213,11 @@ export function MultiplayerReveal() {
     if (revealPhase === REVEAL_PHASES.REVEAL && !isFinished) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
+                {isSpectator && (
+                    <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
+                        Spectating -- watch and react!
+                    </div>
+                )}
                 <div className="w-full flex justify-start px-4 mb-4">
                     <button
                         onClick={leaveCurrentRoom}
@@ -244,6 +252,19 @@ export function MultiplayerReveal() {
                                         <div className="mt-3 pl-10">
                                             <p className="text-white/80 italic text-xl">&ldquo;{entry.submission}&rdquo;</p>
                                         </div>
+                                        {isSpectator && (
+                                            <div className="flex gap-2 mt-2 pl-10">
+                                                {['\uD83D\uDC4D', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDD25', '\uD83E\uDD2F'].map(emoji => (
+                                                    <button
+                                                        key={emoji}
+                                                        onClick={() => addReaction(entry.id, emoji)}
+                                                        className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition text-sm"
+                                                    >
+                                                        {emoji} {reactions.get(entry.id)?.filter(r => r === emoji).length || ''}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -343,6 +364,11 @@ export function MultiplayerReveal() {
     // Results screen (final reveal with scores)
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
+            {isSpectator && (
+                <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
+                    Spectating -- watch and react!
+                </div>
+            )}
             <div className="w-full flex justify-start px-4 mb-4">
                 <button
                     onClick={leaveCurrentRoom}
@@ -423,6 +449,20 @@ export function MultiplayerReveal() {
                                         {entry.parsedScore?.commentary && (
                                             <div className="mt-3 pl-12 text-sm text-white/50 italic">
                                                 &ldquo;{entry.parsedScore.commentary}&rdquo;
+                                            </div>
+                                        )}
+
+                                        {isSpectator && (
+                                            <div className="flex gap-2 mt-2 pl-12">
+                                                {['\uD83D\uDC4D', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDD25', '\uD83E\uDD2F'].map(emoji => (
+                                                    <button
+                                                        key={emoji}
+                                                        onClick={() => addReaction(entry.id, emoji)}
+                                                        className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition text-sm"
+                                                    >
+                                                        {emoji} {reactions.get(entry.id)?.filter(r => r === emoji).length || ''}
+                                                    </button>
+                                                ))}
                                             </div>
                                         )}
                                     </div>

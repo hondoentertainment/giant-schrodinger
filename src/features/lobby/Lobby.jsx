@@ -9,9 +9,14 @@ import { getPlayerRank, getDailyLeaderboard } from '../../services/leaderboard';
 import { getStreakBonus } from '../../services/challenges';
 import { parseReferralFromUrl, trackReferral, hasReferralBonus, claimReferralBonus, generateReferralCode } from '../../services/referrals';
 import { trackEvent } from '../../services/analytics';
-import { toggleMute, isMuted } from '../../services/sounds';
+import { toggleMute, isMuted, playClick } from '../../services/sounds';
+import { getCurrentSeason } from '../../services/leaderboard';
+import { ScoreHistoryChart } from '../analytics/ScoreHistoryChart';
+import { FriendProfile } from '../social/FriendProfile';
+import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
+import { validatePlayerName } from '../../lib/validation';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3 } from 'lucide-react';
+import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3, Shield } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
 import { OnboardingModal } from '../../components/OnboardingModal';
@@ -42,7 +47,7 @@ export function Lobby() {
         advanceRound,
         endSession,
     } = useGame();
-    const { hostRoom, joinRoomByCode } = useRoom();
+    const { hostRoom, joinRoomByCode, joinAsSpectator } = useRoom();
     const { t } = useTranslation();
 
     const [name, setName] = useState(user?.name || '');
@@ -117,9 +122,20 @@ export function Lobby() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const trimmedName = name.trim();
-        if (!trimmedName) return;
-        login({ name: trimmedName, avatar, themeId, gradient: theme.gradient, scoringMode, mediaType, useCustomImages });
+        const result = validatePlayerName(name);
+        if (!result.valid) return;
+        login({ name: result.value, avatar, themeId, gradient: theme.gradient, scoringMode, mediaType, useCustomImages });
+    };
+
+    const weeklyEvent = useMemo(() => getCurrentWeeklyEvent(), []);
+
+    const handleJoinAsSpectator = async () => {
+        if (!joinCode.trim()) return;
+        setMpLoading(true);
+        setMpLoadingAction('spectate');
+        await joinAsSpectator(joinCode.trim());
+        setMpLoading(false);
+        setMpLoadingAction(null);
     };
 
     const dailyChallenge = useMemo(() => getDailyChallenge(), []);
@@ -505,7 +521,7 @@ export function Lobby() {
                             )}
                             <div className="flex gap-3 w-full">
                                 <button
-                                    onClick={startGame}
+                                    onClick={() => { playClick(); startGame(); }}
                                     disabled={sessionId && roundComplete && roundNumber >= totalRounds}
                                     className="flex-1 py-4 bg-white text-black font-bold text-xl rounded-xl hover:scale-105 transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 min-h-[52px]"
                                     aria-label={sessionId
@@ -530,11 +546,12 @@ export function Lobby() {
                                 </button>
                                 <button
                                     onClick={() => setGameState('LEADERBOARD')}
-                                    className="px-4 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors min-w-[48px] min-h-[52px] flex items-center justify-center"
+                                    className="px-4 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors min-w-[48px] min-h-[52px] flex flex-col items-center justify-center"
                                     aria-label="View leaderboard"
                                     title={t('lobby.leaderboard')}
                                 >
                                     <Trophy className="w-5 h-5" />
+                                    <span className="text-xs text-purple-300">{getCurrentSeason().name}</span>
                                 </button>
                             </div>
 
@@ -584,27 +601,36 @@ export function Lobby() {
                             {/* Tournament & Challenge Chains */}
                             <div className="flex gap-2 mt-3">
                                 <button
-                                    onClick={() => { haptic('light'); trackEvent('nav_tournament'); setGameState('TOURNAMENT'); }}
+                                    onClick={() => { playClick(); haptic('light'); trackEvent('nav_tournament'); setGameState('TOURNAMENT'); }}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
                                     title={t('lobby.tournaments')}
                                 >
                                     <Trophy className="w-4 h-4" /> {t('lobby.tournaments')}
                                 </button>
                                 <button
-                                    onClick={() => { haptic('light'); trackEvent('nav_async_chains'); setGameState('ASYNC_CHAINS'); }}
+                                    onClick={() => { playClick(); haptic('light'); trackEvent('nav_async_chains'); setGameState('ASYNC_CHAINS'); }}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
                                     title={t('lobby.challengeChains')}
                                 >
                                     <Link className="w-4 h-4" /> {t('lobby.challengeChains')}
                                 </button>
                                 <button
-                                    onClick={() => { haptic('light'); trackEvent('nav_analytics'); setGameState('ANALYTICS'); }}
+                                    onClick={() => { playClick(); haptic('light'); trackEvent('nav_analytics'); setGameState('ANALYTICS'); }}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
                                     title={t('lobby.analytics')}
                                 >
                                     <BarChart3 className="w-4 h-4" /> {t('lobby.analytics')}
                                 </button>
                             </div>
+
+                            {/* Ranked button */}
+                            <button
+                                onClick={() => { playClick(); haptic('light'); trackEvent('nav_ranked'); setGameState('RANKED'); }}
+                                className="mt-3 w-full py-3 bg-gradient-to-r from-indigo-600/80 to-purple-600/80 text-white font-bold rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Shield className="w-5 h-5" />
+                                Ranked Mode
+                            </button>
 
                             {/* Multiplayer button */}
                             <button
@@ -661,6 +687,16 @@ export function Lobby() {
                                     </button>
                                 </div>
 
+                                {joinCode.trim().length >= 4 && (
+                                    <button
+                                        onClick={handleJoinAsSpectator}
+                                        disabled={mpLoading}
+                                        className="w-full py-2 bg-amber-500/10 text-amber-300 text-sm font-semibold rounded-xl hover:bg-amber-500/20 transition-colors border border-amber-500/20 disabled:opacity-50"
+                                    >
+                                        {mpLoading && mpLoadingAction === 'spectate' ? 'Joining...' : 'Watch the Game'}
+                                    </button>
+                                )}
+
                                 <button
                                     onClick={() => setShowMultiplayer(false)}
                                     className="w-full text-sm text-white/40 hover:text-white underline"
@@ -678,6 +714,13 @@ export function Lobby() {
                             <div className="text-white/70 text-sm mt-1">
                                 {t('lobby.averageScore')}: <span className="text-amber-400 font-bold">{(sessionScore / sessionResults.length).toFixed(1)}</span>/10
                             </div>
+                        </div>
+                    )}
+
+                    {/* Score History Chart (shown after 5+ rounds) */}
+                    {stats.totalRounds >= 5 && (
+                        <div className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                            <ScoreHistoryChart limit={30} />
                         </div>
                     )}
 
