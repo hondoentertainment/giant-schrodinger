@@ -95,7 +95,7 @@ function StoryShareButton({ score, sessionResults, playerName }) {
     );
 }
 
-export function SessionSummary() {
+export function SessionSummary({ onBack }) {
     const { sessionResults, sessionScore, totalRounds, endSession, isDailyChallenge, setGameState, user } = useGame();
     const { toast } = useToast();
 
