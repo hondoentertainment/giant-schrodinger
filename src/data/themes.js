@@ -1,3 +1,5 @@
+import { getSupplementalConcepts } from '../services/conceptGenerator';
+
 const DEFAULT_KEYWORDS = ["abstract art", "texture", "colorful pattern", "surreal", "dreamscape"];
 
 const IMG_WIDTH = 1080;
@@ -440,24 +442,36 @@ export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE
         }
         const unique = [...byUrl.values()];
         const shuffled = shuffle(unique);
-        const picked = shuffled.slice(0, count);
 
-        // Category-based pairing: prefer concepts from DIFFERENT categories
-        if (picked.length >= 2) {
-            const firstCats = new Set(picked[0].categories || []);
-            // Find best second pick - least category overlap
-            let bestIdx = 1;
-            let bestOverlap = Infinity;
-            for (let i = 1; i < Math.min(shuffled.length, 8); i++) {
-                const overlap = (shuffled[i].categories || []).filter(c => firstCats.has(c)).length;
-                if (overlap < bestOverlap) {
-                    bestOverlap = overlap;
-                    bestIdx = i;
+        // If the static pool is getting thin, supplement with AI-generated concepts
+        if (unique.length - count < 4 && mediaType === MEDIA_TYPES.IMAGE) {
+            try {
+                const usedIds = new Set(unique.map(a => a.label));
+                const supplemental = getSupplementalConcepts(usedIds, theme);
+                for (const concept of supplemental) {
+                    shuffled.push({
+                        id: `ai-${seed}-${concept.left.label}`,
+                        label: concept.left.label,
+                        type: MEDIA_TYPES.IMAGE,
+                        url: concept.left.url,
+                        fallbackUrl: buildPicsumFallback(concept.left.label),
+                        categories: concept.left.categories,
+                    });
+                    shuffled.push({
+                        id: `ai-${seed}-${concept.right.label}`,
+                        label: concept.right.label,
+                        type: MEDIA_TYPES.IMAGE,
+                        url: concept.right.url,
+                        fallbackUrl: buildPicsumFallback(concept.right.label),
+                        categories: concept.right.categories,
+                    });
                 }
+            } catch {
+                // conceptGenerator not available or failed — continue with static pool
             }
-            picked[1] = shuffled[bestIdx];
         }
 
+        const picked = shuffled.slice(0, count);
         return picked.map((asset, index) => ({
             ...asset,
             id: asset.id || `${theme?.id || "theme"}-${seed}-${index}`,

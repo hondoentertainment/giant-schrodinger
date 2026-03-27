@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
 import { CheckCircle, Clock, Users } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
+import { ConnectionBanner } from './ConnectionBanner';
 
 export function MultiplayerRound() {
     const {
@@ -97,6 +98,7 @@ export function MultiplayerRound() {
 
     return (
         <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-700">
+            <ConnectionBanner />
             {isSpectator && (
                 <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
                     Spectating -- watch and react!

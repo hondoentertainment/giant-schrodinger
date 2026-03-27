@@ -29,7 +29,7 @@ import { MultiplayerRound } from './features/room/MultiplayerRound'
 import { MultiplayerReveal } from './features/room/MultiplayerReveal'
 import { parseJudgeShareUrl } from './services/share'
 import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
-import { parseThemeFromUrl, clearThemeFromUrl } from './services/themeBuilder'
+import { parseThemeFromUrl, clearThemeFromUrl, importThemeFromLink, saveSharedTheme } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
 import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider } from './services/analytics'
 import { initErrorMonitoring } from './services/errorMonitoring'
@@ -105,11 +105,34 @@ function GameContent() {
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
     const [challengePayload, setChallengePayload] = useState(() => parseChallengeUrl());
 
+    // Handle incoming encoded theme links on mount
+    useEffect(() => {
+        const hash = window.location.hash.slice(1);
+        if (hash.startsWith('theme_')) {
+            const theme = importThemeFromLink(hash);
+            if (theme) {
+                saveSharedTheme(theme);
+                window.location.hash = '';
+            }
+        }
+    }, []);
+
     useEffect(() => {
         const onHashChange = () => {
+            // Handle encoded theme links
+            const hash = window.location.hash.slice(1);
+            if (hash.startsWith('theme_')) {
+                const theme = importThemeFromLink(hash);
+                if (theme) {
+                    saveSharedTheme(theme);
+                    window.location.hash = '';
+                }
+                return;
+            }
+
             setJudgePayload(parseJudgeShareUrl());
             setChallengePayload(parseChallengeUrl());
-            // Handle shared theme links
+            // Handle shared theme links (code-based)
             const themeCode = parseThemeFromUrl();
             if (themeCode) {
                 clearThemeFromUrl();

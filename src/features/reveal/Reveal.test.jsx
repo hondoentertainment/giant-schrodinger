@@ -59,10 +59,15 @@ vi.mock('../../services/storage', () => ({
 
 vi.mock('../../services/stats', () => ({
     recordPlay: vi.fn(() => ({ newlyUnlocked: [] })),
+    getStats: vi.fn(() => ({ currentStreak: 0, totalRounds: 0 })),
+}));
+
+vi.mock('../../services/offlineQueue', () => ({
+    addToOfflineQueue: vi.fn(),
 }));
 
 vi.mock('../../services/share', () => ({
-    createJudgeShareUrl: vi.fn(() => 'https://example.com/judge/123'),
+    createJudgeShareUrl: vi.fn(() => Promise.resolve('https://example.com/judge/123')),
 }));
 
 vi.mock('../../services/challenges', () => ({

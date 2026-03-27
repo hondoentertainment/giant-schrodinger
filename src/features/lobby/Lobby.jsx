@@ -85,6 +85,7 @@ export function Lobby() {
     const [mpLoading, setMpLoading] = useState(false);
     const [mpLoadingAction, setMpLoadingAction] = useState(null); // 'create' | 'join'
     const [soundMuted, setSoundMuted] = useState(isMuted());
+    const [colorblindMode, setColorblindMode] = useState(() => localStorage.getItem('venn_colorblind') === 'true');
     const [countdown, setCountdown] = useState(() => formatCountdown(getTimeUntilNextChallenge()));
 
     const theme = getThemeById(themeId);
@@ -289,6 +290,23 @@ export function Lobby() {
                                 title={soundMuted ? 'Unmute' : 'Mute'}
                             >
                                 {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const next = !colorblindMode;
+                                    setColorblindMode(next);
+                                    localStorage.setItem('venn_colorblind', String(next));
+                                }}
+                                className={`p-2.5 rounded-full ${colorblindMode ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'} hover:bg-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center`}
+                                aria-label={colorblindMode ? 'Disable colorblind mode' : 'Enable colorblind mode'}
+                                title={colorblindMode ? 'Colorblind mode on' : 'Colorblind mode off'}
+                            >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <circle cx="12" cy="12" r="4" />
+                                    <line x1="12" y1="2" x2="12" y2="6" />
+                                    <line x1="12" y1="18" x2="12" y2="22" />
+                                </svg>
                             </button>
                         </div>
                     </div>

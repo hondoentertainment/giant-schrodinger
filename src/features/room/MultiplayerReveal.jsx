@@ -4,6 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
 import { Trophy, ArrowRight, Home, ThumbsUp, Crown, Star } from 'lucide-react';
 import { getRoomSubmissions } from '../../services/multiplayer';
+import { ConnectionBanner } from './ConnectionBanner';
 
 function ScoreBar({ label, value, max = 10 }) {
     const pct = Math.round((value / max) * 100);

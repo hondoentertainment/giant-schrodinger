@@ -29,6 +29,13 @@ vi.mock('../../hooks/useFocusTrap', () => ({
     useFocusTrap: vi.fn(),
 }));
 
+// Mock JudgeCalibration to skip calibration gate
+vi.mock('./JudgeCalibration', () => ({
+    JudgeCalibration: ({ onComplete }) => (
+        <button data-testid="skip-calibration" onClick={onComplete}>Skip Calibration</button>
+    ),
+}));
+
 // Mock VennDiagram to simplify rendering
 vi.mock('../round/VennDiagram', () => ({
     VennDiagram: ({ leftAsset, rightAsset }) => (
@@ -54,6 +61,8 @@ describe('JudgeRound', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        // Mark judge as calibrated so calibration gate is skipped
+        localStorage.setItem('venn_judge_calibrated', 'true');
     });
 
     it('shows quick judge buttons (Fire, Solid, Meh)', () => {

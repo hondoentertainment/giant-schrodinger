@@ -3,6 +3,7 @@ import { useRoom } from '../../context/RoomContext';
 import { useToast } from '../../context/ToastContext';
 import { Copy, Users, Crown, LogOut, Play } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
+import { ConnectionBanner } from './ConnectionBanner';
 
 export function RoomLobby() {
     const {
@@ -49,6 +50,7 @@ export function RoomLobby() {
 
     return (
         <div className="w-full max-w-md glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
+            <ConnectionBanner />
             {isSpectator && (
                 <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center rounded-t-3xl -mt-8 -mx-8 mb-6" style={{ width: 'calc(100% + 4rem)' }}>
                     Spectating -- watch and react!

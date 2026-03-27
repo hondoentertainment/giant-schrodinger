@@ -59,9 +59,11 @@ function writeEntries(entries) {
  * @param {number} score - The player's score.
  * @param {string} avatar - The player's avatar identifier.
  * @param {number} roundCount - Number of rounds played.
+ * @param {object} [options] - Additional options.
+ * @param {boolean} [options.scoredServerSide] - Whether the score was validated server-side.
  * @returns {object|null} The created entry, or null on failure.
  */
-export function submitScore(playerName, score, avatar, roundCount) {
+export function submitScore(playerName, score, avatar, roundCount, options = {}) {
   try {
     const entries = readEntries();
 
@@ -74,6 +76,7 @@ export function submitScore(playerName, score, avatar, roundCount) {
       score,
       avatar,
       roundCount,
+      trusted: !!options.scoredServerSide,
       timestamp: Date.now(),
       dateKey: getTodayKey(),
       weekKey: getWeekKey(),
@@ -97,7 +100,12 @@ function getLeaderboard(keyField, keyValue) {
     const entries = readEntries();
     return entries
       .filter((entry) => entry[keyField] === keyValue)
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => {
+        // Server-scored (trusted) entries are prioritized over client-scored entries
+        if (a.trusted && !b.trusted) return -1;
+        if (!a.trusted && b.trusted) return 1;
+        return b.score - a.score;
+      })
       .slice(0, 50);
   } catch (e) {
     console.error('Failed to get leaderboard:', e);

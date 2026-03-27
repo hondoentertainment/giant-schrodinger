@@ -394,6 +394,22 @@ export function Gallery() {
     const [loadingJudgements, setLoadingJudgements] = useState(true);
     const [sortBy, setSortBy] = useState('newest');
     const [todayHighlights, setTodayHighlights] = useState([]);
+    const galleryGridRef = useRef(null);
+
+    const handleGalleryKeyDown = (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        const grid = galleryGridRef.current;
+        if (!grid) return;
+        const items = Array.from(grid.querySelectorAll('[tabindex="0"]'));
+        const currentIndex = items.indexOf(document.activeElement);
+        if (currentIndex === -1) return;
+        e.preventDefault();
+        if (e.key === 'ArrowRight' && currentIndex < items.length - 1) {
+            items[currentIndex + 1].focus();
+        } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+            items[currentIndex - 1].focus();
+        }
+    };
 
     useEffect(() => {
         // Load today's best highlights (top-scoring from all highlights)
@@ -543,9 +559,11 @@ export function Gallery() {
                         </p>
                     )}
                     <div
+                        ref={galleryGridRef}
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                         role="list"
                         aria-label="Your connection gallery"
+                        onKeyDown={handleGalleryKeyDown}
                     >
                         {sorted.map((c) => (
                             <LazyImage

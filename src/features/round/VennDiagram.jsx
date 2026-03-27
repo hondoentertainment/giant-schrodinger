@@ -322,18 +322,46 @@ function VennMedia({ asset }) {
 export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAsset }) {
     const mediaType = leftAsset?.type || MEDIA_TYPES.IMAGE;
     const isAudio = mediaType === MEDIA_TYPES.AUDIO;
+    const colorblindMode = localStorage.getItem('venn_colorblind') === 'true';
+
+    const COLORS = colorblindMode
+        ? { left: '#0ea5e9', right: '#f97316', overlap: '#10b981' }  // Blue, Orange, Green
+        : { left: '#a855f7', right: '#6366f1', overlap: '#8b5cf6' }; // Purple, Indigo, Violet
 
     return (
         <div className="relative w-full max-w-2xl mx-auto my-4 sm:my-8">
+            {/* SVG pattern definitions for colorblind mode */}
+            {colorblindMode && (
+                <svg className="absolute w-0 h-0" aria-hidden="true">
+                    <defs>
+                        <pattern id="pattern-left" patternUnits="userSpaceOnUse" width="8" height="8">
+                            <line x1="0" y1="0" x2="8" y2="8" stroke={COLORS.left} strokeWidth="1.5" strokeOpacity="0.3" />
+                        </pattern>
+                        <pattern id="pattern-right" patternUnits="userSpaceOnUse" width="6" height="6">
+                            <circle cx="3" cy="3" r="1.5" fill={COLORS.right} fillOpacity="0.3" />
+                        </pattern>
+                    </defs>
+                </svg>
+            )}
             {/* Circles container */}
             <div className="relative w-full aspect-[2/1.1] flex justify-center items-center">
                 {/* Left Circle */}
                 <div className="absolute left-0 w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-105 duration-500 shadow-2xl shadow-blue-500/10"
-                    style={{ border: '3px solid rgba(255,255,255,0.15)' }}>
+                    style={{ border: `3px solid ${colorblindMode ? COLORS.left : 'rgba(255,255,255,0.15)'}` }}>
                     <VennMedia asset={leftAsset} />
                     {/* Gradient overlay for readability */}
                     <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-t from-purple-900/70 via-transparent to-transparent' : 'bg-gradient-to-t from-black/60 via-black/10 to-transparent'}`} />
-                    <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-r from-purple-500/15 to-transparent' : 'bg-gradient-to-r from-blue-500/15 to-transparent'}`} />
+                    <div className="absolute inset-0 pointer-events-none"
+                        style={{ background: colorblindMode
+                            ? `linear-gradient(to right, ${COLORS.left}26, transparent)`
+                            : isAudio ? 'linear-gradient(to right, rgba(168,85,247,0.15), transparent)' : 'linear-gradient(to right, rgba(59,130,246,0.15), transparent)'
+                        }} />
+                    {/* Colorblind pattern overlay */}
+                    {colorblindMode && (
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-[2]" aria-hidden="true">
+                            <rect width="100%" height="100%" fill="url(#pattern-left)" />
+                        </svg>
+                    )}
                     {/* Label */}
                     <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 z-10">
                         <span className="text-sm sm:text-lg md:text-xl font-black text-white uppercase tracking-wider drop-shadow-lg"
@@ -352,11 +380,21 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
 
                 {/* Right Circle */}
                 <div className="absolute right-0 w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-105 duration-500 shadow-2xl shadow-pink-500/10"
-                    style={{ border: '3px solid rgba(255,255,255,0.15)' }}>
+                    style={{ border: `3px solid ${colorblindMode ? COLORS.right : 'rgba(255,255,255,0.15)'}` }}>
                     <VennMedia asset={rightAsset} />
                     {/* Gradient overlay for readability */}
                     <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-t from-fuchsia-900/70 via-transparent to-transparent' : 'bg-gradient-to-t from-black/60 via-black/10 to-transparent'}`} />
-                    <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-l from-fuchsia-500/15 to-transparent' : 'bg-gradient-to-l from-pink-500/15 to-transparent'}`} />
+                    <div className="absolute inset-0 pointer-events-none"
+                        style={{ background: colorblindMode
+                            ? `linear-gradient(to left, ${COLORS.right}26, transparent)`
+                            : isAudio ? 'linear-gradient(to left, rgba(236,72,153,0.15), transparent)' : 'linear-gradient(to left, rgba(236,72,153,0.15), transparent)'
+                        }} />
+                    {/* Colorblind pattern overlay */}
+                    {colorblindMode && (
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-[2]" aria-hidden="true">
+                            <rect width="100%" height="100%" fill="url(#pattern-right)" />
+                        </svg>
+                    )}
                     {/* Label */}
                     <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 z-10 text-right">
                         <span className="text-sm sm:text-lg md:text-xl font-black text-white uppercase tracking-wider drop-shadow-lg"
@@ -382,7 +420,8 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                             The Intersection
                         </span>
                     </div>
-                    <div className="w-8 h-8 sm:w-12 sm:h-12 mt-1 rounded-full bg-white/10 blur-xl animate-pulse" />
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 mt-1 rounded-full blur-xl animate-pulse"
+                        style={{ backgroundColor: colorblindMode ? `${COLORS.overlap}33` : 'rgba(255,255,255,0.1)' }} />
                 </div>
             </div>
         </div>

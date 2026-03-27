@@ -3,7 +3,7 @@ import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { scoreSubmission, generateFusionImage } from '../../services/gemini';
 import { saveCollision } from '../../services/storage';
-import { recordPlay } from '../../services/stats';
+import { recordPlay, getStats } from '../../services/stats';
 import { createJudgeShareUrl } from '../../services/share';
 import { createChallenge, createChallengeUrl } from '../../services/challenges';
 import { submitScore, getPlayerRank, submitSeasonalScore } from '../../services/leaderboard';
@@ -16,6 +16,7 @@ import { checkAchievements } from '../../services/achievements';
 import { AchievementProgress } from '../../components/AchievementProgress';
 import { addCoins, addBattlePassXp } from '../../services/shop';
 import { saveSharedRound } from '../../services/backend';
+import { addToOfflineQueue } from '../../services/offlineQueue';
 import { getThemeById, buildThemeAssets, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
@@ -25,7 +26,7 @@ import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
 
 export function Reveal({ submission, assets }) {
-    const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, sessionResults } = useGame();
+    const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, sessionResults, isDailyChallenge } = useGame();
     const { toast } = useToast();
     const [result, setResult] = useState(null);
     const [fusionImage, setFusionImage] = useState(null);
@@ -46,6 +47,10 @@ export function Reveal({ submission, assets }) {
     const [animatedScore, setAnimatedScore] = useState(0);
     const [shaking, setShaking] = useState(false);
     const [rolling, setRolling] = useState(false);
+    const [scoringError, setScoringError] = useState(null);
+    const [retrying, setRetrying] = useState(false);
+    const [announceScore, setAnnounceScore] = useState('');
+    const [scoreAnimationDone, setScoreAnimationDone] = useState(false);
     const savedRef = useRef(false);
     const soundPlayedRef = useRef(false);
     const comebackCheckedRef = useRef(false);
@@ -90,6 +95,7 @@ export function Reveal({ submission, assets }) {
             } else {
                 setAnimatedScore(finalScore);
                 setRolling(false);
+                setScoreAnimationDone(true);
                 // Trigger screen shake on perfect 10
                 if (finalScore >= 10) {
                     setShaking(true);
@@ -123,6 +129,21 @@ export function Reveal({ submission, assets }) {
         const timer = setTimeout(() => setShowComeback(false), 2000);
         return () => clearTimeout(timer);
     }, [showComeback]);
+
+    // Screen reader score announcement
+    useEffect(() => {
+        if (result && scoreAnimationDone) {
+            const score = result.finalScore || result.score;
+            const breakdown = result.breakdown;
+            let announcement = `Your score is ${score} out of 10.`;
+            if (breakdown) {
+                announcement += ` Wit: ${breakdown.wit}. Logic: ${breakdown.logic}. Originality: ${breakdown.originality}. Clarity: ${breakdown.clarity}.`;
+            }
+            if (score >= 9) announcement += ' Amazing connection!';
+            else if (score >= 7) announcement += ' Great work!';
+            setAnnounceScore(announcement);
+        }
+    }, [result, scoreAnimationDone]);
 
     // Play sound and confetti after score animation completes
     useEffect(() => {
@@ -227,6 +248,11 @@ export function Reveal({ submission, assets }) {
             } catch (err) {
                 if (mounted) {
                     console.error('Reveal processRound failed:', err);
+                    setScoringError({
+                        message: 'Scoring failed — your submission is saved locally',
+                        errorId: `err-${Date.now().toString(36)}`,
+                    });
+                    addToOfflineQueue({ submission, assets, mediaType });
                     setProcessError(err?.message || 'Something went wrong');
                 }
             }
@@ -265,14 +291,7 @@ export function Reveal({ submission, assets }) {
             shareFrom: user?.name || 'A friend',
             collisionId: savedCollision.id,
         };
-        const backendId = await saveSharedRound(roundPayload);
-        if (!backendId) {
-            toast.warn('Backend unavailable — sharing via link encoding');
-        }
-        const payload = backendId
-            ? { backendId, ...roundPayload }
-            : { roundId: savedCollision.id, ...roundPayload };
-        const url = createJudgeShareUrl(payload);
+        const url = await createJudgeShareUrl(roundPayload);
         if (url && navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(url);
             haptic('success');
@@ -452,6 +471,7 @@ export function Reveal({ submission, assets }) {
 
     const scoreBand = result && getScoreBand(result.finalScore || result.score);
     const finalScoreDisplay = result.finalScore || result.score;
+    const stats = getStats();
 
     return (
         <div className={`w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700 ${shaking ? 'screen-shake' : ''}`}>
@@ -473,11 +493,73 @@ export function Reveal({ submission, assets }) {
                     onDismiss={() => setNewlyUnlocked([])}
                 />
             )}
+
+            {/* Screen reader score announcement */}
+            <div className="sr-only" role="status" aria-live="assertive" aria-atomic="true">
+                {announceScore}
+            </div>
+
+            {/* Screen reader achievement announcement */}
+            {newlyUnlocked?.length > 0 && (
+                <div className="sr-only" role="alert">
+                    Achievement unlocked: {newlyUnlocked.map(a => a.name || a.label || a.id).join(', ')}
+                </div>
+            )}
+
             <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl">
                 <div className="glass-panel rounded-[22px] p-4 sm:p-8 text-center max-w-2xl">
                     <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 sm:mb-6 border border-white/10">
                         YOUR SCORE
                     </div>
+
+                    {/* Error state with retry */}
+                    {scoringError && (
+                        <div className="w-full max-w-md p-4 rounded-2xl bg-red-500/10 border border-red-500/20 mb-4">
+                            <div className="text-red-300 font-semibold mb-1">{scoringError.message}</div>
+                            <div className="text-white/40 text-xs mb-3">Error ID: {scoringError.errorId}</div>
+                            <button
+                                onClick={async () => {
+                                    setRetrying(true);
+                                    setScoringError(null);
+                                    try {
+                                        const retryResult = await scoreSubmission(submission, assets.left, assets.right, mediaType);
+                                        const finalScore = Math.min(10, Math.max(1, Math.round(retryResult.score * scoreMultiplier)));
+                                        const resultPayload = {
+                                            ...retryResult,
+                                            finalScore,
+                                            scoreMultiplier,
+                                        };
+                                        setResult(resultPayload);
+                                        setProcessError(null);
+                                        if (!savedRef.current) {
+                                            finalizeCollision({
+                                                submission,
+                                                imageUrl: fusionImage?.url,
+                                                fallbackImageUrl: fusionImage?.fallbackUrl,
+                                                score: finalScore,
+                                                baseScore: retryResult.score,
+                                                breakdown: retryResult.breakdown,
+                                                commentary: retryResult.commentary,
+                                                themeId: theme?.id,
+                                                scoringMode,
+                                                roundNumber,
+                                                totalRounds,
+                                                scoreMultiplier,
+                                            }, finalScore);
+                                        }
+                                        completeRound({ score: finalScore, baseScore: retryResult.score, breakdown: retryResult.breakdown });
+                                    } catch {
+                                        setScoringError({ message: 'Still unable to score. Using offline mode.', errorId: scoringError.errorId });
+                                    }
+                                    setRetrying(false);
+                                }}
+                                disabled={retrying}
+                                className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 text-sm font-semibold hover:bg-red-500/30 transition"
+                            >
+                                {retrying ? 'Retrying...' : 'Retry Scoring'}
+                            </button>
+                        </div>
+                    )}
 
                     <div className="relative aspect-[4/3] sm:aspect-square w-full max-w-xs sm:max-w-sm mx-auto rounded-2xl overflow-hidden mb-6 sm:mb-8 shadow-2xl ring-1 ring-white/20">
                         <img
@@ -634,6 +716,49 @@ export function Reveal({ submission, assets }) {
                                 They&apos;ll play the same concepts and try to outscore you
                             </div>
                         </button>
+                    )}
+
+                    {/* Post-reveal retention hooks */}
+                    {result && (
+                        <div className="w-full max-w-md mt-6 p-4 rounded-2xl bg-white/5 border border-white/10">
+                            <div className="text-white/50 text-xs uppercase tracking-wider font-bold mb-3">Keep Going</div>
+                            <div className="space-y-2">
+                                {/* Battle pass XP */}
+                                {(() => {
+                                    const xpGained = (result.finalScore || result.score || 0) * 10;
+                                    return (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <span className="text-purple-400">&#11088;</span>
+                                            <span className="text-white/70">+{xpGained} XP earned this round</span>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Streak status */}
+                                {stats?.currentStreak > 0 && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-orange-400">&#128293;</span>
+                                        <span className="text-white/70">Day {stats.currentStreak} streak — play tomorrow to keep it!</span>
+                                    </div>
+                                )}
+
+                                {/* Daily challenge prompt */}
+                                {!isDailyChallenge && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-amber-400">&#128197;</span>
+                                        <span className="text-white/70">Daily challenge available — try it for 1.5x bonus!</span>
+                                    </div>
+                                )}
+
+                                {/* Rounds remaining */}
+                                {roundNumber < totalRounds && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-cyan-400">&#127919;</span>
+                                        <span className="text-white/70">{totalRounds - roundNumber} round{totalRounds - roundNumber > 1 ? 's' : ''} left in this session</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     )}
 
                     {/* Round modifier result */}

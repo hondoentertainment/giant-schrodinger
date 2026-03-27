@@ -12,6 +12,7 @@ import {
     submitAnswer,
     updateSubmissionScore,
     subscribeToRoom,
+    fetchRoomState,
 } from '../services/multiplayer';
 import { buildThemeAssets, getThemeById, MEDIA_TYPES } from '../data/themes';
 import { scoreSubmission } from '../services/gemini';
@@ -41,6 +42,11 @@ export function RoomProvider({ children }) {
     // Spectator state
     const [isSpectator, setIsSpectator] = useState(false);
     const [reactions, setReactions] = useState(new Map()); // submissionId → array of emoji reactions
+
+    // Connection state for disconnect recovery
+    const [connectionState, setConnectionState] = useState('connected'); // 'connected' | 'reconnecting' | 'disconnected'
+    const [pendingSubmissions, setPendingSubmissions] = useState([]);
+    const reconnectTimerRef = useRef(null);
 
     const unsubRef = useRef(null);
 
@@ -74,12 +80,90 @@ export function RoomProvider({ children }) {
     }, []);
 
     // ============================================================
+    // Reconnection logic
+    // ============================================================
+    const syncRoomState = useCallback((roomData) => {
+        setRoom(roomData.room);
+        setPlayers(roomData.players);
+        setSubmissions(roomData.submissions);
+
+        const newStatus = roomData.room.status;
+        if (newStatus === 'playing') {
+            setRoomPhase('playing');
+        } else if (newStatus === 'revealing') {
+            setRoomPhase('revealing');
+        } else if (newStatus === 'finished') {
+            setRoomPhase('finished');
+        } else if (newStatus === 'waiting') {
+            setRoomPhase('lobby');
+        }
+    }, []);
+
+    const attemptReconnect = useCallback(async (retries = 3) => {
+        const currentRoomCode = room?.code || null;
+        if (!currentRoomCode) {
+            setConnectionState('disconnected');
+            return;
+        }
+
+        for (let i = 0; i < retries; i++) {
+            try {
+                setConnectionState('reconnecting');
+                const roomData = await fetchRoomState(currentRoomCode);
+                if (roomData) {
+                    syncRoomState(roomData);
+                    // Flush any pending submissions
+                    const pending = [...pendingSubmissions];
+                    for (const sub of pending) {
+                        await submitAnswer(roomData.room.id, roomData.room.round_number, playerName, sub.submission);
+                    }
+                    setPendingSubmissions([]);
+                    setConnectionState('connected');
+                    return;
+                }
+            } catch {
+                // Retry on failure
+            }
+            await new Promise(r => setTimeout(r, 2000 * (i + 1))); // Exponential backoff
+        }
+        setConnectionState('disconnected');
+    }, [room?.code, pendingSubmissions, playerName, syncRoomState]);
+
+    // Monitor browser online/offline
+    useEffect(() => {
+        const handleOffline = () => setConnectionState('reconnecting');
+        const handleOnline = () => attemptReconnect();
+
+        window.addEventListener('offline', handleOffline);
+        window.addEventListener('online', handleOnline);
+
+        return () => {
+            window.removeEventListener('offline', handleOffline);
+            window.removeEventListener('online', handleOnline);
+        };
+    }, [attemptReconnect]);
+
+    // Auto-exit after timeout when disconnected
+    useEffect(() => {
+        if (connectionState === 'disconnected') {
+            reconnectTimerRef.current = setTimeout(() => {
+                leaveCurrentRoom();
+            }, 30000); // 30 second timeout
+        }
+        return () => clearTimeout(reconnectTimerRef.current);
+    }, [connectionState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ============================================================
     // Realtime handlers
     // ============================================================
     const setupSubscriptions = useCallback((roomId) => {
         if (unsubRef.current) unsubRef.current();
 
         const unsub = subscribeToRoom(roomId, {
+            onDisconnect: () => {
+                setConnectionState('reconnecting');
+                attemptReconnect();
+            },
             onRoomUpdate: (updatedRoom) => {
                 setRoom(updatedRoom);
                 const newStatus = updatedRoom.status;
@@ -121,7 +205,7 @@ export function RoomProvider({ children }) {
         });
 
         unsubRef.current = unsub;
-    }, [toast]);
+    }, [toast, attemptReconnect]);
 
     // ============================================================
     // Actions
@@ -289,6 +373,12 @@ export function RoomProvider({ children }) {
     const submitMultiplayerAnswer = useCallback(async (submission) => {
         if (!room || !playerName) return false;
 
+        if (connectionState !== 'connected') {
+            setPendingSubmissions(prev => [...prev, { submission, timestamp: Date.now() }]);
+            toast.info('Answer queued — will submit when reconnected');
+            return true;
+        }
+
         const success = await submitAnswer(room.id, room.round_number, playerName, submission);
         if (!success) {
             toast.error('Failed to submit answer');
@@ -296,7 +386,7 @@ export function RoomProvider({ children }) {
         }
         toast.success('Answer submitted!');
         return true;
-    }, [room, playerName, toast]);
+    }, [room, playerName, toast, connectionState]);
 
     const scoreAllSubmissions = useCallback(async () => {
         if (!room || !isHost) return;
@@ -397,6 +487,7 @@ export function RoomProvider({ children }) {
         allSubmitted,
         isSpectator,
         reactions,
+        connectionState,
 
         // Actions
         hostRoom,
@@ -408,6 +499,7 @@ export function RoomProvider({ children }) {
         submitMultiplayerAnswer,
         scoreAllSubmissions,
         advanceToNextRound,
+        attemptReconnect,
         cleanup,
     };
 

@@ -1,53 +1,69 @@
-const QUEUE_KEY = 'venn_offline_queue';
+import { loadJSON, saveJSON } from '../lib/storage';
 
-export function getOfflineQueue() {
-  try {
-    return JSON.parse(localStorage.getItem(QUEUE_KEY)) || [];
-  } catch { return []; }
-}
+const STORAGE_KEY = 'vwf_offline_queue';
 
-function saveQueue(queue) {
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-}
-
-export function addToOfflineQueue(submission) {
-  const queue = getOfflineQueue();
+/**
+ * Adds a failed submission to the offline queue for later retry.
+ * @param {{ submission: string, assets: Object, mediaType: string }} entry
+ */
+export function addToOfflineQueue(entry) {
+  const queue = loadJSON(STORAGE_KEY, []);
   queue.push({
-    ...submission,
-    id: `offline-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    queuedAt: Date.now(),
+    ...entry,
+    queuedAt: new Date().toISOString(),
   });
-  saveQueue(queue);
-  return queue.length;
+  saveJSON(STORAGE_KEY, queue);
 }
 
-export function removeFromQueue(id) {
-  const queue = getOfflineQueue().filter(s => s.id !== id);
-  saveQueue(queue);
+/**
+ * Returns all queued entries.
+ * @returns {Array}
+ */
+export function getOfflineQueue() {
+  return loadJSON(STORAGE_KEY, []);
 }
 
+/**
+ * Clears the offline queue.
+ */
 export function clearOfflineQueue() {
-  localStorage.removeItem(QUEUE_KEY);
+  saveJSON(STORAGE_KEY, []);
 }
 
+/**
+ * Removes a single entry from the queue by index.
+ * @param {number} index
+ */
+export function removeFromOfflineQueue(index) {
+  const queue = loadJSON(STORAGE_KEY, []);
+  if (index >= 0 && index < queue.length) {
+    queue.splice(index, 1);
+    saveJSON(STORAGE_KEY, queue);
+  }
+}
+
+/**
+ * Returns the number of queued entries.
+ * @returns {number}
+ */
 export function getQueueCount() {
   return getOfflineQueue().length;
 }
 
-// Process queue when online
-export async function processOfflineQueue(scoreFunction) {
+/**
+ * Processes the offline queue by retrying each entry with the provided scoring function.
+ * @param {Function} scoreFn - The scoring function to retry with.
+ */
+export async function processOfflineQueue(scoreFn) {
   const queue = getOfflineQueue();
-  if (queue.length === 0) return [];
-
-  const results = [];
-  for (const item of queue) {
+  if (queue.length === 0) return;
+  const remaining = [];
+  for (const entry of queue) {
     try {
-      const result = await scoreFunction(item.submission, item.assets?.left, item.assets?.right, item.mediaType);
-      results.push({ ...item, result, success: true });
-      removeFromQueue(item.id);
+      await scoreFn(entry.submission, entry.assets?.left, entry.assets?.right, entry.mediaType);
     } catch {
-      results.push({ ...item, success: false });
+      remaining.push(entry);
     }
   }
-  return results;
+  saveJSON(STORAGE_KEY, remaining);
 }
