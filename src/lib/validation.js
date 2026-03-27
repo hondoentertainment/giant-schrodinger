@@ -30,5 +30,6 @@ export function validatePackName(name) {
 
 export function sanitizeForCanvas(text) {
   // Remove control characters and normalize whitespace for canvas rendering
+  // eslint-disable-next-line no-control-regex
   return text.replace(/[\x00-\x1f\x7f]/g, '').replace(/\s+/g, ' ').trim();
 }

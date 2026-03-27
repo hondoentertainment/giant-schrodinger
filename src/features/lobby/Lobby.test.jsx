@@ -52,7 +52,7 @@ vi.mock('../../data/themes', () => ({
 // Attach to globalThis so linter does not prune the variable
 globalThis.__testStreakValue = 0;
 vi.mock('../../services/stats', () => ({
-    getStats: () => ({ totalRounds: 5, currentStreak: globalThis.__testStreakValue, maxStreak: 3, milestonesUnlocked: [] }),
+    getStats: () => ({ totalRounds: 20, currentStreak: globalThis.__testStreakValue, maxStreak: 3, milestonesUnlocked: [] }),
     getMilestones: () => [],
     isAvatarUnlocked: () => true,
     isThemeUnlocked: () => true,

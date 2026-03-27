@@ -44,12 +44,8 @@ function LoadingFallback() {
     );
 }
 
-initErrorMonitoring();
-
-// Initialize analytics providers
+// Module-level analytics init (safe to run once)
 registerAnalyticsProvider(ConsoleAnalyticsProvider);
-
-// Track DAU on app load
 trackRetention();
 
 // Register service worker for PWA
@@ -219,6 +215,11 @@ function GameContent() {
 }
 
 function App() {
+    useEffect(() => {
+        const cleanup = initErrorMonitoring();
+        return cleanup;
+    }, []);
+
     return (
         <ErrorBoundary>
             <ToastProvider>
