@@ -618,3 +618,146 @@ Month 2: Input validation (#57), offline queue (#58), JSON-LD (#59)
 ```
 
 The game is feature-complete and polished. Phase 3 is about **making existing features visible** (ranked, friends, community), **amplifying emotional moments** (comeback, perfect 10, coaching), and **building the social engine** (spectators, community gallery, friend profiles) that turns a single-player puzzle into a multiplayer phenomenon.
+
+---
+
+## Phase 4: Monetization, Platform Growth & Production Excellence
+
+Phases 1-3 built an impressive feature set: 59 items spanning game mechanics, social systems, retention hooks, and technical quality. Phase 4 focuses on **revenue**, **distribution**, **competitive infrastructure**, and **production-grade testing** — the pillars that turn a great game into a sustainable business.
+
+---
+
+### Monetization & Revenue: Tier 1
+
+#### 60. Stripe payment integration for cosmetics
+Add real payment processing using Stripe. Implement checkout modal for premium cosmetics (Venn Skins, avatar packs, score effects). Store transactions in Supabase `purchases` table. Start with 3 price points: $1.99, $4.99, $9.99.
+
+**Files:** `src/lib/stripe.js` (new), `src/features/shop/CheckoutModal.jsx` (new), `src/services/shop.js`
+
+#### 61. Premium battle pass tier
+Create a paid ($4.99/season) premium track that doubles rewards at every tier. Check `isPremiumBattlePass()` at reward claim. Show premium vs free tracks side-by-side in battle pass UI.
+
+**Files:** `src/services/shop.js`, `src/features/shop/BattlePassPanel.jsx` (new)
+
+#### 62. Seasonal cosmetic bundles with limited-time pricing
+Monthly rotating cosmetic packs at 20% discount. Unavailable after season ends. Show countdown timer in shop and featured banner in lobby. FOMO drives 40-60% more sales vs static pricing.
+
+**Files:** `src/services/shop.js`, `src/features/shop/Shop.jsx`
+
+#### 63. Free-to-play cosmetic earning path
+"Cosmetic Quest" — 5 weekly challenges awarding 500 coins each. 3000 coins = 1 avatar pack. Ensures F2P players can earn premium cosmetics over 6 weeks without spending.
+
+**Files:** `src/services/weeklyEvents.js`, `src/services/shop.js`
+
+---
+
+### Platform & Distribution: Tier 2
+
+#### 64. PWA install prompt with custom banner
+Detect `beforeinstallprompt` event and show "Install Venn as App — Faster, Offline Play" banner. Track install rate in analytics. Installed users have 2x retention.
+
+**Files:** `src/lib/pwaInstall.js` (new), `src/components/PWAInstallBanner.jsx` (new), `src/features/lobby/Lobby.jsx`
+
+#### 65. App store wrapper preparation
+Create `MOBILE_DEPLOYMENT.md` documenting Capacitor/PWABuilder pipeline for iOS App Store and Google Play. Prepare icons, splash screens, screenshots, privacy policy, and store listing metadata.
+
+**Files:** `MOBILE_DEPLOYMENT.md` (new), `public/` (icons/splash)
+
+#### 66. Discord bot slash command integration
+Create `/venn challenge @friend` Discord command. Format Venn challenges as rich embeds with concept pair and join link. Use Supabase Edge Function as interaction endpoint.
+
+**Files:** `supabase/functions/discord-bot/index.ts` (new), `DISCORD_BOT.md` (new)
+
+#### 67. Share-to-Instagram Stories & TikTok
+Generate 1080x1920 story images with score, concepts, and CTA. Use Web Share API for native share sheet on mobile. Fallback: clipboard copy with "Paste in Stories" instructions.
+
+**Files:** `src/lib/storyImage.js` (new), `src/components/SocialShareButtons.jsx`, `src/features/summary/SessionSummary.jsx`
+
+---
+
+### Backend & Competitive: Tier 3
+
+#### 68. Elo-based matchmaking for ranked multiplayer
+Match players within ±150 rating points via `matchmaking_queue` Supabase table with 30-second timeout. Show visual queue indicator with "Finding opponent..." animation.
+
+**Files:** `src/services/matchmaking.js` (new), `src/features/ranked/RankedMatchmaking.jsx` (new), `src/context/RoomContext.jsx`
+
+#### 69. Seasonal ranked divisions with visual badges
+4 sub-ranks per division (Bronze I-IV, Silver I-IV, etc.). Track in `seasonal_ratings` table. Display division badge in lobby and player profiles.
+
+**Files:** `src/features/ranked/DivisionBadge.jsx` (new), `src/services/ranked.js`
+
+#### 70. Community content moderation
+Add flag system ("Inappropriate", "Spam", "Offensive") on community gallery submissions. Create admin-only moderation dashboard showing flagged content with approve/remove actions.
+
+**Files:** `src/features/analytics/ModerationDashboard.jsx` (new), `src/features/gallery/Gallery.jsx`
+
+---
+
+### Testing & Quality: Tier 4
+
+#### 71. E2E multiplayer test suite
+Playwright tests for: create room → join → submit → score → winner. Two browser contexts for simultaneous players. Mock Supabase with MSW. Cover spectator, disconnect, and timeout scenarios.
+
+**Files:** `e2e/multiplayer-flow.spec.js` (new), `playwright.config.js`
+
+#### 72. Critical flow component tests
+Integration tests for Lobby→Round→Reveal→Summary flow. Target 80%+ coverage of user-facing flows. Test timer countdown, submission validation, score display, share buttons.
+
+**Files:** `src/features/**/*.test.jsx` (expand existing)
+
+#### 73. Lighthouse CI performance budget
+GitHub Action running Lighthouse on every PR. Fail if: bundle > 210 KB gzipped, FCP > 2.5s, score < 85. Track regressions over time.
+
+**Files:** `.github/workflows/lighthouse.yml` (new), `PERFORMANCE_BUDGET.md` (new)
+
+---
+
+### Analytics & Retention: Tier 5
+
+#### 74. Real-time analytics dashboard with retention funnels
+Wire `trackEvent()` to Plausible/PostHog. Dashboard showing: DAU/WAU/MAU, D1/D7/D30 retention, funnel (lobby→round→score→share), top themes, active hours heatmap.
+
+**Files:** `src/features/analytics/AnalyticsView.jsx` (new), `src/services/analytics.js`
+
+#### 75. Viral coefficient tracking
+Track referral cohorts: new player → referred by code → 5 plays → active at D7. Identify which referral sources have best retention and LTV.
+
+**Files:** `src/services/referrals.js`, `src/services/analytics.js`
+
+#### 76. Seasonal challenge pass
+Weekly challenge pass (7 daily challenges) tied to theme weeks. Completing all 7 earns "Week Master" badge + 1000 coins. Resets every Monday.
+
+**Files:** `src/features/challenge/SeasonalChallengeBattlePass.jsx` (new), `src/services/weeklyEvents.js`
+
+#### 77. Push notification triggers for streaks and friends
+Complete Web Push implementation: "Streak expires in 3 hours", "Daily challenge is live", "Friend challenged you". Use Supabase Edge Functions as push server.
+
+**Files:** `src/services/pushNotifications.js`, `src/services/notifications.js`
+
+#### 78. Player milestone timeline
+Visual timeline showing journey: "First round", "First 100 coins", "Unlocked Neon", "10-game streak", "First perfect 10", "Reached Gold". Celebrated every 10 rounds.
+
+**Files:** `src/features/profile/MilestoneTimeline.jsx` (new), `src/services/stats.js`
+
+#### 79. Contextual in-game tips
+State-aware tips: "Use alliteration for Wit", "Perfect scores grant 2x coins", "Weekly events reset Monday". Shown as subtle pills below UI elements. Track seen tips to avoid repeats. Auto-fade after 30 seconds.
+
+**Files:** `src/lib/contextualTips.js` (new), `src/components/ContextualTip.jsx` (new)
+
+---
+
+### Priority Order (Phase 4)
+
+```
+Week 1:  PWA install prompt (#64), Lighthouse CI (#73)
+Week 1:  Stripe integration (#60), premium battle pass (#61)
+Week 2:  Matchmaking (#68), division badges (#69)
+Week 2:  E2E multiplayer tests (#71), component tests (#72)
+Week 3:  Seasonal bundles (#62), F2P earning path (#63)
+Week 3:  Discord bot (#66), story sharing (#67)
+Week 4:  Analytics dashboard (#74), viral tracking (#75)
+Week 4:  Content moderation (#70), seasonal challenge pass (#76)
+Month 2: Push notifications (#77), milestone timeline (#78)
+Month 2: Contextual tips (#79), app store prep (#65)
+```
