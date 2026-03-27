@@ -59,8 +59,7 @@ export function Round({ onSubmit }) {
     // Asset selection: build assets, filter out used ones, track new ones
     useEffect(() => {
         submittedRef.current = false;
-        setRoundPhase('ready');
-        setCountdown(3);
+        resetTimer();
         let left, right;
         const usedIds = getUsedAssetIds ? getUsedAssetIds() : [];
         const customPool = getCustomImages();
@@ -108,8 +107,7 @@ export function Round({ onSubmit }) {
             }
         });
         setAssets({ left, right });
-        setDisplayTime(timeLimit);
-    }, [user?.themeId, user?.useCustomImages, timeLimit, mediaType, roundNumber]);
+    }, [user?.themeId, user?.useCustomImages, timeLimit, mediaType, roundNumber, resetTimer]);
 
     const handleSubmit = useCallback((e, { forceEmpty = false } = {}) => {
         if (e) e.preventDefault();
@@ -123,6 +121,17 @@ export function Round({ onSubmit }) {
             return;
         }
 
+        // Validate the submission text
+        if (!forceEmpty) {
+            const result = validateSubmission(submission);
+            if (!result.valid) {
+                haptic('warning');
+                setShakeInput(true);
+                setTimeout(() => setShakeInput(false), TIMINGS.SHAKE_ANIMATION);
+                return;
+            }
+        }
+
         submittedRef.current = true;
         haptic('success');
 
@@ -131,47 +140,6 @@ export function Round({ onSubmit }) {
             setGameState('REVEAL');
         }
     }, [submission, assets, mod, onSubmit, setGameState]);
-
-    // Task 5: Get Ready countdown
-    useEffect(() => {
-        if (roundPhase !== 'ready') return;
-        if (countdown <= 0) {
-            setRoundPhase('playing');
-            return;
-        }
-        const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
-        return () => clearTimeout(t);
-    }, [roundPhase, countdown]);
-
-    // requestAnimationFrame-based timer (only runs during 'playing' phase)
-    useEffect(() => {
-        if (roundPhase !== 'playing' || submittedRef.current) return;
-
-        endTimeRef.current = performance.now() + timeLimit * 1000;
-
-        function tick() {
-            const remaining = Math.ceil((endTimeRef.current - performance.now()) / 1000);
-            setDisplayTime(Math.max(0, remaining));
-
-            if (remaining > 0) {
-                rafRef.current = requestAnimationFrame(tick);
-            }
-        }
-
-        rafRef.current = requestAnimationFrame(tick);
-
-        return () => {
-            if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        };
-    }, [timeLimit, roundPhase]);
-
-    // Time-up detection
-    useEffect(() => {
-        if (roundPhase !== 'playing') return;
-        if (displayTime <= 0 && !submittedRef.current && !showTimeUp) {
-            setShowTimeUp(true);
-        }
-    }, [displayTime, showTimeUp, roundPhase]);
 
     // Task 3: Faster auto-submit (400ms instead of 900ms)
     useEffect(() => {
