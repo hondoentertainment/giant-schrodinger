@@ -385,3 +385,41 @@ export function addBattlePassXp(amount) {
   saveJSON(STORAGE_KEYS.battlePass, bpState);
   return bpState.xp;
 }
+
+// --- Seasonal Bundles (#62) ---
+
+function daysUntilMonthEnd() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+}
+
+export function getSeasonalBundles() {
+  const month = new Date().getMonth();
+  const seasons = [
+    { id: 'spring', name: 'Spring Bloom Pack', items: ['avatar_spring', 'skin_flowers', 'effect_petals'], originalPrice: 1500, price: 1200, expiresIn: daysUntilMonthEnd() },
+    { id: 'summer', name: 'Summer Vibes Pack', items: ['avatar_sun', 'skin_beach', 'effect_waves'], originalPrice: 1500, price: 1200, expiresIn: daysUntilMonthEnd() },
+    { id: 'autumn', name: 'Harvest Pack', items: ['avatar_leaf', 'skin_autumn', 'effect_confetti'], originalPrice: 1500, price: 1200, expiresIn: daysUntilMonthEnd() },
+    { id: 'winter', name: 'Frost Pack', items: ['avatar_snow', 'skin_ice', 'effect_sparkle'], originalPrice: 1500, price: 1200, expiresIn: daysUntilMonthEnd() },
+  ];
+  return seasons[Math.floor(month / 3)];
+}
+
+// --- F2P Earning Path / Cosmetic Quests (#63) ---
+
+export function getCosmeticQuests() {
+  const weekOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000));
+  return [
+    { id: `quest_${weekOfYear}_1`, name: 'Score 8+ three times', reward: 500, target: 3, type: 'high_score' },
+    { id: `quest_${weekOfYear}_2`, name: 'Play 5 rounds today', reward: 500, target: 5, type: 'daily_rounds' },
+    { id: `quest_${weekOfYear}_3`, name: 'Win an AI Battle', reward: 500, target: 1, type: 'ai_win' },
+    { id: `quest_${weekOfYear}_4`, name: 'Judge 3 connections', reward: 500, target: 3, type: 'judge' },
+    { id: `quest_${weekOfYear}_5`, name: 'Share a score', reward: 500, target: 1, type: 'share' },
+  ];
+}
+
+export function getQuestProgress(questId) {
+  try {
+    return JSON.parse(localStorage.getItem(`venn_quest_${questId}`)) || { current: 0, completed: false };
+  } catch { return { current: 0, completed: false }; }
+}

@@ -9,6 +9,7 @@ import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
 import { useRoundTimer } from '../../hooks/useRoundTimer';
 import { validateSubmission } from '../../lib/validation';
+import { ContextualTip } from '../../components/ContextualTip';
 
 export function Round({ onSubmit }) {
     const {
@@ -304,6 +305,11 @@ export function Round({ onSubmit }) {
                     </div>
                 </div>
             </form>
+
+            {/* Contextual tip */}
+            <div className="w-full max-w-md mt-3">
+                <ContextualTip context="round" totalRounds={stats.totalRounds} />
+            </div>
 
             {/* Task 4: Quit confirmation modal */}
             {showQuitConfirm && (

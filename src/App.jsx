@@ -23,6 +23,8 @@ const ChallengeRound = lazy(() => import('./features/challenge/ChallengeRound').
 const TournamentLobby = lazy(() => import('./features/tournament/TournamentLobby').then(m => ({ default: m.TournamentLobby })))
 const AsyncChains = lazy(() => import('./features/challenge/AsyncChains').then(m => ({ default: m.AsyncChains })))
 const AnalyticsDashboard = lazy(() => import('./features/analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })))
+const AnalyticsView = lazy(() => import('./features/analytics/AnalyticsView').then(m => ({ default: m.AnalyticsView })))
+const ModerationDashboard = lazy(() => import('./features/analytics/ModerationDashboard').then(m => ({ default: m.ModerationDashboard })))
 const RankedPanel = lazy(() => import('./features/ranked/RankedPanel'))
 import { RoomLobby } from './features/room/RoomLobby'
 import { MultiplayerRound } from './features/room/MultiplayerRound'
@@ -35,6 +37,7 @@ import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalytics
 import { initErrorMonitoring } from './services/errorMonitoring'
 import { processOfflineQueue, getQueueCount } from './services/offlineQueue'
 import { scoreSubmission } from './services/gemini'
+import { initPWAInstall } from './lib/pwaInstall'
 
 function LoadingFallback() {
     return (
@@ -47,6 +50,7 @@ function LoadingFallback() {
 // Module-level analytics init (safe to run once)
 registerAnalyticsProvider(ConsoleAnalyticsProvider);
 trackRetention();
+initPWAInstall();
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
@@ -228,7 +232,8 @@ function GameContent() {
                 )}
                 {gameState === 'TOURNAMENT' && <TournamentLobby onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'ASYNC_CHAINS' && <AsyncChains onBack={() => setGameState('LOBBY')} />}
-                {gameState === 'ANALYTICS' && <AnalyticsDashboard onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'ANALYTICS' && <AnalyticsView onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'MODERATION' && <ModerationDashboard onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'RANKED' && <RankedPanel onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
             </PhaseTransition>

@@ -29,6 +29,13 @@ import { getCustomImages } from '../../services/customImages';
 import { getBuiltInPacks, getCustomPacks } from '../../services/promptPacks';
 import { useTranslation } from '../../hooks/useTranslation';
 import { LanguageSelector } from '../../components/LanguageSelector';
+import { PWAInstallBanner } from '../../components/PWAInstallBanner';
+import { getPlayerRating } from '../../services/ranked';
+import { getSubRank } from '../../services/ranked';
+import { DivisionBadge } from '../ranked/DivisionBadge';
+import { SeasonalChallengeBattlePass } from '../challenge/SeasonalChallengeBattlePass';
+import { scheduleStreakReminder } from '../../services/notifications';
+import { MilestoneTimeline } from '../profile/MilestoneTimeline';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -77,6 +84,7 @@ export function Lobby() {
     const [showTour, setShowTour] = useState(false);
     const [selectedFriend, setSelectedFriend] = useState(null);
     const [showAll, setShowAll] = useState(() => localStorage.getItem('vwf_show_all_features') === 'true');
+    const [showJourney, setShowJourney] = useState(false);
     const [welcomeMsg, setWelcomeMsg] = useState(null);
 
     // Multiplayer state
@@ -128,6 +136,13 @@ export function Lobby() {
             trackEvent('referral_click', { code: refCode });
         }
     }, []);
+
+    // Schedule streak reminder on mount when streak > 0
+    useEffect(() => {
+        if (stats.currentStreak > 0) {
+            scheduleStreakReminder(stats.currentStreak);
+        }
+    }, [stats.currentStreak]);
 
     const handleInvite = () => {
         const refCode = user?.name ? generateReferralCode(user.name) : '';
@@ -262,6 +277,7 @@ export function Lobby() {
                 {showTour && <OnboardingTour onComplete={handleTourComplete} />}
                 {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
                 {selectedFriend && <FriendProfile friend={selectedFriend} onClose={() => setSelectedFriend(null)} onChallenge={() => { setSelectedFriend(null); }} />}
+            <PWAInstallBanner />
             <div className="w-full max-w-md space-y-8 glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
                 <div className="text-center">
                     {/* Welcome-back banner */}
@@ -320,6 +336,16 @@ export function Lobby() {
                     <h2 className="text-3xl font-display font-bold text-white mb-1">
                         Hi, {user.name}!
                     </h2>
+                    {(() => {
+                        const playerInfo = getPlayerRating();
+                        const sub = getSubRank(playerInfo.rating);
+                        return (
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                                <DivisionBadge tier={sub.name} size="sm" />
+                                <span className="text-white/40 text-xs">{sub.display} &middot; {playerInfo.rating} SR</span>
+                            </div>
+                        );
+                    })()}
 
                     {/* Streak Hero Display */}
                     {stats.currentStreak > 0 ? (
@@ -548,6 +574,13 @@ export function Lobby() {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* Weekly Challenge Pass */}
+                    {!showMultiplayer && (
+                        <div className="w-full mb-4">
+                            <SeasonalChallengeBattlePass />
                         </div>
                     )}
 
@@ -799,6 +832,25 @@ export function Lobby() {
                     {stats.totalRounds >= 5 && (
                         <div className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10">
                             <ScoreHistoryChart limit={30} />
+                        </div>
+                    )}
+
+                    {/* Your Journey (collapsible) */}
+                    {stats.totalRounds >= 3 && (
+                        <div className="mt-4">
+                            <button
+                                onClick={() => setShowJourney(!showJourney)}
+                                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm text-white/60"
+                                aria-expanded={showJourney}
+                            >
+                                <span className="font-semibold">Your Journey</span>
+                                <span className="text-xs">{showJourney ? '\u25B2' : '\u25BC'}</span>
+                            </button>
+                            {showJourney && (
+                                <div className="mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <MilestoneTimeline />
+                                </div>
+                            )}
                         </div>
                     )}
 

@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useToast } from '../../context/ToastContext';
-import { getBalance, getShopItems, purchaseItem, getOwnedItems, equipItem, getEquippedItems, getBattlePass, claimBattlePassReward, getBattlePassProgress } from '../../services/shop';
-import { ArrowLeft, Coins, ShoppingBag, Sparkles, Crown, Star, Check, Lock } from 'lucide-react';
+import { getBalance, getShopItems, purchaseItem, getOwnedItems, equipItem, getEquippedItems, getSeasonalBundles, getCosmeticQuests, getQuestProgress } from '../../services/shop';
+import { ArrowLeft, Coins, ShoppingBag, Sparkles, Crown, Star, Check, Lock, CreditCard, Gift, Target, Clock } from 'lucide-react';
+import { CheckoutModal } from './CheckoutModal';
+import { BattlePassPanel } from './BattlePassPanel';
 
 const CATEGORIES = ['ALL', 'AVATAR_PACKS', 'VENN_SKINS', 'SCORE_EFFECTS', 'TITLE_BADGES'];
 
@@ -28,9 +30,10 @@ export function Shop({ onBack }) {
   const [shopItems, setShopItems] = useState(() => getShopItems());
   const [ownedItemIds, setOwnedItemIds] = useState(() => new Set(getOwnedItems().map(e => e.itemId)));
   const [equippedItems, setEquippedItems] = useState(() => getEquippedItems());
-  const [battlePass, setBattlePass] = useState(() => getBattlePass());
-  const [battlePassProgress, setBattlePassProgress] = useState(() => getBattlePassProgress());
   const [purchasingId, setPurchasingId] = useState(null);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const seasonalBundle = useMemo(() => getSeasonalBundles(), []);
+  const quests = useMemo(() => getCosmeticQuests(), []);
 
   const filteredItems = useMemo(() => {
     if (activeCategory === 'ALL') return shopItems;
@@ -73,21 +76,6 @@ export function Shop({ onBack }) {
     [toast]
   );
 
-  const handleClaimReward = useCallback(
-    (tier) => {
-      const result = claimBattlePassReward(tier);
-      if (result.success) {
-        setBattlePass(getBattlePass());
-        setBattlePassProgress(getBattlePassProgress());
-        setBalance(getBalance());
-        toast.success(`Claimed tier ${tier} reward!`);
-      } else {
-        toast.error(result.error || 'Claim failed');
-      }
-    },
-    [toast]
-  );
-
   const isEquipped = useCallback(
     (itemId) => Object.values(equippedItems).includes(itemId),
     [equippedItems]
@@ -106,11 +94,20 @@ export function Shop({ onBack }) {
             <span className="text-sm font-medium">Back to Lobby</span>
           </button>
 
-          <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 py-2">
-            <Coins size={20} className="text-yellow-400" />
-            <span className="text-yellow-300 font-bold text-lg">
-              {balance.toLocaleString()}
-            </span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 py-2">
+              <Coins size={20} className="text-yellow-400" />
+              <span className="text-yellow-300 font-bold text-lg">
+                {balance.toLocaleString()}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowCheckout(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-sm font-semibold transition-all shadow-md"
+            >
+              <CreditCard size={16} />
+              Buy Coins
+            </button>
           </div>
         </div>
 
@@ -256,90 +253,125 @@ export function Shop({ onBack }) {
         </div>
 
         {/* Battle Pass Section */}
-        {battlePass && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md p-5 mb-8">
+        <BattlePassPanel
+          onBalanceChange={setBalance}
+          toast={toast}
+        />
+
+        {/* Seasonal Bundle Section */}
+        {seasonalBundle && (
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-purple-500/5 backdrop-blur-md p-5 mb-8">
             <div className="flex items-center gap-2 mb-4">
-              <Crown size={22} className="text-yellow-400" />
-              <h2 className="text-lg font-bold bg-gradient-to-r from-yellow-200 to-orange-300 bg-clip-text text-transparent">
-                Battle Pass
+              <Gift size={22} className="text-pink-400" />
+              <h2 className="text-lg font-bold bg-gradient-to-r from-pink-300 to-purple-300 bg-clip-text text-transparent">
+                {seasonalBundle.name}
               </h2>
-              {battlePass.season && (
-                <span className="text-xs text-gray-500 ml-auto">
-                  Season {battlePass.season}
-                </span>
-              )}
-            </div>
-
-            {/* Progress Bar */}
-            <div className="mb-4">
-              <div className="flex justify-between text-xs text-gray-400 mb-1.5">
-                <span>
-                  Tier {battlePassProgress?.currentTier ?? 0} / 30
-                </span>
-                <span>
-                  {battlePassProgress?.xp ?? 0} XP
-                </span>
-              </div>
-              <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${Math.min(((battlePassProgress?.currentTier ?? 0) / 30) * 100, 100)}%`,
-                  }}
-                />
+              <div className="ml-auto flex items-center gap-1.5 text-xs text-orange-300 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-full">
+                <Clock size={12} />
+                {seasonalBundle.expiresIn} days left
               </div>
             </div>
 
-            {/* Tier Rewards */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {(battlePass.tiers ?? []).map((tier) => {
-                const reached =
-                  (battlePassProgress?.currentTier ?? 0) >= tier.tier;
-                const claimed = (battlePass.claimedFree ?? []).includes(tier.tier);
-                const reward = tier.freeReward;
-                const rewardIcon = reward?.type === 'coins' ? '🪙' : '🎁';
-                const rewardName = reward?.type === 'coins' ? `${reward.amount} coins` : (reward?.itemId || 'Reward');
-
-                return (
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex gap-2">
+                {seasonalBundle.items.map((item) => (
                   <div
-                    key={tier.tier}
-                    className={`flex-shrink-0 w-20 rounded-xl border text-center p-2 transition-all ${
-                      claimed
-                        ? 'border-green-500/30 bg-green-500/10'
-                        : reached
-                        ? 'border-yellow-500/40 bg-yellow-500/10'
-                        : 'border-white/5 bg-white/5 opacity-50'
-                    }`}
+                    key={item}
+                    className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center"
                   >
-                    <div className="text-[10px] text-gray-400 mb-1">
-                      Tier {tier.tier}
-                    </div>
-                    <div className="text-xl mb-1">{rewardIcon}</div>
-                    <div className="text-[10px] text-gray-300 truncate mb-2">
-                      {rewardName}
-                    </div>
-                    {claimed ? (
-                      <span className="text-[10px] text-green-400 font-medium">
-                        Claimed
-                      </span>
-                    ) : reached ? (
-                      <button
-                        onClick={() => handleClaimReward(tier.tier)}
-                        className="w-full text-[10px] font-bold py-1 rounded-lg bg-gradient-to-r from-yellow-500 to-orange-500 text-black hover:from-yellow-400 hover:to-orange-400 transition-all"
-                      >
-                        Claim
-                      </button>
-                    ) : (
-                      <span className="flex items-center justify-center text-[10px] text-gray-600">
-                        <Lock size={10} className="mr-0.5" />
-                        Locked
-                      </span>
-                    )}
+                    <Sparkles size={20} className="text-purple-400/60" />
                   </div>
-                );
-              })}
+                ))}
+              </div>
+              <div className="flex-1 text-right">
+                <div className="text-sm text-gray-500 line-through">
+                  {seasonalBundle.originalPrice} coins
+                </div>
+                <div className="flex items-center justify-end gap-1">
+                  <Coins size={16} className="text-yellow-400" />
+                  <span className="text-xl font-bold text-yellow-300">
+                    {seasonalBundle.price}
+                  </span>
+                </div>
+                <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white">
+                  20% Off
+                </span>
+              </div>
             </div>
+
+            <button
+              disabled={balance < seasonalBundle.price}
+              className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${
+                balance >= seasonalBundle.price
+                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white shadow-md'
+                  : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {balance >= seasonalBundle.price ? 'Buy Bundle' : 'Insufficient Coins'}
+            </button>
           </div>
+        )}
+
+        {/* Weekly Quests Section */}
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md p-5 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Target size={22} className="text-green-400" />
+            <h2 className="text-lg font-bold bg-gradient-to-r from-green-300 to-emerald-300 bg-clip-text text-transparent">
+              Weekly Quests
+            </h2>
+          </div>
+
+          <div className="space-y-3">
+            {quests.map((quest) => {
+              const progress = getQuestProgress(quest.id);
+              const pct = Math.min((progress.current / quest.target) * 100, 100);
+              return (
+                <div
+                  key={quest.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                    progress.completed
+                      ? 'border-green-500/30 bg-green-500/10'
+                      : 'border-white/5 bg-white/5'
+                  }`}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-white">
+                        {quest.name}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-yellow-300">
+                        <Coins size={12} className="text-yellow-400" />
+                        {quest.reward}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          progress.completed
+                            ? 'bg-green-500'
+                            : 'bg-gradient-to-r from-green-500 to-emerald-400'
+                        }`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">
+                      {progress.current} / {quest.target}
+                      {progress.completed && (
+                        <span className="ml-2 text-green-400 font-medium">
+                          Completed!
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Checkout Modal */}
+        {showCheckout && (
+          <CheckoutModal onClose={() => setShowCheckout(false)} />
         )}
       </div>
     </div>

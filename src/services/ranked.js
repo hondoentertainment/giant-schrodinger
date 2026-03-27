@@ -117,6 +117,16 @@ export function getRankTier(rating) {
   return { ...result };
 }
 
+export function getSubRank(rating) {
+  const tier = getRankTier(rating);
+  const tierStart = tier.minRating;
+  const nextTier = TIERS.find(t => t.tier === tier.tier + 1);
+  const tierRange = (nextTier ? nextTier.minRating : 3000) - tierStart;
+  const progress = rating - tierStart;
+  const subRank = Math.min(4, Math.floor((progress / tierRange) * 4) + 1);
+  return { ...tier, subRank, display: `${tier.name} ${['I','II','III','IV'][subRank-1]}` };
+}
+
 export function getPlayerRating() {
   const data = ensureData();
   const tierInfo = getRankTier(data.rating);

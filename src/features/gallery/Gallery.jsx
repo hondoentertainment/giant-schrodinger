@@ -5,6 +5,7 @@ import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgement } from '../../services/judgements';
 import { upvote, downvote, getVotes, getAllVotes, getVoteDirection } from '../../services/votes';
 import { getHighlights, getWeeklyHighlights } from '../../services/highlights';
+import { flagContent } from '../../services/moderation';
 import { getScoreBand } from '../../lib/scoreBands';
 
 const MOCK_COMMUNITY = [
@@ -154,8 +155,17 @@ function LazyImage({ collision, displayJudgement }) {
                         <div className="text-white/60 text-sm">{new Date(collision.timestamp).toLocaleDateString()}</div>
                         <div className="text-yellow-400 font-bold">{collision.score}/10</div>
                     </div>
-                    {/* Voting */}
-                    <VoteButtons collisionId={collision.id} />
+                    {/* Voting & Report */}
+                    <div className="flex items-center justify-between">
+                        <VoteButtons collisionId={collision.id} />
+                        <button
+                            onClick={(e) => { e.stopPropagation(); flagContent(collision.id, 'inappropriate'); }}
+                            className="text-white/30 hover:text-red-400 text-xs"
+                            aria-label="Report this submission"
+                        >
+                            {'\u{1F6A9}'} Report
+                        </button>
+                    </div>
                     {fj && (
                         <div className="text-white/70 text-sm border-t border-white/20 pt-2 mt-2">
                             Judged by {fj.judgeName || fj.judge_name || 'a friend'}: {fj.score}/10

@@ -1,12 +1,13 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { getScoreBand } from '../../lib/scoreBands';
 import { getStats } from '../../services/stats';
 import { getPlayerRank } from '../../services/leaderboard';
 import { trackEvent } from '../../services/analytics';
-import { Trophy, Star, Zap, ArrowRight, Home } from 'lucide-react';
+import { Trophy, Star, Zap, ArrowRight, Home, Share2 } from 'lucide-react';
 import SocialShareButtons from '../../components/SocialShareButtons';
+import { generateStoryImage } from '../../lib/storyImage';
 
 function RoundCard({ result, index }) {
     const mod = result.modifier;
@@ -43,6 +44,52 @@ function RoundCard({ result, index }) {
                 {score}
             </div>
         </div>
+    );
+}
+
+function StoryShareButton({ score, sessionResults, playerName }) {
+    const [generating, setGenerating] = useState(false);
+
+    const handleShare = async () => {
+        setGenerating(true);
+        try {
+            const best = sessionResults.reduce((a, b) => (a.score || 0) > (b.score || 0) ? a : b, sessionResults[0]);
+            const conceptLeft = best.conceptLeft || 'Concept A';
+            const conceptRight = best.conceptRight || 'Concept B';
+            const submission = best.submission || 'My best answer';
+            const dataUrl = await generateStoryImage(score, conceptLeft, conceptRight, submission, playerName);
+
+            // Try Web Share API first, fall back to download
+            if (navigator.share && navigator.canShare) {
+                const blob = await (await fetch(dataUrl)).blob();
+                const file = new File([blob], 'venn-story.png', { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: 'Venn with Friends', text: `I scored ${score}/10!` });
+                    return;
+                }
+            }
+
+            // Fallback: download
+            const link = document.createElement('a');
+            link.download = 'venn-story.png';
+            link.href = dataUrl;
+            link.click();
+        } catch {
+            // Ignore share cancellation
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    return (
+        <button
+            onClick={handleShare}
+            disabled={generating}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 hover:text-purple-200 hover:border-purple-500/50 transition-all text-sm font-semibold disabled:opacity-50"
+        >
+            <Share2 className="w-4 h-4" />
+            {generating ? 'Generating...' : 'Share to Stories'}
+        </button>
     );
 }
 
@@ -219,6 +266,17 @@ export function SessionSummary() {
                             onToast={(type, msg) => toast[type]?.(msg)}
                         />
                     </div>
+
+                    {/* Share to Stories */}
+                    {sessionResults.length > 0 && (
+                        <div className="mb-8 flex justify-center">
+                            <StoryShareButton
+                                score={Math.round(stats.avg)}
+                                sessionResults={sessionResults}
+                                playerName={user?.name || 'Anonymous'}
+                            />
+                        </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex flex-col gap-3">

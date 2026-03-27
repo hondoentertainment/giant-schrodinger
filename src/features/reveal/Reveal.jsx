@@ -24,6 +24,7 @@ import Confetti from '../../components/Confetti';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
+import { ContextualTip } from '../../components/ContextualTip';
 
 export function Reveal({ submission, assets }) {
     const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, sessionResults, isDailyChallenge } = useGame();
@@ -785,6 +786,11 @@ export function Reveal({ submission, assets }) {
                             <div className="text-white/60 text-sm">2x points applied to your final round.</div>
                         </div>
                     )}
+
+                    {/* Contextual tip */}
+                    <div className="mb-4">
+                        <ContextualTip context="reveal" totalRounds={getStats().totalRounds} />
+                    </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <div>

@@ -121,6 +121,43 @@ export function checkReferralReward() {
 }
 
 /**
+ * Track a referral conversion with cohort data.
+ * Records rounds played and retention flags (d1, d7).
+ * @param {string} referralCode - The referral code to track
+ */
+export function trackReferralConversion(referralCode) {
+    try {
+        if (!referralCode || typeof referralCode !== 'string') return;
+        const cohorts = JSON.parse(localStorage.getItem('venn_referral_cohorts') || '{}');
+        if (!cohorts[referralCode]) {
+            cohorts[referralCode] = { firstSeen: Date.now(), rounds: 0, d1: false, d7: false };
+        }
+        cohorts[referralCode].rounds++;
+        cohorts[referralCode].lastSeen = Date.now();
+
+        const daysSinceFirst = (Date.now() - cohorts[referralCode].firstSeen) / 86400000;
+        if (daysSinceFirst >= 1) cohorts[referralCode].d1 = true;
+        if (daysSinceFirst >= 7) cohorts[referralCode].d7 = true;
+
+        localStorage.setItem('venn_referral_cohorts', JSON.stringify(cohorts));
+    } catch (error) {
+        console.warn('Failed to track referral conversion:', error);
+    }
+}
+
+/**
+ * Returns all referral cohort data.
+ * @returns {Object} Map of referralCode -> { firstSeen, rounds, d1, d7, lastSeen }
+ */
+export function getReferralCohorts() {
+    try {
+        return JSON.parse(localStorage.getItem('venn_referral_cohorts')) || {};
+    } catch {
+        return {};
+    }
+}
+
+/**
  * Checks the current URL query params for a referral code (?ref=CODE).
  * @returns {string|null} The referral code, or null if not present
  */
