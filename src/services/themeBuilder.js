@@ -143,3 +143,41 @@ export function getFeaturedThemes() {
     .sort((a, b) => (b.playCount || 0) - (a.playCount || 0))
     .slice(0, 10);
 }
+
+// ── Theme Sharing via encoded links ──
+
+export function exportThemeAsLink(theme) {
+  const payload = {
+    name: theme.name,
+    colors: theme.colors,
+    gradient: theme.gradient,
+    images: (theme.assets || []).map(a => ({ label: a.label, url: a.url })),
+    createdAt: Date.now(),
+  };
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  return `${window.location.origin}${window.location.pathname}#theme_${encoded}`;
+}
+
+export function importThemeFromLink(hash) {
+  if (!hash?.startsWith('theme_')) return null;
+  try {
+    const json = decodeURIComponent(escape(atob(hash.slice(6))));
+    const theme = JSON.parse(json);
+    if (!theme.name || !theme.images) return null;
+    return theme;
+  } catch {
+    return null;
+  }
+}
+
+export function getSharedThemes() {
+  try {
+    return JSON.parse(localStorage.getItem('venn_shared_themes') || '[]');
+  } catch { return []; }
+}
+
+export function saveSharedTheme(theme) {
+  const themes = getSharedThemes();
+  themes.push({ ...theme, id: `shared-${Date.now()}`, playCount: 0 });
+  localStorage.setItem('venn_shared_themes', JSON.stringify(themes.slice(-20)));
+}

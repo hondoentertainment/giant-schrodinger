@@ -7,14 +7,20 @@ import { getStats, isThemeUnlocked } from '../../services/stats';
 import { getAIDifficulty, getDifficultyConfig } from '../../services/aiFeatures';
 import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
+import { useRoundTimer } from '../../hooks/useRoundTimer';
+import { validateSubmission } from '../../lib/validation';
+import { ContextualTip } from '../../components/ContextualTip';
 
 export function Round({ onSubmit }) {
-    const { setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge } = useGame();
+    const {
+        setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge,
+        trackUsedAssets, getUsedAssetIds,
+    } = useGame();
     const [assets, setAssets] = useState({ left: null, right: null });
     const [submission, setSubmission] = useState('');
-    const [timer, setTimer] = useState(60);
     const [showTimeUp, setShowTimeUp] = useState(false);
     const [shakeInput, setShakeInput] = useState(false);
+    const [showQuitConfirm, setShowQuitConfirm] = useState(false);
     const submittedRef = useRef(false);
     const stats = getStats();
     const rawTheme = getThemeById(user?.themeId);
@@ -25,17 +31,45 @@ export function Round({ onSubmit }) {
     const difficultyConfig = getDifficultyConfig(getAIDifficulty());
     const timeLimit = Math.round(baseTimeLimit * (currentModifier?.timeFactor || 1)) + (difficultyConfig.timeBonus || 0);
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
-    const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
+    const rawMediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const mod = currentModifier;
 
+    const handleTimeUp = useCallback(() => {
+        setShowTimeUp(true);
+    }, []);
+
+    const { displayTime, roundPhase, countdown, reset: resetTimer } = useRoundTimer({
+        timeLimit,
+        onTimeUp: handleTimeUp,
+        enabled: true,
+    });
+
+    // Resolve 'mixed' to a concrete media type per round
+    const [resolvedMediaType, setResolvedMediaType] = useState(rawMediaType);
+    useEffect(() => {
+        if (rawMediaType === 'mixed') {
+            const types = [MEDIA_TYPES.IMAGE, MEDIA_TYPES.VIDEO, MEDIA_TYPES.AUDIO];
+            setResolvedMediaType(types[Math.floor(Math.random() * types.length)]);
+        } else {
+            setResolvedMediaType(rawMediaType);
+        }
+    }, [rawMediaType, roundNumber]);
+
+    const mediaType = resolvedMediaType;
+
+    // Asset selection: build assets, filter out used ones, track new ones
     useEffect(() => {
         submittedRef.current = false;
+        resetTimer();
         let left, right;
+        const usedIds = getUsedAssetIds ? getUsedAssetIds() : [];
         const customPool = getCustomImages();
         const useCustom = mediaType === MEDIA_TYPES.IMAGE && user?.useCustomImages && customPool.length >= 2;
         if (useCustom) {
-            const shuffled = [...customPool].sort(() => Math.random() - 0.5);
-            [left, right] = shuffled.slice(0, 2).map((img, i) => ({
+            const available = customPool.filter((img) => !usedIds.includes(img.id));
+            const pool = available.length >= 2 ? available : customPool;
+            const shuffled = [...pool].sort(() => Math.random() - 0.5);
+            [left, right] = shuffled.slice(0, 2).map((img) => ({
                 id: img.id,
                 label: img.label,
                 type: MEDIA_TYPES.IMAGE,
@@ -43,7 +77,16 @@ export function Round({ onSubmit }) {
                 fallbackUrl: img.url,
             }));
         } else {
-            [left, right] = buildThemeAssets(theme, 2, mediaType);
+            // Build more assets than needed so we can filter out used ones
+            const candidates = buildThemeAssets(theme, Math.max(6, usedIds.length + 4), mediaType);
+            const filtered = candidates.filter((a) => !usedIds.includes(a.id));
+            // If filtering leaves fewer than 2, fall back to unfiltered
+            const pool = filtered.length >= 2 ? filtered : candidates;
+            [left, right] = pool.slice(0, 2);
+        }
+        // Track newly selected assets
+        if (trackUsedAssets) {
+            trackUsedAssets([left, right]);
         }
         [left, right].forEach((a) => {
             if (!a?.url) return;
@@ -65,8 +108,7 @@ export function Round({ onSubmit }) {
             }
         });
         setAssets({ left, right });
-        setTimer(timeLimit);
-    }, [user?.themeId, user?.useCustomImages, timeLimit, mediaType, roundNumber]);
+    }, [user?.themeId, user?.useCustomImages, timeLimit, mediaType, roundNumber, resetTimer]);
 
     const handleSubmit = useCallback((e, { forceEmpty = false } = {}) => {
         if (e) e.preventDefault();
@@ -80,6 +122,17 @@ export function Round({ onSubmit }) {
             return;
         }
 
+        // Validate the submission text
+        if (!forceEmpty) {
+            const result = validateSubmission(submission);
+            if (!result.valid) {
+                haptic('warning');
+                setShakeInput(true);
+                setTimeout(() => setShakeInput(false), TIMINGS.SHAKE_ANIMATION);
+                return;
+            }
+        }
+
         submittedRef.current = true;
         haptic('success');
 
@@ -89,15 +142,7 @@ export function Round({ onSubmit }) {
         }
     }, [submission, assets, mod, onSubmit, setGameState]);
 
-    useEffect(() => {
-        if (timer > 0) {
-            const interval = setInterval(() => setTimer(t => t - 1), TIMINGS.TIMER_TICK);
-            return () => clearInterval(interval);
-        } else if (!submittedRef.current && !showTimeUp) {
-            setShowTimeUp(true);
-        }
-    }, [timer, showTimeUp]);
-
+    // Task 3: Faster auto-submit (400ms instead of 900ms)
     useEffect(() => {
         if (!showTimeUp || submittedRef.current) return;
         const t = setTimeout(() => {
@@ -105,7 +150,7 @@ export function Round({ onSubmit }) {
                 handleSubmit(null, { forceEmpty: true });
             }
             setShowTimeUp(false);
-        }, TIMINGS.TIME_UP_REVEAL);
+        }, 400);
         return () => clearTimeout(t);
     }, [showTimeUp, handleSubmit]);
 
@@ -129,6 +174,30 @@ export function Round({ onSubmit }) {
 
     return (
         <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-700 px-4">
+            {/* Task 5: Get Ready countdown overlay */}
+            {roundPhase === 'ready' && (
+                <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+                    {/* Concept preview labels */}
+                    <div className="flex items-center gap-4 mb-8">
+                        <span className="text-white/80 text-lg">{assets?.left?.label}</span>
+                        <span className="text-white/40">&times;</span>
+                        <span className="text-white/80 text-lg">{assets?.right?.label}</span>
+                    </div>
+                    {/* Task 6: Modifier badge preview during countdown */}
+                    {mod && mod.id !== 'normal' && (
+                        <div className="mb-4 px-4 py-2 rounded-full bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-sm font-bold">
+                            {mod.id === 'speed' && 'SPEED ROUND — Half time, 1.5x points!'}
+                            {mod.id === 'doubleOrNothing' && 'DOUBLE OR NOTHING — Score 7+ to keep your points!'}
+                            {mod.id === 'showdown' && 'FINAL SHOWDOWN — 2x points, reduced time!'}
+                        </div>
+                    )}
+                    {/* Countdown number */}
+                    <div className="text-8xl font-bold text-white animate-pulse">
+                        {countdown > 0 ? countdown : 'GO!'}
+                    </div>
+                </div>
+            )}
+
             {/* Round modifier banner */}
             {isSpecialRound && (
                 <div className={`w-full max-w-md mb-3 animate-in slide-in-from-top-4 duration-500 ${
@@ -147,16 +216,13 @@ export function Round({ onSubmit }) {
             {/* Header row - round info + timer */}
             <div className="w-full flex justify-between items-center mb-2">
                 <div className="flex items-center gap-3">
+                    {/* Task 4: Quit confirmation */}
                     <button
-                        onClick={() => {
-                            if (window.confirm('Quit this round? You\'ll return to the lobby.')) {
-                                setGameState('LOBBY');
-                            }
-                        }}
-                        className="text-white/30 hover:text-white/60 transition-colors text-xs"
+                        onClick={() => setShowQuitConfirm(true)}
+                        className="text-white/30 hover:text-white/60 transition-colors text-xs min-w-[44px] min-h-[44px] p-2.5"
                         aria-label="Quit round"
                     >
-                        ← Quit
+                        &larr; Quit
                     </button>
                     <div className="text-lg sm:text-xl font-bold text-white/40 tracking-wide">
                         {isDailyChallenge ? 'DAILY' : 'ROUND'} {roundNumber} / {totalRounds}
@@ -167,8 +233,8 @@ export function Round({ onSubmit }) {
                         Time&apos;s up!
                     </div>
                 ) : (
-                    <div className={`text-2xl sm:text-3xl font-black font-display tabular-nums ${timer < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`} aria-live="assertive" aria-atomic="true" role="timer">
-                        {timer}s
+                    <div className={`text-2xl sm:text-3xl font-black font-display tabular-nums ${displayTime < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`} aria-live="assertive" aria-atomic="true" role="timer">
+                        {displayTime > 0 ? `${displayTime}s` : ''}
                     </div>
                 )}
             </div>
@@ -220,6 +286,7 @@ export function Round({ onSubmit }) {
                         className={`w-full bg-black/40 backdrop-blur-xl border-2 rounded-full px-5 sm:px-8 py-4 sm:py-5 text-lg sm:text-xl text-center text-white placeholder-white/20 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-2xl ${
                             shakeInput ? 'border-red-500/60 animate-[shake_0.5s_ease-in-out]' : 'border-white/20'
                         }`}
+                        autoComplete="off"
                         autoFocus
                         maxLength={200}
                     />
@@ -239,6 +306,37 @@ export function Round({ onSubmit }) {
                     </div>
                 </div>
             </form>
+
+            {/* Contextual tip */}
+            <div className="w-full max-w-md mt-3">
+                <ContextualTip context="round" totalRounds={stats.totalRounds} />
+            </div>
+
+            {/* Task 4: Quit confirmation modal */}
+            {showQuitConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                    <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-sm mx-4 text-center">
+                        <h3 className="text-xl font-bold text-white mb-2">Quit Session?</h3>
+                        <p className="text-white/60 mb-6">
+                            You&apos;ll lose progress on rounds {roundNumber}&ndash;{totalRounds}.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowQuitConfirm(false)}
+                                className="flex-1 py-3 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20 transition"
+                            >
+                                Keep Playing
+                            </button>
+                            <button
+                                onClick={() => { setShowQuitConfirm(false); setGameState('LOBBY'); }}
+                                className="flex-1 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+                            >
+                                Quit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

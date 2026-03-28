@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { TIMINGS } from '../lib/timings';
 import {
     shareToTwitter,
     shareToFacebook,
@@ -7,6 +6,7 @@ import {
     copyShareLink,
     downloadFusionImage,
     shareViaWebShare,
+    generateShareText,
 } from '../services/socialShare';
 
 const ICON_SIZE = 20;
@@ -98,7 +98,7 @@ export default function SocialShareButtons({ shareData, imageUrl, onToast }) {
         if (result.success) {
             setCopied(true);
             onToast?.('success', result.message);
-            setTimeout(() => setCopied(false), TIMINGS.TOAST_DISMISS);
+            setTimeout(() => setCopied(false), 2500);
         }
     };
 

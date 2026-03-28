@@ -59,10 +59,15 @@ vi.mock('../../services/storage', () => ({
 
 vi.mock('../../services/stats', () => ({
     recordPlay: vi.fn(() => ({ newlyUnlocked: [] })),
+    getStats: vi.fn(() => ({ currentStreak: 0, totalRounds: 0 })),
+}));
+
+vi.mock('../../services/offlineQueue', () => ({
+    addToOfflineQueue: vi.fn(),
 }));
 
 vi.mock('../../services/share', () => ({
-    createJudgeShareUrl: vi.fn(() => 'https://example.com/judge/123'),
+    createJudgeShareUrl: vi.fn(() => Promise.resolve('https://example.com/judge/123')),
 }));
 
 vi.mock('../../services/challenges', () => ({
@@ -72,6 +77,7 @@ vi.mock('../../services/challenges', () => ({
 
 vi.mock('../../services/leaderboard', () => ({
     submitScore: vi.fn(),
+    submitSeasonalScore: vi.fn(),
     getPlayerRank: vi.fn(() => null),
 }));
 
@@ -94,6 +100,7 @@ vi.mock('../../services/aiFeatures', () => ({
 
 vi.mock('../../services/achievements', () => ({
     checkAchievements: vi.fn(),
+    getNextAchievementProgress: vi.fn(() => null),
 }));
 
 vi.mock('../../services/shop', () => ({
@@ -107,6 +114,10 @@ vi.mock('../../services/backend', () => ({
 
 vi.mock('../../data/themes', () => ({
     getThemeById: () => ({ id: 'classic', label: 'Classic', gradient: 'from-purple-500 to-pink-500', modifier: { timeLimit: 60, scoreMultiplier: 1.0 } }),
+    buildThemeAssets: () => [
+        { id: 'next1', label: 'Next1', type: 'image', url: 'https://example.com/next1.jpg' },
+        { id: 'next2', label: 'Next2', type: 'image', url: 'https://example.com/next2.jpg' },
+    ],
     MEDIA_TYPES: { IMAGE: 'image', VIDEO: 'video', AUDIO: 'audio' },
 }));
 

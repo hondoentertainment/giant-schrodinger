@@ -3,28 +3,31 @@ import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { scoreSubmission, generateFusionImage } from '../../services/gemini';
 import { saveCollision } from '../../services/storage';
-import { recordPlay } from '../../services/stats';
+import { recordPlay, getStats } from '../../services/stats';
 import { createJudgeShareUrl } from '../../services/share';
 import { createChallenge, createChallengeUrl } from '../../services/challenges';
-import { submitScore, getPlayerRank } from '../../services/leaderboard';
+import { submitScore, getPlayerRank, submitSeasonalScore } from '../../services/leaderboard';
 import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
 import { trackEvent } from '../../services/analytics';
 import { autoSaveHighlight } from '../../services/highlights';
 import { getConnectionExplanation } from '../../services/aiFeatures';
 import { ShareCardCanvas } from '../../components/ShareCardCanvas';
 import { checkAchievements } from '../../services/achievements';
+import { AchievementProgress } from '../../components/AchievementProgress';
 import { addCoins, addBattlePassXp } from '../../services/shop';
 import { saveSharedRound } from '../../services/backend';
-import { getThemeById, MEDIA_TYPES } from '../../data/themes';
+import { addToOfflineQueue } from '../../services/offlineQueue';
+import { getThemeById, buildThemeAssets, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import Confetti from '../../components/Confetti';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
+import { ContextualTip } from '../../components/ContextualTip';
 
 export function Reveal({ submission, assets }) {
-    const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound } = useGame();
+    const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, sessionResults, isDailyChallenge } = useGame();
     const { toast } = useToast();
     const [result, setResult] = useState(null);
     const [fusionImage, setFusionImage] = useState(null);
@@ -39,10 +42,19 @@ export function Reveal({ submission, assets }) {
     const [processError, setProcessError] = useState(null);
     const [retryTrigger, setRetryTrigger] = useState(0);
     const [showConfetti, setShowConfetti] = useState(false);
+    const [showComeback, setShowComeback] = useState(false);
+    const [comebackData, setComebackData] = useState(null);
     const [playerRank, setPlayerRank] = useState(null);
     const [animatedScore, setAnimatedScore] = useState(0);
+    const [shaking, setShaking] = useState(false);
+    const [rolling, setRolling] = useState(false);
+    const [scoringError, setScoringError] = useState(null);
+    const [retrying, setRetrying] = useState(false);
+    const [announceScore, setAnnounceScore] = useState('');
+    const [scoreAnimationDone, setScoreAnimationDone] = useState(false);
     const savedRef = useRef(false);
     const soundPlayedRef = useRef(false);
+    const comebackCheckedRef = useRef(false);
     const scoringMode = user?.scoringMode || 'human';
     const theme = getThemeById(user?.themeId);
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
@@ -63,27 +75,81 @@ export function Reveal({ submission, assets }) {
         return collision;
     };
 
-    // Animate score counting up - slower for dramatic effect
+    // Animate score rolling up from 0 with requestAnimationFrame
     useEffect(() => {
         if (!result) return;
         const finalScore = result.finalScore || result.score;
         if (!finalScore) return;
-        let frame = 0;
-        const totalFrames = 30;
-        const interval = setInterval(() => {
-            frame++;
-            // Ease-out curve for satisfying deceleration
-            const progress = 1 - Math.pow(1 - frame / totalFrames, 3);
-            const current = finalScore * progress;
-            if (frame >= totalFrames) {
-                setAnimatedScore(finalScore);
-                clearInterval(interval);
+        setRolling(true);
+        const duration = 800;
+        const start = performance.now();
+        let raf;
+
+        function animate(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+            setAnimatedScore(Math.round(eased * finalScore * 10) / 10);
+
+            if (progress < 1) {
+                raf = requestAnimationFrame(animate);
             } else {
-                setAnimatedScore(Math.round(current * 10) / 10);
+                setAnimatedScore(finalScore);
+                setRolling(false);
+                setScoreAnimationDone(true);
+                // Trigger screen shake on perfect 10
+                if (finalScore >= 10) {
+                    setShaking(true);
+                    setTimeout(() => setShaking(false), 400);
+                }
             }
-        }, 50);
-        return () => clearInterval(interval);
+        }
+        raf = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(raf);
     }, [result]);
+
+    // Reset comeback check when round changes so it can trigger each round
+    useEffect(() => {
+        comebackCheckedRef.current = false;
+    }, [roundNumber]);
+
+    // Detect comeback: current score >= 9 AND previous round score < 4
+    useEffect(() => {
+        if (!result || comebackCheckedRef.current) return;
+        comebackCheckedRef.current = true;
+        const currentScore = result.finalScore || result.score;
+        if (currentScore >= 9 && sessionResults && sessionResults.length > 0) {
+            const prevScore = sessionResults[sessionResults.length - 1]?.score;
+            if (prevScore != null && prevScore < 4) {
+                setComebackData({ prevScore, currentScore });
+                setShowComeback(true);
+                playConfettiSound();
+                setShowConfetti(true);
+            }
+        }
+    }, [result, sessionResults]);
+
+    // Auto-dismiss comeback overlay after 2 seconds
+    useEffect(() => {
+        if (!showComeback) return;
+        const timer = setTimeout(() => setShowComeback(false), 2000);
+        return () => clearTimeout(timer);
+    }, [showComeback]);
+
+    // Screen reader score announcement
+    useEffect(() => {
+        if (result && scoreAnimationDone) {
+            const score = result.finalScore || result.score;
+            const breakdown = result.breakdown;
+            let announcement = `Your score is ${score} out of 10.`;
+            if (breakdown) {
+                announcement += ` Wit: ${breakdown.wit}. Logic: ${breakdown.logic}. Originality: ${breakdown.originality}. Clarity: ${breakdown.clarity}.`;
+            }
+            if (score >= 9) announcement += ' Amazing connection!';
+            else if (score >= 7) announcement += ' Great work!';
+            setAnnounceScore(announcement);
+        }
+    }, [result, scoreAnimationDone]);
 
     // Play sound and confetti after score animation completes
     useEffect(() => {
@@ -98,14 +164,32 @@ export function Reveal({ submission, assets }) {
                 playConfettiSound();
             }
         }, 1400);
-        // Submit to leaderboard
+        // Submit to leaderboard (tracks best single-round score, not session averages)
         if (user?.name) {
             submitScore(user.name, score, user.avatar, roundNumber);
+            submitSeasonalScore(user.name, score, user.avatar);
             const rank = getPlayerRank(user.name);
             if (rank) setPlayerRank(rank);
         }
         trackEvent('round_complete', { score, scoringMode, roundNumber });
         return () => clearTimeout(soundTimer);
+    }, [result]);
+
+    // After scoring completes, preload next round's assets
+    useEffect(() => {
+        if (!result || roundNumber >= totalRounds) return;
+
+        // Build next round's assets (same logic as Round.jsx)
+        const nextTheme = getThemeById(user?.themeId);
+        const nextAssets = buildThemeAssets(nextTheme, 2, mediaType);
+
+        // Preload each image
+        nextAssets.forEach(asset => {
+            if (asset?.url) {
+                const img = new Image();
+                img.src = asset.url;
+            }
+        });
     }, [result]);
 
     useEffect(() => {
@@ -170,6 +254,11 @@ export function Reveal({ submission, assets }) {
             } catch (err) {
                 if (mounted) {
                     console.error('Reveal processRound failed:', err);
+                    setScoringError({
+                        message: 'Scoring failed — your submission is saved locally',
+                        errorId: `err-${Date.now().toString(36)}`,
+                    });
+                    addToOfflineQueue({ submission, assets, mediaType });
                     setProcessError(err?.message || 'Something went wrong');
                 }
             }
@@ -208,14 +297,7 @@ export function Reveal({ submission, assets }) {
             shareFrom: user?.name || 'A friend',
             collisionId: savedCollision.id,
         };
-        const backendId = await saveSharedRound(roundPayload);
-        if (!backendId) {
-            toast.warn('Backend unavailable — sharing via link encoding');
-        }
-        const payload = backendId
-            ? { backendId, ...roundPayload }
-            : { roundId: savedCollision.id, ...roundPayload };
-        const url = createJudgeShareUrl(payload);
+        const url = await createJudgeShareUrl(roundPayload);
         if (url && navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(url);
             haptic('success');
@@ -395,21 +477,95 @@ export function Reveal({ submission, assets }) {
 
     const scoreBand = result && getScoreBand(result.finalScore || result.score);
     const finalScoreDisplay = result.finalScore || result.score;
+    const stats = getStats();
 
     return (
-        <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
-            <Confetti active={showConfetti} duration={4000} particleCount={60} />
+        <div className={`w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700 ${shaking ? 'screen-shake' : ''}`}>
+            {showComeback && comebackData && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 animate-in zoom-in-95 duration-500">
+                    <div className="text-7xl mb-4 animate-bounce">&#x1F525;</div>
+                    <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 mb-2">
+                        COMEBACK KID!
+                    </h2>
+                    <p className="text-white/60 text-lg">
+                        From {comebackData.prevScore}/10 &rarr; {comebackData.currentScore}/10
+                    </p>
+                </div>
+            )}
+            <Confetti active={showConfetti} duration={4000} particleCount={comebackData ? 120 : 60} />
             {newlyUnlocked.length > 0 && (
                 <MilestoneCelebration
                     newlyUnlocked={newlyUnlocked}
                     onDismiss={() => setNewlyUnlocked([])}
                 />
             )}
+
+            {/* Screen reader score announcement */}
+            <div className="sr-only" role="status" aria-live="assertive" aria-atomic="true">
+                {announceScore}
+            </div>
+
+            {/* Screen reader achievement announcement */}
+            {newlyUnlocked?.length > 0 && (
+                <div className="sr-only" role="alert">
+                    Achievement unlocked: {newlyUnlocked.map(a => a.name || a.label || a.id).join(', ')}
+                </div>
+            )}
+
             <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl">
                 <div className="glass-panel rounded-[22px] p-4 sm:p-8 text-center max-w-2xl">
                     <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 sm:mb-6 border border-white/10">
                         YOUR SCORE
                     </div>
+
+                    {/* Error state with retry */}
+                    {scoringError && (
+                        <div className="w-full max-w-md p-4 rounded-2xl bg-red-500/10 border border-red-500/20 mb-4">
+                            <div className="text-red-300 font-semibold mb-1">{scoringError.message}</div>
+                            <div className="text-white/40 text-xs mb-3">Error ID: {scoringError.errorId}</div>
+                            <button
+                                onClick={async () => {
+                                    setRetrying(true);
+                                    setScoringError(null);
+                                    try {
+                                        const retryResult = await scoreSubmission(submission, assets.left, assets.right, mediaType);
+                                        const finalScore = Math.min(10, Math.max(1, Math.round(retryResult.score * scoreMultiplier)));
+                                        const resultPayload = {
+                                            ...retryResult,
+                                            finalScore,
+                                            scoreMultiplier,
+                                        };
+                                        setResult(resultPayload);
+                                        setProcessError(null);
+                                        if (!savedRef.current) {
+                                            finalizeCollision({
+                                                submission,
+                                                imageUrl: fusionImage?.url,
+                                                fallbackImageUrl: fusionImage?.fallbackUrl,
+                                                score: finalScore,
+                                                baseScore: retryResult.score,
+                                                breakdown: retryResult.breakdown,
+                                                commentary: retryResult.commentary,
+                                                themeId: theme?.id,
+                                                scoringMode,
+                                                roundNumber,
+                                                totalRounds,
+                                                scoreMultiplier,
+                                            }, finalScore);
+                                        }
+                                        completeRound({ score: finalScore, baseScore: retryResult.score, breakdown: retryResult.breakdown });
+                                    } catch {
+                                        setScoringError({ message: 'Still unable to score. Using offline mode.', errorId: scoringError.errorId });
+                                    }
+                                    setRetrying(false);
+                                }}
+                                disabled={retrying}
+                                className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 text-sm font-semibold hover:bg-red-500/30 transition"
+                            >
+                                {retrying ? 'Retrying...' : 'Retry Scoring'}
+                            </button>
+                        </div>
+                    )}
 
                     <div className="relative aspect-[4/3] sm:aspect-square w-full max-w-xs sm:max-w-sm mx-auto rounded-2xl overflow-hidden mb-6 sm:mb-8 shadow-2xl ring-1 ring-white/20">
                         <img
@@ -447,6 +603,13 @@ export function Reveal({ submission, assets }) {
                             </div>
                         </div>
                     </div>
+
+                    {/* Achievement progress */}
+                    {!rolling && (
+                        <div className="flex justify-center mb-4 animate-in fade-in duration-500">
+                            <AchievementProgress score={finalScoreDisplay} stats={user?.stats} />
+                        </div>
+                    )}
 
                     {/* Percentile rank */}
                     {playerRank && playerRank.total > 0 && (
@@ -491,6 +654,27 @@ export function Reveal({ submission, assets }) {
                             <p className="text-white/70 text-sm leading-relaxed">
                                 {getConnectionExplanation(submission, result.finalScore || result.score, assets.left.label, assets.right.label)}
                             </p>
+                        </div>
+                    )}
+
+                    {/* Score coaching tips */}
+                    {result?.breakdown && (
+                        <div className="mt-3 space-y-1">
+                            {result.breakdown.wit < 4 && (
+                                <p className="text-purple-300 text-xs">Tip: Try wordplay or puns -- clever language boosts wit scores</p>
+                            )}
+                            {result.breakdown.originality < 4 && (
+                                <p className="text-purple-300 text-xs">Tip: Think sideways -- unexpected connections score higher on originality</p>
+                            )}
+                            {result.breakdown.logic < 4 && (
+                                <p className="text-purple-300 text-xs">Tip: Make the connection clearer -- the thread between concepts needs to be obvious</p>
+                            )}
+                            {result.breakdown.clarity < 4 && (
+                                <p className="text-purple-300 text-xs">Tip: Keep it simple -- one sentence, one idea scores better for clarity</p>
+                            )}
+                            {(result.score || result.finalScore) >= 8 && (
+                                <p className="text-green-300 text-xs">Great work! Your connection shows strong creative thinking</p>
+                            )}
                         </div>
                     )}
 
@@ -540,6 +724,49 @@ export function Reveal({ submission, assets }) {
                         </button>
                     )}
 
+                    {/* Post-reveal retention hooks */}
+                    {result && (
+                        <div className="w-full max-w-md mt-6 p-4 rounded-2xl bg-white/5 border border-white/10">
+                            <div className="text-white/50 text-xs uppercase tracking-wider font-bold mb-3">Keep Going</div>
+                            <div className="space-y-2">
+                                {/* Battle pass XP */}
+                                {(() => {
+                                    const xpGained = (result.finalScore || result.score || 0) * 10;
+                                    return (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <span className="text-purple-400">&#11088;</span>
+                                            <span className="text-white/70">+{xpGained} XP earned this round</span>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Streak status */}
+                                {stats?.currentStreak > 0 && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-orange-400">&#128293;</span>
+                                        <span className="text-white/70">Day {stats.currentStreak} streak — play tomorrow to keep it!</span>
+                                    </div>
+                                )}
+
+                                {/* Daily challenge prompt */}
+                                {!isDailyChallenge && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-amber-400">&#128197;</span>
+                                        <span className="text-white/70">Daily challenge available — try it for 1.5x bonus!</span>
+                                    </div>
+                                )}
+
+                                {/* Rounds remaining */}
+                                {roundNumber < totalRounds && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-cyan-400">&#127919;</span>
+                                        <span className="text-white/70">{totalRounds - roundNumber} round{totalRounds - roundNumber > 1 ? 's' : ''} left in this session</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Round modifier result */}
                     {mod && mod.id === 'doubleOrNothing' && (
                         <div className={`mb-6 p-4 rounded-2xl border text-center animate-in zoom-in-95 duration-500 ${
@@ -564,6 +791,11 @@ export function Reveal({ submission, assets }) {
                             <div className="text-white/60 text-sm">2x points applied to your final round.</div>
                         </div>
                     )}
+
+                    {/* Contextual tip */}
+                    <div className="mb-4">
+                        <ContextualTip context="reveal" totalRounds={getStats().totalRounds} />
+                    </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <div>

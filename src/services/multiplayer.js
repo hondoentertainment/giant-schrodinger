@@ -242,6 +242,29 @@ export async function updateSubmissionScore(submissionId, score) {
 }
 
 // ============================================================
+// Room state fetching (for reconnection)
+// ============================================================
+
+export async function fetchRoomState(roomCode) {
+    if (!isBackendEnabled()) return null;
+    try {
+        const { data: room, error } = await supabase
+            .from('rooms')
+            .select('*')
+            .eq('code', roomCode.toUpperCase().trim())
+            .single();
+        if (error || !room) return null;
+
+        const players = await getRoomPlayers(room.id);
+        const submissions = await getRoundSubmissions(room.id, room.round_number);
+
+        return { room, players, submissions };
+    } catch {
+        return null;
+    }
+}
+
+// ============================================================
 // Realtime subscriptions
 // ============================================================
 
@@ -280,6 +303,13 @@ export function subscribeToRoom(roomId, callbacks) {
         { event: 'UPDATE', schema: 'public', table: 'room_submissions', filter: `room_id=eq.${roomId}` },
         (payload) => callbacks.onSubmissionUpdate?.(payload.new)
     );
+
+    // Monitor channel state changes for disconnect recovery
+    channel.on('system', {}, (payload) => {
+        if (payload.event === 'disconnect' || payload.event === 'error') {
+            callbacks.onDisconnect?.();
+        }
+    });
 
     channel.subscribe();
 

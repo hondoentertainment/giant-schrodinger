@@ -9,9 +9,15 @@ import { getPlayerRank, getDailyLeaderboard } from '../../services/leaderboard';
 import { getStreakBonus } from '../../services/challenges';
 import { parseReferralFromUrl, trackReferral, hasReferralBonus, claimReferralBonus, generateReferralCode } from '../../services/referrals';
 import { trackEvent } from '../../services/analytics';
-import { toggleMute, isMuted } from '../../services/sounds';
+import { toggleMute, isMuted, playClick } from '../../services/sounds';
+import { getCurrentSeason } from '../../services/leaderboard';
+import { ScoreHistoryChart } from '../analytics/ScoreHistoryChart';
+import { FriendProfile } from '../social/FriendProfile';
+import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
+import { validatePlayerName } from '../../lib/validation';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3 } from 'lucide-react';
+import { getFriends } from '../../services/friends';
+import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Volume2, VolumeX, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3, Shield } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
 import { OnboardingModal } from '../../components/OnboardingModal';
@@ -23,6 +29,13 @@ import { getCustomImages } from '../../services/customImages';
 import { getBuiltInPacks, getCustomPacks } from '../../services/promptPacks';
 import { useTranslation } from '../../hooks/useTranslation';
 import { LanguageSelector } from '../../components/LanguageSelector';
+import { PWAInstallBanner } from '../../components/PWAInstallBanner';
+import { getPlayerRating } from '../../services/ranked';
+import { getSubRank } from '../../services/ranked';
+import { DivisionBadge } from '../ranked/DivisionBadge';
+import { SeasonalChallengeBattlePass } from '../challenge/SeasonalChallengeBattlePass';
+import { scheduleStreakReminder } from '../../services/notifications';
+import { MilestoneTimeline } from '../profile/MilestoneTimeline';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -42,7 +55,7 @@ export function Lobby() {
         advanceRound,
         endSession,
     } = useGame();
-    const { hostRoom, joinRoomByCode } = useRoom();
+    const { hostRoom, joinRoomByCode, joinAsSpectator } = useRoom();
     const { t } = useTranslation();
 
     const [name, setName] = useState(user?.name || '');
@@ -69,6 +82,10 @@ export function Lobby() {
     const [onboardingDismissCallback, setOnboardingDismissCallback] = useState(null);
     const [showUnlockModal, setShowUnlockModal] = useState(false);
     const [showTour, setShowTour] = useState(false);
+    const [selectedFriend, setSelectedFriend] = useState(null);
+    const [showAll, setShowAll] = useState(() => localStorage.getItem('vwf_show_all_features') === 'true');
+    const [showJourney, setShowJourney] = useState(false);
+    const [welcomeMsg, setWelcomeMsg] = useState(null);
 
     // Multiplayer state
     const [showMultiplayer, setShowMultiplayer] = useState(false);
@@ -76,6 +93,7 @@ export function Lobby() {
     const [mpLoading, setMpLoading] = useState(false);
     const [mpLoadingAction, setMpLoadingAction] = useState(null); // 'create' | 'join'
     const [soundMuted, setSoundMuted] = useState(isMuted());
+    const [colorblindMode, setColorblindMode] = useState(() => localStorage.getItem('venn_colorblind') === 'true');
     const [countdown, setCountdown] = useState(() => formatCountdown(getTimeUntilNextChallenge()));
 
     const theme = getThemeById(themeId);
@@ -83,6 +101,24 @@ export function Lobby() {
     const milestones = useMemo(() => getMilestones(), [sessionId, roundNumber]);
     const backendReady = isBackendEnabled();
     const streakBonus = useMemo(() => getStreakBonus(stats), [stats]);
+    const lobbyTier = stats.totalRounds >= 15 ? 3 : stats.totalRounds >= 9 ? 2 : stats.totalRounds >= 3 ? 1 : 0;
+
+    // Welcome-back message
+    useEffect(() => {
+        const lastSeen = localStorage.getItem('venn_last_seen');
+        const now = Date.now();
+        if (lastSeen) {
+            const daysSince = Math.floor((now - parseInt(lastSeen)) / (1000 * 60 * 60 * 24));
+            if (daysSince >= 7) setWelcomeMsg("It's been a while! Jump back in with today's daily challenge");
+            else if (daysSince >= 3) setWelcomeMsg("We missed you! Your streak awaits");
+            else if (daysSince >= 1) setWelcomeMsg("Welcome back! Keep your streak alive");
+        }
+        localStorage.setItem('venn_last_seen', now.toString());
+        if (welcomeMsg) {
+            const t = setTimeout(() => setWelcomeMsg(null), 5000);
+            return () => clearTimeout(t);
+        }
+    }, []);
 
     // Update countdown every minute
     useEffect(() => {
@@ -101,6 +137,13 @@ export function Lobby() {
         }
     }, []);
 
+    // Schedule streak reminder on mount when streak > 0
+    useEffect(() => {
+        if (stats.currentStreak > 0) {
+            scheduleStreakReminder(stats.currentStreak);
+        }
+    }, [stats.currentStreak]);
+
     const handleInvite = () => {
         const refCode = user?.name ? generateReferralCode(user.name) : '';
         const base = window.location.origin + window.location.pathname;
@@ -117,9 +160,20 @@ export function Lobby() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const trimmedName = name.trim();
-        if (!trimmedName) return;
-        login({ name: trimmedName, avatar, themeId, gradient: theme.gradient, scoringMode, mediaType, useCustomImages });
+        const result = validatePlayerName(name);
+        if (!result.valid) return;
+        login({ name: result.value, avatar, themeId, gradient: theme.gradient, scoringMode, mediaType, useCustomImages });
+    };
+
+    const weeklyEvent = useMemo(() => getCurrentWeeklyEvent(), []);
+
+    const handleJoinAsSpectator = async () => {
+        if (!joinCode.trim()) return;
+        setMpLoading(true);
+        setMpLoadingAction('spectate');
+        await joinAsSpectator(joinCode.trim());
+        setMpLoading(false);
+        setMpLoadingAction(null);
     };
 
     const dailyChallenge = useMemo(() => getDailyChallenge(), []);
@@ -222,8 +276,17 @@ export function Lobby() {
                 )}
                 {showTour && <OnboardingTour onComplete={handleTourComplete} />}
                 {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
+                {selectedFriend && <FriendProfile friend={selectedFriend} onClose={() => setSelectedFriend(null)} onChallenge={() => { setSelectedFriend(null); }} />}
+            <PWAInstallBanner />
             <div className="w-full max-w-md space-y-8 glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
                 <div className="text-center">
+                    {/* Welcome-back banner */}
+                    {welcomeMsg && (
+                        <div className="w-full max-w-md mb-4 p-3 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 flex items-center justify-between">
+                            <span className="text-emerald-300 text-sm">{welcomeMsg}</span>
+                            <button onClick={() => setWelcomeMsg(null)} className="text-white/40 hover:text-white ml-2">&times;</button>
+                        </div>
+                    )}
                     {/* Top bar: Edit Profile + Language + Sound toggle */}
                     <div className="flex justify-between items-center mb-4">
                         <button
@@ -244,6 +307,23 @@ export function Lobby() {
                             >
                                 {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                             </button>
+                            <button
+                                onClick={() => {
+                                    const next = !colorblindMode;
+                                    setColorblindMode(next);
+                                    localStorage.setItem('venn_colorblind', String(next));
+                                }}
+                                className={`p-2.5 rounded-full ${colorblindMode ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'} hover:bg-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center`}
+                                aria-label={colorblindMode ? 'Disable colorblind mode' : 'Enable colorblind mode'}
+                                title={colorblindMode ? 'Colorblind mode on' : 'Colorblind mode off'}
+                            >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <circle cx="12" cy="12" r="4" />
+                                    <line x1="12" y1="2" x2="12" y2="6" />
+                                    <line x1="12" y1="18" x2="12" y2="22" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
 
@@ -256,6 +336,16 @@ export function Lobby() {
                     <h2 className="text-3xl font-display font-bold text-white mb-1">
                         Hi, {user.name}!
                     </h2>
+                    {(() => {
+                        const playerInfo = getPlayerRating();
+                        const sub = getSubRank(playerInfo.rating);
+                        return (
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                                <DivisionBadge tier={sub.name} size="sm" />
+                                <span className="text-white/40 text-xs">{sub.display} &middot; {playerInfo.rating} SR</span>
+                            </div>
+                        );
+                    })()}
 
                     {/* Streak Hero Display */}
                     {stats.currentStreak > 0 ? (
@@ -290,14 +380,15 @@ export function Lobby() {
 
                     <div className="mb-4 flex flex-wrap gap-3 justify-center text-sm text-white/60">
                         <span>Media: <span className="text-white font-semibold">
-                            {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? t('lobby.images') :
+                            {(user?.mediaType || MEDIA_TYPES.IMAGE) === 'mixed' ? t('lobby.mixed') || 'Mixed' :
+                             (user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? t('lobby.images') :
                              (user?.mediaType) === MEDIA_TYPES.VIDEO ? t('lobby.videos') : t('lobby.audio')}
                         </span></span>
                         <span>{stats.totalRounds} {t('lobby.roundsPlayed').toLowerCase()}</span>
                         {stats.maxStreak > 0 && <span>{t('lobby.bestStreak')}: <span className="text-amber-400 font-semibold">{stats.maxStreak}d</span></span>}
                     </div>
-                    {/* Scoring mode toggle */}
-                    <div className="mb-4">
+                    {/* Scoring mode toggle (Tier 1+) */}
+                    {(showAll || lobbyTier >= 1) && <div className="mb-4">
                         <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">{t('lobby.scoring')}</label>
                         <div className="flex gap-2 justify-center">
                             <button
@@ -337,8 +428,8 @@ export function Lobby() {
                                 : t('lobby.aiJudgeDesc')
                             }
                         </p>
-                    </div>
-                    {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE && (
+                    </div>}
+                    {(showAll || lobbyTier >= 1) && (user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE && (
                         <div className="mb-4">
                             <CustomImagesManager
                                 customImages={customImages}
@@ -394,6 +485,22 @@ export function Lobby() {
                     {/* Notification opt-in banner */}
                     <NotificationBanner />
 
+                    {/* Session resume banner */}
+                    {roundNumber > 0 && roundNumber < totalRounds && (
+                        <div className="w-full max-w-md mb-4 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 flex items-center justify-between">
+                            <div>
+                                <div className="text-blue-300 text-sm font-bold">Session in Progress</div>
+                                <div className="text-white/60 text-xs">Round {roundNumber} of {totalRounds}</div>
+                            </div>
+                            <button
+                                onClick={beginRound}
+                                className="px-4 py-2 rounded-xl bg-blue-500 text-white font-bold text-sm hover:bg-blue-600 transition"
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    )}
+
                     {/* Streak Counter */}
                     {stats?.currentStreak > 0 && (
                         <div className="w-full max-w-md mb-4 p-4 rounded-2xl bg-gradient-to-r from-orange-500/20 via-red-500/20 to-orange-500/20 border border-orange-500/30 text-center animate-in fade-in duration-500">
@@ -406,8 +513,8 @@ export function Lobby() {
                         </div>
                     )}
 
-                    {/* Daily Challenge */}
-                    {!showMultiplayer && !dailyPlayed && (
+                    {/* Daily Challenge (Tier 2+) */}
+                    {(showAll || lobbyTier >= 2) && !showMultiplayer && !dailyPlayed && (
                         <button
                             onClick={startDailyChallenge}
                             disabled={!!sessionId}
@@ -428,7 +535,7 @@ export function Lobby() {
                             </div>
                         </button>
                     )}
-                    {!showMultiplayer && dailyPlayed && (
+                    {(showAll || lobbyTier >= 2) && !showMultiplayer && dailyPlayed && (
                         <div className="w-full mb-4 p-4 rounded-2xl border border-white/10 bg-white/5 text-center">
                             <div className="text-white/40 text-sm mb-1">
                                 <CalendarDays className="w-4 h-4 inline mr-2" />
@@ -440,11 +547,48 @@ export function Lobby() {
                         </div>
                     )}
 
+                    {/* Weekly Event Banner (Tier 2+) */}
+                    {weeklyEvent && (showAll || lobbyTier >= 2) && (
+                        <div className="w-full max-w-md mb-4 p-4 rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-purple-300 text-xs uppercase tracking-wider font-bold">This Week's Event</span>
+                                <span className="text-white/40 text-xs">Ends in {formatWeeklyCountdown(getTimeUntilNextWeek())}</span>
+                            </div>
+                            <div className="text-white font-bold text-lg">{weeklyEvent.name}</div>
+                            <div className="text-white/60 text-sm">{weeklyEvent.description}</div>
+                        </div>
+                    )}
+
+                    {/* Friends list (Tier 2+) */}
+                    {(showAll || lobbyTier >= 2) && getFriends().length > 0 && (
+                        <div className="w-full max-w-md mb-4">
+                            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Friends</label>
+                            <div className="flex flex-wrap gap-2">
+                                {getFriends().map((f) => (
+                                    <button
+                                        key={f.name}
+                                        onClick={() => setSelectedFriend(f)}
+                                        className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
+                                    >
+                                        {f.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Weekly Challenge Pass */}
+                    {!showMultiplayer && (
+                        <div className="w-full mb-4">
+                            <SeasonalChallengeBattlePass />
+                        </div>
+                    )}
+
                     {/* Solo play */}
                     {!showMultiplayer && (
                         <>
-                            {/* Prompt Pack Selector */}
-                            <div className="w-full max-w-md mb-4">
+                            {/* Prompt Pack Selector (Tier 1+) */}
+                            {(showAll || lobbyTier >= 1) && <div className="w-full max-w-md mb-4">
                                 <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">{t('lobby.conceptPack')}</label>
                                 <select
                                     value={user?.promptPack || ''}
@@ -459,10 +603,10 @@ export function Lobby() {
                                         <option key={pack.id} value={pack.id}>{pack.name} (Custom)</option>
                                     ))}
                                 </select>
-                            </div>
+                            </div>}
 
-                            {/* Session length (only when not in active session) */}
-                            {!sessionId && (
+                            {/* Session length (Tier 1+, only when not in active session) */}
+                            {(showAll || lobbyTier >= 1) && !sessionId && (
                                 <div className="mb-4">
                                     <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">{t('lobby.sessionLength')}</label>
                                     <div className="flex gap-2 justify-center">
@@ -488,7 +632,7 @@ export function Lobby() {
                             )}
                             <div className="flex gap-3 w-full">
                                 <button
-                                    onClick={startGame}
+                                    onClick={() => { playClick(); startGame(); }}
                                     disabled={sessionId && roundComplete && roundNumber >= totalRounds}
                                     className="flex-1 py-4 bg-white text-black font-bold text-xl rounded-xl hover:scale-105 transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 min-h-[52px]"
                                     aria-label={sessionId
@@ -503,26 +647,27 @@ export function Lobby() {
                                             : t('lobby.startRound', { round: roundComplete ? roundNumber + 1 : roundNumber })
                                         : t('lobby.soloSession', { rounds: sessionLength })}
                                 </button>
-                                <button
+                                {(showAll || lobbyTier >= 2) && <button
                                     onClick={() => setGameState('GALLERY')}
                                     className="px-4 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors min-w-[48px] min-h-[52px] flex items-center justify-center"
                                     aria-label="View connection gallery"
                                     title={t('lobby.gallery')}
                                 >
                                     🖼️
-                                </button>
-                                <button
+                                </button>}
+                                {(showAll || lobbyTier >= 2) && <button
                                     onClick={() => setGameState('LEADERBOARD')}
-                                    className="px-4 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors min-w-[48px] min-h-[52px] flex items-center justify-center"
+                                    className="px-4 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors min-w-[48px] min-h-[52px] flex flex-col items-center justify-center"
                                     aria-label="View leaderboard"
                                     title={t('lobby.leaderboard')}
                                 >
                                     <Trophy className="w-5 h-5" />
-                                </button>
+                                    <span className="text-xs text-purple-300">{getCurrentSeason().name}</span>
+                                </button>}
                             </div>
 
-                            {/* AI Battle button */}
-                            <button
+                            {/* AI Battle button (Tier 3+) */}
+                            {(showAll || lobbyTier >= 3) && <button
                                 onClick={() => {
                                     if (!sessionId) startSession(sessionLength);
                                     setGameState('AI_BATTLE');
@@ -530,10 +675,10 @@ export function Lobby() {
                                 className="w-full py-4 bg-gradient-to-r from-red-600/80 to-orange-600/80 hover:from-red-600 hover:to-orange-600 text-white font-bold text-lg rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg border border-red-500/30"
                             >
                                 {`🤖 ${t('lobby.aiBattle')}`}
-                            </button>
+                            </button>}
 
-                            {/* Quick nav row */}
-                            <div className="flex gap-2 mt-3">
+                            {/* Quick nav row (Tier 2+: achievements, leaderboard, gallery) */}
+                            {(showAll || lobbyTier >= 2) && <div className="flex gap-2 mt-3">
                                 <button
                                     onClick={() => setGameState('ACHIEVEMENTS')}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
@@ -562,42 +707,51 @@ export function Lobby() {
                                 >
                                     <Brain className="w-4 h-4" /> {t('lobby.aiSettings')}
                                 </button>
-                            </div>
+                            </div>}
 
-                            {/* Tournament & Challenge Chains */}
-                            <div className="flex gap-2 mt-3">
+                            {/* Tournament & Challenge Chains (Tier 3+) */}
+                            {(showAll || lobbyTier >= 3) && <div className="flex gap-2 mt-3">
                                 <button
-                                    onClick={() => { haptic('light'); trackEvent('nav_tournament'); setGameState('TOURNAMENT'); }}
+                                    onClick={() => { playClick(); haptic('light'); trackEvent('nav_tournament'); setGameState('TOURNAMENT'); }}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
                                     title={t('lobby.tournaments')}
                                 >
                                     <Trophy className="w-4 h-4" /> {t('lobby.tournaments')}
                                 </button>
                                 <button
-                                    onClick={() => { haptic('light'); trackEvent('nav_async_chains'); setGameState('ASYNC_CHAINS'); }}
+                                    onClick={() => { playClick(); haptic('light'); trackEvent('nav_async_chains'); setGameState('ASYNC_CHAINS'); }}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
                                     title={t('lobby.challengeChains')}
                                 >
                                     <Link className="w-4 h-4" /> {t('lobby.challengeChains')}
                                 </button>
                                 <button
-                                    onClick={() => { haptic('light'); trackEvent('nav_analytics'); setGameState('ANALYTICS'); }}
+                                    onClick={() => { playClick(); haptic('light'); trackEvent('nav_analytics'); setGameState('ANALYTICS'); }}
                                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
                                     title={t('lobby.analytics')}
                                 >
                                     <BarChart3 className="w-4 h-4" /> {t('lobby.analytics')}
                                 </button>
-                            </div>
+                            </div>}
 
-                            {/* Multiplayer button */}
-                            <button
+                            {/* Ranked button (Tier 3+) */}
+                            {(showAll || lobbyTier >= 3) && <button
+                                onClick={() => { playClick(); haptic('light'); trackEvent('nav_ranked'); setGameState('RANKED'); }}
+                                className="mt-3 w-full py-3 bg-gradient-to-r from-indigo-600/80 to-purple-600/80 text-white font-bold rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Shield className="w-5 h-5" />
+                                Ranked Mode
+                            </button>}
+
+                            {/* Multiplayer button (Tier 3+) */}
+                            {(showAll || lobbyTier >= 3) && <button
                                 onClick={() => setShowMultiplayer(true)}
                                 className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2"
                             >
                                 <Users className="w-5 h-5" />
                                 {t('lobby.multiplayer')}
                                 {!backendReady && <WifiOff className="w-4 h-4 opacity-50" />}
-                            </button>
+                            </button>}
                         </>
                     )}
 
@@ -644,6 +798,16 @@ export function Lobby() {
                                     </button>
                                 </div>
 
+                                {joinCode.trim().length >= 4 && (
+                                    <button
+                                        onClick={handleJoinAsSpectator}
+                                        disabled={mpLoading}
+                                        className="w-full py-2 bg-amber-500/10 text-amber-300 text-sm font-semibold rounded-xl hover:bg-amber-500/20 transition-colors border border-amber-500/20 disabled:opacity-50"
+                                    >
+                                        {mpLoading && mpLoadingAction === 'spectate' ? 'Joining...' : 'Watch the Game'}
+                                    </button>
+                                )}
+
                                 <button
                                     onClick={() => setShowMultiplayer(false)}
                                     className="w-full text-sm text-white/40 hover:text-white underline"
@@ -664,6 +828,32 @@ export function Lobby() {
                         </div>
                     )}
 
+                    {/* Score History Chart (shown after 5+ rounds) */}
+                    {stats.totalRounds >= 5 && (
+                        <div className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                            <ScoreHistoryChart limit={30} />
+                        </div>
+                    )}
+
+                    {/* Your Journey (collapsible) */}
+                    {stats.totalRounds >= 3 && (
+                        <div className="mt-4">
+                            <button
+                                onClick={() => setShowJourney(!showJourney)}
+                                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm text-white/60"
+                                aria-expanded={showJourney}
+                            >
+                                <span className="font-semibold">Your Journey</span>
+                                <span className="text-xs">{showJourney ? '\u25B2' : '\u25BC'}</span>
+                            </button>
+                            {showJourney && (
+                                <div className="mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <MilestoneTimeline />
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-4 justify-center">
                         {sessionId && (
                             <button
@@ -681,6 +871,13 @@ export function Lobby() {
                             </button>
                         )}
                     </div>
+                    {/* Show All Features toggle */}
+                    <button
+                        onClick={() => { const v = !showAll; setShowAll(v); localStorage.setItem('vwf_show_all_features', v.toString()); }}
+                        className="mt-4 text-sm text-white/40 hover:text-white/60 underline transition-colors"
+                    >
+                        {showAll ? 'Hide Advanced Features' : 'Show All Features'}
+                    </button>
                 </div>
             </div>
             </>
@@ -842,7 +1039,7 @@ export function Lobby() {
                     </p>
                 </section>
 
-                {mediaType === MEDIA_TYPES.IMAGE && (
+                {mediaType === MEDIA_TYPES.IMAGE && mediaType !== 'mixed' && (
                     <section aria-labelledby="profile-custom-images">
                         <CustomImagesManager
                             customImages={customImages}
@@ -855,7 +1052,7 @@ export function Lobby() {
 
                 <section aria-labelledby="profile-media">
                     <label id="profile-media" className="block text-sm font-medium text-white/60 mb-2">{t('lobby.mediaType')}</label>
-                    <div className="grid grid-cols-3 gap-3" role="group">
+                    <div className="grid grid-cols-4 gap-3" role="group">
                         {[
                             { type: MEDIA_TYPES.IMAGE, label: 'Images', Icon: Image, desc: 'Classic visual Venn' },
                             { type: MEDIA_TYPES.VIDEO, label: 'Videos', Icon: Film, desc: 'Looping video clips' },
@@ -876,11 +1073,25 @@ export function Lobby() {
                                 {label}
                             </button>
                         ))}
+                        <button
+                            type="button"
+                            onClick={() => setMediaType('mixed')}
+                            aria-pressed={mediaType === 'mixed'}
+                            aria-label="Mixed — random media type each round"
+                            className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 ${mediaType === 'mixed'
+                                    ? 'bg-white text-black shadow-lg'
+                                    : 'bg-white/10 text-white hover:bg-white/20'
+                                }`}
+                        >
+                            <span className="text-lg">🎲</span>
+                            Mixed
+                        </button>
                     </div>
                     <p className="mt-2 text-center text-white/50 text-xs">
                         {mediaType === MEDIA_TYPES.IMAGE && t('lobby.imagesDesc')}
                         {mediaType === MEDIA_TYPES.VIDEO && t('lobby.videosDesc')}
                         {mediaType === MEDIA_TYPES.AUDIO && t('lobby.audioDesc')}
+                        {mediaType === 'mixed' && 'Mixed mode — random media type each round.'}
                     </p>
                 </section>
 

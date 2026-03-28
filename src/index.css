@@ -39,6 +39,22 @@
   }
 }
 
+@keyframes screenShake {
+  0%, 100% { transform: translate(0); }
+  10% { transform: translate(-4px, 2px); }
+  20% { transform: translate(4px, -2px); }
+  30% { transform: translate(-3px, 3px); }
+  40% { transform: translate(3px, -3px); }
+  50% { transform: translate(-2px, 2px); }
+  60% { transform: translate(2px, -2px); }
+  70% { transform: translate(-1px, 1px); }
+  80% { transform: translate(1px, -1px); }
+}
+
+.screen-shake {
+  animation: screenShake 0.4s ease-out;
+}
+
 /* Screen-reader only utility */
 .sr-only {
   position: absolute;
@@ -66,6 +82,27 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Phase transition animations */
+.phase-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.phase-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+
+.phase-exit {
+  opacity: 1;
+}
+
+.phase-exit-active {
+  opacity: 0;
+  transition: opacity 150ms ease-in;
 }
 
 @keyframes shake {

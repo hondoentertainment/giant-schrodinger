@@ -1,3 +1,5 @@
+import { getSupplementalConcepts } from '../services/conceptGenerator';
+
 const DEFAULT_KEYWORDS = ["abstract art", "texture", "colorful pattern", "surreal", "dreamscape"];
 
 const IMG_WIDTH = 1080;
@@ -9,7 +11,7 @@ export const MEDIA_TYPES = {
     AUDIO: 'audio',
 };
 
-function buildUnsplashUrl(id, width = IMG_WIDTH) {
+export function buildUnsplashUrl(id, width = 1080) {
     return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${width}&q=80`;
 }
 
@@ -18,13 +20,14 @@ function buildPicsumFallback(labelOrKeyword) {
     return `https://picsum.photos/seed/${slug || 'venn'}/${IMG_WIDTH}/${IMG_WIDTH}`;
 }
 
-function createImage({ id, label, fallback }) {
+function createImage({ id, label, fallback, categories = [] }) {
     return {
         id,
         label,
         type: MEDIA_TYPES.IMAGE,
         url: buildUnsplashUrl(id),
         fallbackUrl: buildPicsumFallback(fallback || label),
+        categories,
     };
 }
 
@@ -69,19 +72,32 @@ export const THEMES = [
         keywords: ["neon city", "cyberpunk alley", "neon signs", "street art", "night market"],
         assets: [
             // People & nightlife
-            createImage({ id: "1516450360452-9258136e97a1", label: "Club Dancer", fallback: "nightclub dancing" }),
-            createImage({ id: "1492684223066-81342ee5ff30", label: "Street Performer", fallback: "street performer night" }),
-            createImage({ id: "1571266028243-3716f02d3f50", label: "Graffiti Artist", fallback: "graffiti artist" }),
-            createImage({ id: "1551818255-6b0f0d59b3e6", label: "DJ Booth", fallback: "dj neon" }),
-            createImage({ id: "1582719508461-905c673c1ae0", label: "Night Market", fallback: "night market crowd" }),
+            createImage({ id: "1516450360452-9258136e97a1", label: "The Girl Who Never Stopped Dancing", fallback: "nightclub dancing", categories: ['human', 'music', 'emotion'] }),
+            createImage({ id: "1492684223066-81342ee5ff30", label: "Sidewalk Serenade at 2AM", fallback: "street performer night", categories: ['human', 'music', 'urban'] }),
+            createImage({ id: "1571266028243-3716f02d3f50", label: "Spray Can Confessions", fallback: "graffiti artist", categories: ['art', 'urban', 'human'] }),
+            createImage({ id: "1551818255-6b0f0d59b3e6", label: "The Heartbeat Behind the Decks", fallback: "dj neon", categories: ['music', 'technology', 'human'] }),
+            createImage({ id: "1582719508461-905c673c1ae0", label: "A Thousand Flavors After Dark", fallback: "night market crowd", categories: ['urban', 'human', 'nostalgia'] }),
             // Viral city vibes
-            createImage({ id: "1555680202-c86f0e12f086", label: "Neon Alley", fallback: "neon city" }),
-            createImage({ id: "1563089145-599997674d42", label: "Neon Glow", fallback: "neon signs" }),
-            createImage({ id: "1514565131-fce0801e5785", label: "Tokyo Nights", fallback: "tokyo neon" }),
-            createImage({ id: "1533174072545-7a4b6ad7a6c3", label: "Concert Crowd", fallback: "concert crowd" }),
-            createImage({ id: "1470225620780-dba8ba36b745", label: "Rave Lights", fallback: "rave party" }),
-            createImage({ id: "1504893524553-b855bce32c67", label: "City Rain", fallback: "city rain night" }),
-            createImage({ id: "1557683316-973673baf926", label: "Umbrella Walk", fallback: "umbrella rain neon" }),
+            createImage({ id: "1555680202-c86f0e12f086", label: "The Alley That Glows Back", fallback: "neon city", categories: ['urban', 'art', 'emotion'] }),
+            createImage({ id: "1563089145-599997674d42", label: "Tokyo's Electric Dreams", fallback: "neon signs", categories: ['urban', 'technology', 'art'] }),
+            createImage({ id: "1514565131-fce0801e5785", label: "3AM Taxi Ride Through Shinjuku", fallback: "tokyo neon", categories: ['urban', 'adventure', 'nostalgia'] }),
+            createImage({ id: "1533174072545-7a4b6ad7a6c3", label: "Ten Thousand Strangers Singing Along", fallback: "concert crowd", categories: ['music', 'human', 'emotion'] }),
+            createImage({ id: "1470225620780-dba8ba36b745", label: "When the Bass Drops at Dawn", fallback: "rave party", categories: ['music', 'emotion', 'abstract'] }),
+            createImage({ id: "1504893524553-b855bce32c67", label: "Neon Tears on the Windshield", fallback: "city rain night", categories: ['urban', 'emotion', 'water'] }),
+            createImage({ id: "1557683316-973673baf926", label: "The Last Umbrella on the Block", fallback: "umbrella rain neon", categories: ['urban', 'human', 'emotion'] }),
+            // New images
+            createImage({ id: "1558618666-fcd25c85f1d7", label: "Midnight Arcade Fever", fallback: "arcade", categories: ['nostalgia', 'technology', 'urban'] }),
+            createImage({ id: "1517999144091-3d9dca6d1e43", label: "Rooftop Secrets in Pink Light", fallback: "rooftop neon", categories: ['urban', 'emotion', 'human'] }),
+            createImage({ id: "1542038784456-1ea8df5aa738", label: "The Subway That Never Sleeps", fallback: "subway neon", categories: ['urban', 'adventure', 'nostalgia'] }),
+            createImage({ id: "1519389950473-47ba0277781c", label: "Flickering Promises on a Marquee", fallback: "theater marquee", categories: ['art', 'nostalgia', 'urban'] }),
+            createImage({ id: "1506792006437-256b665541e2", label: "Puddle Reflecting a Parallel City", fallback: "rain puddle neon", categories: ['urban', 'abstract', 'water'] }),
+            createImage({ id: "1521412644187-c49fa049e84d", label: "A Vending Machine's Lonely Glow", fallback: "vending machine", categories: ['technology', 'nostalgia', 'urban'] }),
+            createImage({ id: "1531747118685-64e4e3893e04", label: "Crossed Wires and Crossed Hearts", fallback: "electric wires night", categories: ['technology', 'emotion', 'urban'] }),
+            createImage({ id: "1579546929518-9e396f3cc509", label: "Chinatown's Whispering Lanterns", fallback: "chinatown lanterns", categories: ['urban', 'nostalgia', 'art'] }),
+            createImage({ id: "1548345680-f5475ea5b5ed", label: "Smoke and Strobe Confessions", fallback: "smoke neon", categories: ['abstract', 'music', 'emotion'] }),
+            createImage({ id: "1504703395950-b89145a5425b", label: "The Bridge Between Midnight and Dawn", fallback: "bridge night city", categories: ['urban', 'adventure', 'emotion'] }),
+            createImage({ id: "1520045892732-304bc3ac77d4", label: "Taxi Cab Oracle", fallback: "taxi night", categories: ['urban', 'human', 'nostalgia'] }),
+            createImage({ id: "1465847899084-d164df4dedc6", label: "Electric Veins of the City", fallback: "city lights aerial", categories: ['urban', 'technology', 'abstract'] }),
         ],
         fusionImages: [
             createImage({ id: "1469474968028-56623f02e42e", label: "Electric Atmosphere", fallback: "neon abstract" }),
@@ -100,19 +116,32 @@ export const THEMES = [
         keywords: ["forest", "waterfall", "mountain lake", "mossy rocks", "wildflowers"],
         assets: [
             // People in nature
-            createImage({ id: "1551632811-561732d1e306", label: "Cliff Hiker", fallback: "hiker cliff" }),
-            createImage({ id: "1486915309851-b0cc1f8a0084", label: "Kayak Explorer", fallback: "kayak nature" }),
-            createImage({ id: "1544735716-ea9ef790f501", label: "Hammock Chill", fallback: "hammock forest" }),
-            createImage({ id: "1502680390548-bca8fcc47c11", label: "Campfire Vibes", fallback: "campfire friends" }),
-            createImage({ id: "1522163182402-834f871fd851", label: "Mountain Runner", fallback: "trail runner" }),
+            createImage({ id: "1551632811-561732d1e306", label: "Standing on the Edge of Everything", fallback: "hiker cliff", categories: ['adventure', 'human', 'nature'] }),
+            createImage({ id: "1486915309851-b0cc1f8a0084", label: "Where the River Decides Your Path", fallback: "kayak nature", categories: ['adventure', 'water', 'nature'] }),
+            createImage({ id: "1544735716-ea9ef790f501", label: "Gravity's Day Off", fallback: "hammock forest", categories: ['human', 'nature', 'emotion'] }),
+            createImage({ id: "1502680390548-bca8fcc47c11", label: "Sparks Telling Stories to the Stars", fallback: "campfire friends", categories: ['human', 'nature', 'nostalgia'] }),
+            createImage({ id: "1522163182402-834f871fd851", label: "Chasing the Horizon on Foot", fallback: "trail runner", categories: ['adventure', 'human', 'nature'] }),
             // Stunning nature
-            createImage({ id: "1433086966358-54859d0ed716", label: "Waterfall Pool", fallback: "waterfall" }),
-            createImage({ id: "1540206395-68808572332f", label: "Aurora Sky", fallback: "northern lights" }),
-            createImage({ id: "1472396961693-142e6e269027", label: "Deer Meadow", fallback: "deer meadow" }),
-            createImage({ id: "1518495973542-4542f68e80bf", label: "Mossy Stones", fallback: "mossy rocks" }),
-            createImage({ id: "1470071459604-3b5ec3a7fe05", label: "Fog Valley", fallback: "fog valley" }),
-            createImage({ id: "1501785888041-af3ef285b470", label: "Mountain Lake", fallback: "mountain lake" }),
-            createImage({ id: "1441974231531-c6227db76b6e", label: "Forest Canopy", fallback: "forest canopy" }),
+            createImage({ id: "1433086966358-54859d0ed716", label: "Where Gravity Learns to Sing", fallback: "waterfall", categories: ['nature', 'water', 'emotion'] }),
+            createImage({ id: "1540206395-68808572332f", label: "The Sky's Secret Light Show", fallback: "northern lights", categories: ['nature', 'space', 'abstract'] }),
+            createImage({ id: "1472396961693-142e6e269027", label: "Morning's First Witness", fallback: "deer meadow", categories: ['animal', 'nature', 'emotion'] }),
+            createImage({ id: "1518495973542-4542f68e80bf", label: "A Thousand Years of Patience", fallback: "mossy rocks", categories: ['nature', 'abstract', 'nostalgia'] }),
+            createImage({ id: "1470071459604-3b5ec3a7fe05", label: "The Valley That Swallowed the Clouds", fallback: "fog valley", categories: ['nature', 'abstract', 'emotion'] }),
+            createImage({ id: "1501785888041-af3ef285b470", label: "A Mirror the Mountains Built", fallback: "mountain lake", categories: ['nature', 'water', 'emotion'] }),
+            createImage({ id: "1441974231531-c6227db76b6e", label: "The Last Tree Standing's Cathedral", fallback: "forest canopy", categories: ['nature', 'abstract', 'emotion'] }),
+            // New images
+            createImage({ id: "1469474968028-56623f02e42e", label: "The Path Nobody Took Twice", fallback: "forest path", categories: ['nature', 'adventure', 'emotion'] }),
+            createImage({ id: "1507003211169-0a1dd7228f2d", label: "Morning's First Songbird", fallback: "bird branch", categories: ['animal', 'nature', 'music'] }),
+            createImage({ id: "1475113548554-5a36f1f523d6", label: "Roots That Remember Everything", fallback: "ancient tree roots", categories: ['nature', 'nostalgia', 'abstract'] }),
+            createImage({ id: "1516298773066-f6b860f8ea84", label: "The Mushroom Kingdom's Parliament", fallback: "mushrooms forest floor", categories: ['nature', 'science', 'abstract'] }),
+            createImage({ id: "1504567961542-e24d9439a724", label: "Lightning's Autograph", fallback: "lightning storm", categories: ['nature', 'science', 'emotion'] }),
+            createImage({ id: "1520262494112-9fe481d36ec2", label: "Dandelion's Last Wish", fallback: "dandelion seeds", categories: ['nature', 'abstract', 'emotion'] }),
+            createImage({ id: "1509316975850-ff9c5deb0cd9", label: "A Fox Who Knows Your Name", fallback: "fox snow", categories: ['animal', 'nature', 'emotion'] }),
+            createImage({ id: "1518173946687-403870c84f25", label: "The Glacier's Slow Confession", fallback: "glacier", categories: ['nature', 'water', 'science'] }),
+            createImage({ id: "1490682143684-14369e18dce8", label: "Fireflies Writing in Cursive", fallback: "fireflies night", categories: ['nature', 'abstract', 'nostalgia'] }),
+            createImage({ id: "1505852679233-d9fd70aff56d", label: "Petals Before the Storm", fallback: "wildflowers field", categories: ['nature', 'emotion', 'art'] }),
+            createImage({ id: "1494500764479-0c8f2919a3d8", label: "The River That Carved a Canyon's Heart", fallback: "river canyon", categories: ['nature', 'water', 'adventure'] }),
+            createImage({ id: "1508739773434-c26b3d09e071", label: "Sunset Teaching the Leaves to Glow", fallback: "autumn forest sunset", categories: ['nature', 'emotion', 'nostalgia'] }),
         ],
         fusionImages: [
             createImage({ id: "1500530855697-b586d89ba3ee", label: "Natural Blend", fallback: "forest abstract" }),
@@ -131,19 +160,32 @@ export const THEMES = [
         keywords: ["vintage computer", "circuit board", "cassette tape", "arcade", "retro futurism"],
         assets: [
             // People & tech culture
-            createImage({ id: "1542751371-adc38448a05e", label: "VR Gamer", fallback: "vr headset person" }),
-            createImage({ id: "1511512578047-dfb367046420", label: "Arcade Kid", fallback: "arcade playing" }),
-            createImage({ id: "1558618666-fcd25c85f82e", label: "Old TV Night", fallback: "retro tv" }),
-            createImage({ id: "1593508512255-86ab42a8e620", label: "Home Office", fallback: "retro desk setup" }),
-            createImage({ id: "1485827404703-89b55fcc595e", label: "Robot Friends", fallback: "robot" }),
+            createImage({ id: "1542751371-adc38448a05e", label: "Wearing Tomorrow's Eyes Today", fallback: "vr headset person", categories: ['technology', 'human', 'science'] }),
+            createImage({ id: "1511512578047-dfb367046420", label: "Quarter-Fed Childhood Memories", fallback: "arcade playing", categories: ['nostalgia', 'technology', 'human'] }),
+            createImage({ id: "1558618666-fcd25c85f82e", label: "Static Between the Channels of Sleep", fallback: "retro tv", categories: ['nostalgia', 'technology', 'abstract'] }),
+            createImage({ id: "1593508512255-86ab42a8e620", label: "Where Ideas Go to Become Real", fallback: "retro desk setup", categories: ['technology', 'human', 'nostalgia'] }),
+            createImage({ id: "1485827404703-89b55fcc595e", label: "The Machine That Learned to Wave", fallback: "robot", categories: ['technology', 'science', 'emotion'] }),
             // Iconic tech objects
-            createImage({ id: "1550745165-9bc0b252726f", label: "Cassette Tape", fallback: "cassette tape" }),
-            createImage({ id: "1550751827-4bd374c3f58b", label: "Vinyl Spin", fallback: "vinyl record" }),
-            createImage({ id: "1518770660439-4636190af475", label: "Circuit Board", fallback: "circuit board" }),
-            createImage({ id: "1531297484001-80022131f5a1", label: "Keyboard Glow", fallback: "keyboard rgb" }),
-            createImage({ id: "1498050108023-c5249f4df085", label: "Code Screen", fallback: "code screen" }),
-            createImage({ id: "1487058792275-0ad4aaf24ca7", label: "Arcade Lights", fallback: "arcade" }),
-            createImage({ id: "1526374965328-7f61d4dc18c5", label: "Rotary Phone", fallback: "rotary phone" }),
+            createImage({ id: "1550745165-9bc0b252726f", label: "90 Minutes of Someone's Soul", fallback: "cassette tape", categories: ['nostalgia', 'music', 'emotion'] }),
+            createImage({ id: "1550751827-4bd374c3f58b", label: "The Crackle Before the First Note", fallback: "vinyl record", categories: ['music', 'nostalgia', 'art'] }),
+            createImage({ id: "1518770660439-4636190af475", label: "A City Built for Electrons", fallback: "circuit board", categories: ['technology', 'science', 'abstract'] }),
+            createImage({ id: "1531297484001-80022131f5a1", label: "Rainbow Fingers on a Midnight Keyboard", fallback: "keyboard rgb", categories: ['technology', 'art', 'human'] }),
+            createImage({ id: "1498050108023-c5249f4df085", label: "Poetry Written in Semicolons", fallback: "code screen", categories: ['technology', 'art', 'abstract'] }),
+            createImage({ id: "1487058792275-0ad4aaf24ca7", label: "Ghosts of High Scores Past", fallback: "arcade", categories: ['nostalgia', 'technology', 'emotion'] }),
+            createImage({ id: "1526374965328-7f61d4dc18c5", label: "Dialing the Number You Still Remember", fallback: "rotary phone", categories: ['nostalgia', 'technology', 'emotion'] }),
+            // New images
+            createImage({ id: "1558618666-fcd25c85f1d7", label: "Midnight Arcade Fever", fallback: "arcade night", categories: ['nostalgia', 'technology', 'urban'] }),
+            createImage({ id: "1517420704952-d9f39e95b43b", label: "The Floppy Disk That Held a Universe", fallback: "floppy disk", categories: ['nostalgia', 'technology', 'science'] }),
+            createImage({ id: "1525547719571-a2d4ac8945e2", label: "Laptop Campfire Stories", fallback: "laptop dark", categories: ['technology', 'human', 'emotion'] }),
+            createImage({ id: "1496181133206-80ce9b88a853", label: "The Cursor That Blinked Like a Heartbeat", fallback: "computer cursor", categories: ['technology', 'abstract', 'emotion'] }),
+            createImage({ id: "1558098329-a11cff621064", label: "The Server Room's Lullaby", fallback: "server room", categories: ['technology', 'science', 'abstract'] }),
+            createImage({ id: "1548092372-0d1bd40894a3", label: "A Joystick's Worn-Down Memories", fallback: "retro joystick", categories: ['nostalgia', 'technology', 'emotion'] }),
+            createImage({ id: "1515940175183-6798529cb860", label: "Where the Wires All Converge", fallback: "tangled cables", categories: ['technology', 'abstract', 'art'] }),
+            createImage({ id: "1561883088-039e53143d73", label: "The Blueprint of an Impossible Machine", fallback: "technical blueprint", categories: ['science', 'technology', 'art'] }),
+            createImage({ id: "1504384308090-c894fdcc538d", label: "Radar Ghosts and Satellite Prayers", fallback: "satellite dish", categories: ['technology', 'space', 'science'] }),
+            createImage({ id: "1550009158-9ebf69173e03", label: "A Motherboard's Family Portrait", fallback: "motherboard closeup", categories: ['technology', 'science', 'abstract'] }),
+            createImage({ id: "1519389950473-47ba0277781c", label: "The First Pixel of a Revolution", fallback: "pixel art", categories: ['technology', 'art', 'nostalgia'] }),
+            createImage({ id: "1563770660331-4e1b460168f4", label: "Rewinding Saturday Morning Cartoons", fallback: "vhs tape", categories: ['nostalgia', 'art', 'emotion'] }),
         ],
         fusionImages: [
             createImage({ id: "1518770660439-4636190af475", label: "Signal Merge", fallback: "tech abstract" }),
@@ -162,19 +204,32 @@ export const THEMES = [
         keywords: ["ocean waves", "coral reef", "sailing", "underwater", "seaside cliffs"],
         assets: [
             // People & ocean life
-            createImage({ id: "1530053969600-cacd65653d22", label: "Surfer Ride", fallback: "surfer wave" }),
-            createImage({ id: "1544551763-46a013bb70d5", label: "Scuba Diver", fallback: "scuba diver" }),
-            createImage({ id: "1502680390548-bca8fcc47c11", label: "Beach Party", fallback: "beach party" }),
-            createImage({ id: "1505228395891-9a51e7e86bf6", label: "Cliff Jumper", fallback: "cliff jumping ocean" }),
-            createImage({ id: "1437622368342-7a3d73a34c8f", label: "Sailor", fallback: "sailing boat" }),
+            createImage({ id: "1530053969600-cacd65653d22", label: "Borrowed Time on a Borrowed Wave", fallback: "surfer wave", categories: ['adventure', 'water', 'human'] }),
+            createImage({ id: "1544551763-46a013bb70d5", label: "Breathing in an Alien World", fallback: "scuba diver", categories: ['adventure', 'water', 'science'] }),
+            createImage({ id: "1502680390548-bca8fcc47c11", label: "Salt on Your Skin, Stars in Your Hair", fallback: "beach party", categories: ['human', 'water', 'emotion'] }),
+            createImage({ id: "1505228395891-9a51e7e86bf6", label: "The Leap Before the Splash", fallback: "cliff jumping ocean", categories: ['adventure', 'human', 'emotion'] }),
+            createImage({ id: "1437622368342-7a3d73a34c8f", label: "A Compass Pointing to Freedom", fallback: "sailing boat", categories: ['adventure', 'water', 'nostalgia'] }),
             // Viral ocean imagery
-            createImage({ id: "1507525428034-b723cf961d3e", label: "Perfect Wave", fallback: "ocean waves" }),
-            createImage({ id: "1544027993-215b52db5e3c", label: "Frozen Wave", fallback: "frozen wave" }),
-            createImage({ id: "1468581264429-2548a9948e97", label: "Jellyfish Drift", fallback: "jellyfish" }),
-            createImage({ id: "1518837695005-2083093ee35b", label: "Coral Reef", fallback: "coral reef" }),
-            createImage({ id: "1544551763-77a2d1f5b107", label: "Deep Blue", fallback: "deep ocean" }),
-            createImage({ id: "1505118380757-91f5816e5e04", label: "Lighthouse", fallback: "lighthouse" }),
-            createImage({ id: "1498462440456-0dba182e007b", label: "Tropical Shore", fallback: "tropical shore" }),
+            createImage({ id: "1507525428034-b723cf961d3e", label: "Poseidon's Living Room", fallback: "ocean waves", categories: ['water', 'nature', 'abstract'] }),
+            createImage({ id: "1544027993-215b52db5e3c", label: "Time Stopped Mid-Crash", fallback: "frozen wave", categories: ['water', 'abstract', 'art'] }),
+            createImage({ id: "1468581264429-2548a9948e97", label: "The Ocean's Floating Lanterns", fallback: "jellyfish", categories: ['animal', 'water', 'abstract'] }),
+            createImage({ id: "1518837695005-2083093ee35b", label: "An Underwater City That Grew Itself", fallback: "coral reef", categories: ['nature', 'water', 'science'] }),
+            createImage({ id: "1544551763-77a2d1f5b107", label: "The Silence Below the Silence", fallback: "deep ocean", categories: ['water', 'abstract', 'emotion'] }),
+            createImage({ id: "1505118380757-91f5816e5e04", label: "The Last Light Before the Storm", fallback: "lighthouse", categories: ['urban', 'water', 'emotion'] }),
+            createImage({ id: "1498462440456-0dba182e007b", label: "Where the Sand Remembers Your Footprints", fallback: "tropical shore", categories: ['nature', 'water', 'nostalgia'] }),
+            // New images
+            createImage({ id: "1518882575700-5e30b5468d4f", label: "The Whale's Unfinished Symphony", fallback: "whale tail", categories: ['animal', 'water', 'music'] }),
+            createImage({ id: "1559827260435-44836119a2d0", label: "A Message in a Bottle That Arrived", fallback: "bottle shore", categories: ['nostalgia', 'water', 'emotion'] }),
+            createImage({ id: "1504701954957-2010ec3bcec1", label: "Tide Pools Holding Tiny Universes", fallback: "tide pool", categories: ['nature', 'water', 'science'] }),
+            createImage({ id: "1494790108377-be9c29b29330", label: "The Anchor's Rusty Autobiography", fallback: "rusty anchor", categories: ['nostalgia', 'water', 'art'] }),
+            createImage({ id: "1517483000871-1dbf64a6e1c6", label: "Bioluminescence Writing the Dark", fallback: "bioluminescence", categories: ['science', 'water', 'abstract'] }),
+            createImage({ id: "1540979388789-6cee28a1cdc9", label: "The Shipwreck That Became a Reef", fallback: "shipwreck underwater", categories: ['adventure', 'water', 'nostalgia'] }),
+            createImage({ id: "1559827291814-023a161a3e2b", label: "Seahorse Holding On for Dear Life", fallback: "seahorse", categories: ['animal', 'water', 'emotion'] }),
+            createImage({ id: "1510414842594-a61c69b5ae57", label: "Driftwood's Long Journey Home", fallback: "driftwood beach", categories: ['nature', 'water', 'nostalgia'] }),
+            createImage({ id: "1504472478235-9bc48ba4d60f", label: "The Ocean Floor's Starless Sky", fallback: "deep sea floor", categories: ['water', 'space', 'abstract'] }),
+            createImage({ id: "1519451241324-20b4ea2c4220", label: "A Pelican's Perfect Patience", fallback: "pelican dock", categories: ['animal', 'water', 'emotion'] }),
+            createImage({ id: "1513553404607-988bf2703777", label: "Mist Rising Like Ghosts at Sunrise", fallback: "ocean mist sunrise", categories: ['water', 'nature', 'emotion'] }),
+            createImage({ id: "1520942702018-0862200e6873", label: "The Dock That Heard Every Goodbye", fallback: "old dock", categories: ['nostalgia', 'water', 'human'] }),
         ],
         fusionImages: [
             createImage({ id: "1507525428034-b723cf961d3e", label: "Tidal Merge", fallback: "ocean abstract" }),
@@ -193,19 +248,32 @@ export const THEMES = [
         keywords: ["sunset skyline", "golden hour", "warm glow", "desert dusk", "sunlit city"],
         assets: [
             // People in golden light
-            createImage({ id: "1502680390548-bca8fcc47c16", label: "Rooftop Toast", fallback: "friends rooftop sunset" }),
-            createImage({ id: "1476900164809-ff19b8ae5968", label: "Yoga Silhouette", fallback: "yoga sunset" }),
-            createImage({ id: "1495616811223-4d98c6e9c869", label: "Beach Bonfire", fallback: "beach bonfire friends" }),
-            createImage({ id: "1529156069898-49953bc91ac4", label: "Festival Crowd", fallback: "music festival sunset" }),
-            createImage({ id: "1506905925346-21bda4d32df4", label: "Desert Walker", fallback: "desert sunset" }),
+            createImage({ id: "1502680390548-bca8fcc47c16", label: "Clinking Glasses Above the Skyline", fallback: "friends rooftop sunset", categories: ['human', 'urban', 'emotion'] }),
+            createImage({ id: "1476900164809-ff19b8ae5968", label: "Balancing Between Earth and Sun", fallback: "yoga sunset", categories: ['human', 'nature', 'emotion'] }),
+            createImage({ id: "1495616811223-4d98c6e9c869", label: "Embers That Outlast the Daylight", fallback: "beach bonfire friends", categories: ['human', 'nature', 'nostalgia'] }),
+            createImage({ id: "1529156069898-49953bc91ac4", label: "The Last Song Before the Lights Came On", fallback: "music festival sunset", categories: ['music', 'human', 'emotion'] }),
+            createImage({ id: "1506905925346-21bda4d32df4", label: "A Silhouette Writing Its Own Story", fallback: "desert sunset", categories: ['adventure', 'nature', 'emotion'] }),
             // Viral sunset moments
-            createImage({ id: "1472120435266-95a3f747eb47", label: "Silhouette Trees", fallback: "tree silhouette" }),
-            createImage({ id: "1490750967868-88aa4f44baee", label: "City Rooftop", fallback: "rooftop sunset" }),
-            createImage({ id: "1476842634003-7dcca8f832de", label: "Sky Lanterns", fallback: "sky lanterns" }),
-            createImage({ id: "1508739773434-c26b3d09e071", label: "Canyon Light", fallback: "canyon sunset" }),
-            createImage({ id: "1500530855697-b586d89ba3ee", label: "Golden Forest", fallback: "golden hour forest" }),
-            createImage({ id: "1504701954957-2010ec3bcec1", label: "Harvest Field", fallback: "harvest field" }),
-            createImage({ id: "1470770841072-f978cf4d019e", label: "Dusk Glow", fallback: "sunset skyline" }),
+            createImage({ id: "1472120435266-95a3f747eb47", label: "Trees Rehearsing for a Shadow Play", fallback: "tree silhouette", categories: ['nature', 'art', 'abstract'] }),
+            createImage({ id: "1490750967868-88aa4f44baee", label: "The Rooftop Where Time Slows Down", fallback: "rooftop sunset", categories: ['urban', 'emotion', 'nostalgia'] }),
+            createImage({ id: "1476842634003-7dcca8f832de", label: "Wishes Floating Into the Atmosphere", fallback: "sky lanterns", categories: ['emotion', 'art', 'adventure'] }),
+            createImage({ id: "1508739773434-c26b3d09e071", label: "A Canyon Blushing at Golden Hour", fallback: "canyon sunset", categories: ['nature', 'adventure', 'art'] }),
+            createImage({ id: "1500530855697-b586d89ba3ee", label: "The Forest Dipped in Honey", fallback: "golden hour forest", categories: ['nature', 'emotion', 'art'] }),
+            createImage({ id: "1504701954957-2010ec3bcec1", label: "The Harvest That Painted Itself Gold", fallback: "harvest field", categories: ['nature', 'nostalgia', 'art'] }),
+            createImage({ id: "1470770841072-f978cf4d019e", label: "The Sky's Resignation Letter", fallback: "sunset skyline", categories: ['urban', 'nature', 'emotion'] }),
+            // New images
+            createImage({ id: "1495584816685-4bdbeb2b982c", label: "A Stairway Climbing Into the Blaze", fallback: "stairway sunset", categories: ['urban', 'adventure', 'abstract'] }),
+            createImage({ id: "1519681393784-d120267933ba", label: "Stars Arriving for the Night Shift", fallback: "twilight stars", categories: ['space', 'nature', 'emotion'] }),
+            createImage({ id: "1473496169904-658ba7c44d8a", label: "Bicycle Silhouette Against Amber Sky", fallback: "bicycle sunset", categories: ['human', 'nostalgia', 'adventure'] }),
+            createImage({ id: "1500382017468-9049fed747ef", label: "The Vineyard's Golden Farewell", fallback: "vineyard sunset", categories: ['nature', 'nostalgia', 'art'] }),
+            createImage({ id: "1518173946687-403870c84f25", label: "Clouds Wearing Their Evening Gowns", fallback: "dramatic clouds sunset", categories: ['nature', 'abstract', 'art'] }),
+            createImage({ id: "1502899576159-f224dc2349fa", label: "Window Seat to the End of the Day", fallback: "window sunset view", categories: ['human', 'emotion', 'nostalgia'] }),
+            createImage({ id: "1505765050516-f72dcac9c60e", label: "Hot Air Balloons Chasing the Sun", fallback: "hot air balloons", categories: ['adventure', 'art', 'emotion'] }),
+            createImage({ id: "1496483648148-47c686dc86c4", label: "The Pier That Reaches for Tomorrow", fallback: "pier sunset", categories: ['water', 'nostalgia', 'emotion'] }),
+            createImage({ id: "1489516408517-0c0a15fc1d85", label: "Shadows Growing Longer Than Dreams", fallback: "long shadows sunset", categories: ['abstract', 'nature', 'emotion'] }),
+            createImage({ id: "1500534314209-a25ddb2bd429", label: "Lighthouse Painting the Fog in Gold", fallback: "lighthouse sunset", categories: ['water', 'urban', 'art'] }),
+            createImage({ id: "1517483000871-1dbf64a6e1c6", label: "The Fisherman's Golden Hour Ritual", fallback: "fisherman sunset", categories: ['human', 'water', 'nostalgia'] }),
+            createImage({ id: "1486870591958-9b9d0d1dda99", label: "Mountains Wearing Crowns of Light", fallback: "mountains golden hour", categories: ['nature', 'adventure', 'emotion'] }),
         ],
         fusionImages: [
             createImage({ id: "1501785888041-af3ef285b470", label: "Golden Blend", fallback: "sunset abstract" }),
@@ -224,16 +292,29 @@ export const THEMES = [
         keywords: ["abstract art", "street culture", "viral moment", "surreal", "pop culture"],
         assets: [
             // Wild mix of viral & people moments
-            createImage({ id: "1529156069898-49953bc91ac4", label: "???", fallback: "crowd" }),
-            createImage({ id: "1534430480872-3498386e7856", label: "???", fallback: "tunnel" }),
-            createImage({ id: "1502680390548-bca8fcc47c11", label: "???", fallback: "bonfire" }),
-            createImage({ id: "1519681393784-d120267933ba", label: "???", fallback: "stars" }),
-            createImage({ id: "1533174072545-7a4b6ad7a6c3", label: "???", fallback: "concert" }),
-            createImage({ id: "1551632811-561732d1e306", label: "???", fallback: "adventure" }),
-            createImage({ id: "1540206395-68808572332f", label: "???", fallback: "aurora" }),
-            createImage({ id: "1542751371-adc38448a05e", label: "???", fallback: "future" }),
-            createImage({ id: "1470225620780-dba8ba36b745", label: "???", fallback: "party" }),
-            createImage({ id: "1544027993-215b52db5e3c", label: "???", fallback: "frozen" }),
+            createImage({ id: "1529156069898-49953bc91ac4", label: "???", fallback: "crowd", categories: ['human', 'music', 'emotion'] }),
+            createImage({ id: "1534430480872-3498386e7856", label: "???", fallback: "tunnel", categories: ['urban', 'abstract', 'adventure'] }),
+            createImage({ id: "1502680390548-bca8fcc47c11", label: "???", fallback: "bonfire", categories: ['nature', 'human', 'nostalgia'] }),
+            createImage({ id: "1519681393784-d120267933ba", label: "???", fallback: "stars", categories: ['space', 'nature', 'abstract'] }),
+            createImage({ id: "1533174072545-7a4b6ad7a6c3", label: "???", fallback: "concert", categories: ['music', 'human', 'emotion'] }),
+            createImage({ id: "1551632811-561732d1e306", label: "???", fallback: "adventure", categories: ['adventure', 'nature', 'human'] }),
+            createImage({ id: "1540206395-68808572332f", label: "???", fallback: "aurora", categories: ['nature', 'space', 'abstract'] }),
+            createImage({ id: "1542751371-adc38448a05e", label: "???", fallback: "future", categories: ['technology', 'science', 'human'] }),
+            createImage({ id: "1470225620780-dba8ba36b745", label: "???", fallback: "party", categories: ['music', 'emotion', 'human'] }),
+            createImage({ id: "1544027993-215b52db5e3c", label: "???", fallback: "frozen", categories: ['water', 'abstract', 'nature'] }),
+            // New mystery images
+            createImage({ id: "1507003211169-0a1dd7228f2d", label: "???", fallback: "portrait", categories: ['human', 'emotion', 'art'] }),
+            createImage({ id: "1518770660439-4636190af475", label: "???", fallback: "circuits", categories: ['technology', 'science', 'abstract'] }),
+            createImage({ id: "1468581264429-2548a9948e97", label: "???", fallback: "glow", categories: ['animal', 'water', 'abstract'] }),
+            createImage({ id: "1441974231531-c6227db76b6e", label: "???", fallback: "green", categories: ['nature', 'emotion', 'abstract'] }),
+            createImage({ id: "1487058792275-0ad4aaf24ca7", label: "???", fallback: "game", categories: ['nostalgia', 'technology', 'art'] }),
+            createImage({ id: "1476842634003-7dcca8f832de", label: "???", fallback: "floating", categories: ['emotion', 'art', 'adventure'] }),
+            createImage({ id: "1472396961693-142e6e269027", label: "???", fallback: "wild", categories: ['animal', 'nature', 'emotion'] }),
+            createImage({ id: "1558618666-fcd25c85f1d7", label: "???", fallback: "neon", categories: ['nostalgia', 'technology', 'urban'] }),
+            createImage({ id: "1505118380757-91f5816e5e04", label: "???", fallback: "beacon", categories: ['urban', 'water', 'emotion'] }),
+            createImage({ id: "1504567961542-e24d9439a724", label: "???", fallback: "flash", categories: ['nature', 'science', 'emotion'] }),
+            createImage({ id: "1505765050516-f72dcac9c60e", label: "???", fallback: "flying", categories: ['adventure', 'art', 'emotion'] }),
+            createImage({ id: "1509316975850-ff9c5deb0cd9", label: "???", fallback: "creature", categories: ['animal', 'nature', 'emotion'] }),
         ],
         fusionImages: DEFAULT_FUSIONS,
         unlockMilestone: "streak_7",
@@ -361,6 +442,35 @@ export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE
         }
         const unique = [...byUrl.values()];
         const shuffled = shuffle(unique);
+
+        // If the static pool is getting thin, supplement with AI-generated concepts
+        if (unique.length - count < 4 && mediaType === MEDIA_TYPES.IMAGE) {
+            try {
+                const usedIds = new Set(unique.map(a => a.label));
+                const supplemental = getSupplementalConcepts(usedIds, theme);
+                for (const concept of supplemental) {
+                    shuffled.push({
+                        id: `ai-${seed}-${concept.left.label}`,
+                        label: concept.left.label,
+                        type: MEDIA_TYPES.IMAGE,
+                        url: concept.left.url,
+                        fallbackUrl: buildPicsumFallback(concept.left.label),
+                        categories: concept.left.categories,
+                    });
+                    shuffled.push({
+                        id: `ai-${seed}-${concept.right.label}`,
+                        label: concept.right.label,
+                        type: MEDIA_TYPES.IMAGE,
+                        url: concept.right.url,
+                        fallbackUrl: buildPicsumFallback(concept.right.label),
+                        categories: concept.right.categories,
+                    });
+                }
+            } catch {
+                // conceptGenerator not available or failed — continue with static pool
+            }
+        }
+
         const picked = shuffled.slice(0, count);
         return picked.map((asset, index) => ({
             ...asset,

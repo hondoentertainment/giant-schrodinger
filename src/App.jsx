@@ -23,15 +23,21 @@ const ChallengeRound = lazy(() => import('./features/challenge/ChallengeRound').
 const TournamentLobby = lazy(() => import('./features/tournament/TournamentLobby').then(m => ({ default: m.TournamentLobby })))
 const AsyncChains = lazy(() => import('./features/challenge/AsyncChains').then(m => ({ default: m.AsyncChains })))
 const AnalyticsDashboard = lazy(() => import('./features/analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })))
+const AnalyticsView = lazy(() => import('./features/analytics/AnalyticsView').then(m => ({ default: m.AnalyticsView })))
+const ModerationDashboard = lazy(() => import('./features/analytics/ModerationDashboard').then(m => ({ default: m.ModerationDashboard })))
+const RankedPanel = lazy(() => import('./features/ranked/RankedPanel'))
 import { RoomLobby } from './features/room/RoomLobby'
 import { MultiplayerRound } from './features/room/MultiplayerRound'
 import { MultiplayerReveal } from './features/room/MultiplayerReveal'
 import { parseJudgeShareUrl } from './services/share'
 import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
-import { parseThemeFromUrl, clearThemeFromUrl } from './services/themeBuilder'
+import { parseThemeFromUrl, clearThemeFromUrl, importThemeFromLink, saveSharedTheme } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
 import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider } from './services/analytics'
 import { initErrorMonitoring } from './services/errorMonitoring'
+import { processOfflineQueue, getQueueCount } from './services/offlineQueue'
+import { scoreSubmission } from './services/gemini'
+import { initPWAInstall } from './lib/pwaInstall'
 
 function LoadingFallback() {
     return (
@@ -41,13 +47,10 @@ function LoadingFallback() {
     );
 }
 
-initErrorMonitoring();
-
-// Initialize analytics providers
+// Module-level analytics init (safe to run once)
 registerAnalyticsProvider(ConsoleAnalyticsProvider);
-
-// Track DAU on app load
 trackRetention();
+initPWAInstall();
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
@@ -58,6 +61,47 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+function OfflineQueueHandler() {
+    useEffect(() => {
+        const handleOnline = async () => {
+            const count = getQueueCount();
+            if (count > 0) {
+                await processOfflineQueue(scoreSubmission);
+            }
+        };
+        window.addEventListener('online', handleOnline);
+        return () => window.removeEventListener('online', handleOnline);
+    }, []);
+    return null;
+}
+
+function PhaseTransition({ children, phase }) {
+    const [currentChildren, setCurrentChildren] = useState(children);
+    const [animClass, setAnimClass] = useState('phase-enter-active');
+
+    useEffect(() => {
+        // Fade out
+        setAnimClass('phase-exit-active');
+        const timer = setTimeout(() => {
+            setCurrentChildren(children);
+            setAnimClass('phase-enter');
+            // Force reflow then fade in
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setAnimClass('phase-enter-active');
+                });
+            });
+        }, 150);
+        return () => clearTimeout(timer);
+    }, [phase]); // Only transition when phase changes
+
+    return (
+        <div className={animClass}>
+            {currentChildren}
+        </div>
+    );
+}
+
 function GameContent() {
     const { gameState, setGameState } = useGame();
     const { isMultiplayer, roomPhase } = useRoom();
@@ -65,11 +109,34 @@ function GameContent() {
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
     const [challengePayload, setChallengePayload] = useState(() => parseChallengeUrl());
 
+    // Handle incoming encoded theme links on mount
+    useEffect(() => {
+        const hash = window.location.hash.slice(1);
+        if (hash.startsWith('theme_')) {
+            const theme = importThemeFromLink(hash);
+            if (theme) {
+                saveSharedTheme(theme);
+                window.location.hash = '';
+            }
+        }
+    }, []);
+
     useEffect(() => {
         const onHashChange = () => {
+            // Handle encoded theme links
+            const hash = window.location.hash.slice(1);
+            if (hash.startsWith('theme_')) {
+                const theme = importThemeFromLink(hash);
+                if (theme) {
+                    saveSharedTheme(theme);
+                    window.location.hash = '';
+                }
+                return;
+            }
+
             setJudgePayload(parseJudgeShareUrl());
             setChallengePayload(parseChallengeUrl());
-            // Handle shared theme links
+            // Handle shared theme links (code-based)
             const themeCode = parseThemeFromUrl();
             if (themeCode) {
                 clearThemeFromUrl();
@@ -150,6 +217,7 @@ function GameContent() {
         <Layout>
             {headerEl}
             <Suspense fallback={<LoadingFallback />}>
+            <PhaseTransition phase={gameState}>
                 {gameState === 'LOBBY' && <Lobby />}
                 {gameState === 'GALLERY' && <Gallery />}
                 {gameState === 'LEADERBOARD' && <Leaderboard onBack={() => setGameState('LOBBY')} />}
@@ -162,22 +230,37 @@ function GameContent() {
                 {gameState === 'REVEAL' && roundData && (
                     <Reveal submission={roundData.submission} assets={roundData.assets} />
                 )}
+                {gameState === 'REVEAL' && !roundData && (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <p className="text-white/60 mb-4">Session data was lost.</p>
+                        <button onClick={() => setGameState('LOBBY')} className="px-6 py-3 rounded-xl bg-purple-600 text-white font-bold">Back to Lobby</button>
+                    </div>
+                )}
                 {gameState === 'TOURNAMENT' && <TournamentLobby onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'ASYNC_CHAINS' && <AsyncChains onBack={() => setGameState('LOBBY')} />}
-                {gameState === 'ANALYTICS' && <AnalyticsDashboard onBack={() => setGameState('LOBBY')} />}
-                {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
+                {gameState === 'ANALYTICS' && <AnalyticsView onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'MODERATION' && <ModerationDashboard onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'RANKED' && <RankedPanel onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'SESSION_SUMMARY' && <SessionSummary onBack={() => setGameState('LOBBY')} />}
+            </PhaseTransition>
             </Suspense>
         </Layout>
     );
 }
 
 function App() {
+    useEffect(() => {
+        const cleanup = initErrorMonitoring();
+        return cleanup;
+    }, []);
+
     return (
         <ErrorBoundary>
             <ToastProvider>
                 <GameProvider>
                     <RoomProvider>
                         <GameContent />
+                        <OfflineQueueHandler />
                         <ToastContainer />
                     </RoomProvider>
                 </GameProvider>

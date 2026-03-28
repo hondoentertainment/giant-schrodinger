@@ -117,6 +117,16 @@ export function getRankTier(rating) {
   return { ...result };
 }
 
+export function getSubRank(rating) {
+  const tier = getRankTier(rating);
+  const tierStart = tier.minRating;
+  const nextTier = TIERS.find(t => t.tier === tier.tier + 1);
+  const tierRange = (nextTier ? nextTier.minRating : 3000) - tierStart;
+  const progress = rating - tierStart;
+  const subRank = Math.min(4, Math.floor((progress / tierRange) * 4) + 1);
+  return { ...tier, subRank, display: `${tier.name} ${['I','II','III','IV'][subRank-1]}` };
+}
+
 export function getPlayerRating() {
   const data = ensureData();
   const tierInfo = getRankTier(data.rating);
@@ -214,6 +224,75 @@ export function checkDecay() {
   }
 
   return { decayed: false, rating: data.rating };
+}
+
+export const SEASON_RESET_TYPE = 'soft'; // 'soft' | 'hard'
+
+export function applyDecayOnLoad() {
+  const data = loadData();
+  if (!data?.lastGameDate) return null;
+
+  const daysSince = Math.floor((Date.now() - new Date(data.lastGameDate).getTime()) / (1000 * 60 * 60 * 24));
+  if (daysSince < DECAY_DAYS) return null;
+
+  const decayPeriods = Math.floor(daysSince / DECAY_DAYS);
+  const totalDecay = decayPeriods * DECAY_AMOUNT;
+  const oldRating = data.rating;
+  const newRating = Math.max(0, oldRating - totalDecay);
+
+  saveData({ ...data, rating: newRating, lastDecayAt: Date.now() });
+
+  return { oldRating, newRating, decayAmount: oldRating - newRating, daysSince };
+}
+
+export function applySeasonalReset() {
+  const data = loadData();
+  if (!data) return null;
+
+  const season = getCurrentSeason();
+  if (data.currentSeasonId === season.id) return null; // Already reset for this season
+
+  const oldRating = data.rating;
+  let newRating;
+
+  if (SEASON_RESET_TYPE === 'soft') {
+    // Pull toward 1000 by 50%
+    newRating = Math.round(1000 + (oldRating - 1000) * 0.5);
+  } else {
+    newRating = 1000;
+  }
+
+  // Archive old season
+  const archive = JSON.parse(localStorage.getItem('venn_season_archive') || '[]');
+  if (data.currentSeasonId && data.gamesPlayed > 0) {
+    archive.push({
+      seasonId: data.currentSeasonId,
+      finalRating: oldRating,
+      tier: getRankTier(oldRating)?.name,
+      timestamp: Date.now(),
+    });
+    localStorage.setItem('venn_season_archive', JSON.stringify(archive));
+  }
+
+  // Apply reset
+  saveData({
+    ...data,
+    rating: newRating,
+    seasonBest: newRating,
+    currentSeasonId: season.id,
+    gamesPlayed: 0,
+    wins: 0,
+    losses: 0,
+    placementWins: 0,
+    placementLosses: 0,
+    lastGameDate: null,
+  });
+
+  return { oldRating, newRating, seasonName: season.name };
+}
+
+export function getSeasonArchive() {
+  return JSON.parse(localStorage.getItem('venn_season_archive') || '[]');
 }
 
 export function getSeasonHistory() {

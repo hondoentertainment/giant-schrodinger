@@ -13,8 +13,10 @@ import { VennDiagram } from '../round/VennDiagram';
 import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
 import Confetti from '../../components/Confetti';
 
+const TOTAL_AI_ROUNDS = 5;
+
 export function AIBattle({ onDone }) {
-    const { user, currentModifier, roundNumber, totalRounds, isDailyChallenge, completeRound } = useGame();
+    const { user, currentModifier, isDailyChallenge, completeRound } = useGame();
     const [phase, setPhase] = useState('playing'); // playing | scoring | results
     const [assets, setAssets] = useState({ left: null, right: null });
     const [submission, setSubmission] = useState('');
@@ -26,6 +28,14 @@ export function AIBattle({ onDone }) {
     const [winner, setWinner] = useState(null);
     const [showConfetti, setShowConfetti] = useState(false);
     const submittedRef = useRef(false);
+
+    // Best-of-5 state
+    const [aiRound, setAiRound] = useState(1);
+    const [playerWins, setPlayerWins] = useState(0);
+    const [aiWins, setAiWins] = useState(0);
+    const [matchComplete, setMatchComplete] = useState(false);
+    const [matchHistory, setMatchHistory] = useState([]);
+
     const stats = getStats();
     const rawTheme = getThemeById(user?.themeId);
     const theme = isThemeUnlocked(rawTheme?.id, stats)
@@ -36,13 +46,21 @@ export function AIBattle({ onDone }) {
     const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const difficulty = getAIDifficulty();
 
-    // Load assets
+    // Load assets when round changes
     useEffect(() => {
         submittedRef.current = false;
         const [left, right] = buildThemeAssets(theme, 2, mediaType);
         setAssets({ left, right });
         setTimer(timeLimit);
-    }, [theme?.id, timeLimit, mediaType, roundNumber]);
+        setSubmission('');
+        setShowTimeUp(false);
+        setShakeInput(false);
+        setPlayerResult(null);
+        setAiResult(null);
+        setWinner(null);
+        setShowConfetti(false);
+        setPhase('playing');
+    }, [theme?.id, timeLimit, mediaType, aiRound]);
 
     // Timer
     useEffect(() => {
@@ -57,6 +75,25 @@ export function AIBattle({ onDone }) {
             setTimeout(() => handleSubmit(null, { forceEmpty: true }), TIMINGS.TIME_UP_REVEAL);
         }
     }, [timer, phase]);
+
+    // Early match-clinch detection
+    useEffect(() => {
+        if (playerWins >= 3 || aiWins >= 3) {
+            setMatchComplete(true);
+        }
+    }, [playerWins, aiWins]);
+
+    function handleRoundComplete(playerScore, aiScore) {
+        const roundWinner = playerScore > aiScore ? 'player' : playerScore < aiScore ? 'ai' : 'tie';
+        if (roundWinner === 'player') setPlayerWins(w => w + 1);
+        if (roundWinner === 'ai') setAiWins(w => w + 1);
+
+        setMatchHistory(h => [...h, { round: aiRound, playerScore, aiScore, winner: roundWinner }]);
+
+        if (aiRound >= TOTAL_AI_ROUNDS) {
+            setMatchComplete(true);
+        }
+    }
 
     const handleSubmit = useCallback(async (e, { forceEmpty = false } = {}) => {
         if (e) e.preventDefault();
@@ -122,6 +159,9 @@ export function AIBattle({ onDone }) {
         completeRound({ score: pScore });
         trackEvent('ai_battle_complete', { playerScore: pScore, aiScore: aScore, winner: pScore > aScore ? 'player' : aScore > pScore ? 'ai' : 'tie' });
 
+        // Track round result for best-of-5
+        handleRoundComplete(pScore, aScore);
+
         // Delay to show results
         setTimeout(() => {
             setPhase('results');
@@ -130,9 +170,28 @@ export function AIBattle({ onDone }) {
                 setShowConfetti(true);
                 playConfettiSound();
             }
-        }, TIMINGS.PHASE_TRANSITION);
-    }, [submission, assets, mediaType, difficulty, completeRound]);
+        }, 500);
+    }, [submission, assets, mediaType, difficulty, completeRound, aiRound]);
 
+    const onBack = onDone;
+
+    // Scoreboard component shown at all times
+    const Scoreboard = () => (
+        <div className="flex items-center justify-center gap-6 mb-6 p-4 rounded-2xl bg-white/5 border border-white/10">
+            <div className="text-center">
+                <div className="text-sm text-white/50 mb-1">You</div>
+                <div className="text-3xl font-bold text-green-400">{playerWins}</div>
+            </div>
+            <div className="text-center">
+                <div className="text-sm text-white/50 mb-1">Round</div>
+                <div className="text-xl text-white/70">{aiRound}/{TOTAL_AI_ROUNDS}</div>
+            </div>
+            <div className="text-center">
+                <div className="text-sm text-white/50 mb-1">AI</div>
+                <div className="text-3xl font-bold text-red-400">{aiWins}</div>
+            </div>
+        </div>
+    );
     if (!assets.left || !assets.right) {
         return (
             <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-500 px-4">
@@ -141,21 +200,68 @@ export function AIBattle({ onDone }) {
         );
     }
 
+    // MATCH COMPLETE SCREEN
+    if (matchComplete && phase === 'results') {
+        return (
+            <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700 px-4">
+                <Confetti active={showConfetti} duration={4000} particleCount={60} />
+                <Scoreboard />
+                <div className="text-center py-8">
+                    <div className="text-5xl mb-4">
+                        {playerWins > aiWins ? '\uD83C\uDF89' : playerWins < aiWins ? '\uD83E\uDD16' : '\uD83E\uDD1D'}
+                    </div>
+                    <h2 className="text-3xl font-bold text-white mb-2">
+                        {playerWins > aiWins ? 'You Win!' : playerWins < aiWins ? 'AI Wins!' : "It's a Tie!"}
+                    </h2>
+                    <p className="text-white/60 mb-2">
+                        Final Score: {playerWins} &mdash; {aiWins}
+                    </p>
+
+                    {/* Match history */}
+                    <div className="mt-6 space-y-2 max-w-sm mx-auto">
+                        {matchHistory.map((h, i) => (
+                            <div key={i} className={`flex justify-between px-4 py-2 rounded-lg ${
+                                h.winner === 'player' ? 'bg-green-500/10' : h.winner === 'ai' ? 'bg-red-500/10' : 'bg-white/5'
+                            }`}>
+                                <span className="text-white/70">Round {h.round}</span>
+                                <span className="text-white font-semibold">{h.playerScore} &mdash; {h.aiScore}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex gap-3 justify-center mt-6">
+                        <button onClick={() => {
+                            setAiRound(1); setPlayerWins(0); setAiWins(0);
+                            setMatchComplete(false); setMatchHistory([]);
+                        }} className="px-6 py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 transition">
+                            Rematch
+                        </button>
+                        <button onClick={onBack} className="px-6 py-3 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition">
+                            Back to Lobby
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // PLAYING PHASE
     if (phase === 'playing') {
         return (
             <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-700 px-4">
+                <Scoreboard />
+
                 {/* AI Battle Banner */}
                 <div className="w-full max-w-md mb-3 bg-gradient-to-r from-red-500/20 via-orange-500/20 to-red-500/20 border border-red-500/30 rounded-2xl p-3 text-center animate-in slide-in-from-top-4 duration-500">
-                    <div className="text-2xl mb-0.5">🤖</div>
+                    <div className="text-2xl mb-0.5">{'\uD83E\uDD16'}</div>
                     <div className="text-white font-bold text-base">vs AI Opponent</div>
                     <div className="text-white/60 text-xs">Beat the AI for bonus coins!</div>
                 </div>
 
                 <div className="w-full flex justify-between items-center mb-2">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => onDone?.()} className="text-white/30 hover:text-white/60 transition-colors text-xs">← Quit</button>
-                        <div className="text-lg font-bold text-white/40">ROUND {roundNumber} / {totalRounds}</div>
+                        <button onClick={() => onDone?.()} className="text-white/30 hover:text-white/60 transition-colors text-xs">{'\u2190'} Quit</button>
                     </div>
                     {showTimeUp ? (
                         <div className="text-2xl font-black font-display text-amber-400 animate-in zoom-in-95 duration-300">Time's up!</div>
@@ -191,6 +297,7 @@ export function AIBattle({ onDone }) {
     if (phase === 'scoring') {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-in fade-in duration-500">
+                <Scoreboard />
                 <div className="w-24 h-24 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mb-8" />
                 <h2 className="text-3xl font-display font-bold text-white mb-2 animate-pulse">Scoring both players...</h2>
                 <p className="text-white/40">You vs AI</p>
@@ -202,18 +309,19 @@ export function AIBattle({ onDone }) {
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700 px-4">
             <Confetti active={showConfetti} duration={4000} particleCount={60} />
+            <Scoreboard />
 
-            {/* Winner Banner */}
+            {/* Round Winner Banner */}
             <div className={`w-full max-w-md mb-6 p-4 rounded-2xl border text-center animate-in slide-in-from-top-4 duration-500 ${
                 winner === 'player' ? 'bg-emerald-500/20 border-emerald-500/30' :
                 winner === 'ai' ? 'bg-red-500/20 border-red-500/30' :
                 'bg-yellow-500/20 border-yellow-500/30'
             }`}>
                 <div className="text-3xl mb-1">
-                    {winner === 'player' ? '🏆' : winner === 'ai' ? '🤖' : '🤝'}
+                    {winner === 'player' ? '\uD83C\uDFC6' : winner === 'ai' ? '\uD83E\uDD16' : '\uD83E\uDD1D'}
                 </div>
                 <div className="text-xl font-bold text-white">
-                    {winner === 'player' ? 'You Win!' : winner === 'ai' ? 'AI Wins!' : "It's a Tie!"}
+                    {winner === 'player' ? 'You Win This Round!' : winner === 'ai' ? 'AI Wins This Round!' : "It's a Tie!"}
                 </div>
                 {winner === 'player' && <div className="text-emerald-300 text-sm">+1.5x bonus coins earned!</div>}
             </div>
@@ -223,7 +331,7 @@ export function AIBattle({ onDone }) {
                 {/* Player Card */}
                 <div className={`p-6 rounded-2xl border ${winner === 'player' ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/10'}`}>
                     <div className="text-center mb-4">
-                        <div className="text-2xl mb-1">{user?.avatar || '👤'}</div>
+                        <div className="text-2xl mb-1">{user?.avatar || '\uD83D\uDC64'}</div>
                         <div className="text-white font-bold">{user?.name || 'You'}</div>
                     </div>
                     <div className="text-center mb-3">
@@ -243,7 +351,7 @@ export function AIBattle({ onDone }) {
                 {/* AI Card */}
                 <div className={`p-6 rounded-2xl border ${winner === 'ai' ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
                     <div className="text-center mb-4">
-                        <div className="text-2xl mb-1">🤖</div>
+                        <div className="text-2xl mb-1">{'\uD83E\uDD16'}</div>
                         <div className="text-white font-bold">AI ({difficulty})</div>
                     </div>
                     <div className="text-center mb-3">
@@ -266,12 +374,14 @@ export function AIBattle({ onDone }) {
                 </div>
             )}
 
-            <button
-                onClick={() => onDone?.()}
-                className="px-12 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)]"
-            >
-                {roundNumber >= totalRounds ? 'See Results' : 'Next Round →'}
-            </button>
+            {!matchComplete && (
+                <button
+                    onClick={() => setAiRound(r => r + 1)}
+                    className="px-12 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)]"
+                >
+                    Next Round {'\u2192'}
+                </button>
+            )}
         </div>
     );
 }

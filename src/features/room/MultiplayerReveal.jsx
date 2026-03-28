@@ -4,6 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
 import { Trophy, ArrowRight, Home, ThumbsUp, Crown, Star } from 'lucide-react';
 import { getRoomSubmissions } from '../../services/multiplayer';
+import { ConnectionBanner } from './ConnectionBanner';
 
 function ScoreBar({ label, value, max = 10 }) {
     const pct = Math.round((value / max) * 100);
@@ -35,8 +36,11 @@ export function MultiplayerReveal() {
         players,
         submissions,
         isHost,
+        isSpectator,
         roomPhase,
         playerName,
+        reactions,
+        addReaction,
         advanceToNextRound,
         leaveCurrentRoom,
     } = useRoom();
@@ -178,6 +182,14 @@ export function MultiplayerReveal() {
     if (revealPhase === REVEAL_PHASES.COUNTDOWN && !isFinished) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center justify-center min-h-[50vh]">
+                <div className="w-full flex justify-start px-4 mb-4">
+                    <button
+                        onClick={leaveCurrentRoom}
+                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
+                    >
+                        Leave Room
+                    </button>
+                </div>
                 <div className="text-center animate-in zoom-in-95 duration-500">
                     <div className="text-white/40 text-lg uppercase tracking-widest mb-4">
                         Round {room?.round_number} Answers
@@ -202,6 +214,19 @@ export function MultiplayerReveal() {
     if (revealPhase === REVEAL_PHASES.REVEAL && !isFinished) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
+                {isSpectator && (
+                    <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
+                        Spectating -- watch and react!
+                    </div>
+                )}
+                <div className="w-full flex justify-start px-4 mb-4">
+                    <button
+                        onClick={leaveCurrentRoom}
+                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
+                    >
+                        Leave Room
+                    </button>
+                </div>
                 <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                     <div className="glass-panel rounded-[22px] p-8">
                         <div className="text-center mb-8">
@@ -228,6 +253,19 @@ export function MultiplayerReveal() {
                                         <div className="mt-3 pl-10">
                                             <p className="text-white/80 italic text-xl">&ldquo;{entry.submission}&rdquo;</p>
                                         </div>
+                                        {isSpectator && (
+                                            <div className="flex gap-2 mt-2 pl-10">
+                                                {['\uD83D\uDC4D', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDD25', '\uD83E\uDD2F'].map(emoji => (
+                                                    <button
+                                                        key={emoji}
+                                                        onClick={() => addReaction(entry.id, emoji)}
+                                                        className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition text-sm"
+                                                    >
+                                                        {emoji} {reactions.get(entry.id)?.filter(r => r === emoji).length || ''}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -248,6 +286,14 @@ export function MultiplayerReveal() {
     if (revealPhase === REVEAL_PHASES.VOTING && !isFinished) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
+                <div className="w-full flex justify-start px-4 mb-4">
+                    <button
+                        onClick={leaveCurrentRoom}
+                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
+                    >
+                        Leave Room
+                    </button>
+                </div>
                 <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                     <div className="glass-panel rounded-[22px] p-8">
                         <div className="text-center mb-8">
@@ -319,6 +365,19 @@ export function MultiplayerReveal() {
     // Results screen (final reveal with scores)
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
+            {isSpectator && (
+                <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
+                    Spectating -- watch and react!
+                </div>
+            )}
+            <div className="w-full flex justify-start px-4 mb-4">
+                <button
+                    onClick={leaveCurrentRoom}
+                    className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
+                >
+                    Leave Room
+                </button>
+            </div>
             <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                 <div className="glass-panel rounded-[22px] p-8">
                     {/* Header */}
@@ -391,6 +450,20 @@ export function MultiplayerReveal() {
                                         {entry.parsedScore?.commentary && (
                                             <div className="mt-3 pl-12 text-sm text-white/50 italic">
                                                 &ldquo;{entry.parsedScore.commentary}&rdquo;
+                                            </div>
+                                        )}
+
+                                        {isSpectator && (
+                                            <div className="flex gap-2 mt-2 pl-12">
+                                                {['\uD83D\uDC4D', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDD25', '\uD83E\uDD2F'].map(emoji => (
+                                                    <button
+                                                        key={emoji}
+                                                        onClick={() => addReaction(entry.id, emoji)}
+                                                        className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition text-sm"
+                                                    >
+                                                        {emoji} {reactions.get(entry.id)?.filter(r => r === emoji).length || ''}
+                                                    </button>
+                                                ))}
                                             </div>
                                         )}
                                     </div>

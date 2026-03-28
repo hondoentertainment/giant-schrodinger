@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getSessionMetrics, getEventCount, getEvents } from '../../services/analytics';
 import { getHighlightStats } from '../../services/highlights';
-import { BarChart3, TrendingUp, Share2, Target, Calendar, Users } from 'lucide-react';
+import { BarChart3, TrendingUp, Share2, Target, Calendar, Users, Shield } from 'lucide-react';
+import { useGame } from '../../context/GameContext';
+import { getFlaggedCount } from '../../services/moderation';
+import { ScoreHistoryChart } from './ScoreHistoryChart';
 
 function MetricCard({ icon: Icon, label, value, subtext, color = 'purple' }) {
     const colorMap = {
@@ -24,9 +27,11 @@ function MetricCard({ icon: Icon, label, value, subtext, color = 'purple' }) {
 }
 
 export function AnalyticsDashboard({ onBack }) {
+    const { setGameState } = useGame();
     const [metrics, setMetrics] = useState(null);
     const [highlightStats, setHighlightStats] = useState(null);
     const [eventCounts, setEventCounts] = useState({});
+    const flagCount = getFlaggedCount();
 
     useEffect(() => {
         setMetrics(getSessionMetrics());
@@ -58,6 +63,11 @@ export function AnalyticsDashboard({ onBack }) {
                 <MetricCard icon={TrendingUp} label="Avg Score" value={metrics.avgScore.toFixed(1)} subtext="Across all sessions" color="green" />
                 <MetricCard icon={Share2} label="Share Rate" value={`${(metrics.shareRate * 100).toFixed(0)}%`} subtext="Sessions with a share" color="blue" />
                 <MetricCard icon={Calendar} label="Daily Challenges" value={metrics.dailyChallengesCompleted} subtext="Challenges completed" color="amber" />
+            </div>
+
+            {/* Score History Chart */}
+            <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/10">
+                <ScoreHistoryChart limit={30} />
             </div>
 
             {/* Retention */}
@@ -109,6 +119,24 @@ export function AnalyticsDashboard({ onBack }) {
                         </div>
                     ))}
                 </div>
+            </div>
+
+            {/* Moderation Link */}
+            <div className="mb-6">
+                <button
+                    onClick={() => setGameState('MODERATION')}
+                    className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors flex items-center justify-between"
+                >
+                    <div className="flex items-center gap-2">
+                        <Shield size={16} className="text-white/60" />
+                        <span className="text-white font-bold">Content Moderation</span>
+                    </div>
+                    {flagCount > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs font-bold">
+                            {flagCount} flag{flagCount !== 1 ? 's' : ''}
+                        </span>
+                    )}
+                </button>
             </div>
 
             {/* Highlight Stats */}

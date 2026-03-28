@@ -5,6 +5,7 @@ import { saveJudgement } from '../../services/judgements';
 import { saveJudgementToBackend, getSharedRound } from '../../services/backend';
 import { clearJudgeFromUrl } from '../../services/share';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { JudgeCalibration } from './JudgeCalibration';
 
 export function JudgeRound({ payload, onDone }) {
     const { toast } = useToast();
@@ -18,10 +19,13 @@ export function JudgeRound({ payload, onDone }) {
     const [errorType, setErrorType] = useState(null); // 'not_found' | 'network' | 'invalid'
     const [judgeName, setJudgeName] = useState('');
     const [showDetailedForm, setShowDetailedForm] = useState(false);
+    const [isCalibrated, setIsCalibrated] = useState(
+        () => localStorage.getItem('venn_judge_calibrated') === 'true'
+    );
     const formRef = useRef(null);
     const effectivePayload = resolvedPayload || payload;
     const hasValidPayload = effectivePayload?.assets?.left && effectivePayload?.assets?.right && effectivePayload?.submission;
-    useFocusTrap(!loading && !error && hasValidPayload && !submitted, formRef);
+    useFocusTrap(!loading && !error && hasValidPayload && !submitted && isCalibrated, formRef);
 
     useEffect(() => {
         if (!payload?.backendId) return;
@@ -49,6 +53,10 @@ export function JudgeRound({ payload, onDone }) {
             });
         return () => { cancelled = true; };
     }, [payload?.backendId]);
+
+    if (!isCalibrated) {
+        return <JudgeCalibration onComplete={() => setIsCalibrated(true)} />;
+    }
 
     if (loading) {
         return (
@@ -149,6 +157,11 @@ export function JudgeRound({ payload, onDone }) {
             <div className="mb-6 text-center">
                 <h2 className="text-2xl font-display font-bold text-white mb-1">Judge a Friend&apos;s Connection</h2>
                 <p className="text-white/60 text-sm">Score their connection — they&apos;ll see your feedback in their gallery.</p>
+                {isCalibrated && (
+                    <span className="inline-block mt-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-semibold">
+                        &#127891; Certified Judge
+                    </span>
+                )}
             </div>
 
             <VennDiagram leftAsset={effectivePayload.assets.left} rightAsset={effectivePayload.assets.right} />

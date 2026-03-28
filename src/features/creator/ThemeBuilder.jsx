@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
-import { createCustomTheme, getCustomThemes, deleteCustomTheme, shareThemeUrl, getFeaturedThemes, calculateMultiplier } from '../../services/themeBuilder';
+import { createCustomTheme, getCustomThemes, deleteCustomTheme, shareThemeUrl, getFeaturedThemes, calculateMultiplier, exportThemeAsLink } from '../../services/themeBuilder';
 import { ArrowLeft, Plus, Copy, Trash2, Palette, Clock, Star } from 'lucide-react';
 
 const COLOR_PALETTES = [
@@ -234,6 +234,19 @@ export function ThemeBuilder({ onBack }) {
                                         >
                                             <Copy className="w-4 h-4" />
                                             Copy Share Link
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const link = exportThemeAsLink(theme);
+                                                navigator.clipboard?.writeText(link).then(() => {
+                                                    addToast('Theme link copied!', 'success');
+                                                }).catch(() => {
+                                                    addToast('Could not copy theme link', 'error');
+                                                });
+                                            }}
+                                            className="px-4 py-2 rounded-xl bg-purple-500/20 text-purple-300 text-sm font-semibold hover:bg-purple-500/30 transition"
+                                        >
+                                            Share Theme Link
                                         </button>
                                         <button
                                             onClick={() => handleDelete(theme.id)}

@@ -108,3 +108,29 @@ export function scheduleDailyChallengeReminder() {
         );
     }
 }
+
+/**
+ * Send an immediate notification that the daily challenge is live.
+ * Useful for triggering when a new daily challenge becomes available.
+ */
+export function notifyDailyChallenge() {
+    if (!isNotificationSupported() || Notification.permission !== 'granted') return;
+    new Notification('Venn with Friends', {
+        body: 'Daily challenge is live! Earn 1.5x bonus points.',
+        icon: '/icon-192.svg',
+        tag: 'daily-challenge',
+    });
+}
+
+/**
+ * Send an immediate notification that a friend has challenged the player.
+ * @param {string} friendName - The name of the friend who sent the challenge
+ */
+export function notifyFriendChallenge(friendName) {
+    if (!isNotificationSupported() || Notification.permission !== 'granted') return;
+    new Notification('Venn with Friends', {
+        body: `${friendName} just challenged you! Can you beat their score?`,
+        icon: '/icon-192.svg',
+        tag: 'friend-challenge',
+    });
+}

@@ -1,12 +1,13 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { getScoreBand } from '../../lib/scoreBands';
 import { getStats } from '../../services/stats';
 import { getPlayerRank } from '../../services/leaderboard';
 import { trackEvent } from '../../services/analytics';
-import { Trophy, Star, Zap, ArrowRight, Home } from 'lucide-react';
+import { Trophy, Star, Zap, ArrowRight, Home, Share2 } from 'lucide-react';
 import SocialShareButtons from '../../components/SocialShareButtons';
+import { generateStoryImage } from '../../lib/storyImage';
 
 function RoundCard({ result, index }) {
     const mod = result.modifier;
@@ -46,7 +47,55 @@ function RoundCard({ result, index }) {
     );
 }
 
-export function SessionSummary() {
+function StoryShareButton({ score, sessionResults, playerName }) {
+    const [generating, setGenerating] = useState(false);
+
+    const handleShare = async () => {
+        setGenerating(true);
+        try {
+            const best = sessionResults?.length > 0
+                ? sessionResults.reduce((a, b) => ((a.score || a.finalScore || 0) > (b.score || b.finalScore || 0) ? a : b))
+                : null;
+            const conceptLeft = best.conceptLeft || 'Concept A';
+            const conceptRight = best.conceptRight || 'Concept B';
+            const submission = best.submission || 'My best answer';
+            const dataUrl = await generateStoryImage(score, conceptLeft, conceptRight, submission, playerName);
+
+            // Try Web Share API first, fall back to download
+            if (navigator.share && navigator.canShare) {
+                const blob = await (await fetch(dataUrl)).blob();
+                const file = new File([blob], 'venn-story.png', { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: 'Venn with Friends', text: `I scored ${score}/10!` });
+                    return;
+                }
+            }
+
+            // Fallback: download
+            const link = document.createElement('a');
+            link.download = 'venn-story.png';
+            link.href = dataUrl;
+            link.click();
+        } catch {
+            // Ignore share cancellation
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    return (
+        <button
+            onClick={handleShare}
+            disabled={generating}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 hover:text-purple-200 hover:border-purple-500/50 transition-all text-sm font-semibold disabled:opacity-50"
+        >
+            <Share2 className="w-4 h-4" />
+            {generating ? 'Generating...' : 'Share to Stories'}
+        </button>
+    );
+}
+
+export function SessionSummary({ onBack }) {
     const { sessionResults, sessionScore, totalRounds, endSession, isDailyChallenge, setGameState, user } = useGame();
     const { toast } = useToast();
 
@@ -59,6 +108,13 @@ export function SessionSummary() {
         const specialRounds = sessionResults.filter((r) => r.modifier && r.modifier.id !== 'normal').length;
         return { avg, best, worst, specialRounds };
     }, [sessionResults]);
+
+    // Find the best round
+    const bestRound = useMemo(() => sessionResults?.reduce((best, r, i) =>
+        (!best || (r.score || r.finalScore || 0) > (best.result.score || best.result.finalScore || 0))
+            ? { result: r, index: i }
+            : best
+    , null), [sessionResults]);
 
     const overallBand = getScoreBand(Math.round(stats?.avg || 0));
     const playerStats = getStats();
@@ -157,6 +213,39 @@ export function SessionSummary() {
                         </div>
                     </div>
 
+                    {/* Best connection highlight */}
+                    {bestRound && (
+                        <div className="w-full max-w-md mb-6 p-5 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/20">
+                            <div className="text-yellow-400 text-xs uppercase tracking-wider font-bold mb-2">
+                                ⭐ Best Connection — Round {bestRound.index + 1}
+                            </div>
+                            {bestRound.result.submission && (
+                                <p className="text-white text-lg font-medium mb-2 italic">
+                                    &ldquo;{bestRound.result.submission}&rdquo;
+                                </p>
+                            )}
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl font-bold text-yellow-400">
+                                    {bestRound.result.score || bestRound.result.finalScore}/10
+                                </span>
+                                {bestRound.result.breakdown && (
+                                    <span className="text-white/50 text-sm">
+                                        W:{bestRound.result.breakdown.wit} L:{bestRound.result.breakdown.logic} O:{bestRound.result.breakdown.originality} C:{bestRound.result.breakdown.clarity}
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const text = `My best connection: "${bestRound.result.submission}" — scored ${bestRound.result.score || bestRound.result.finalScore}/10 on Venn with Friends!`;
+                                    navigator.clipboard?.writeText(text);
+                                }}
+                                className="mt-3 px-4 py-2 rounded-lg bg-yellow-500/20 text-yellow-300 text-sm font-semibold hover:bg-yellow-500/30 transition"
+                            >
+                                Share Best Connection
+                            </button>
+                        </div>
+                    )}
+
                     {/* Round-by-round breakdown */}
                     <div className="mb-8">
                         <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Round Breakdown</div>
@@ -179,6 +268,17 @@ export function SessionSummary() {
                             onToast={(type, msg) => toast[type]?.(msg)}
                         />
                     </div>
+
+                    {/* Share to Stories */}
+                    {sessionResults.length > 0 && (
+                        <div className="mb-8 flex justify-center">
+                            <StoryShareButton
+                                score={Math.round(stats.avg)}
+                                sessionResults={sessionResults}
+                                playerName={user?.name || 'Anonymous'}
+                            />
+                        </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex flex-col gap-3">

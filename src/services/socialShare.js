@@ -19,20 +19,31 @@ export function dataURLtoFile(dataURL, filename) {
   return new File([u8arr], filename, { type: mime });
 }
 
+// Generate personality-rich, tiered share text based on score
+export function generateShareText(score, conceptLeft, conceptRight, submission, extras = {}) {
+  const { streak, rank } = extras;
+
+  let tone;
+  if (score >= 9) tone = `Absolutely unhinged. I connected "${conceptLeft}" and "${conceptRight}" and scored ${score}/10.`;
+  else if (score >= 7) tone = `Pretty sharp. Connected "${conceptLeft}" + "${conceptRight}" for ${score}/10.`;
+  else if (score >= 4) tone = `Decent attempt at "${conceptLeft}" \u00d7 "${conceptRight}"... ${score}/10.`;
+  else tone = `I tried connecting "${conceptLeft}" and "${conceptRight}". ${score}/10. Surely you can beat this.`;
+
+  let suffix = 'Can you do better?';
+  if (streak > 3) suffix += ` (${streak}-day streak \ud83d\udd25)`;
+  if (rank) suffix += ` Rank #${rank}`;
+
+  return `${tone} ${suffix}\n\n#VennWithFriends`;
+}
+
 // Create shareable text for different contexts
 export function createShareText(shareData) {
-  const { submission, score, scoreBand, commentary, assets } = shareData;
-  const leftAsset = assets?.left?.title || 'Unknown';
-  const rightAsset = assets?.right?.title || 'Unknown';
-  
-  const templates = [
-    `I just connected "${leftAsset}" and "${rightAsset}" with "${submission}" and scored ${score}/10! ${commentary} 🎮 #VennWithFriends #PartyGames`,
-    `🎯 ${score}/10! My connection: "${submission}" (${leftAsset} + ${rightAsset}). ${commentary} Play now! #VennWithFriends`,
-    `💡 Creative win! Connected "${leftAsset}" to "${rightAsset}" with "${submission}" - scored ${score}/10! ${commentary} #VennWithFriends`,
-    `🎉 Just got "${scoreBand}" in Venn with Friends! "${submission}" (${leftAsset} + ${rightAsset}) ${commentary} Join the fun!`,
-  ];
-  
-  return templates[Math.floor(Math.random() * templates.length)];
+  const { submission, score, assets } = shareData;
+  const leftAsset = assets?.left?.label || assets?.left?.title || 'Unknown';
+  const rightAsset = assets?.right?.label || assets?.right?.title || 'Unknown';
+
+  // Use the new tiered template
+  return generateShareText(score, leftAsset, rightAsset, submission);
 }
 
 // Share to Twitter/X

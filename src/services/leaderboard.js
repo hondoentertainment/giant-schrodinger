@@ -59,9 +59,11 @@ function writeEntries(entries) {
  * @param {number} score - The player's score.
  * @param {string} avatar - The player's avatar identifier.
  * @param {number} roundCount - Number of rounds played.
+ * @param {object} [options] - Additional options.
+ * @param {boolean} [options.scoredServerSide] - Whether the score was validated server-side.
  * @returns {object|null} The created entry, or null on failure.
  */
-export function submitScore(playerName, score, avatar, roundCount) {
+export function submitScore(playerName, score, avatar, roundCount, options = {}) {
   try {
     const entries = readEntries();
 
@@ -74,6 +76,7 @@ export function submitScore(playerName, score, avatar, roundCount) {
       score,
       avatar,
       roundCount,
+      trusted: !!options.scoredServerSide,
       timestamp: Date.now(),
       dateKey: getTodayKey(),
       weekKey: getWeekKey(),
@@ -97,7 +100,12 @@ function getLeaderboard(keyField, keyValue) {
     const entries = readEntries();
     return entries
       .filter((entry) => entry[keyField] === keyValue)
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => {
+        // Server-scored (trusted) entries are prioritized over client-scored entries
+        if (a.trusted && !b.trusted) return -1;
+        if (!a.trusted && b.trusted) return 1;
+        return b.score - a.score;
+      })
       .slice(0, 50);
   } catch (e) {
     console.error('Failed to get leaderboard:', e);
@@ -192,4 +200,61 @@ export function clearOldEntries() {
     console.error('Failed to clear old entries:', e);
     return 0;
   }
+}
+
+// ============================================================
+// Seasonal Leaderboard
+// ============================================================
+
+/**
+ * Returns the current season identifier and display name.
+ */
+export function getCurrentSeason() {
+  const now = new Date();
+  const month = now.toLocaleString('default', { month: 'long' });
+  const year = now.getFullYear();
+  return { id: `${year}-${now.getMonth() + 1}`, name: `${month} ${year}`, startDate: new Date(year, now.getMonth(), 1) };
+}
+
+/**
+ * Reads the seasonal leaderboard for the current month.
+ */
+export function getSeasonalLeaderboard() {
+  const season = getCurrentSeason();
+  const key = `venn_leaderboard_${season.id}`;
+  try {
+    return JSON.parse(localStorage.getItem(key)) || [];
+  } catch { return []; }
+}
+
+/**
+ * Submits (or updates) a player's score in the current seasonal leaderboard.
+ */
+export function submitSeasonalScore(name, score, avatar) {
+  const season = getCurrentSeason();
+  const key = `venn_leaderboard_${season.id}`;
+  const board = getSeasonalLeaderboard();
+  const existing = board.find(e => e.name === name);
+  if (existing) {
+    if (score > existing.bestScore) existing.bestScore = score;
+    existing.totalRounds++;
+    existing.totalScore += score;
+  } else {
+    board.push({ name, avatar, bestScore: score, totalScore: score, totalRounds: 1 });
+  }
+  board.sort((a, b) => b.bestScore - a.bestScore);
+  localStorage.setItem(key, JSON.stringify(board.slice(0, 100)));
+  return board;
+}
+
+/**
+ * Returns an archive of all seasonal leaderboards stored in localStorage.
+ */
+export function getSeasonArchive() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('venn_leaderboard_')) keys.push(key);
+  }
+  return keys.map(k => ({ seasonId: k.replace('venn_leaderboard_', ''), data: JSON.parse(localStorage.getItem(k) || '[]') }));
 }
