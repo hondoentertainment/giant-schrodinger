@@ -4,72 +4,25 @@
 
 ### Option 1: Using GitHub Actions (Automated)
 
-1. **Create GitHub Actions workflow file**:
+The repository already includes two CI/CD workflows in `.github/workflows/`:
 
-   Create `.github/workflows/deploy.yml`:
+- **deploy.yml** -- Runs on every push to `main` and on manual dispatch. It installs dependencies, runs unit tests (179 tests), installs Playwright and runs E2E tests, builds the production bundle, and deploys to GitHub Pages.
+- **lighthouse.yml** -- Runs on pull requests to `main`. It builds the app and runs Lighthouse CI against the thresholds in `lighthouse.config.js`.
 
-   ```yaml
-   name: Deploy to GitHub Pages
+To enable deployment:
 
-   on:
-     push:
-       branches: [ main ]
-     workflow_dispatch:
-
-   permissions:
-     contents: read
-     pages: write
-     id-token: write
-
-   jobs:
-     build:
-       runs-on: ubuntu-latest
-       steps:
-         - uses: actions/checkout@v4
-         
-         - name: Setup Node
-           uses: actions/setup-node@v4
-           with:
-             node-version: '18'
-             cache: 'npm'
-         
-         - name: Install dependencies
-           run: npm ci
-         
-         - name: Build
-           run: npm run build
-         
-         - name: Upload artifact
-           uses: actions/upload-pages-artifact@v3
-           with:
-             path: ./dist
-
-     deploy:
-       environment:
-         name: github-pages
-         url: ${{ steps.deployment.outputs.page_url }}
-       runs-on: ubuntu-latest
-       needs: build
-       steps:
-         - name: Deploy to GitHub Pages
-           id: deployment
-           uses: actions/deploy-pages@v4
-   ```
-
-2. **Enable GitHub Pages**:
+1. **Enable GitHub Pages**:
    - Go to your repository on GitHub
    - Settings > Pages
    - Source: "GitHub Actions"
    - Save
 
-3. **Push to trigger deployment**:
+2. **Push to trigger deployment**:
    ```bash
-   git add .
-   git commit -m "Add GitHub Actions deployment"
    git push origin main
    ```
 
-4. **Your site will be live at**: `https://hondoentertainment.github.io/giant-schrodinger`
+3. **Your site will be live at**: `https://hondoentertainment.github.io/giant-schrodinger`
 
 ---
 
@@ -247,18 +200,22 @@ supabase secrets set GEMINI_API_KEY=your-gemini-api-key
 
 ### 4. Deploy Edge Functions
 
-Install the Supabase CLI, then deploy:
+Install the Supabase CLI, then deploy all three functions:
 
 ```bash
 # Link to your project
 supabase link --project-ref your-project-ref
 
-# Deploy the server-side scoring function
-supabase functions deploy score-submission
+# Set secrets
+supabase secrets set GEMINI_API_KEY=your-gemini-api-key
 
-# Deploy the dynamic OG tags function
+# Deploy all Edge Functions
+supabase functions deploy score-submission
 supabase functions deploy og-tags
+supabase functions deploy discord-bot
 ```
+
+See [DISCORD_BOT.md](DISCORD_BOT.md) for Discord bot configuration details.
 
 ### 5. Enable Server-Side Scoring
 
@@ -274,10 +231,18 @@ The `og-tags` Edge Function serves custom Open Graph meta tags for shared links.
 
 ---
 
+## Mobile Deployment
+
+For deploying to iOS and Android app stores as a PWA wrapper, see [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md).
+
+---
+
 ## Next Steps
 
 1. Choose deployment method (GitHub Actions recommended)
 2. Set up environment variables if needed
-3. Deploy
-4. Test thoroughly using `TEST_REVIEW_CHECKLIST.md`
-5. Share with friends! 🎉
+3. Deploy Edge Functions to Supabase (score-submission, og-tags, discord-bot)
+4. Deploy
+5. Test thoroughly using `TEST_REVIEW_CHECKLIST.md`
+6. See [DISCORD_BOT.md](DISCORD_BOT.md) for Discord integration setup
+7. See [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) for app store preparation
