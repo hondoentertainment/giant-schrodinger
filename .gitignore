@@ -49,3 +49,4 @@ npm-shrinkwrap.json
 
 # Claude Code
 .claude/
+settings.local.json
