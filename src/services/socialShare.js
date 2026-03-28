@@ -38,7 +38,7 @@ export function generateShareText(score, conceptLeft, conceptRight, submission, 
 
 // Create shareable text for different contexts
 export function createShareText(shareData) {
-  const { submission, score, scoreBand, commentary, assets } = shareData;
+  const { submission, score, assets } = shareData;
   const leftAsset = assets?.left?.label || assets?.left?.title || 'Unknown';
   const rightAsset = assets?.right?.label || assets?.right?.title || 'Unknown';
 

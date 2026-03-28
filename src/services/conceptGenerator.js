@@ -7,7 +7,7 @@ export function getCachedConcepts() {
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return cached.concepts;
     }
-  } catch {}
+  } catch { /* ignore parse errors */ }
   return null;
 }
 
@@ -64,7 +64,7 @@ function buildPicsumUrl(label) {
 }
 
 // Get supplemental concepts when static pool is exhausted
-export function getSupplementalConcepts(usedIds, theme) {
+export function getSupplementalConcepts(usedIds, _theme) { // eslint-disable-line no-unused-vars
   const cached = getCachedConcepts();
   if (!cached) return [];
   return cached.filter(c => !usedIds.has(c.left.label) && !usedIds.has(c.right.label));
