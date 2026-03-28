@@ -1,13 +1,22 @@
 # Venn with Friends - Comprehensive Testing Checklist
 
-## 🔗 Testing URLs
+## Testing URLs
 
 - **Local Development**: http://localhost:5173/giant-schrodinger/
 - **GitHub Pages (after deployment)**: https://hondoentertainment.github.io/giant-schrodinger
 
+## Automated Test Coverage
+
+The project has **179 tests across 21 files** (16 unit/integration + 5 Playwright E2E). Run them before manual testing:
+
+```bash
+npm run test              # 179 unit/integration tests
+npm run test:e2e:desktop  # 5 Playwright E2E specs
+```
+
 ---
 
-## 📋 Test Categories
+## Test Categories
 
 ### 1. Initial Load & Landing Page
 
@@ -182,7 +191,109 @@
 
 ---
 
-### 6. Responsive Design Testing
+### 6. Ranked Mode & Competitive (Phase 3)
+
+#### Ranked Panel
+- [ ] Ranked mode accessible from lobby
+- [ ] Elo rating displays correctly
+- [ ] Tier badge matches rating range
+- [ ] Win/loss record shown
+- [ ] Elo changes after ranked match (with animation)
+- [ ] Promotion/demotion animations trigger at tier boundaries
+
+#### Spectator Mode
+- [ ] Can join a room as spectator
+- [ ] Spectators see live gameplay status
+- [ ] Spectators cannot submit answers
+- [ ] Spectator reactions (emoji) visible to players
+- [ ] Spectator banners display for notable events
+- [ ] Spectator count updates in real time
+
+#### Community Gallery
+- [ ] Gallery loads with Recent, Trending, Top Rated tabs
+- [ ] Switching tabs loads correct content
+- [ ] Voting (upvote/downvote) works
+- [ ] Vote count updates optimistically
+- [ ] Card click expands to detail view
+
+#### Tournaments
+- [ ] Tournament bracket displays correctly
+- [ ] Can join an open tournament
+- [ ] Match results advance the bracket
+- [ ] Tournament leaderboard updates
+
+---
+
+### 7. Progression & Monetization (Phase 4-5)
+
+#### Battle Pass
+- [ ] Battle pass panel accessible from lobby or shop
+- [ ] Tiers display with locked/unlocked status
+- [ ] XP progress bar tracks across games
+- [ ] Rewards unlock at correct thresholds
+
+#### Weekly Events
+- [ ] Event banner visible in lobby
+- [ ] Event has theme, timer, and special rules
+- [ ] Event leaderboard tracks separately
+- [ ] Event ends when timer reaches zero
+
+#### Achievement Progress
+- [ ] Achievements panel shows categories
+- [ ] Progress bars reflect partial completion
+- [ ] Milestone popups appear when thresholds are crossed
+- [ ] Completed achievements are visually distinct
+
+#### Score Coaching
+- [ ] Coaching feedback appears below score after rounds
+- [ ] Tips are contextual to score breakdown
+- [ ] Score bands (Amazing / Great / Solid / Room to grow) display
+
+#### Story Sharing
+- [ ] "Share Story" option available after rounds
+- [ ] Generated image includes Venn diagram and score
+- [ ] Image can be downloaded or shared
+
+#### Theme Sharing
+- [ ] Custom themes can be shared via URL or code
+- [ ] Received theme applies correctly
+
+---
+
+### 8. Accessibility & Platform (Phase 4-5)
+
+#### Colorblind Mode
+- [ ] Toggle available in settings
+- [ ] Venn diagram uses patterns (stripes, dots) when enabled
+- [ ] Score bands use icons alongside colors
+- [ ] Tier badges use distinct shapes
+
+#### Progressive Lobby Disclosure
+- [ ] New users see simplified lobby (Play Solo + basics)
+- [ ] After a few games, multiplayer options appear
+- [ ] After more games, ranked/tournaments/gallery appear
+- [ ] Veteran users see all features
+
+#### Disconnect Recovery
+- [ ] Reconnect banner appears on disconnect
+- [ ] Player rejoins room automatically on reconnect
+- [ ] Other players see "Disconnected" status
+
+#### Offline Queue (PWA)
+- [ ] App loads offline from service worker cache
+- [ ] Solo rounds playable offline with mock scoring
+- [ ] Offline submissions queue and sync when online
+- [ ] Offline status banner appears
+
+#### Keyboard & Focus
+- [ ] Tab navigation reaches all interactive elements
+- [ ] Focus indicators are visible
+- [ ] Modals trap focus correctly
+- [ ] Escape key closes modals
+
+---
+
+### 9. Responsive Design Testing
 
 #### Mobile (375px - 428px)
 - [ ] Layout adapts to mobile
@@ -215,7 +326,7 @@
 
 ---
 
-### 7. Browser Compatibility
+### 10. Browser Compatibility
 
 #### Chrome/Edge (Chromium)
 - [ ] Full functionality works
@@ -234,7 +345,7 @@
 
 ---
 
-### 8. Performance & Optimization
+### 11. Performance & Optimization
 
 #### Lighthouse Scores
 - [ ] Performance: ____/100
@@ -256,7 +367,7 @@
 
 ---
 
-### 9. Console & Error Checking
+### 12. Console & Error Checking
 
 #### JavaScript Console
 ```
@@ -277,7 +388,7 @@ Document errors found:
 
 ---
 
-### 10. User Experience Findings
+### 13. User Experience Findings
 
 #### Positive Aspects
 ```
