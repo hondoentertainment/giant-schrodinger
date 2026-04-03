@@ -64,7 +64,7 @@ function buildPicsumUrl(label) {
 }
 
 // Get supplemental concepts when static pool is exhausted
-export function getSupplementalConcepts(usedIds, _theme) { // eslint-disable-line no-unused-vars
+export function getSupplementalConcepts(usedIds, _theme) {
   const cached = getCachedConcepts();
   if (!cached) return [];
   return cached.filter(c => !usedIds.has(c.left.label) && !usedIds.has(c.right.label));

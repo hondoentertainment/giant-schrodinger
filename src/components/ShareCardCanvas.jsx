@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-export function ShareCardCanvas({ submission, score, leftLabel, rightLabel, fusionImageUrl, playerName }) {
+export function ShareCardCanvas({ submission, score, leftLabel, rightLabel, playerName }) {
     const canvasRef = useRef(null);
     const [dataUrl, setDataUrl] = useState(null);
 

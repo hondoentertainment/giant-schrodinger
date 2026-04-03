@@ -280,3 +280,96 @@ CREATE TABLE IF NOT EXISTS analytics_events (
 ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_analytics_event ON analytics_events(event, created_at DESC);
+
+-- ============================================================
+-- PERFORMANCE INDEXES (Phase 6 optimization)
+-- ============================================================
+
+-- Faster leaderboard queries by score ranking
+CREATE INDEX IF NOT EXISTS idx_leaderboard_total_score ON leaderboard(total_score DESC);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_best_streak ON leaderboard(best_streak DESC);
+
+-- Faster round lookups by user and date
+CREATE INDEX IF NOT EXISTS idx_rounds_user_date ON rounds(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_rounds_mode ON rounds(mode);
+CREATE INDEX IF NOT EXISTS idx_rounds_score ON rounds(final_score DESC);
+
+-- Faster challenge lookups
+CREATE INDEX IF NOT EXISTS idx_challenges_challenger ON challenges(challenger_id);
+CREATE INDEX IF NOT EXISTS idx_challenges_challenged ON challenges(challenged_id);
+CREATE INDEX IF NOT EXISTS idx_challenges_expires ON challenges(expires_at) WHERE status = 'pending';
+
+-- Faster analytics queries
+CREATE INDEX IF NOT EXISTS idx_analytics_user ON analytics_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_analytics_event_type ON analytics_events(event);
+
+-- Room lookup optimization
+CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status) WHERE status IN ('waiting', 'playing');
+CREATE INDEX IF NOT EXISTS idx_rooms_created ON rooms(created_at DESC);
+
+-- Shared rounds optimization
+CREATE INDEX IF NOT EXISTS idx_shared_rounds_created ON shared_rounds(created_at DESC);
+
+-- Judgements optimization
+CREATE INDEX IF NOT EXISTS idx_judgements_created ON judgements(created_at DESC);
+
+-- Push subscriptions table (for push notification support)
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    user_id TEXT PRIMARY KEY,
+    subscription TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "push_subs_public_read" ON push_subscriptions FOR SELECT USING (true);
+CREATE POLICY "push_subs_public_upsert" ON push_subscriptions FOR INSERT WITH CHECK (true);
+CREATE POLICY "push_subs_public_update" ON push_subscriptions FOR UPDATE USING (true);
+
+-- Monthly leaderboard for seasonal resets
+CREATE TABLE IF NOT EXISTS leaderboard_monthly (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    month TEXT NOT NULL,
+    total_score NUMERIC DEFAULT 0,
+    total_rounds INTEGER DEFAULT 0,
+    avg_score NUMERIC(3,1) DEFAULT 0,
+    best_score NUMERIC(3,1) DEFAULT 0,
+    rank INTEGER,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id, month)
+);
+
+ALTER TABLE leaderboard_monthly ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "monthly_lb_read" ON leaderboard_monthly FOR SELECT USING (true);
+CREATE POLICY "monthly_lb_insert" ON leaderboard_monthly FOR INSERT WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_monthly_lb_month_score ON leaderboard_monthly(month, avg_score DESC);
+CREATE INDEX IF NOT EXISTS idx_monthly_lb_user ON leaderboard_monthly(user_id);
+
+-- Community submissions table for community gallery
+CREATE TABLE IF NOT EXISTS community_submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    player_name TEXT NOT NULL,
+    submission TEXT NOT NULL,
+    score NUMERIC(3,1),
+    concept_left TEXT,
+    concept_right TEXT,
+    theme TEXT,
+    votes_up INTEGER DEFAULT 0,
+    votes_down INTEGER DEFAULT 0,
+    flagged BOOLEAN DEFAULT false,
+    flag_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE community_submissions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "community_read" ON community_submissions FOR SELECT USING (true);
+CREATE POLICY "community_insert" ON community_submissions FOR INSERT WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_community_score ON community_submissions(score DESC);
+CREATE INDEX IF NOT EXISTS idx_community_votes ON community_submissions((votes_up - votes_down) DESC);
+CREATE INDEX IF NOT EXISTS idx_community_created ON community_submissions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_community_theme ON community_submissions(theme);
+CREATE INDEX IF NOT EXISTS idx_community_flagged ON community_submissions(flagged) WHERE flagged = true;

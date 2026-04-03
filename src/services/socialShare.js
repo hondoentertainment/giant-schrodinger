@@ -19,21 +19,95 @@ export function dataURLtoFile(dataURL, filename) {
   return new File([u8arr], filename, { type: mime });
 }
 
+// --- A/B Testing for Share Copy ---
+
+const AB_STORAGE_KEY = 'vwf_share_variant';
+const AB_RESULTS_KEY = 'vwf_share_ab_results';
+
+/**
+ * Get or assign a share copy variant (A, B, or C) for this session.
+ */
+function getShareVariant() {
+    try {
+        let variant = sessionStorage.getItem(AB_STORAGE_KEY);
+        if (!variant) {
+            variant = ['A', 'B', 'C'][Math.floor(Math.random() * 3)];
+            sessionStorage.setItem(AB_STORAGE_KEY, variant);
+        }
+        return variant;
+    } catch {
+        return 'A';
+    }
+}
+
+/**
+ * Record a share click for A/B tracking.
+ */
+export function recordShareClick(variant, platform) {
+    try {
+        const results = JSON.parse(localStorage.getItem(AB_RESULTS_KEY) || '{}');
+        const key = `${variant}_${platform}`;
+        results[key] = (results[key] || 0) + 1;
+        results[`${variant}_total`] = (results[`${variant}_total`] || 0) + 1;
+        localStorage.setItem(AB_RESULTS_KEY, JSON.stringify(results));
+    } catch { /* silent */ }
+}
+
+/**
+ * Get A/B test results for analysis.
+ */
+export function getShareABResults() {
+    try {
+        return JSON.parse(localStorage.getItem(AB_RESULTS_KEY) || '{}');
+    } catch {
+        return {};
+    }
+}
+
+const SHARE_VARIANTS = {
+    high: {  // score >= 9
+        A: (left, right, score) => `Absolutely unhinged. I connected "${left}" and "${right}" and scored ${score}/10. Can you do better?`,
+        B: (left, right, score) => `${score}/10 connecting "${left}" and "${right}". I'm basically a genius. Prove me wrong.`,
+        C: (left, right, score) => `"${left}" + "${right}" = ${score}/10. My brain did something beautiful. Your turn.`,
+    },
+    mid: {  // score 7-8
+        A: (left, right, score) => `Pretty sharp. Connected "${left}" + "${right}" for ${score}/10. Your turn.`,
+        B: (left, right, score) => `${score}/10 on "${left}" \u00d7 "${right}". Not bad, but I bet you can't beat it.`,
+        C: (left, right, score) => `Connected "${left}" to "${right}" and scored ${score}/10. Think you're wittier?`,
+    },
+    low_mid: {  // score 4-6
+        A: (left, right, score) => `Decent attempt at "${left}" \u00d7 "${right}"... ${score}/10. Bet you can't beat it.`,
+        B: (left, right, score) => `"${left}" + "${right}" = ${score}/10. Room for improvement. Can you do better?`,
+        C: (left, right, score) => `I scored ${score}/10 connecting "${left}" and "${right}". Surely that's beatable.`,
+    },
+    low: {  // score 1-3
+        A: (left, right, score) => `I tried connecting "${left}" and "${right}". ${score}/10. Surely you can beat this.`,
+        B: (left, right, score) => `${score}/10 on "${left}" \u00d7 "${right}". This is embarrassing. Please avenge me.`,
+        C: (left, right, score) => `"${left}" + "${right}" broke my brain. ${score}/10. Even you could beat this.`,
+    },
+};
+
 // Generate personality-rich, tiered share text based on score
 export function generateShareText(score, conceptLeft, conceptRight, submission, extras = {}) {
-  const { streak, rank } = extras;
+    const { streak, rank } = extras;
+    const variant = getShareVariant();
 
-  let tone;
-  if (score >= 9) tone = `Absolutely unhinged. I connected "${conceptLeft}" and "${conceptRight}" and scored ${score}/10.`;
-  else if (score >= 7) tone = `Pretty sharp. Connected "${conceptLeft}" + "${conceptRight}" for ${score}/10.`;
-  else if (score >= 4) tone = `Decent attempt at "${conceptLeft}" \u00d7 "${conceptRight}"... ${score}/10.`;
-  else tone = `I tried connecting "${conceptLeft}" and "${conceptRight}". ${score}/10. Surely you can beat this.`;
+    let tier;
+    if (score >= 9) tier = 'high';
+    else if (score >= 7) tier = 'mid';
+    else if (score >= 4) tier = 'low_mid';
+    else tier = 'low';
 
-  let suffix = 'Can you do better?';
-  if (streak > 3) suffix += ` (${streak}-day streak \ud83d\udd25)`;
-  if (rank) suffix += ` Rank #${rank}`;
+    const templateFn = SHARE_VARIANTS[tier]?.[variant] || SHARE_VARIANTS[tier]?.A;
+    let text = templateFn(conceptLeft, conceptRight, score);
 
-  return `${tone} ${suffix}\n\n#VennWithFriends`;
+    let suffix = '';
+    if (streak > 3) suffix += ` (${streak}-day streak \ud83d\udd25)`;
+    if (rank) suffix += ` Rank #${rank}`;
+    if (suffix) text += suffix;
+
+    recordShareClick(variant, 'generated');
+    return `${text}\n\n#VennWithFriends`;
 }
 
 // Create shareable text for different contexts

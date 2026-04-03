@@ -55,19 +55,56 @@ export const LocalStorageReporter = {
 };
 
 /**
- * Sentry reporter stub - ready to activate when a Sentry DSN is configured.
+ * Sentry reporter - dynamically imports @sentry/browser to avoid main bundle bloat.
  */
+let _sentryModule = null;
+let _sentryInitialized = false;
+
 export const SentryReporter = {
-    report: (errorData, context) => {
+    async init() {
         const dsn = import.meta.env.VITE_SENTRY_DSN;
-        if (!dsn) return;
-        // Sentry SDK would be initialized here
-        // For now, queue errors for when Sentry is configured
+        if (!dsn || _sentryInitialized) return;
         try {
-            const queue = JSON.parse(localStorage.getItem('vwf_sentry_queue') || '[]');
-            queue.push({ ...errorData, ...context });
-            localStorage.setItem('vwf_sentry_queue', JSON.stringify(queue.slice(-MAX_ERRORS)));
-        } catch { /* silent */ }
+            const sentryPkg = '@sentry/browser';
+            _sentryModule = await import(/* @vite-ignore */ sentryPkg);
+            _sentryModule.init({
+                dsn,
+                environment: import.meta.env.DEV ? 'development' : 'production',
+                sampleRate: 1.0,
+                maxBreadcrumbs: 50,
+            });
+            _sentryInitialized = true;
+            // Flush any queued errors
+            try {
+                const queue = JSON.parse(localStorage.getItem('vwf_sentry_queue') || '[]');
+                queue.forEach(err => _sentryModule.captureMessage(err.message, { extra: err }));
+                localStorage.removeItem('vwf_sentry_queue');
+            } catch { /* ignore */ }
+        } catch { /* Sentry SDK not installed — silent fallback */ }
+    },
+    report(errorData, context) {
+        if (_sentryModule && _sentryInitialized) {
+            _sentryModule.withScope(scope => {
+                scope.setUser({ id: context.userId });
+                scope.setExtra('url', context.url);
+                scope.setExtra('timestamp', context.timestamp);
+                if (errorData.source) scope.setTag('source', errorData.source);
+                if (errorData.stack) {
+                    const err = new Error(errorData.message);
+                    err.stack = errorData.stack;
+                    _sentryModule.captureException(err);
+                } else {
+                    _sentryModule.captureMessage(errorData.message, { extra: errorData });
+                }
+            });
+        } else {
+            // Queue for when Sentry initializes
+            try {
+                const queue = JSON.parse(localStorage.getItem('vwf_sentry_queue') || '[]');
+                queue.push({ ...errorData, ...context });
+                localStorage.setItem('vwf_sentry_queue', JSON.stringify(queue.slice(-MAX_ERRORS)));
+            } catch { /* silent */ }
+        }
     },
 };
 
@@ -115,6 +152,9 @@ export function initErrorMonitoring() {
 
     // Register Sentry reporter (will only activate if DSN is configured)
     registerErrorReporter(SentryReporter);
+
+    // Initialize Sentry asynchronously
+    SentryReporter.init();
 
     return () => {
         window.removeEventListener('error', onError);

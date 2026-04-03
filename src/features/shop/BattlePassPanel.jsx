@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Crown, Lock, Check, Coins } from 'lucide-react';
+import { Crown, Lock, Check } from 'lucide-react';
 import { getBattlePass, getBattlePassProgress, claimBattlePassReward, getBalance } from '../../services/shop';
 
 const PREMIUM_PRICE = '$4.99';

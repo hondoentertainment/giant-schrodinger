@@ -4,7 +4,6 @@ import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
 import { Trophy, ArrowRight, Home, ThumbsUp, Crown, Star } from 'lucide-react';
 import { getRoomSubmissions } from '../../services/multiplayer';
-import { ConnectionBanner } from './ConnectionBanner';
 
 function ScoreBar({ label, value, max = 10 }) {
     const pct = Math.round((value / max) * 100);
@@ -239,7 +238,7 @@ export function MultiplayerReveal() {
                         </div>
 
                         <div className="space-y-4">
-                            {submissions.slice(0, revealedCount).map((entry, idx) => {
+                            {submissions.slice(0, revealedCount).map((entry) => {
                                 const player = players.find((p) => p.player_name === entry.player_name);
                                 return (
                                     <div

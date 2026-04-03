@@ -15,7 +15,6 @@ import { ShareCardCanvas } from '../../components/ShareCardCanvas';
 import { checkAchievements } from '../../services/achievements';
 import { AchievementProgress } from '../../components/AchievementProgress';
 import { addCoins, addBattlePassXp } from '../../services/shop';
-import { saveSharedRound } from '../../services/backend';
 import { addToOfflineQueue } from '../../services/offlineQueue';
 import { getThemeById, buildThemeAssets, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
@@ -27,7 +26,7 @@ import { TIMINGS } from '../../lib/timings';
 import { ContextualTip } from '../../components/ContextualTip';
 
 export function Reveal({ submission, assets }) {
-    const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, sessionResults, isDailyChallenge } = useGame();
+    const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, sessionResults, isDailyChallenge } = useGame();
     const { toast } = useToast();
     const [result, setResult] = useState(null);
     const [fusionImage, setFusionImage] = useState(null);
@@ -70,7 +69,7 @@ export function Reveal({ submission, assets }) {
         addBattlePassXp(finalScore * 10);
         const { newlyUnlocked: unlocked } = recordPlay();
         if (unlocked?.length) setNewlyUnlocked(unlocked);
-        try { checkAchievements({ score: finalScore }); } catch {}
+        try { checkAchievements({ score: finalScore }); } catch { /* intentionally empty */ }
         savedRef.current = true;
         return collision;
     };

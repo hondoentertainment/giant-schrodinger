@@ -28,7 +28,7 @@ vi.mock('../../context/ToastContext', () => ({
 }));
 
 // ── Mock services ──
-const mockScoreResult = {
+const _mockScoreResult = {
     score: 8,
     baseScore: 8,
     breakdown: { wit: 8, logic: 7, originality: 9, clarity: 8 },

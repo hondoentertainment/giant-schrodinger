@@ -1,3 +1,4 @@
+/* global clients */
 const CACHE_NAME = 'venn-v1';
 
 const SHELL_FILES = ['/', '/index.html'];

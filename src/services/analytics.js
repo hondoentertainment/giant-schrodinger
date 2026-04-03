@@ -62,12 +62,17 @@ export const ConsoleAnalyticsProvider = {
  * Supabase provider - writes events to an analytics_events table when backend is available.
  */
 export const SupabaseAnalyticsProvider = {
-  track: async () => {
+  track: async (event, props) => {
     try {
-      const { isBackendEnabled } = await import('./backend.js');
+      const { getSupabase, isBackendEnabled } = await import('../lib/supabase.js');
       if (!isBackendEnabled()) return;
-      // Stub: when Supabase is configured, insert into analytics_events table
-    } catch { /* silent */ }
+      const supabase = getSupabase();
+      await supabase.from('analytics_events').insert({
+        event,
+        properties: props,
+        user_id: props.userId || null,
+      });
+    } catch { /* silent — analytics should never break the app */ }
   },
 };
 
@@ -165,10 +170,64 @@ export function trackDailyChallenge(completed) {
 }
 
 /**
+ * Track achievement unlock.
+ */
+export function trackAchievementUnlock(achievementName) {
+    trackEvent('achievement_unlocked', { achievement: achievementName });
+}
+
+/**
+ * Track judge link opened.
+ */
+export function trackJudgeLinkOpened() {
+    trackEvent('judge_link_opened');
+}
+
+/**
+ * Track session length (number of rounds played).
+ */
+export function trackSessionLength(rounds) {
+    trackEvent('session_complete', { rounds, totalScore: 0 });
+}
+
+/**
  * Track retention - call on app load to track DAU.
  */
 export function trackRetention() {
   trackEvent('app_load', { date: new Date().toISOString().slice(0, 10) });
+}
+
+// --- Funnel tracking ---
+
+/**
+ * Track onboarding funnel steps for measuring conversion.
+ */
+export function trackFunnelStep(step) {
+    trackEvent('funnel_step', { step });
+}
+
+/**
+ * Get funnel metrics: page_loaded → name_entered → round_started → round_completed → second_round
+ */
+export function getFunnelMetrics() {
+    try {
+        flushBuffer();
+        const events = readEvents().filter(e => e.event === 'funnel_step');
+        const steps = ['page_loaded', 'name_entered', 'round_started', 'round_completed', 'second_round_started'];
+        const counts = {};
+        for (const step of steps) {
+            counts[step] = events.filter(e => e.properties?.step === step).length;
+        }
+        const dropoff = {};
+        for (let i = 1; i < steps.length; i++) {
+            const prev = counts[steps[i - 1]] || 0;
+            const curr = counts[steps[i]] || 0;
+            dropoff[`${steps[i - 1]}_to_${steps[i]}`] = prev > 0 ? ((prev - curr) / prev * 100).toFixed(1) + '%' : 'N/A';
+        }
+        return { counts, dropoff };
+    } catch {
+        return { counts: {}, dropoff: {} };
+    }
 }
 
 // --- Query functions ---

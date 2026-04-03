@@ -1,15 +1,25 @@
 import { TIMINGS } from '../lib/timings';
-import { GoogleGenAI } from '@google/genai';
 import { getFusionImage } from '../data/themes';
 import { getAIDifficulty, getDifficultyConfig } from './aiFeatures';
-import { createRateLimiter } from '../lib/rateLimit.js';
+import { createAPIRateLimiter } from '../lib/rateLimit.js';
 import { addToOfflineQueue } from './offlineQueue';
 import { scoreViaServer } from './serverScoring';
 
-const scoringLimiter = createRateLimiter('scoring', { maxRequests: 1, windowMs: 5000 });
+const scoringLimiter = createAPIRateLimiter('scoring', { maxPerMinute: 10 });
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+let _ai = null;
+async function getAI() {
+    if (_ai) return _ai;
+    if (!API_KEY) return null;
+    try {
+        const { GoogleGenAI } = await import('@google/genai');
+        _ai = new GoogleGenAI({ apiKey: API_KEY });
+        return _ai;
+    } catch {
+        return null;
+    }
+}
 
 const SCORING_PROMPT = `You are a witty judge for a game where players connect two concepts using a creative phrase.
 
@@ -80,6 +90,7 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
         // Server scoring unavailable, fall through to client-side
     }
 
+    const ai = await getAI();
     if (!ai || !submission || !asset1 || !asset2) {
         await new Promise((r) => setTimeout(r, TIMINGS.MOCK_AI_DELAY));
         return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true, scoredServerSide: false });
@@ -139,6 +150,7 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
 }
 
 export async function generateFusionImage(theme, submission) {
+    const ai = await getAI();
     if (!ai || !API_KEY) {
         await new Promise((r) => setTimeout(r, TIMINGS.MOCK_AI_DELAY));
         return { ...getFusionImage(theme), isFallback: true };
