@@ -1,35 +1,51 @@
 # Next Steps: From Feature-Complete to Production-Ready
 
-## Where You Are Now (March 2026)
+## Where You Are Now (April 2026)
 
-**Venn with Friends** has come a long way. The previous roadmap's 19 items are all implemented:
+**Venn with Friends** is a feature-rich creative party game with 93 implemented features across 5 development phases. The codebase is substantial and well-structured.
 
+### Current Metrics (Verified)
+
+| Metric | Value |
+|--------|-------|
+| Features implemented | 93 across 5 phases |
+| Source files | 134 (JSX + JS) |
+| Lines of code | ~22,600 |
+| Unit/integration tests | 179 passing across 21 test files |
+| E2E specs | 5 Playwright spec files |
+| Production build | Succeeds (Vite 5, 3.5s build time) |
+| Main chunk | 510.83 KB (149.34 KB gzipped) |
+| Lazy-loaded chunks | 24 code-split chunks |
+| CSS | 82.94 KB (12.05 KB gzipped) |
+| ESLint errors | 59 (unused vars/imports — see details below) |
+
+### What's Built
 - Core game loop with AI scoring, difficulty settings, and time bonuses
 - 7+ game modes (solo, multiplayer, AI battle, tournaments, challenges, daily, async chains)
-- Progression systems (streaks, 25+ achievements, battle pass, leaderboards)
+- Progression systems (streaks, 51+ achievements, battle pass, leaderboards)
 - Social features (share cards, quick judge, friend judging, challenge links)
 - Personalization (theme builder, shop, custom images, prompt packs)
 - UX polish (OG tags, streak counter on lobby, daily countdown, connection explanations)
-- Infrastructure (offline mode indicator, error boundary, PWA, sound/haptics)
+- Infrastructure (offline mode, error boundary, PWA, sound/haptics, i18n)
 
-**All 151 tests pass. Production build succeeds (492 KB gzipped to 137 KB). The game is feature-rich.**
-
-**What's standing between you and a confident launch is code quality, production infrastructure, and the viral loop actually working end-to-end with real users.**
+### What's Blocking Launch
+**Code quality, production infrastructure, and the viral loop working end-to-end with real users.** The game is feature-rich but ships with mock backends, client-side scoring (spoofable), and 59 lint errors. The path from here is hardening, not building.
 
 ---
 
 ## Tier 1: Ship-Blocking (Fix Before Launch)
 
-### 1. Fix 8 ESLint errors
-The linter reports 8 errors that should be zero for a production codebase:
-- `MAX_STREAK_MULTIPLIER` unused in `battlePass.js`
-- `getThemeById` unused import in `dailyChallenge.js`
-- `_tiers` unused in `shop.js` (2 occurrences)
-- `getOwnedItems` unused in `shop.test.js`
-- `byeCount` unused in `tournaments.js`
-- `beforeEach` undefined in `test/setup.js` (needs vitest global import)
+### 1. Fix 59 ESLint errors
+The linter reports 59 errors — all `no-unused-vars` or `no-empty` violations. Key files with errors:
+- `src/features/summary/SessionSummary.jsx` — unused icon imports (Trophy, Zap, Home) and unused `onBack` prop
+- `src/features/room/MultiplayerReveal.jsx` — unused `ConnectionBanner` import, unused `idx` parameter
+- `src/features/shop/BattlePassPanel.jsx` — unused `Coins` import
+- `src/features/tournament/TournamentLobby.jsx` — unused `Clock` import
+- `src/features/reveal/Reveal.test.jsx` — unused `mockScoreResult`
+- `src/features/round/Round.test.jsx` — unused `mockLeftAsset`, `mockRightAsset`
+- Multiple services with unused variables and empty catch blocks
 
-**Action:** Remove unused variables, add missing import in test setup. These are 10-minute fixes.
+**Action:** Remove unused variables/imports, add error handling to empty catch blocks. These are mechanical fixes — good first contributions.
 
 ### 2. Bundle is a single 492 KB chunk
 Everything ships in one JS file. First paint is blocked until the entire app downloads and parses. On a 3G connection, that's 4+ seconds of white screen.
@@ -914,3 +930,218 @@ Week 4:  Theme sharing (#92), procedural concepts (#93)
 ```
 
 **The mandate**: No new game modes, no new progression systems, no new UI until every existing feature works reliably with real users on real networks. Phase 5 is about earning trust.
+
+---
+
+## Phase 6: Scale, Measure, Iterate — Data-Driven Growth
+
+Phases 1-5 built and hardened 93 features. Phase 6 shifts from building to **measuring and optimizing**. Every change should be driven by real user data, not intuition. The game needs users, metrics, and feedback loops before any more features make sense.
+
+---
+
+### Launch & Distribution: Tier 1 (Do First)
+
+#### 94. Enable GitHub Pages deployment
+The CI/CD workflow is ready. GitHub Pages just needs to be turned on in repo settings. This is the single highest-leverage action — nothing else matters if nobody can play the game.
+
+**Action:**
+- Enable GitHub Pages (Settings > Pages > Source: GitHub Actions)
+- Push to `main` to trigger deployment
+- Verify the app loads at `https://hondoentertainment.github.io/giant-schrodinger/`
+- Test all core flows on the live URL (solo round, share link, judge link)
+
+#### 95. Set up production Supabase instance
+Mock multiplayer has been useful for development, but real users need real rooms, real leaderboards, and real persistence. Without this, the game is a polished single-player demo.
+
+**Action:**
+- Create Supabase project
+- Run `supabase/schema.sql` to create all tables with RLS
+- Deploy Edge Functions (score-submission, og-tags, discord-bot)
+- Set environment secrets in GitHub Actions
+- Test: create room, join from second browser, play full game, check leaderboard
+
+#### 96. Production error monitoring with Sentry
+59 ESLint errors suggest there are runtime errors hiding in production. Without Sentry, every error is invisible once users aren't on localhost.
+
+**Action:**
+- Create Sentry project (free tier)
+- Set `VITE_SENTRY_DSN` in production environment
+- Wire existing `errorMonitoring.js` and `ErrorBoundary` to Sentry
+- Add user context (anonymous ID, game mode, round number)
+- Set up Sentry alerts for new error types
+
+#### 97. Basic analytics pipeline
+`trackEvent()` is called throughout the codebase but data goes nowhere. You can't improve what you can't measure.
+
+**Action:**
+- Wire `trackEvent` to Plausible (privacy-friendly, no cookie banner needed) or PostHog
+- Priority events to track:
+  - `round_completed` (with score, mode, theme)
+  - `share_clicked` (with platform)
+  - `judge_link_opened`
+  - `achievement_unlocked` (with achievement name)
+  - `session_length` (rounds per session)
+  - `daily_challenge_completed`
+
+---
+
+### Optimization: Tier 2 (First Week After Launch)
+
+#### 98. Reduce main bundle to under 200 KB gzipped
+The main chunk is 510 KB (149 KB gzip). First paint is blocked until the full bundle downloads. On 3G, that's 4+ seconds of white screen.
+
+**Action:**
+- Audit the main bundle with `npx vite-bundle-visualizer`
+- Move `@google/genai` to dynamic import (only needed when scoring)
+- Move Supabase client to dynamic import (only needed for multiplayer)
+- Extract Stripe to its own chunk
+- Target: main chunk < 200 KB gzipped, FCP < 2s on 4G
+
+#### 99. Fix all 59 ESLint errors
+Clean lint means CI can enforce zero-tolerance for new errors. Currently any PR can introduce new issues and nobody would notice.
+
+**Action:**
+- Remove all unused imports and variables (mechanical — can be automated)
+- Add error handling to empty catch blocks (log or rethrow)
+- Enable `--max-warnings 0` in CI lint step
+- Run `eslint --fix` for auto-fixable issues
+
+#### 100. First-time user experience audit
+Watch 5 people play the game for the first time (screen share or in person). Note where they get confused, what they click first, when they quit. This is worth more than any feature.
+
+**Action:**
+- Recruit 5 testers (friends, coworkers, Reddit)
+- Have them play solo with no guidance
+- Track: time to first submission, first share, first return visit
+- Document top 3 friction points
+- Fix the #1 friction point before anything else
+
+---
+
+### Retention: Tier 3 (First Month)
+
+#### 101. Implement A/B testing for share copy
+The share templates from Phase 5 (#85) are opinionated. Test which share copy drives the highest click-through rate. Even a 10% improvement in share CTR compounds dramatically.
+
+**Action:**
+- Create 3 variants of share text per score range
+- Randomly assign variant per session
+- Track: share clicks, link opens, and rounds played from shared links
+- Run for 2 weeks, then adopt the winner
+
+#### 102. Push notification implementation
+The infrastructure exists (VAPID keys, service worker, notification triggers) but nothing actually fires. Push notifications are the #1 retention lever for casual games.
+
+**Action:**
+- Implement Web Push subscription flow
+- Start with 2 notifications only:
+  - "Your streak expires in 3 hours" (high urgency, high value)
+  - "Today's daily challenge is live" (daily engagement)
+- Track: notification opt-in rate, open rate, session starts from notifications
+- Do NOT add more notification types until these two prove retention value
+
+#### 103. Onboarding funnel measurement
+How many people who land on the page actually complete a round? This funnel is the most important metric for growth.
+
+**Action:**
+- Track events: `page_loaded` → `name_entered` → `round_started` → `round_completed` → `second_round_started`
+- Calculate drop-off at each step
+- If >50% drop off before `round_completed`, simplify the lobby
+- If >70% drop off before `second_round_started`, improve the reveal screen
+
+---
+
+### Competitive & Social: Tier 4 (Month 2-3)
+
+#### 104. Real multiplayer stress test
+The multiplayer system uses Supabase Realtime but has never been tested with more than 2 concurrent players in production. Before promoting multiplayer, verify it works under load.
+
+**Action:**
+- Test with 8 simultaneous players in one room
+- Test with 10 concurrent rooms
+- Measure: message latency, submission ordering, disconnect recovery
+- Document max supported room size and concurrent rooms
+
+#### 105. Community gallery moderation at scale
+The moderation dashboard exists but hasn't been tested with real user content. Before enabling the community gallery, ensure the moderation flow works.
+
+**Action:**
+- Seed 100 test submissions (mix of good, borderline, and bad)
+- Test the flag → review → approve/remove flow
+- Add automated filters (profanity check, minimum length)
+- Set up Slack/Discord alerts for new flags
+
+#### 106. Seasonal ranked launch
+Ranked mode is fully implemented but needs a player base for matchmaking. Time the first season with a marketing push.
+
+**Action:**
+- Set season start date and duration (4 weeks recommended)
+- Create season theme and rewards
+- Announce via all channels (Discord, social, in-app banner)
+- Monitor: queue times, rating distribution, match quality
+- Need minimum 50 active ranked players for <60s queue times
+
+---
+
+### Technical Debt: Tier 5 (Ongoing)
+
+#### 107. Component test coverage
+All 21 test files cover services and utilities. Zero component tests exist. The most critical user flows (lobby → round → reveal) have no automated testing.
+
+**Action:**
+- Add integration tests for:
+  - Lobby: renders modes, starts game, shows streak
+  - Round: displays concepts, accepts input, submits, handles time-up
+  - Reveal: shows score animation, displays breakdown, offers share/next
+  - JudgeRound: loads shared data, accepts score, submits
+- Target: 80%+ coverage of user-facing flows
+
+#### 108. API rate limiting
+No throttling on Gemini API calls. A bot or enthusiastic user could burn through the entire API quota in minutes.
+
+**Action:**
+- Client-side: max 1 scoring call per 5 seconds (debounce)
+- Server-side: per-user rate limit in Edge Function (10 calls/minute)
+- Return 429 with retry-after header
+- Show "Please wait" UI when rate limited
+
+#### 109. Database query optimization
+No database indexes beyond primary keys are confirmed in production. As user count grows, leaderboard queries and room lookups will slow down.
+
+**Action:**
+- Add indexes on `rounds(user_id, created_at)`, `leaderboard(score DESC)`, `rooms(code)`
+- Enable Supabase query logging to identify slow queries
+- Add connection pooling configuration for concurrent users
+- Review and optimize RLS policies for performance
+
+---
+
+### Priority Order (Phase 6)
+
+```
+Day 1:   Enable GitHub Pages (#94), fix ESLint errors (#99)
+Week 1:  Set up Supabase (#95), Sentry (#96), analytics (#97)
+Week 2:  Bundle optimization (#98), first-time user audit (#100)
+Week 3:  Push notifications (#102), onboarding funnel (#103)
+Week 4:  Share A/B testing (#101), component tests (#107)
+Month 2: Multiplayer stress test (#104), API rate limiting (#108)
+Month 2: Community moderation (#105), database optimization (#109)
+Month 3: Seasonal ranked launch (#106)
+```
+
+**The shift**: Phases 1-5 were about building. Phase 6 is about **launching, measuring, and iterating**. Ship the game, instrument everything, watch real users, and fix what actually breaks — not what might break. Every decision from here should be backed by data, not guesses.
+
+---
+
+## Summary: All Phases at a Glance
+
+| Phase | Items | Focus |
+|-------|-------|-------|
+| Phase 1 | #1-19 | Core gameplay, production infrastructure, code quality |
+| Phase 2 | #20-39 | Image system, game flow polish, friction reduction |
+| Phase 3 | #40-59 | Social features, retention hooks, competitive systems |
+| Phase 4 | #60-79 | Monetization, platform growth, testing, analytics |
+| Phase 5 | #80-93 | Production hardening, accessibility, competitive integrity |
+| Phase 6 | #94-109 | Launch, measure, iterate — data-driven growth |
+
+**Total roadmap items: 109** (93 implemented, 16 remaining in Phase 6)
