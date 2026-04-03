@@ -61,7 +61,7 @@ export function Leaderboard({ onBack }) {
 
     // Use a refresh key to force re-read when tab changes
     const [refreshKey, setRefreshKey] = useState(0);
-    const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+const _refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
     const entries = useMemo(() => {
         return activeTab === 'daily' ? getDailyLeaderboard() : getWeeklyLeaderboard();

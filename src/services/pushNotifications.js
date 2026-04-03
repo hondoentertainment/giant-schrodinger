@@ -83,3 +83,92 @@ export function scheduleStreakReminder(streakDays) {
         });
     }, delay);
 }
+
+/**
+ * Send push subscription to server for storage.
+ * The server needs the subscription object to send push notifications later.
+ */
+export async function sendSubscriptionToServer(subscription) {
+    try {
+        const { getSupabase, isBackendEnabled } = await import('../lib/supabase.js');
+        if (!isBackendEnabled()) {
+            // Store locally as fallback
+            localStorage.setItem('vwf_push_subscription', JSON.stringify(subscription));
+            return true;
+        }
+        const supabase = getSupabase();
+        const userId = localStorage.getItem('venn_user_id') || 'anonymous';
+        await supabase.from('push_subscriptions').upsert({
+            user_id: userId,
+            subscription: JSON.stringify(subscription),
+            updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Full push notification opt-in flow.
+ * Requests permission, subscribes, and sends subscription to server.
+ * @returns {Promise<{success: boolean, subscription?: PushSubscription, error?: string}>}
+ */
+export async function enablePushNotifications() {
+    if (!isPushSupported()) {
+        return { success: false, error: 'Push notifications not supported' };
+    }
+    const permission = await requestNotificationPermission();
+    if (permission !== 'granted') {
+        return { success: false, error: `Permission ${permission}` };
+    }
+    try {
+        const subscription = await subscribeToPush();
+        if (subscription) {
+            await sendSubscriptionToServer(subscription);
+            localStorage.setItem('vwf_push_enabled', 'true');
+            return { success: true, subscription };
+        }
+        return { success: false, error: 'Subscription failed' };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Check if push notifications are currently enabled.
+ */
+export function isPushEnabled() {
+    return localStorage.getItem('vwf_push_enabled') === 'true';
+}
+
+/**
+ * Disable push notifications and clean up.
+ */
+export async function disablePushNotifications() {
+    await unsubscribeFromPush();
+    localStorage.removeItem('vwf_push_enabled');
+    localStorage.removeItem('vwf_push_subscription');
+}
+
+/**
+ * Schedule daily challenge notification.
+ * Fires at noon local time if permission granted.
+ */
+export function scheduleDailyChallengeReminder() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return null;
+    const now = new Date();
+    const noon = new Date(now);
+    noon.setHours(12, 0, 0, 0);
+    if (noon <= now) return null;
+    const delay = noon - now;
+    return setTimeout(() => {
+        if (document.hidden) {
+            new Notification('Venn with Friends', {
+                body: 'Today\'s daily challenge is live! Can you crack today\'s concepts?',
+                icon: '/icon-192.svg',
+                tag: 'daily-challenge',
+            });
+        }
+    }, delay);
+}

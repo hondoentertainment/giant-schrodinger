@@ -1,3 +1,5 @@
+/* global global */
+import React from 'react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 

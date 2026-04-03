@@ -25,6 +25,7 @@ module.exports = {
     "react/prop-types": "off",
     "react-refresh/only-export-components": "off",
     "react-hooks/exhaustive-deps": "off",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
   },
   ignorePatterns: ["dist/"],
 };

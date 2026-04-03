@@ -151,7 +151,7 @@ export function RoomProvider({ children }) {
             }, 30000); // 30 second timeout
         }
         return () => clearTimeout(reconnectTimerRef.current);
-    }, [connectionState]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [connectionState]);
 
     // ============================================================
     // Realtime handlers
