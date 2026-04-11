@@ -2,27 +2,58 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--
+      Favicons
+      NOTE: Only SVG icons exist today. A PNG favicon fallback
+      (/giant-schrodinger/favicon.png, 32x32 or 48x48) and an
+      apple-touch-icon.png (180x180) should be added to public/
+      for best cross-browser / iOS home-screen support.
+    -->
+    <link rel="icon" type="image/svg+xml" href="/giant-schrodinger/icon-192.svg" />
+    <link rel="mask-icon" href="/giant-schrodinger/icon-512.svg" color="#1a0533" />
+    <link rel="apple-touch-icon" href="/giant-schrodinger/icon-192.svg" />
+
+    <!-- Viewport (viewport-fit=cover so content can extend under iOS notches) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+    <!-- SEO basics -->
     <meta name="description" content="Connect two concepts with one witty phrase. Play solo or with friends. AI or human scoring. Venn with Friends is a creative word game that challenges your wit, logic, and originality." />
+    <meta name="author" content="Hondo Entertainment" />
     <meta name="theme-color" content="#1a0533" />
 
     <!-- Open Graph / Social Sharing -->
+    <!--
+      TODO: Replace og-image.svg with a rasterized 1200x630 PNG
+      (e.g. /giant-schrodinger/og-image.png). Some crawlers
+      (Facebook, LinkedIn, Slack) do not reliably render SVG
+      og:image assets. The SVG is wired up as a fallback so
+      Twitter/X and modern crawlers still get a card.
+    -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Venn with Friends" />
     <meta property="og:title" content="Venn with Friends — Can You Beat My Score?" />
     <meta property="og:description" content="Connect two random concepts with one witty phrase. Score points for wit, logic, originality, and clarity. Challenge your friends!" />
-    <meta property="og:image" content="https://hondoentertainment.github.io/giant-schrodinger/og-image.svg" />
     <meta property="og:url" content="https://hondoentertainment.github.io/giant-schrodinger/" />
+    <meta property="og:image" content="https://hondoentertainment.github.io/giant-schrodinger/og-image.svg" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Venn with Friends — two overlapping circles with a crosshair in the intersection" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Venn with Friends — Can You Beat My Score?" />
     <meta name="twitter:description" content="Connect two random concepts with one witty phrase. Challenge your friends!" />
     <meta name="twitter:image" content="https://hondoentertainment.github.io/giant-schrodinger/og-image.svg" />
+    <meta name="twitter:image:alt" content="Venn with Friends — two overlapping circles with a crosshair in the intersection" />
 
-    <!-- PWA Manifest -->
+    <!-- PWA Manifest (path respects Vite base '/giant-schrodinger/') -->
     <link rel="manifest" href="/giant-schrodinger/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Venn" />
+    <meta name="mobile-web-app-capable" content="yes" />
 
     <title>Venn with Friends — Connect concepts with creative wit</title>
 
