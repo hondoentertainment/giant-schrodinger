@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { ToastProvider } from './context/ToastContext';
 import { ToastContainer } from './components/Toast';
 import { GameProvider, useGame } from './context/GameContext';
 import { RoomProvider, useRoom } from './context/RoomContext';
+// AuthProvider scaffolds Supabase Auth (Wave 3 - growth features). It is a
+// noop when Supabase isn't configured, so anonymous / offline play is the
+// default and unaffected. Sits inside the Sentry.ErrorBoundary (mounted in
+// main.jsx) so any auth-layer crashes are still reported, but outside the
+// lazy/routed game content so the auth session is stable across navigation.
+import { AuthProvider } from './features/auth/AuthContext';
 // Core flow - Lobby is eager (initial landing); everything else is lazy
 // so they stay out of the initial bundle.
 import { Lobby } from './features/lobby/Lobby';
@@ -86,10 +93,14 @@ import { processOfflineQueue, getQueueCount } from './services/offlineQueue';
 import { scoreSubmission } from './services/gemini';
 import { initPWAInstall } from './lib/pwaInstall';
 
+// Single proof-of-life conversion to react-i18next. Every other hardcoded
+// string in the app still uses the legacy src/lib/i18n.js helper — those
+// will migrate component-by-component in a follow-up.
 function LoadingFallback() {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-center min-h-[200px]">
-      <div className="text-purple-400 text-lg animate-pulse">Loading...</div>
+      <div className="text-purple-400 text-lg animate-pulse">{t('app.loading')}</div>
     </div>
   );
 }
@@ -317,15 +328,17 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <GameProvider>
-          <RoomProvider>
-            <GameContent />
-            <OfflineQueueHandler />
-            <ToastContainer />
-          </RoomProvider>
-        </GameProvider>
-      </ToastProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <GameProvider>
+            <RoomProvider>
+              <GameContent />
+              <OfflineQueueHandler />
+              <ToastContainer />
+            </RoomProvider>
+          </GameProvider>
+        </ToastProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

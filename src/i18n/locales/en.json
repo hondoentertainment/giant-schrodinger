@@ -1,0 +1,19 @@
+{
+  "app": {
+    "tagline": "A creative multiplayer party game where players connect two random concepts with witty, clever phrases.",
+    "loading": "Loading..."
+  },
+  "lobby": {
+    "play": "Play",
+    "solo": "Solo",
+    "ranked": "Ranked",
+    "multiplayer": "Multiplayer",
+    "daily": "Daily Challenge",
+    "tournament": "Tournament",
+    "achievements": "Achievements"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out"
+  }
+}

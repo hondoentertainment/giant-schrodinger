@@ -2,6 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
+// Bootstrap react-i18next BEFORE rendering so the singleton is initialized
+// by the time any component calls useTranslation(). This is a side-effect
+// import — the module initializes i18next on first load and exposes the
+// singleton for direct access if a non-React consumer ever needs it.
+import './i18n';
 import { initSentry, isSentryInitialized, Sentry } from './services/errorMonitoring';
 import { initPosthogAnalytics } from './services/analytics';
 
