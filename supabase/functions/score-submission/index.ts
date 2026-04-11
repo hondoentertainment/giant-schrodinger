@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const GEMINI_API_KEY =
+  Deno.env.get("GEMINI_API_KEY") ||
+  Deno.env.get("GOOGLE_GENERATIVE_AI_API_KEY");
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 const DIFFICULTY_CONFIGS: Record<string, { scoringStrictness: number }> = {
@@ -25,20 +27,47 @@ Score the connection from 1-10 on four criteria (each 1-10):
 Respond with ONLY valid JSON, no other text:
 {"wit": N, "logic": N, "originality": N, "clarity": N, "relevance": "Highly Logical" or "Absurdly Creative" or "Wild Card", "commentary": "One witty sentence"}`;
 
-// Simple in-memory rate limiter: userId -> timestamp[]
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const RATE_LIMIT_MAX = 12;
+// Input length caps (defense-in-depth against prompt-injection bloat and cost spikes)
+const MAX_SUBMISSION_LEN = 500;
+const MAX_CONCEPT_LEN = 200;
 
-function isRateLimited(userId: string): boolean {
+// Simple in-memory rate limiter: key -> timestamp[]
+// Two independent windows:
+//   - per-user (authHeader prefix or anonymous) — coarse abuse control
+//   - per-IP   (x-forwarded-for)                 — per task spec: max 30 / min
+// Memory only; resets on cold start. Good enough for a single-function instance.
+const userRateMap = new Map<string, number[]>();
+const ipRateMap = new Map<string, number[]>();
+
+const USER_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const USER_MAX = 12;
+const IP_WINDOW_MS = 60 * 1000; // 1 minute
+const IP_MAX = 30;
+
+function hitWindow(
+  map: Map<string, number[]>,
+  key: string,
+  windowMs: number,
+  max: number
+): boolean {
   const now = Date.now();
-  const timestamps = rateLimitMap.get(userId) || [];
-  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  rateLimitMap.set(userId, recent);
-  if (recent.length >= RATE_LIMIT_MAX) return true;
+  const timestamps = map.get(key) || [];
+  const recent = timestamps.filter((t) => now - t < windowMs);
+  if (recent.length >= max) {
+    map.set(key, recent);
+    return true;
+  }
   recent.push(now);
-  rateLimitMap.set(userId, recent);
+  map.set(key, recent);
   return false;
+}
+
+function isUserRateLimited(userId: string): boolean {
+  return hitWindow(userRateMap, userId, USER_WINDOW_MS, USER_MAX);
+}
+
+function isIpRateLimited(ip: string): boolean {
+  return hitWindow(ipRateMap, ip, IP_WINDOW_MS, IP_MAX);
 }
 
 function clamp(val: number, min = 1, max = 10): number {
@@ -79,11 +108,26 @@ serve(async (req: Request) => {
     });
   }
 
-  // Extract user identity from Authorization header (JWT sub or fallback to IP)
+  // Identify caller by (1) auth header prefix for per-user limits, (2) forwarded IP for per-IP limits
   const authHeader = req.headers.get("authorization") || "";
   const userId = authHeader.slice(0, 64) || "anonymous";
+  const forwardedFor = req.headers.get("x-forwarded-for") || "";
+  const ip = forwardedFor.split(",")[0]?.trim() || "unknown";
 
-  if (isRateLimited(userId)) {
+  if (isIpRateLimited(ip)) {
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded. Max 30 requests per IP per minute." }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
+    );
+  }
+
+  if (isUserRateLimited(userId)) {
     return new Response(
       JSON.stringify({ error: "Rate limit exceeded. Max 12 submissions per hour." }),
       {
@@ -117,13 +161,39 @@ serve(async (req: Request) => {
 
   const { conceptLeft, conceptRight, submission, difficulty = "normal" } = body;
 
-  if (!conceptLeft || !conceptRight || !submission) {
+  if (
+    typeof conceptLeft !== "string" ||
+    typeof conceptRight !== "string" ||
+    typeof submission !== "string" ||
+    !conceptLeft.trim() ||
+    !conceptRight.trim() ||
+    !submission.trim()
+  ) {
     return new Response(
       JSON.stringify({
         error: "Missing required fields: conceptLeft, conceptRight, submission",
       }),
       {
         status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
+    );
+  }
+
+  if (
+    submission.length > MAX_SUBMISSION_LEN ||
+    conceptLeft.length > MAX_CONCEPT_LEN ||
+    conceptRight.length > MAX_CONCEPT_LEN
+  ) {
+    return new Response(
+      JSON.stringify({
+        error: `Input too long (submission ≤ ${MAX_SUBMISSION_LEN}, concept ≤ ${MAX_CONCEPT_LEN})`,
+      }),
+      {
+        status: 413,
         headers: {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
