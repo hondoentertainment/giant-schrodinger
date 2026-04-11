@@ -13,8 +13,9 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm run build
-      - name: Run Lighthouse
+      - name: Run Lighthouse CI with assertions
         uses: treosh/lighthouse-ci-action@v11
         with:
           uploadArtifacts: true
-          configPath: ./lighthouse.config.js
+          temporaryPublicStorage: true
+          configPath: ./lighthouserc.json
