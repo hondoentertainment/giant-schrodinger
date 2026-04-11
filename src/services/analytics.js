@@ -6,8 +6,10 @@
  * avoid serializing the full event log on every call.
  *
  * Supports pluggable analytics providers for sending events to different
- * backends (console, Supabase, etc.).
+ * backends (console, Supabase, PostHog, etc.).
  */
+
+import posthog from 'posthog-js';
 
 const STORAGE_KEY = 'vwf_analytics';
 const SESSION_ID_KEY = 'vwf_session_id';
@@ -22,10 +24,43 @@ let _flushTimer = null;
 
 const providers = [];
 
+// Tracks whether a "real" (non-console) provider is active. When true,
+// attempts to register ConsoleAnalyticsProvider are skipped so we don't
+// duplicate logs in production.
+let _realProviderActive = false;
+
 /**
  * Register an analytics provider. Each provider must have a `track(event, props)` method.
+ *
+ * When a real (non-console) provider such as PostHog is registered, any
+ * previously-registered ConsoleAnalyticsProvider is removed, and any later
+ * attempt to register ConsoleAnalyticsProvider becomes a no-op. This keeps
+ * production free of duplicate console noise while still letting App.jsx
+ * safely register the console provider as its default.
  */
 export function registerAnalyticsProvider(provider) {
+  if (!provider || typeof provider.track !== 'function') return;
+
+  // If a real provider is already installed, don't let the console
+  // provider sneak back in on a later registration call.
+  if (_realProviderActive && provider === ConsoleAnalyticsProvider) {
+    return;
+  }
+
+  // If this provider is a real provider (not the console one), mark the
+  // flag and evict any existing console provider from the array.
+  if (provider !== ConsoleAnalyticsProvider) {
+    _realProviderActive = true;
+    for (let i = providers.length - 1; i >= 0; i--) {
+      if (providers[i] === ConsoleAnalyticsProvider) {
+        providers.splice(i, 1);
+      }
+    }
+  }
+
+  // Avoid registering the exact same provider instance twice.
+  if (providers.includes(provider)) return;
+
   providers.push(provider);
 }
 
@@ -56,6 +91,11 @@ export const ConsoleAnalyticsProvider = {
       console.debug(`[Analytics] ${event}`, props);
     }
   },
+  identify: (userId, traits) => {
+    if (import.meta.env.DEV) {
+      console.debug('[Analytics] identify', userId, traits);
+    }
+  },
 };
 
 /**
@@ -67,9 +107,82 @@ export const SupabaseAnalyticsProvider = {
       const { isBackendEnabled } = await import('./backend.js');
       if (!isBackendEnabled()) return;
       // Stub: when Supabase is configured, insert into analytics_events table
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   },
 };
+
+// --- PostHog provider ---
+
+let _posthogInitialized = false;
+
+/**
+ * Returns true if the PostHog SDK has been initialized in this process.
+ */
+export function isPosthogInitialized() {
+  return _posthogInitialized;
+}
+
+/**
+ * PostHog analytics provider. Matches the {track, identify} shape used by
+ * ConsoleAnalyticsProvider so it can be swapped in via
+ * registerAnalyticsProvider().
+ *
+ * All methods are guarded by _posthogInitialized so that importing this
+ * module in environments without a POSTHOG key is a pure no-op.
+ */
+export const PosthogAnalyticsProvider = {
+  track: (event, props) => {
+    if (!_posthogInitialized) return;
+    try {
+      posthog.capture(event, props);
+    } catch {
+      /* never let a provider break the app */
+    }
+  },
+  identify: (userId, traits) => {
+    if (!_posthogInitialized) return;
+    try {
+      posthog.identify(userId, traits);
+    } catch {
+      /* silent */
+    }
+  },
+};
+
+/**
+ * Initialize PostHog lazily. No-op (returns false) if VITE_POSTHOG_KEY is
+ * missing, so local dev without analytics keys doesn't fail.
+ *
+ * Privacy-conscious defaults:
+ *   - capture_pageview: false (we send explicit events)
+ *   - capture_pageleave: true
+ *   - persistence: localStorage (no third-party cookies)
+ *   - disable_session_recording: true (no session replay / PII capture)
+ *
+ * Returns true if PostHog was initialized, false otherwise.
+ */
+export function initPosthogAnalytics() {
+  if (_posthogInitialized) return true;
+  const key = import.meta.env.VITE_POSTHOG_KEY;
+  if (!key) return false;
+  try {
+    posthog.init(key, {
+      api_host: import.meta.env.VITE_POSTHOG_HOST ?? 'https://us.i.posthog.com',
+      capture_pageview: false,
+      capture_pageleave: true,
+      persistence: 'localStorage',
+      disable_session_recording: true,
+    });
+    _posthogInitialized = true;
+    registerAnalyticsProvider(PosthogAnalyticsProvider);
+    return true;
+  } catch {
+    // Never let analytics init break the app.
+    return false;
+  }
+}
 
 function readEvents() {
   try {
@@ -134,7 +247,9 @@ export function trackEvent(eventName, properties = {}) {
     providers.forEach((p) => {
       try {
         p.track(eventName, enriched);
-      } catch { /* never let a provider break the app */ }
+      } catch {
+        /* never let a provider break the app */
+      }
     });
   } catch {
     // Never let analytics break the app.
@@ -234,10 +349,7 @@ export function getSessionMetrics() {
     }
 
     const totalSessions = scores.length;
-    const avgScore =
-      scores.length > 0
-        ? scores.reduce((sum, s) => sum + s, 0) / scores.length
-        : 0;
+    const avgScore = scores.length > 0 ? scores.reduce((sum, s) => sum + s, 0) / scores.length : 0;
     const shareRate = totalSessions > 0 ? shareClicks / totalSessions : 0;
 
     const sortedDays = [...gameStartDays].sort();
@@ -247,13 +359,9 @@ export function getSessionMetrics() {
 
     if (sortedDays.length >= 2) {
       const first = new Date(sortedDays[0]).getTime();
-      const dayAfterFirst = new Date(first + 24 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 10);
+      const dayAfterFirst = new Date(first + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       d1Retention = gameStartDays.has(dayAfterFirst) ? 1 : 0;
-      const weekAfterFirst = new Date(first + 7 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 10);
+      const weekAfterFirst = new Date(first + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       d7Retention = gameStartDays.has(weekAfterFirst) ? 1 : 0;
     }
 
@@ -294,4 +402,8 @@ export function clearOldEvents() {
 }
 
 // Auto-prune old events on module load
-try { clearOldEvents(); } catch { /* ignore */ }
+try {
+  clearOldEvents();
+} catch {
+  /* ignore */
+}
