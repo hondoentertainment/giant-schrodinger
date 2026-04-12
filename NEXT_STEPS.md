@@ -914,3 +914,132 @@ Week 4:  Theme sharing (#92), procedural concepts (#93)
 ```
 
 **The mandate**: No new game modes, no new progression systems, no new UI until every existing feature works reliably with real users on real networks. Phase 5 is about earning trust.
+
+---
+
+## Phase 6: Ship-Ready Audit — Close the Gaps Phase 5 Left Open
+
+A deep audit of the Phase 5 code reveals that several "done" items shipped with partial wiring, dead imports, and zero test coverage. The README claims **0 ESLint errors**; `npx eslint .` actually reports **58**. Core Phase 5 features like server-side scoring and ELO decay have **no unit tests**. Multiplayer disconnect recovery imported `ConnectionBanner` but never rendered it. Phase 6 is the finishing round: make the stats in the README true.
+
+---
+
+### Ship-Blocking: Code Quality & Wiring
+
+#### 94. Zero the ESLint error count
+`npx eslint . --ext js,jsx` reports 58 errors across 12 files. Mostly unused imports left by Phase 5 refactors, missing `React` imports in `Gallery.test.jsx`, an unescaped apostrophe in `Lobby.jsx:554`, and an empty `catch {}` in `Reveal.jsx:73`. The CI gate is passing only because it isn't running lint.
+
+**Action:** Remove dead imports; add missing JSX-scope imports; escape entities; add an intent comment inside the empty catch. Update CI to actually fail on lint errors.
+
+**Files:** `src/features/lobby/Lobby.jsx`, `src/features/reveal/Reveal.jsx`, `src/features/summary/SessionSummary.jsx`, `src/features/room/MultiplayerReveal.jsx`, `src/features/judge/JudgeCalibration.jsx`, `src/features/leaderboard/Leaderboard.jsx`, `src/features/shop/BattlePassPanel.jsx`, `src/features/tournament/TournamentLobby.jsx`, `src/features/gallery/Gallery.test.jsx`, `src/features/reveal/Reveal.test.jsx`, `src/features/round/Round.test.jsx`
+
+#### 95. Wire the Phase 5 #82 connection banner
+`MultiplayerReveal.jsx:7` imports `ConnectionBanner` but never renders it. The banner exists and the disconnect/reconnect logic in `RoomContext` fires `connectionState` updates, but the most common multiplayer surface (the reveal screen) never shows the user that their connection dropped.
+
+**Action:** Either render `<ConnectionBanner />` at the top of `MultiplayerReveal.jsx`, or delete the import if `ConnectionBanner` is surfaced at a higher layout level and the import is a leftover.
+
+**Files:** `src/features/room/MultiplayerReveal.jsx`
+
+#### 96. Verify Phase 5 #80 share-link persistence is actually called
+`Reveal.jsx:18` imports `saveSharedRound` but never calls it. Phase 5 required share links to write to Supabase `shared_rounds` first and fall back to the hash URL. If `share.js` is the only caller, the Reveal import is dead; if Reveal was supposed to pre-warm the saved round before displaying the share button, the wiring is missing.
+
+**Action:** Trace the share flow end-to-end; either wire `saveSharedRound` into Reveal's share-button handler or remove the import.
+
+**Files:** `src/features/reveal/Reveal.jsx`, `src/services/share.js`
+
+#### 97. Silent catch in `Reveal.jsx:73` hides achievement errors
+`try { checkAchievements({ score: finalScore }); } catch {}` eats every error with no logging. If achievement tracking throws, the user never unlocks anything and we never know.
+
+**Action:** Add at minimum `catch (err) { console.warn('achievement check failed', err); }` so the error reaches `errorMonitoring`.
+
+**Files:** `src/features/reveal/Reveal.jsx`
+
+#### 98. `JudgeCalibration` tracks `failedCount` but never reads it
+The calibration flow increments `failedCount` on every miss but nothing consumes the value — the pass/fail branch only checks `passedCount`. Either show "X miss(es)" in the feedback UI or remove the dead state.
+
+**Files:** `src/features/judge/JudgeCalibration.jsx`
+
+#### 99. `Leaderboard.refresh` is declared but never wired to a button
+The Leaderboard component holds a `refresh` callback from its data hook but there is no refresh button, no pull-to-refresh, no interval. Stale leaderboards stay stale until a remount.
+
+**Action:** Add a refresh button with a spinner, or wire `useEffect` with a focus/interval trigger.
+
+**Files:** `src/features/leaderboard/Leaderboard.jsx`
+
+---
+
+### Test Coverage: Phase 5 Features Are Flying Blind
+
+#### 100. Unit tests for `serverScoring.js`
+Phase 5 #81 claimed server-side scoring prevents cheating, but `src/services/serverScoring.js` has zero tests. A network-timeout regression would ship undetected.
+
+**Action:** Mock `fetch`; verify URL, body, auth header, success path, non-200 returns null, missing env returns null.
+
+**Files:** `src/services/serverScoring.test.js` (new)
+
+#### 101. Unit tests for ELO decay
+Phase 5 #90 wired `checkDecay()` but there are no tests covering the 3-day threshold, the 15-point decrement, or the behavior near the 1000 floor.
+
+**Files:** `src/services/ranked.decay.test.js` (new)
+
+#### 102. Unit tests for multiplayer reconnect
+Phase 5 #82 added disconnect recovery to `RoomContext` / `multiplayer.js` but nothing tests the `CLOSED → SUBSCRIBED` state transition, the pending-submission flush, or the 30-second auto-exit timeout.
+
+**Files:** `src/services/multiplayer.reconnect.test.js` (new) or `src/context/RoomContext.test.jsx` (new)
+
+#### 103. Close the service-test gap — 25 services still untested
+Beyond the three Phase 5 items above, these modules ship with **no tests at all**: `aiFeatures`, `analytics`, `backend`, `challenges`, `conceptGenerator`, `countdown`, `dailyChallenge`, `errorMonitoring`, `friends`, `highlights`, `leaderboard`, `matchmaking`, `moderation`, `multiplayer`, `notifications`, `offlineQueue`, `partyMode`, `pushNotifications`, `referrals`, `socialShare`, `sounds`, `themeBuilder`, `votes`, `weeklyEvents`. Prioritize `offlineQueue`, `errorMonitoring`, `backend` — they guard data loss.
+
+---
+
+### Hardening Items Surfaced by the Audit
+
+#### 104. `serverScoring.scoreViaServer` has no try/catch around `fetch`
+`src/services/serverScoring.js:10-20`: a network timeout or DNS failure throws an uncaught promise rejection. The caller (`gemini.js`) wraps the call in try/catch so the app survives, but the swallowed error never reaches `errorMonitoring`.
+
+**Action:** Wrap fetch and `response.json()` in try/catch; log to `errorMonitoring`; return `null` on failure.
+
+**Files:** `src/services/serverScoring.js`
+
+#### 105. `errorMonitoring.SentryReporter` is a no-op stub
+`src/services/errorMonitoring.js:58-72` defines `SentryReporter` but never calls the Sentry SDK. The README lists Sentry as a monitoring layer; in practice, errors queue to localStorage forever and never leave the device.
+
+**Action:** Either import `@sentry/browser` and wire `Sentry.captureException()`, or remove the stub and strike Sentry from the README until it's actually integrated.
+
+**Files:** `src/services/errorMonitoring.js`, `README.md`
+
+#### 106. Analytics flush timer leaks on unmount
+`src/services/analytics.js:107` creates a module-level `_flushTimer` that is never cleared. In dev with HMR and in multi-tab usage, timers stack up and duplicate events fire.
+
+**Action:** Export a `teardownAnalytics()` cleanup; call it from `App.jsx` useEffect cleanup.
+
+**Files:** `src/services/analytics.js`, `src/App.jsx`
+
+#### 107. Supabase schema ships as one unversioned file
+`supabase/schema.sql` is a 282-line monolith with no migration history. Rolling back a change or tracking what's deployed requires diffing the file against production — fragile.
+
+**Action:** Create `supabase/migrations/` with timestamped migrations; document the convention in `SETUP.md`.
+
+**Files:** `supabase/migrations/` (new directory), `SETUP.md`
+
+#### 108. Gallery.test.jsx act() warnings
+Three tests produce "An update to Gallery inside a test was not wrapped in act(...)" warnings. Functionally passing, but every CI run is noisy and masks real async issues.
+
+**Action:** Wrap async render effects in `await act(async () => ...)` or use `waitFor` for post-mount assertions.
+
+**Files:** `src/features/gallery/Gallery.test.jsx`
+
+---
+
+### Priority Order (Phase 6)
+
+```
+Week 1:  ESLint zero (#94), ConnectionBanner wire-up (#95), share-link trace (#96)
+Week 1:  Silent catch fix (#97), JudgeCalibration cleanup (#98), Leaderboard refresh (#99)
+Week 2:  serverScoring tests (#100), ELO decay tests (#101), multiplayer reconnect tests (#102)
+Week 2:  Gallery act() (#108), serverScoring try/catch (#104)
+Week 3:  Sentry integration or removal (#105), analytics cleanup (#106)
+Week 3:  Service-test gap — offlineQueue, errorMonitoring, backend first (#103)
+Week 4:  Supabase migrations (#107)
+```
+
+**The mandate**: Phase 6 is not about adding anything. It's about making the README honest. Every claim in the stats table ("0 ESLint errors", "179 tests", "Sentry monitoring") must be real before Phase 7.

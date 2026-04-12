@@ -1,13 +1,14 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 
 beforeAll(() => {
-  global.IntersectionObserver = class {
+  vi.stubGlobal('IntersectionObserver', class {
     constructor(cb) { this._cb = cb; }
     observe() { this._cb([{ isIntersecting: true }]); }
     unobserve() {}
     disconnect() {}
-  };
+  });
 });
 
 vi.mock('../../services/storage', () => ({
@@ -50,18 +51,24 @@ vi.mock('../../lib/scoreBands', () => ({
 import { Gallery } from './Gallery';
 
 describe('Gallery', () => {
-  it('renders gallery heading', () => {
+  it('renders gallery heading', async () => {
     render(<Gallery />);
-    expect(screen.getByText(/Connection Gallery/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Connection Gallery/i)).toBeInTheDocument();
+    });
   });
 
-  it('shows connection entries', () => {
+  it('shows connection entries', async () => {
     render(<Gallery />);
-    expect(screen.getByText(/No connections yet|Test connection/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/No connections yet|Test connection/i)).toBeInTheDocument();
+    });
   });
 
-  it('has a sort control', () => {
+  it('has a sort control', async () => {
     render(<Gallery />);
-    expect(screen.getByLabelText(/Sort gallery/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Sort gallery/i)).toBeInTheDocument();
+    });
   });
 });

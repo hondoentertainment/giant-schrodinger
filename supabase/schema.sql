@@ -1,3 +1,7 @@
+-- CONSOLIDATED SCHEMA REFERENCE
+-- For fresh installs and rollbacks, run the ordered files in supabase/migrations/
+-- This file is the end-state snapshot — do not edit directly; regenerate from migrations.
+
 -- Run this in Supabase SQL editor to create tables for Venn with Friends backend.
 -- This schema includes Row Level Security (RLS) policies for production use.
 
@@ -192,7 +196,7 @@ CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (auth.uid
 -- ============================================================
 CREATE TABLE IF NOT EXISTS rounds (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   concept_left TEXT NOT NULL,
   concept_right TEXT NOT NULL,
   submission TEXT NOT NULL,
@@ -220,8 +224,8 @@ CREATE INDEX IF NOT EXISTS idx_rounds_created ON rounds(created_at DESC);
 -- ============================================================
 CREATE TABLE IF NOT EXISTS scored_judgements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  round_id UUID REFERENCES rounds(id),
-  judge_id UUID REFERENCES users(id),
+  round_id UUID REFERENCES rounds(id) ON DELETE CASCADE,
+  judge_id UUID REFERENCES users(id) ON DELETE CASCADE,
   score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 10),
   commentary TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
@@ -233,7 +237,7 @@ ALTER TABLE scored_judgements ENABLE ROW LEVEL SECURITY;
 -- LEADERBOARD
 -- ============================================================
 CREATE TABLE IF NOT EXISTS leaderboard (
-  user_id UUID REFERENCES users(id) PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE PRIMARY KEY,
   total_score NUMERIC DEFAULT 0,
   total_rounds INTEGER DEFAULT 0,
   avg_score NUMERIC(3,1) DEFAULT 0,
@@ -254,9 +258,9 @@ CREATE INDEX IF NOT EXISTS idx_leaderboard_score ON leaderboard(avg_score DESC);
 -- ============================================================
 CREATE TABLE IF NOT EXISTS challenges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  challenger_id UUID REFERENCES users(id),
-  challenged_id UUID REFERENCES users(id),
-  round_id UUID REFERENCES rounds(id),
+  challenger_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  challenged_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  round_id UUID REFERENCES rounds(id) ON DELETE CASCADE,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'completed', 'expired')),
   created_at TIMESTAMPTZ DEFAULT now(),
   expires_at TIMESTAMPTZ DEFAULT now() + INTERVAL '7 days'
@@ -271,7 +275,7 @@ CREATE INDEX IF NOT EXISTS idx_challenges_status ON challenges(status) WHERE sta
 -- ============================================================
 CREATE TABLE IF NOT EXISTS analytics_events (
   id BIGSERIAL PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   event TEXT NOT NULL,
   properties JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT now()

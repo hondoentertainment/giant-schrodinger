@@ -22,7 +22,6 @@ const SessionSummary = lazy(() => import('./features/summary/SessionSummary').th
 const ChallengeRound = lazy(() => import('./features/challenge/ChallengeRound').then(m => ({ default: m.ChallengeRound })))
 const TournamentLobby = lazy(() => import('./features/tournament/TournamentLobby').then(m => ({ default: m.TournamentLobby })))
 const AsyncChains = lazy(() => import('./features/challenge/AsyncChains').then(m => ({ default: m.AsyncChains })))
-const AnalyticsDashboard = lazy(() => import('./features/analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })))
 const AnalyticsView = lazy(() => import('./features/analytics/AnalyticsView').then(m => ({ default: m.AnalyticsView })))
 const ModerationDashboard = lazy(() => import('./features/analytics/ModerationDashboard').then(m => ({ default: m.ModerationDashboard })))
 const RankedPanel = lazy(() => import('./features/ranked/RankedPanel'))
@@ -33,7 +32,7 @@ import { parseJudgeShareUrl } from './services/share'
 import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
 import { parseThemeFromUrl, clearThemeFromUrl, importThemeFromLink, saveSharedTheme } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
-import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider } from './services/analytics'
+import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider, teardownAnalytics } from './services/analytics'
 import { initErrorMonitoring } from './services/errorMonitoring'
 import { processOfflineQueue, getQueueCount } from './services/offlineQueue'
 import { scoreSubmission } from './services/gemini'
@@ -241,7 +240,7 @@ function GameContent() {
                 {gameState === 'ANALYTICS' && <AnalyticsView onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'MODERATION' && <ModerationDashboard onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'RANKED' && <RankedPanel onBack={() => setGameState('LOBBY')} />}
-                {gameState === 'SESSION_SUMMARY' && <SessionSummary onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
             </PhaseTransition>
             </Suspense>
         </Layout>
@@ -251,7 +250,10 @@ function GameContent() {
 function App() {
     useEffect(() => {
         const cleanup = initErrorMonitoring();
-        return cleanup;
+        return () => {
+            if (typeof cleanup === 'function') cleanup();
+            teardownAnalytics();
+        };
     }, []);
 
     return (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getSessionMetrics, getEventCount, getEvents } from '../../services/analytics';
+import { getSessionMetrics, getEventCount } from '../../services/analytics';
 import { getHighlightStats } from '../../services/highlights';
-import { BarChart3, TrendingUp, Share2, Target, Calendar, Users, Shield } from 'lucide-react';
+import { BarChart3, TrendingUp, Share2, Target, Calendar, Shield } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { getFlaggedCount } from '../../services/moderation';
 import { ScoreHistoryChart } from './ScoreHistoryChart';

@@ -280,6 +280,22 @@ export function getSessionMetrics() {
 }
 
 /**
+ * Tear down analytics: drain the in-memory buffer and clear the pending
+ * flush timer. Safe to call multiple times (idempotent).
+ */
+export function teardownAnalytics() {
+  try {
+    flushBuffer();
+  } catch {
+    // ignore
+  }
+  if (_flushTimer) {
+    clearTimeout(_flushTimer);
+    _flushTimer = null;
+  }
+}
+
+/**
  * Remove events older than 30 days.
  */
 export function clearOldEvents() {

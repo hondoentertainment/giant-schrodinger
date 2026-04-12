@@ -4,7 +4,7 @@ import { getStats } from '../../services/stats';
 import { getSessionMetrics, getEventCount } from '../../services/analytics';
 import { getHighlightStats } from '../../services/highlights';
 import { getReferralCohorts } from '../../services/referrals';
-import { BarChart3, TrendingUp, Share2, Target, Calendar, Users } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 
 export function AnalyticsView({ onBack }) {
   const stats = useMemo(() => getStats(), []);

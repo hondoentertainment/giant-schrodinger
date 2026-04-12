@@ -5,9 +5,8 @@ import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked } from '../../services/stats';
 import { getDailyChallenge, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { getTimeUntilNextChallenge, formatCountdown } from '../../services/countdown';
-import { getPlayerRank, getDailyLeaderboard } from '../../services/leaderboard';
 import { getStreakBonus } from '../../services/challenges';
-import { parseReferralFromUrl, trackReferral, hasReferralBonus, claimReferralBonus, generateReferralCode } from '../../services/referrals';
+import { parseReferralFromUrl, trackReferral, generateReferralCode } from '../../services/referrals';
 import { trackEvent } from '../../services/analytics';
 import { toggleMute, isMuted, playClick } from '../../services/sounds';
 import { getCurrentSeason } from '../../services/leaderboard';
@@ -551,7 +550,7 @@ export function Lobby() {
                     {weeklyEvent && (showAll || lobbyTier >= 2) && (
                         <div className="w-full max-w-md mb-4 p-4 rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
                             <div className="flex items-center justify-between mb-1">
-                                <span className="text-purple-300 text-xs uppercase tracking-wider font-bold">This Week's Event</span>
+                                <span className="text-purple-300 text-xs uppercase tracking-wider font-bold">This Week&apos;s Event</span>
                                 <span className="text-white/40 text-xs">Ends in {formatWeeklyCountdown(getTimeUntilNextWeek())}</span>
                             </div>
                             <div className="text-white font-bold text-lg">{weeklyEvent.name}</div>

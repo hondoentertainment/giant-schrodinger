@@ -4,7 +4,7 @@ import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgement } from '../../services/judgements';
 import { upvote, downvote, getVotes, getAllVotes, getVoteDirection } from '../../services/votes';
-import { getHighlights, getWeeklyHighlights } from '../../services/highlights';
+import { getHighlights } from '../../services/highlights';
 import { flagContent } from '../../services/moderation';
 import { getScoreBand } from '../../lib/scoreBands';
 

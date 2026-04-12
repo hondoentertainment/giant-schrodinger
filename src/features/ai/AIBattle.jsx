@@ -16,7 +16,7 @@ import Confetti from '../../components/Confetti';
 const TOTAL_AI_ROUNDS = 5;
 
 export function AIBattle({ onDone }) {
-    const { user, currentModifier, isDailyChallenge, completeRound } = useGame();
+    const { user, currentModifier, completeRound } = useGame();
     const [phase, setPhase] = useState('playing'); // playing | scoring | results
     const [assets, setAssets] = useState({ left: null, right: null });
     const [submission, setSubmission] = useState('');
@@ -264,7 +264,7 @@ export function AIBattle({ onDone }) {
                         <button onClick={() => onDone?.()} className="text-white/30 hover:text-white/60 transition-colors text-xs">{'\u2190'} Quit</button>
                     </div>
                     {showTimeUp ? (
-                        <div className="text-2xl font-black font-display text-amber-400 animate-in zoom-in-95 duration-300">Time's up!</div>
+                        <div className="text-2xl font-black font-display text-amber-400 animate-in zoom-in-95 duration-300">Time&apos;s up!</div>
                     ) : (
                         <div className={`text-2xl font-black font-display tabular-nums ${timer < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{timer}s</div>
                     )}
@@ -337,7 +337,7 @@ export function AIBattle({ onDone }) {
                     <div className="text-center mb-3">
                         <div className="text-4xl font-black text-white">{playerResult?.score}/10</div>
                     </div>
-                    <p className="text-white/70 text-sm italic text-center mb-3">"{playerResult?.submission}"</p>
+                    <p className="text-white/70 text-sm italic text-center mb-3">&quot;{playerResult?.submission}&quot;</p>
                     {playerResult?.breakdown && (
                         <div className="grid grid-cols-2 gap-2 text-xs text-white/60">
                             <div className="bg-white/5 rounded-lg p-2">Wit: {playerResult.breakdown.wit}</div>
@@ -357,7 +357,7 @@ export function AIBattle({ onDone }) {
                     <div className="text-center mb-3">
                         <div className="text-4xl font-black text-white">{aiResult?.score}/10</div>
                     </div>
-                    <p className="text-white/70 text-sm italic text-center mb-3">"{aiResult?.submission}"</p>
+                    <p className="text-white/70 text-sm italic text-center mb-3">&quot;{aiResult?.submission}&quot;</p>
                     <div className="text-center text-white/40 text-xs">
                         Confidence: {Math.round((aiResult?.confidence || 0) * 100)}%
                     </div>

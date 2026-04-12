@@ -5,7 +5,7 @@ import { getScoreBand } from '../../lib/scoreBands';
 import { getStats } from '../../services/stats';
 import { getPlayerRank } from '../../services/leaderboard';
 import { trackEvent } from '../../services/analytics';
-import { Trophy, Star, Zap, ArrowRight, Home, Share2 } from 'lucide-react';
+import { Star, ArrowRight, Share2 } from 'lucide-react';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { generateStoryImage } from '../../lib/storyImage';
 
@@ -95,7 +95,7 @@ function StoryShareButton({ score, sessionResults, playerName }) {
     );
 }
 
-export function SessionSummary({ onBack }) {
+export function SessionSummary() {
     const { sessionResults, sessionScore, totalRounds, endSession, isDailyChallenge, setGameState, user } = useGame();
     const { toast } = useToast();
 
