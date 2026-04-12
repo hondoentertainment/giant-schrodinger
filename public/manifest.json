@@ -8,6 +8,9 @@
   "background_color": "#0a0118",
   "theme_color": "#1a0533",
   "orientation": "portrait",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["games", "entertainment", "social"],
   "icons": [
     {
       "src": "icon-192.svg",
@@ -21,5 +24,21 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Daily Challenge",
+      "short_name": "Daily",
+      "url": "/giant-schrodinger/#daily",
+      "icons": [{ "src": "icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ranked",
+      "short_name": "Ranked",
+      "url": "/giant-schrodinger/#ranked",
+      "icons": [{ "src": "icon-192.svg", "sizes": "192x192" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }

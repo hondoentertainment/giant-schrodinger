@@ -1043,3 +1043,6 @@ Week 4:  Supabase migrations (#107)
 ```
 
 **The mandate**: Phase 6 is not about adding anything. It's about making the README honest. Every claim in the stats table ("0 ESLint errors", "179 tests", "Sentry monitoring") must be real before Phase 7.
+
+## Known Limitations
+OG image is SVG; Twitter/iMessage/Slack may not preview. A PNG fallback should be rendered and added at `public/og-image.png` before launch.

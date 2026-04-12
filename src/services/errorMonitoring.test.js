@@ -191,6 +191,26 @@ describe('errorMonitoring', () => {
             expect(body.event_id).toMatch(/^[a-f0-9]{32}$/);
         });
 
+        it('includes a release field in the event body', async () => {
+            const { SentryReporter } = await freshImport({
+                dsn: 'https://abc123@o12345.ingest.sentry.io/67890',
+            });
+            const fetchMock = vi.fn(() => Promise.resolve({ ok: true }));
+            vi.stubGlobal('fetch', fetchMock);
+
+            SentryReporter.report(
+                { message: 'kaboom' },
+                { userId: 'u', url: '', userAgent: '', timestamp: 't' }
+            );
+
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            const [, opts] = fetchMock.mock.calls[0];
+            const body = JSON.parse(opts.body);
+            expect(body).toHaveProperty('release');
+            expect(typeof body.release).toBe('string');
+            expect(body.release.length).toBeGreaterThan(0);
+        });
+
         it('does not throw when fetch rejects', async () => {
             const { SentryReporter } = await freshImport({
                 dsn: 'https://abc123@o12345.ingest.sentry.io/67890',
