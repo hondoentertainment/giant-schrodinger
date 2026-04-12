@@ -6,6 +6,11 @@ vi.mock('../lib/supabase', () => ({
     supabase: {},
 }));
 
+// Mock errorMonitoring so we can assert logError calls
+vi.mock('./errorMonitoring', () => ({
+    logError: vi.fn(),
+}));
+
 const ORIGINAL_URL = import.meta.env.VITE_SUPABASE_URL;
 const ORIGINAL_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -138,5 +143,62 @@ describe('serverScoring', () => {
         const [, opts] = fetchMock.mock.calls[0];
         const body = JSON.parse(opts.body);
         expect(body.difficulty).toBe('normal');
+    });
+
+    it('returns null and logs error when fetch rejects', async () => {
+        const { scoreViaServer } = await freshImport();
+        const { logError } = await import('./errorMonitoring');
+
+        const fetchMock = vi.fn(async () => {
+            throw new Error('network down');
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const result = await scoreViaServer('answer', { label: 'A' }, { label: 'B' });
+        expect(result).toBeNull();
+        expect(logError).toHaveBeenCalledWith({
+            message: 'serverScoring.fetch failed: network down',
+            source: 'serverScoring',
+        });
+    });
+
+    it('returns null and logs error when response JSON is malformed', async () => {
+        const { scoreViaServer } = await freshImport();
+        const { logError } = await import('./errorMonitoring');
+
+        const fetchMock = vi.fn(async () => ({
+            ok: true,
+            status: 200,
+            json: async () => {
+                throw new Error('Unexpected token < in JSON');
+            },
+        }));
+        vi.stubGlobal('fetch', fetchMock);
+
+        const result = await scoreViaServer('answer', { label: 'A' }, { label: 'B' });
+        expect(result).toBeNull();
+        expect(logError).toHaveBeenCalledWith({
+            message: 'serverScoring.json parse failed: Unexpected token < in JSON',
+            source: 'serverScoring',
+        });
+    });
+
+    it('logs auth error and returns null on 401 response', async () => {
+        const { scoreViaServer } = await freshImport();
+        const { logError } = await import('./errorMonitoring');
+
+        const fetchMock = vi.fn(async () => ({
+            ok: false,
+            status: 401,
+            json: async () => ({ error: 'unauthorized' }),
+        }));
+        vi.stubGlobal('fetch', fetchMock);
+
+        const result = await scoreViaServer('answer', { label: 'A' }, { label: 'B' });
+        expect(result).toBeNull();
+        expect(logError).toHaveBeenCalledWith({
+            message: 'serverScoring.auth 401',
+            source: 'serverScoring',
+        });
     });
 });

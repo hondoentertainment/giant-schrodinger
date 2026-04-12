@@ -32,7 +32,7 @@ import { parseJudgeShareUrl } from './services/share'
 import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
 import { parseThemeFromUrl, clearThemeFromUrl, importThemeFromLink, saveSharedTheme } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
-import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider } from './services/analytics'
+import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider, teardownAnalytics } from './services/analytics'
 import { initErrorMonitoring } from './services/errorMonitoring'
 import { processOfflineQueue, getQueueCount } from './services/offlineQueue'
 import { scoreSubmission } from './services/gemini'
@@ -250,7 +250,10 @@ function GameContent() {
 function App() {
     useEffect(() => {
         const cleanup = initErrorMonitoring();
-        return cleanup;
+        return () => {
+            if (typeof cleanup === 'function') cleanup();
+            teardownAnalytics();
+        };
     }, []);
 
     return (

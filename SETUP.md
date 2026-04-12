@@ -28,7 +28,9 @@
 ## 1. Supabase (multiplayer, persistence, server-side scoring)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run the SQL in `supabase/schema.sql` in the Supabase SQL editor. This creates all tables (users, rounds, leaderboard, challenges, rooms, analytics_events, ranked data) with Row Level Security policies and indexes.
+2. Apply the schema. You have two options:
+   - **Migrations (recommended):** run each file in `supabase/migrations/` in timestamp order (see the "Database migrations" section below).
+   - **One-shot reference:** run `supabase/schema.sql` in the Supabase SQL editor. This creates all tables (users, rounds, leaderboard, challenges, rooms, analytics_events, ranked data) with Row Level Security policies and indexes.
 3. In Supabase: Settings > API > copy the URL and anon key.
 4. Create `.env` with:
 
@@ -120,6 +122,21 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
 ```
 
 3. Without this, errors are only logged to the browser console.
+
+---
+
+## Database migrations
+
+The SQL schema is split into timestamped migration files under `supabase/migrations/`, ordered by their `YYYYMMDDHHMMSS_` filename prefix. Each file is standalone: it contains the `create table`, RLS policies, and indexes for a single logical section.
+
+**Applying migrations:**
+
+- **Supabase SQL editor:** open each file in timestamp order and run them one by one.
+- **Supabase CLI:** after linking your project (`supabase link --project-ref your-project-ref`), run `supabase db push` to apply any pending migrations.
+
+**Fresh installs:** running every file in `supabase/migrations/` in order produces the same end-state schema as `supabase/schema.sql`. The consolidated `schema.sql` is kept as a reference snapshot only — do not edit it directly.
+
+**Adding new tables or columns:** create a new timestamped migration file (e.g. `20260501120000_add_new_table.sql`) instead of editing `schema.sql` or any existing migration. Then regenerate `schema.sql` from the migration set to keep the snapshot in sync.
 
 ---
 

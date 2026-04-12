@@ -1,11 +1,14 @@
 /**
  * Error monitoring service for Venn with Friends.
  * Captures unhandled errors and dispatches them to pluggable reporters.
- * Includes a LocalStorage reporter by default and a Sentry reporter stub.
+ * Includes a LocalStorage reporter by default and a Sentry reporter that
+ * talks directly to the Sentry public ingestion HTTP API (no SDK dependency).
  */
 
 const STORAGE_KEY = 'vwf_error_log';
 const MAX_ERRORS = 50;
+const SENTRY_QUEUE_KEY = 'vwf_sentry_queue';
+const SENTRY_QUEUE_MAX = 10;
 
 // --- Reporter system ---
 
@@ -54,20 +57,137 @@ export const LocalStorageReporter = {
     },
 };
 
+// --- Sentry DSN parsing ---
+
 /**
- * Sentry reporter stub - ready to activate when a Sentry DSN is configured.
+ * Parse a Sentry DSN of the form `https://<public_key>@<host>/<project_id>`.
+ * Returns `{publicKey, host, projectId}` or `null` when the DSN is missing
+ * or malformed.
+ */
+export function parseSentryDsn(dsn) {
+    if (!dsn || typeof dsn !== 'string') return null;
+    try {
+        const url = new URL(dsn);
+        if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+        const publicKey = url.username;
+        const host = url.host;
+        // pathname is like "/2" -> strip leading slash. Project id must be non-empty.
+        const projectId = url.pathname.replace(/^\/+/, '').replace(/\/+$/, '');
+        if (!publicKey || !host || !projectId) return null;
+        if (projectId.includes('/')) return null;
+        return { publicKey, host, projectId };
+    } catch {
+        return null;
+    }
+}
+
+// --- Sentry reporter ---
+
+let sentryParsed; // undefined = not yet tried, null = failed/disabled, object = ok
+let sentryParseAttempted = false;
+
+function getSentryConfig() {
+    if (sentryParseAttempted) return sentryParsed;
+    sentryParseAttempted = true;
+    const dsn = import.meta.env?.VITE_SENTRY_DSN;
+    if (!dsn) {
+        sentryParsed = null;
+        return null;
+    }
+    const parsed = parseSentryDsn(dsn);
+    if (!parsed) {
+        // eslint-disable-next-line no-console
+        console.warn('[errorMonitoring] Invalid VITE_SENTRY_DSN; Sentry reporting disabled.');
+        sentryParsed = null;
+        return null;
+    }
+    sentryParsed = parsed;
+    return parsed;
+}
+
+/**
+ * Reset cached DSN parse state. Exported for tests.
+ */
+export function _resetSentryParseCache() {
+    sentryParsed = undefined;
+    sentryParseAttempted = false;
+}
+
+function generateEventId() {
+    try {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID().replace(/-/g, '');
+        }
+    } catch { /* fall through */ }
+    return Math.random().toString(16).slice(2).padStart(32, '0').slice(0, 32);
+}
+
+function queueToLocalStorage(errorData, context) {
+    try {
+        const queue = JSON.parse(localStorage.getItem(SENTRY_QUEUE_KEY) || '[]');
+        queue.push({ ...errorData, ...context });
+        localStorage.setItem(
+            SENTRY_QUEUE_KEY,
+            JSON.stringify(queue.slice(-SENTRY_QUEUE_MAX))
+        );
+    } catch { /* silent */ }
+}
+
+/**
+ * Sentry reporter - posts events directly to the Sentry ingestion API.
+ * Falls back to a small localStorage queue when no DSN is configured so
+ * developers still have local visibility.
  */
 export const SentryReporter = {
     report: (errorData, context) => {
-        const dsn = import.meta.env.VITE_SENTRY_DSN;
-        if (!dsn) return;
-        // Sentry SDK would be initialized here
-        // For now, queue errors for when Sentry is configured
+        const cfg = getSentryConfig();
+        if (!cfg) {
+            // No DSN or bad DSN - keep a small local queue for dev visibility.
+            queueToLocalStorage(errorData, context);
+            return;
+        }
         try {
-            const queue = JSON.parse(localStorage.getItem('vwf_sentry_queue') || '[]');
-            queue.push({ ...errorData, ...context });
-            localStorage.setItem('vwf_sentry_queue', JSON.stringify(queue.slice(-MAX_ERRORS)));
-        } catch { /* silent */ }
+            const { publicKey, host, projectId } = cfg;
+            const endpoint = `https://${host}/api/${projectId}/store/`;
+            const message = errorData?.message || 'Unknown error';
+            const event = {
+                event_id: generateEventId(),
+                timestamp: Math.floor(Date.now() / 1000),
+                level: 'error',
+                platform: 'javascript',
+                message,
+                exception: {
+                    values: [{
+                        type: 'Error',
+                        value: message,
+                        stacktrace: { frames: [] },
+                    }],
+                },
+                tags: { source: errorData?.source || 'unknown' },
+                user: { id: context?.userId || 'anonymous' },
+                extra: {
+                    url: context?.url || '',
+                    userAgent: context?.userAgent || '',
+                    componentStack: errorData?.componentStack || '',
+                },
+            };
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-Sentry-Auth': `Sentry sentry_version=7, sentry_key=${publicKey}, sentry_client=venn-with-friends/1.0`,
+            };
+            // Fire and forget. Never block the UI or throw.
+            const p = fetch(endpoint, {
+                method: 'POST',
+                body: JSON.stringify(event),
+                headers,
+                keepalive: true,
+            });
+            if (p && typeof p.catch === 'function') {
+                p.catch(() => {});
+            }
+        } catch {
+            // Never let error logging break the app.
+        }
     },
 };
 
