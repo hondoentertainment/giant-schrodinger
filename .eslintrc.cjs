@@ -26,5 +26,16 @@ module.exports = {
     "react-refresh/only-export-components": "off",
     "react-hooks/exhaustive-deps": "off",
   },
+  overrides: [
+    {
+      files: ["discord-bot/**/*.js", "*.config.js", "playwright.config.js", "lighthouse.config.js"],
+      env: { node: true },
+    },
+    {
+      files: ["public/sw.js"],
+      env: { serviceworker: true, browser: true },
+      globals: { clients: "readonly" },
+    },
+  ],
   ignorePatterns: ["dist/"],
 };

@@ -28,15 +28,6 @@ vi.mock('../../context/ToastContext', () => ({
 }));
 
 // ── Mock services ──
-const mockScoreResult = {
-    score: 8,
-    baseScore: 8,
-    breakdown: { wit: 8, logic: 7, originality: 9, clarity: 8 },
-    commentary: 'Great connection between Cat and Dog!',
-    relevance: 'Highly Logical',
-    isMock: true,
-};
-
 vi.mock('../../services/gemini', () => ({
     scoreSubmission: vi.fn().mockResolvedValue({
         score: 8,

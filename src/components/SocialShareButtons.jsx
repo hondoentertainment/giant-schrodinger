@@ -6,7 +6,6 @@ import {
     copyShareLink,
     downloadFusionImage,
     shareViaWebShare,
-    generateShareText,
 } from '../services/socialShare';
 
 const ICON_SIZE = 20;

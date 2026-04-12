@@ -13,7 +13,7 @@ import {
     getTournamentHistory,
 } from '../../services/tournaments';
 import { trackEvent } from '../../services/analytics';
-import { Trophy, Users, Clock, ChevronRight, Plus, Crown } from 'lucide-react';
+import { Trophy, Users, ChevronRight, Plus, Crown } from 'lucide-react';
 
 export function TournamentLobby({ onBack }) {
     const { user } = useGame();

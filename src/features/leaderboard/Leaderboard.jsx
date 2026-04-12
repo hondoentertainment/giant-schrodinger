@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useGame } from '../../context/GameContext';
 import { getDailyLeaderboard, getWeeklyLeaderboard, getPlayerRank, getPlayerBest } from '../../services/leaderboard';
 import { getStats } from '../../services/stats';
@@ -60,8 +60,7 @@ export function Leaderboard({ onBack }) {
     const [activeTab, setActiveTab] = useState('daily');
 
     // Use a refresh key to force re-read when tab changes
-    const [refreshKey, setRefreshKey] = useState(0);
-    const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+    const [refreshKey] = useState(0);
 
     const entries = useMemo(() => {
         return activeTab === 'daily' ? getDailyLeaderboard() : getWeeklyLeaderboard();

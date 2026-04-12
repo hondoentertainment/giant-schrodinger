@@ -182,6 +182,7 @@ export function MultiplayerReveal() {
     if (revealPhase === REVEAL_PHASES.COUNTDOWN && !isFinished) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center justify-center min-h-[50vh]">
+                <ConnectionBanner />
                 <div className="w-full flex justify-start px-4 mb-4">
                     <button
                         onClick={leaveCurrentRoom}
@@ -214,6 +215,7 @@ export function MultiplayerReveal() {
     if (revealPhase === REVEAL_PHASES.REVEAL && !isFinished) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
+                <ConnectionBanner />
                 {isSpectator && (
                     <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
                         Spectating -- watch and react!
@@ -239,7 +241,7 @@ export function MultiplayerReveal() {
                         </div>
 
                         <div className="space-y-4">
-                            {submissions.slice(0, revealedCount).map((entry, idx) => {
+                            {submissions.slice(0, revealedCount).map((entry) => {
                                 const player = players.find((p) => p.player_name === entry.player_name);
                                 return (
                                     <div
@@ -286,6 +288,7 @@ export function MultiplayerReveal() {
     if (revealPhase === REVEAL_PHASES.VOTING && !isFinished) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
+                <ConnectionBanner />
                 <div className="w-full flex justify-start px-4 mb-4">
                     <button
                         onClick={leaveCurrentRoom}
@@ -365,6 +368,7 @@ export function MultiplayerReveal() {
     // Results screen (final reveal with scores)
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
+            <ConnectionBanner />
             {isSpectator && (
                 <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
                     Spectating -- watch and react!
