@@ -1044,5 +1044,78 @@ Week 4:  Supabase migrations (#107)
 
 **The mandate**: Phase 6 is not about adding anything. It's about making the README honest. Every claim in the stats table ("0 ESLint errors", "179 tests", "Sentry monitoring") must be real before Phase 7.
 
+---
+
+## Phase 7: Launch Readiness & Observability (Done — Code Side)
+
+### Tier A — Launch-Blocking
+- **#109** Verify GitHub Pages live — **STILL NEEDS YOU** (no credential)
+- **#110** Provision real Supabase project — **STILL NEEDS YOU**
+- **#111** Real OG image — done; SVG branded asset present, PNG fallback flagged in Known Limitations
+- **#112** PWA manifest + icons — done; manifest enriched with `lang`, `categories`, `shortcuts`
+- **#113** Gemini API key + quota alerts — **STILL NEEDS YOU**
+
+### Tier B — Observability
+- **#114** Lighthouse CI gates flipped from `warn` to `error` with full preset; 7 thresholds enforced (perf 85, a11y 90, BP 90, FCP 2500, LCP 3500, CLS 0.1, TBT 300)
+- **#115** Sentry source map upload — Vite emits `.map`; `getsentry/action-release@v1` uploads on deploy; maps stripped from Pages artifact; release SHA embedded in every event
+- **#116** Real analytics storage — **DEFERRED** (still needs Supabase project)
+- **#117** Bundle budget gate — `scripts/check-bundle-size.mjs` enforces main 170 KB / lazy 50 KB / total 300 KB gzipped via `bundle-budget.yml` workflow
+
+### Tier C — Structural Debt
+- **#118** Decompose `Lobby.jsx` — done: 1182 → 344 lines, 18 sections under `src/features/lobby/sections/`
+- **#119** Reveal.jsx decomposition — **DEFERRED to Phase 9** (two agent timeouts; needs incremental approach)
+- **#120** MultiplayerReveal.jsx — done: 581 → 239 lines, 5 phase sections under `src/features/room/sections/`
+- **#121** Finish 19 service tests — done; all 19 services have test coverage (+296 tests)
+- **#122** E2E depth — done in part: disconnect & error-path specs added (7 passing, 3 skipped pending real backend)
+
+### Tier D — Polish
+- **#123** Accessibility — partial: `aria-describedby` added to `JudgeRound.jsx` and `HumanJudgeForm` (defunct section file). Reveal-side aria pending decomposition.
+- **#124** `pg_cron` ELO decay job — done as migration #13 (`20260412000013_elo_decay_cron.sql`); also adds `rating` and `last_ranked_at` columns to `leaderboard`
+- **#125** Schema drift check — done: `scripts/check-schema-drift.mjs` (~400 lines, dep-free); workflow `schema-drift.yml` runs on PRs touching `supabase/**`
+
+---
+
+## Phase 8: Bug-Fix Sprint, Decomposition Round 2, Component Tests
+
+### Bucket 1 — Bugs surfaced by Phase 7 service tests (all FIXED)
+- **#126** `matchmaking.js` ID collision: same-millisecond joins now use `crypto.randomUUID()` with safe fallback
+- **#127** `leaderboard.js` `getWeekKey` was non-ISO; replaced with true ISO 8601 (Thursday-shift in UTC)
+- **#128** `challenges.js` unbounded `localStorage` growth: capped at 30 entries (matches `dailyChallenge`)
+- **#129** `partyMode.advancePartyRound` docstring/behavior mismatch: code now matches docstring (`status='waiting'` after advance)
+
+### Bucket 2 — Decomposition (round 2)
+- **#130** `MultiplayerReveal.jsx`: 581 → 239 lines, 5 sections (CountdownPhase, RevealPhase, VotingPhase, ResultsPhase, SharedRevealHeader); `<ConnectionBanner />` confirmed at top of every phase
+- **#131** `Reveal.jsx` (823 lines): **DEFERRED to Phase 9.** Two agent attempts timed out mid-rewrite. Needs incremental approach: extract one section per commit, verify byte-identical DOM each time, rather than one-shot rewrite.
+
+### Bucket 3 — Component tests (no longer service-only)
+- **#132** `Round.test.jsx`: 6 → 16 tests covering concept render, get-ready countdown, validation (empty, whitespace, maxLength), DAILY label, quit confirmation modal, modifier banner. **Auto-submit-on-time-up gap noted** — `useRoundTimer` uses `requestAnimationFrame` which fake timers don't drive.
+- **#133** `Gallery.test.jsx`: 3 → 11 tests covering empty state, back-to-lobby, loading indicator, friend-judgement display, sort, community filter chips, theme filter, LazyImage rendering
+- **#134** `Reveal.test.jsx`: expanded to 5 tests (target was 8-10; partial because parent agent timed out before completing component-level mocking for save-error retry and human-judge form)
+
+### Bucket 4 — E2E (filling the disconnect/error gaps)
+- **#135** `e2e/multiplayer-disconnect.spec.js`: 2 passing (banner absent on landing, offline events don't crash) + 2 skipped (banner-after-disconnect, banner-disappears-after-reconnect — both blocked by lack of Supabase mock harness)
+- **#136** `e2e/error-paths.spec.js`: 5 passing (room-code disabled-when-invalid, empty submission blocked, whitespace blocked, quit modal, theme-builder name validation) + 1 skipped (server error for non-existent room — needs backend)
+
+### Bucket 5 — Polish
+- **#137** `ToastContext` timer leak: `useRef` Map of timer IDs; `clearTimeout` on manual remove and on provider unmount; +7 tests verifying via `vi.getTimerCount()`
+- **#138** Accessibility on `JudgeRound.jsx` score input: `aria-describedby`, `aria-required`, help text linked
+- **#139** ELO decay `pg_cron` job: migration #13 enables `pg_cron`, adds `rating`/`last_ranked_at` columns to `leaderboard`, schedules `decay_inactive_ratings()` daily at 03:00 UTC; floors at 0 to mirror client behavior
+
+### Findings carried into Phase 9 (NOT fixed)
+- **F1** Gallery `<div role="list">` children lack `role="listitem"` — screen readers won't enumerate properly
+- **F2** Gallery's `new Date(collision.timestamp).toLocaleDateString()` doesn't guard missing timestamps — silent "Invalid Date" in card aria-labels
+- **F3** Empty/whitespace submission has no aria-live announcement — only CSS shake + red border
+- **F4** Invalid room code disables Join button silently — no inline error to guide the user
+- **F5** Multiplayer e2e is unreachable without a real Supabase backend; need a mock harness (msw-style or fixture client) before disconnect/reconnect can be e2e-tested
+
+### Priority Order (Phase 8)
+```
+Done in parallel (this commit):  #126-#130, #132-#139
+Deferred to Phase 9:             #131 (Reveal decomp), #134 (extra Reveal tests)
+Pending credentials:             #109, #110, #113, #116
+```
+
+---
+
 ## Known Limitations
 OG image is SVG; Twitter/iMessage/Slack may not preview. A PNG fallback should be rendered and added at `public/og-image.png` before launch.

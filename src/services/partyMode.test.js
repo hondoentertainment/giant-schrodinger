@@ -277,14 +277,29 @@ describe('partyMode service', () => {
     });
 
     describe('advancePartyRound / endPartyGame', () => {
-        it('advancePartyRound restores playing status', () => {
+        it('advancePartyRound resets status to waiting so startPartyRound can run again', () => {
             const game = createPartyGame({ hostName: 'A', mode: 'audience', maxPlayers: 4 });
             joinPartyGame(game.id, 'B');
             joinPartyGame(game.id, 'C');
             joinPartyGame(game.id, 'D');
             startPartyRound(game.id);
             const updated = advancePartyRound(game.id);
-            expect(updated.status).toBe('playing');
+            expect(updated.status).toBe('waiting');
+            // And startPartyRound can be called to begin the next round cleanly.
+            const next = startPartyRound(game.id);
+            expect(next.status).toBe('playing');
+            expect(next.rounds).toHaveLength(2);
+            expect(next.currentRound).toBe(2);
+        });
+
+        it('advancePartyRound throws when game is finished', () => {
+            const game = createPartyGame({ hostName: 'A', mode: 'round-robin', maxPlayers: 4 });
+            joinPartyGame(game.id, 'B');
+            joinPartyGame(game.id, 'C');
+            joinPartyGame(game.id, 'D');
+            startPartyRound(game.id);
+            endPartyGame(game.id);
+            expect(() => advancePartyRound(game.id)).toThrow(/already finished/);
         });
 
         it('endPartyGame returns final standings with finished status', () => {

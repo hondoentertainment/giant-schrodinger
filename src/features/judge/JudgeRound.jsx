@@ -223,8 +223,9 @@ export function JudgeRound({ payload, onDone }) {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Score (1-10)</label>
+                        <label htmlFor="judge-round-score" className="block text-sm font-medium text-white/60 mb-2">Score (1-10)</label>
                         <input
+                            id="judge-round-score"
                             type="number"
                             min="1"
                             max="10"
@@ -233,11 +234,15 @@ export function JudgeRound({ payload, onDone }) {
                             className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                             placeholder="10"
                             required
+                            aria-required="true"
+                            aria-describedby="judge-round-score-help"
                         />
+                        <p id="judge-round-score-help" className="text-xs text-white/50 mt-1">1 = nonsense, 10 = brilliant. Be honest.</p>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Relevance</label>
+                        <label htmlFor="judge-round-relevance" className="block text-sm font-medium text-white/60 mb-2">Relevance</label>
                         <select
+                            id="judge-round-relevance"
                             value={relevance}
                             onChange={(e) => setRelevance(e.target.value)}
                             className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
@@ -248,14 +253,17 @@ export function JudgeRound({ payload, onDone }) {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Commentary</label>
+                        <label htmlFor="judge-round-commentary" className="block text-sm font-medium text-white/60 mb-2">Commentary</label>
                         <textarea
+                            id="judge-round-commentary"
                             value={commentary}
                             onChange={(e) => setCommentary(e.target.value)}
                             rows="3"
                             className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                             placeholder="Share your verdict..."
+                            aria-describedby="judge-round-commentary-help"
                         />
+                        <p id="judge-round-commentary-help" className="text-xs text-white/50 mt-1">Optional. Explain your reasoning so the player learns.</p>
                     </div>
                     <button
                         type="submit"

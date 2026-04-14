@@ -27,6 +27,15 @@ describe('matchmaking service', () => {
             const queue = JSON.parse(localStorage.getItem('venn_matchmaking_queue'));
             expect(queue).toHaveLength(2);
         });
+
+        it('joinMatchmakingQueue called twice in rapid succession produces distinct IDs', () => {
+            const ids = new Set();
+            for (let i = 0; i < 2; i++) {
+                const entry = joinMatchmakingQueue(`P${i}`, 1200);
+                ids.add(entry.id);
+            }
+            expect(ids.size).toBe(2);
+        });
     });
 
     describe('findMatch', () => {
@@ -60,16 +69,9 @@ describe('matchmaking service', () => {
 
     describe('leaveQueue', () => {
         it('removes the specified entry from the queue', () => {
-            // Manually seed so the two entries have distinct ids (joinMatchmakingQueue uses
-            // Date.now() which can collide if called in the same millisecond).
-            const aliceId = 'match-a';
-            const bobId = 'match-b';
-            const queue = [
-                { playerName: 'Alice', rating: 1200, joinedAt: Date.now(), id: aliceId },
-                { playerName: 'Bob', rating: 1300, joinedAt: Date.now(), id: bobId },
-            ];
-            localStorage.setItem('venn_matchmaking_queue', JSON.stringify(queue));
-            leaveQueue(aliceId);
+            const alice = joinMatchmakingQueue('Alice', 1200);
+            joinMatchmakingQueue('Bob', 1300);
+            leaveQueue(alice.id);
             const remaining = JSON.parse(localStorage.getItem('venn_matchmaking_queue'));
             expect(remaining).toHaveLength(1);
             expect(remaining[0].playerName).toBe('Bob');

@@ -27,6 +27,41 @@ describe('leaderboard service', () => {
         it('returns weekKey in YYYY-WNN format', () => {
             expect(getWeekKey()).toMatch(/^\d{4}-W\d{2}$/);
         });
+
+        describe('getWeekKey ISO 8601 compliance', () => {
+            it('Jan 4 is always in week 1', () => {
+                // 2026: Jan 4 is a Sunday of the week Mon Dec 29 2025 - Sun Jan 4 2026.
+                // Per ISO, Jan 4 is always in W01 (of its own calendar year's ISO year).
+                expect(getWeekKey(new Date(2026, 0, 4))).toBe('2026-W01');
+                expect(getWeekKey(new Date(2024, 0, 4))).toBe('2024-W01');
+                expect(getWeekKey(new Date(2020, 0, 4))).toBe('2020-W01');
+            });
+
+            it('Dec 31 can belong to week 1 of the next ISO year', () => {
+                // 2024-12-31 is a Tuesday; its ISO week is 2025-W01.
+                expect(getWeekKey(new Date(2024, 11, 31))).toBe('2025-W01');
+            });
+
+            it('Dec 31 stays in the current year when it is not in next year\'s W01', () => {
+                // 2023-12-31 is a Sunday, in the ISO week 2023-W52.
+                expect(getWeekKey(new Date(2023, 11, 31))).toBe('2023-W52');
+            });
+
+            it('Monday vs Sunday boundary lands in the same ISO week', () => {
+                // 2026-04-13 (Mon) and 2026-04-19 (Sun) are the same ISO week.
+                const mon = getWeekKey(new Date(2026, 3, 13));
+                const sun = getWeekKey(new Date(2026, 3, 19));
+                expect(mon).toBe(sun);
+                // The following Monday (next week) differs.
+                const nextMon = getWeekKey(new Date(2026, 3, 20));
+                expect(nextMon).not.toBe(mon);
+            });
+
+            it('returns 2026-W16 for April 14, 2026', () => {
+                // ISO W1 of 2026 starts Mon Dec 29 2025; Apr 13 2026 (Mon) starts W16.
+                expect(getWeekKey(new Date(2026, 3, 14))).toBe('2026-W16');
+            });
+        });
     });
 
     describe('submitScore / getDailyLeaderboard', () => {

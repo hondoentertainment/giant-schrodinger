@@ -42,6 +42,28 @@ describe('challenges service', () => {
             expect(c.playerName).toBe('Anonymous');
             expect(c.themeId).toBe('default');
         });
+
+        it('caps stored challenges at 30 entries (oldest dropped)', () => {
+            let firstId = null;
+            for (let i = 0; i < 35; i++) {
+                const c = createChallenge({ submission: `s${i}`, score: i });
+                if (i === 0) firstId = c.id;
+            }
+            const stored = JSON.parse(localStorage.getItem('vwf_challenges'));
+            expect(stored).toHaveLength(30);
+            // The very first (oldest) entry should have been dropped.
+            expect(stored.some((c) => c.id === firstId)).toBe(false);
+        });
+
+        it('keeps newest entries at the head after cap', () => {
+            for (let i = 0; i < 31; i++) {
+                createChallenge({ submission: `s${i}`, score: i });
+            }
+            const stored = JSON.parse(localStorage.getItem('vwf_challenges'));
+            expect(stored).toHaveLength(30);
+            // Newest is at index 0 because createChallenge unshifts.
+            expect(stored[0].submission).toBe('s30');
+        });
     });
 
     describe('getChallenge', () => {
