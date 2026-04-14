@@ -32,6 +32,11 @@ module.exports = {
       env: { node: true },
     },
     {
+      files: ["scripts/**/*.mjs", "scripts/**/*.js"],
+      env: { node: true, es2022: true },
+      parserOptions: { ecmaVersion: 2022, sourceType: "module" },
+    },
+    {
       files: ["public/sw.js"],
       env: { serviceworker: true, browser: true },
       globals: { clients: "readonly" },

@@ -138,6 +138,16 @@ The SQL schema is split into timestamped migration files under `supabase/migrati
 
 **Adding new tables or columns:** create a new timestamped migration file (e.g. `20260501120000_add_new_table.sql`) instead of editing `schema.sql` or any existing migration. Then regenerate `schema.sql` from the migration set to keep the snapshot in sync.
 
+### Enabling pg_cron for ELO decay
+
+The migration `20260412000013_elo_decay_cron.sql` schedules a daily job that decays inactive ranked players (mirroring the client-side logic in `src/services/ranked.js`: subtract 15 rating from anyone who hasn't played ranked in more than 3 days, floored at 0). To enable it:
+
+1. In the Supabase dashboard, go to **Database → Extensions**.
+2. Enable `pg_cron`.
+3. Re-run the migration (it's idempotent — safe to apply repeatedly).
+
+The job runs at 03:00 UTC daily under the name `decay-inactive-ratings`. To change the schedule, edit the cron expression in the migration (or call `cron.schedule('decay-inactive-ratings', '<new-expr>', ...)` directly on an already-deployed database).
+
 ---
 
 ## Without Env Vars

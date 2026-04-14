@@ -2,25 +2,11 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRoom } from '../../context/RoomContext';
 import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
-import { Trophy, ArrowRight, Home, ThumbsUp, Crown, Star } from 'lucide-react';
 import { getRoomSubmissions } from '../../services/multiplayer';
-import { ConnectionBanner } from './ConnectionBanner';
-
-function ScoreBar({ label, value, max = 10 }) {
-    const pct = Math.round((value / max) * 100);
-    return (
-        <div className="flex items-center gap-2 text-sm">
-            <span className="text-white/50 w-20 text-right">{label}</span>
-            <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden">
-                <div
-                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-700"
-                    style={{ width: `${pct}%` }}
-                />
-            </div>
-            <span className="text-white font-semibold w-8">{value}</span>
-        </div>
-    );
-}
+import { CountdownPhase } from './sections/CountdownPhase';
+import { RevealPhase } from './sections/RevealPhase';
+import { VotingPhase } from './sections/VotingPhase';
+import { ResultsPhase } from './sections/ResultsPhase';
 
 // Phases: countdown -> reveal -> voting -> results
 const REVEAL_PHASES = {
@@ -178,404 +164,76 @@ export function MultiplayerReveal() {
         await advanceToNextRound();
     };
 
+    const handleRematch = useCallback(() => {
+        // Rematch: restart the room with same settings
+        setRevealPhase(REVEAL_PHASES.COUNTDOWN);
+        setRevealedCount(0);
+        setVotes({});
+        setHasVoted(false);
+        setCountdownValue(3);
+        advanceToNextRound();
+    }, [advanceToNextRound]);
+
     // Countdown screen
     if (revealPhase === REVEAL_PHASES.COUNTDOWN && !isFinished) {
         return (
-            <div className="w-full max-w-4xl flex flex-col items-center justify-center min-h-[50vh]">
-                <ConnectionBanner />
-                <div className="w-full flex justify-start px-4 mb-4">
-                    <button
-                        onClick={leaveCurrentRoom}
-                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
-                    >
-                        Leave Room
-                    </button>
-                </div>
-                <div className="text-center animate-in zoom-in-95 duration-500">
-                    <div className="text-white/40 text-lg uppercase tracking-widest mb-4">
-                        Round {room?.round_number} Answers
-                    </div>
-                    <div
-                        className="text-[120px] font-black font-display text-transparent bg-clip-text bg-gradient-to-br from-purple-400 via-pink-400 to-amber-400 animate-pulse leading-none"
-                        role="status"
-                        aria-live="polite"
-                        aria-label={countdownValue > 0 ? `Get ready, ${countdownValue}` : 'Here they are'}
-                    >
-                        {countdownValue || '!'}
-                    </div>
-                    <div className="text-white/60 text-lg mt-4">
-                        {countdownValue > 0 ? 'Get ready...' : 'Here they are!'}
-                    </div>
-                </div>
-            </div>
+            <CountdownPhase
+                room={room}
+                countdownValue={countdownValue}
+                onLeave={leaveCurrentRoom}
+            />
         );
     }
 
     // Staggered reveal screen
     if (revealPhase === REVEAL_PHASES.REVEAL && !isFinished) {
         return (
-            <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
-                <ConnectionBanner />
-                {isSpectator && (
-                    <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
-                        Spectating -- watch and react!
-                    </div>
-                )}
-                <div className="w-full flex justify-start px-4 mb-4">
-                    <button
-                        onClick={leaveCurrentRoom}
-                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
-                    >
-                        Leave Room
-                    </button>
-                </div>
-                <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                    <div className="glass-panel rounded-[22px] p-8">
-                        <div className="text-center mb-8">
-                            <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 border border-white/10">
-                                ROUND {room?.round_number} ANSWERS
-                            </div>
-                            <h2 className="text-2xl font-display font-bold text-white">
-                                And the connections are...
-                            </h2>
-                        </div>
-
-                        <div className="space-y-4">
-                            {submissions.slice(0, revealedCount).map((entry) => {
-                                const player = players.find((p) => p.player_name === entry.player_name);
-                                return (
-                                    <div
-                                        key={entry.id}
-                                        className="rounded-2xl border bg-white/5 border-white/10 p-5 animate-in slide-in-from-bottom-8 zoom-in-95 duration-500"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-2xl">{player?.avatar || '👽'}</span>
-                                            <span className="text-white font-bold text-lg">{entry.player_name}</span>
-                                        </div>
-                                        <div className="mt-3 pl-10">
-                                            <p className="text-white/80 italic text-xl">&ldquo;{entry.submission}&rdquo;</p>
-                                        </div>
-                                        {isSpectator && (
-                                            <div className="flex gap-2 mt-2 pl-10">
-                                                {['\uD83D\uDC4D', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDD25', '\uD83E\uDD2F'].map(emoji => (
-                                                    <button
-                                                        key={emoji}
-                                                        onClick={() => addReaction(entry.id, emoji)}
-                                                        className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition text-sm"
-                                                    >
-                                                        {emoji} {reactions.get(entry.id)?.filter(r => r === emoji).length || ''}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {revealedCount < submissions.length && (
-                            <div className="text-center mt-6 text-white/30 animate-pulse">
-                                Revealing answers...
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <RevealPhase
+                room={room}
+                submissions={submissions}
+                players={players}
+                revealedCount={revealedCount}
+                isSpectator={isSpectator}
+                reactions={reactions}
+                addReaction={addReaction}
+                onLeave={leaveCurrentRoom}
+            />
         );
     }
 
     // Voting screen (for non-AI scoring)
     if (revealPhase === REVEAL_PHASES.VOTING && !isFinished) {
         return (
-            <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
-                <ConnectionBanner />
-                <div className="w-full flex justify-start px-4 mb-4">
-                    <button
-                        onClick={leaveCurrentRoom}
-                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
-                    >
-                        Leave Room
-                    </button>
-                </div>
-                <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                    <div className="glass-panel rounded-[22px] p-8">
-                        <div className="text-center mb-8">
-                            <div className="inline-block px-4 py-1 rounded-full bg-purple-500/20 text-sm font-bold tracking-widest text-purple-300 mb-4 border border-purple-500/20">
-                                VOTE FOR THE BEST
-                            </div>
-                            <h2 className="text-2xl font-display font-bold text-white mb-2">
-                                Which connection is the best?
-                            </h2>
-                            <p className="text-white/40 text-sm">
-                                {hasVoted ? 'You\'ve voted! Waiting for results...' : 'Tap the one you think deserves to win (you can\'t vote for yourself)'}
-                            </p>
-                        </div>
-
-                        <div className="space-y-3">
-                            {scored.map((entry) => {
-                                const isOwnSubmission = entry.player_name === playerName;
-                                const canVote = !hasVoted && !isOwnSubmission;
-                                return (
-                                    <button
-                                        key={entry.id}
-                                        onClick={() => canVote && handleVote(entry.id)}
-                                        disabled={!canVote}
-                                        className={`w-full text-left rounded-2xl border p-5 transition-all ${
-                                            canVote
-                                                ? 'hover:bg-white/10 hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.2)] cursor-pointer'
-                                                : isOwnSubmission
-                                                ? 'opacity-50 cursor-not-allowed'
-                                                : 'cursor-default'
-                                        } ${
-                                            entry.voteCount > 0
-                                                ? 'bg-purple-500/10 border-purple-500/30'
-                                                : 'bg-white/5 border-white/10'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-2xl">{entry.avatar}</span>
-                                            <div className="flex-1">
-                                                <span className="text-white font-bold">{entry.player_name}</span>
-                                                {isOwnSubmission && <span className="text-white/30 text-xs ml-2">(you)</span>}
-                                                <p className="text-white/70 italic text-lg mt-1">&ldquo;{entry.submission}&rdquo;</p>
-                                            </div>
-                                            {entry.voteCount > 0 && (
-                                                <div className="flex items-center gap-1 text-purple-400">
-                                                    <ThumbsUp className="w-5 h-5" />
-                                                    <span className="font-bold">{entry.voteCount}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {isHost && (
-                            <button
-                                onClick={handleFinishVoting}
-                                className="mt-6 w-full py-3 bg-white/10 text-white font-semibold rounded-full hover:bg-white/20 transition-colors border border-white/20"
-                            >
-                                End Voting &amp; Show Results
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <VotingPhase
+                scored={scored}
+                playerName={playerName}
+                hasVoted={hasVoted}
+                isHost={isHost}
+                onVote={handleVote}
+                onFinishVoting={handleFinishVoting}
+                onLeave={leaveCurrentRoom}
+            />
         );
     }
 
     // Results screen (final reveal with scores)
     return (
-        <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
-            <ConnectionBanner />
-            {isSpectator && (
-                <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
-                    Spectating -- watch and react!
-                </div>
-            )}
-            <div className="w-full flex justify-start px-4 mb-4">
-                <button
-                    onClick={leaveCurrentRoom}
-                    className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
-                >
-                    Leave Room
-                </button>
-            </div>
-            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                <div className="glass-panel rounded-[22px] p-8">
-                    {/* Header */}
-                    <div className="text-center mb-8">
-                        <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 border border-white/10">
-                            {isFinished ? 'FINAL STANDINGS' : `ROUND ${room?.round_number} RESULTS`}
-                        </div>
-                        <h2 className="text-3xl font-display font-bold text-white">
-                            {isFinished ? 'Game Over!' : 'The results are in!'}
-                        </h2>
-                    </div>
-
-                    {/* Per-round leaderboard */}
-                    {!isFinished && (
-                        <div className="space-y-4 mb-8">
-                            {scored.map((entry, idx) => {
-                                const isWinner = idx === 0;
-                                const breakdown = entry.parsedScore?.breakdown;
-
-                                return (
-                                    <div
-                                        key={entry.id}
-                                        className={`rounded-2xl border p-5 transition-all animate-in slide-in-from-bottom-4 duration-500 ${
-                                            isWinner
-                                                ? 'bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/30 shadow-[0_0_30px_rgba(245,158,11,0.15)]'
-                                                : 'bg-white/5 border-white/10'
-                                        }`}
-                                        style={{ animationDelay: `${idx * 150}ms` }}
-                                    >
-                                        <div className="flex items-center gap-4 mb-3">
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                                                isWinner ? 'bg-amber-500 text-black' : 'bg-white/10 text-white/50'
-                                            }`}>
-                                                {isWinner ? <Trophy className="w-4 h-4" /> : idx + 1}
-                                            </div>
-                                            <span className="text-2xl">{entry.avatar}</span>
-                                            <span className="text-white font-bold text-lg flex-1">{entry.player_name}</span>
-                                            <div className="flex items-center gap-3">
-                                                {entry.voteCount > 0 && (
-                                                    <div className="flex items-center gap-1 text-purple-400 text-sm">
-                                                        <ThumbsUp className="w-4 h-4" />
-                                                        <span>{entry.voteCount}</span>
-                                                    </div>
-                                                )}
-                                                {scoringMode === 'ai' && (
-                                                    <div className={`text-3xl font-black ${
-                                                        isWinner
-                                                            ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500'
-                                                            : 'text-white/80'
-                                                    }`}>
-                                                        {entry.finalScore}/10
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="mb-3 pl-12">
-                                            <p className="text-white/70 italic text-lg">&ldquo;{entry.submission}&rdquo;</p>
-                                        </div>
-
-                                        {breakdown && (
-                                            <div className="pl-12 space-y-1.5">
-                                                <ScoreBar label="Wit" value={breakdown.wit} />
-                                                <ScoreBar label="Logic" value={breakdown.logic} />
-                                                <ScoreBar label="Originality" value={breakdown.originality} />
-                                                <ScoreBar label="Clarity" value={breakdown.clarity} />
-                                            </div>
-                                        )}
-
-                                        {entry.parsedScore?.commentary && (
-                                            <div className="mt-3 pl-12 text-sm text-white/50 italic">
-                                                &ldquo;{entry.parsedScore.commentary}&rdquo;
-                                            </div>
-                                        )}
-
-                                        {isSpectator && (
-                                            <div className="flex gap-2 mt-2 pl-12">
-                                                {['\uD83D\uDC4D', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDD25', '\uD83E\uDD2F'].map(emoji => (
-                                                    <button
-                                                        key={emoji}
-                                                        onClick={() => addReaction(entry.id, emoji)}
-                                                        className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition text-sm"
-                                                    >
-                                                        {emoji} {reactions.get(entry.id)?.filter(r => r === emoji).length || ''}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* Session leaderboard (finished state) */}
-                    {isFinished && (
-                        <div className="space-y-3 mb-8">
-                            {sessionLeaderboard.map((entry, idx) => (
-                                <div
-                                    key={entry.playerName}
-                                    className={`rounded-2xl border p-4 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-500 ${
-                                        idx === 0
-                                            ? 'bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]'
-                                            : 'bg-white/5 border-white/10'
-                                    }`}
-                                    style={{ animationDelay: `${idx * 100}ms` }}
-                                >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                                        idx === 0 ? 'bg-amber-500 text-black' : idx === 1 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
-                                    }`}>
-                                        {idx === 0 ? <Crown className="w-5 h-5" /> : idx === 1 ? <Star className="w-4 h-4" /> : idx + 1}
-                                    </div>
-                                    <span className="text-3xl">{entry.avatar}</span>
-                                    <div className="flex-1">
-                                        <div className="text-white font-bold text-lg">{entry.playerName}</div>
-                                        <div className="text-white/40 text-sm">
-                                            {entry.rounds} round{entry.rounds === 1 ? '' : 's'}
-                                            {entry.totalVotes > 0 && ` · ${entry.totalVotes} votes`}
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className={`text-3xl font-black ${idx === 0 ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500' : 'text-white'}`}>
-                                            {entry.totalScore}
-                                        </div>
-                                        <div className="text-xs text-white/50">total pts</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* No scores yet */}
-                    {!isFinished && scored.length === 0 && (
-                        <div className="text-center py-12 text-white/40">
-                            <div className="w-12 h-12 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mx-auto mb-4" />
-                            <p>Waiting for scores...</p>
-                        </div>
-                    )}
-
-                    {/* Multiplier note */}
-                    {!isFinished && multiplier !== 1 && (
-                        <div className="text-center text-sm text-white/40 mb-6">
-                            Theme multiplier: <span className="text-white">x{multiplier.toFixed(2)}</span>
-                        </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        {!isFinished && isHost && hasNextRound && (
-                            <button
-                                onClick={handleNext}
-                                disabled={advancing}
-                                className="px-8 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center gap-2 disabled:opacity-50"
-                            >
-                                <ArrowRight className="w-5 h-5" />
-                                {advancing ? 'Loading...' : `Next Round (${room.round_number + 1}/${room.total_rounds})`}
-                            </button>
-                        )}
-                        {(isFinished || (isHost && !hasNextRound)) && (
-                            <>
-                                {isHost && (
-                                    <button
-                                        onClick={() => {
-                                            // Rematch: restart the room with same settings
-                                            setRevealPhase(REVEAL_PHASES.COUNTDOWN);
-                                            setRevealedCount(0);
-                                            setVotes({});
-                                            setHasVoted(false);
-                                            setCountdownValue(3);
-                                            advanceToNextRound();
-                                        }}
-                                        className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_rgba(168,85,247,0.4)] flex items-center gap-2"
-                                    >
-                                        <ArrowRight className="w-5 h-5" />
-                                        Rematch!
-                                    </button>
-                                )}
-                                <button
-                                    onClick={leaveCurrentRoom}
-                                    className="px-8 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center gap-2"
-                                >
-                                    <Home className="w-5 h-5" />
-                                    Back to Lobby
-                                </button>
-                            </>
-                        )}
-                        {!isFinished && !isHost && (
-                            <div className="text-white/40 text-sm">
-                                {hasNextRound ? 'Waiting for host to start next round...' : 'Game complete — waiting for final results...'}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+        <ResultsPhase
+            room={room}
+            isFinished={isFinished}
+            isHost={isHost}
+            isSpectator={isSpectator}
+            scoringMode={scoringMode}
+            multiplier={multiplier}
+            scored={scored}
+            sessionLeaderboard={sessionLeaderboard}
+            hasNextRound={hasNextRound}
+            advancing={advancing}
+            reactions={reactions}
+            addReaction={addReaction}
+            onNext={handleNext}
+            onRematch={handleRematch}
+            onLeave={leaveCurrentRoom}
+        />
     );
 }

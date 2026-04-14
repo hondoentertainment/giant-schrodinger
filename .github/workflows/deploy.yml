@@ -44,6 +44,22 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Upload source maps to Sentry
+        uses: getsentry/action-release@v1
+        if: env.SENTRY_AUTH_TOKEN != ''
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          sourcemaps: ./dist/assets
+          url_prefix: '~/giant-schrodinger/assets'
+          version: ${{ github.sha }}
+
+      - name: Strip source maps from deploy artifact
+        run: find ./dist -name '*.map' -delete
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 

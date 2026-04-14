@@ -5,6 +5,8 @@
  * talks directly to the Sentry public ingestion HTTP API (no SDK dependency).
  */
 
+/* global __SENTRY_RELEASE__ */
+
 const STORAGE_KEY = 'vwf_error_log';
 const MAX_ERRORS = 50;
 const SENTRY_QUEUE_KEY = 'vwf_sentry_queue';
@@ -150,11 +152,13 @@ export const SentryReporter = {
             const { publicKey, host, projectId } = cfg;
             const endpoint = `https://${host}/api/${projectId}/store/`;
             const message = errorData?.message || 'Unknown error';
+            const release = typeof __SENTRY_RELEASE__ !== 'undefined' ? __SENTRY_RELEASE__ : 'dev';
             const event = {
                 event_id: generateEventId(),
                 timestamp: Math.floor(Date.now() / 1000),
                 level: 'error',
                 platform: 'javascript',
+                release,
                 message,
                 exception: {
                     values: [{
