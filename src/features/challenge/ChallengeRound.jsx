@@ -167,8 +167,9 @@ export function ChallengeRound({ payload, onDone }) {
 
             <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-white/60 mb-2">Your connection</label>
+                    <label htmlFor="challenge-round-connection" className="block text-sm font-medium text-white/60 mb-2">Your connection</label>
                     <input
+                        id="challenge-round-connection"
                         ref={inputRef}
                         type="text"
                         value={submission}
@@ -176,6 +177,7 @@ export function ChallengeRound({ payload, onDone }) {
                         className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-4 text-white text-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                         placeholder="Write one witty phrase that connects both concepts..."
                         maxLength={200}
+                        // eslint-disable-next-line jsx-a11y/no-autofocus -- game-flow UX: player is expected to type immediately
                         autoFocus
                         required
                     />

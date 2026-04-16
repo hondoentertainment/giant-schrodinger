@@ -39,9 +39,10 @@ export function ProfileForm({ onLogin }) {
             <p className="text-white/50 text-sm text-center mb-6">Customize your experience and unlock rewards by playing</p>
             <form onSubmit={handleSubmit} className="space-y-6">
                 <section aria-labelledby="profile-username">
-                    <label id="profile-username" className="block text-sm font-medium text-white/60 mb-2">Username</label>
+                    <label id="profile-username" htmlFor="profile-username-input" className="block text-sm font-medium text-white/60 mb-2">Username</label>
                     <div className="relative">
                         <input
+                            id="profile-username-input"
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value.trimStart())}
@@ -63,7 +64,7 @@ export function ProfileForm({ onLogin }) {
 
                 <section aria-labelledby="profile-avatar">
                     <div className="flex items-center justify-between mb-2">
-                        <label id="profile-avatar" className="block text-sm font-medium text-white/60">Avatar</label>
+                        <span id="profile-avatar" className="block text-sm font-medium text-white/60">Avatar</span>
                         <button
                             type="button"
                             onClick={() => setShowUnlockModal(true)}
@@ -101,7 +102,7 @@ export function ProfileForm({ onLogin }) {
 
                 <section aria-labelledby="profile-theme">
                     <div className="flex items-center justify-between mb-2">
-                        <label id="profile-theme" className="block text-sm font-medium text-white/60">Theme</label>
+                        <span id="profile-theme" className="block text-sm font-medium text-white/60">Theme</span>
                         <button
                             type="button"
                             onClick={() => setShowUnlockModal(true)}
@@ -149,7 +150,7 @@ export function ProfileForm({ onLogin }) {
                 </section>
 
                 <section aria-labelledby="profile-scoring">
-                    <label id="profile-scoring" className="block text-sm font-medium text-white/60 mb-2">Scoring</label>
+                    <span id="profile-scoring" className="block text-sm font-medium text-white/60 mb-2">Scoring</span>
                     <div className="grid grid-cols-2 gap-3" role="group">
                         <button
                             type="button"
@@ -196,7 +197,7 @@ export function ProfileForm({ onLogin }) {
                 )}
 
                 <section aria-labelledby="profile-media">
-                    <label id="profile-media" className="block text-sm font-medium text-white/60 mb-2">Media Type</label>
+                    <span id="profile-media" className="block text-sm font-medium text-white/60 mb-2">Media Type</span>
                     <div className="grid grid-cols-3 gap-3" role="group">
                         {[
                             { type: MEDIA_TYPES.IMAGE, label: 'Images', Icon: Image, desc: 'Classic visual Venn' },
@@ -228,7 +229,7 @@ export function ProfileForm({ onLogin }) {
 
                 <section aria-labelledby="profile-progress">
                     <div className="flex items-center justify-between mb-2">
-                        <label id="profile-progress" className="block text-sm font-medium text-white/60">Progress</label>
+                        <span id="profile-progress" className="block text-sm font-medium text-white/60">Progress</span>
                         <button
                             type="button"
                             onClick={() => setShowUnlockModal(true)}
@@ -281,7 +282,7 @@ export function ProfileForm({ onLogin }) {
                 </section>
 
                 <section aria-labelledby="profile-session">
-                    <label id="profile-session" className="block text-sm font-medium text-white/60 mb-2">Session Length</label>
+                    <span id="profile-session" className="block text-sm font-medium text-white/60 mb-2">Session Length</span>
                     <div className="grid grid-cols-3 gap-3" role="group">
                         {[3, 5, 7].map((rounds) => (
                             <button

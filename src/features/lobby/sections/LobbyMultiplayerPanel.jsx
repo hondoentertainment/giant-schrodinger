@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Wifi, WifiOff } from 'lucide-react';
 import { useTranslation } from '../../../hooks/useTranslation';
+
+const VALID_ROOM_CODE_CHARS = /^[A-HJ-NP-Z2-9]{4}$/;
 
 export function LobbyMultiplayerPanel({
     backendReady,
@@ -14,6 +16,14 @@ export function LobbyMultiplayerPanel({
     onBack,
 }) {
     const { t } = useTranslation();
+    const trimmed = joinCode.trim();
+    const validationError = useMemo(() => {
+        if (!trimmed) return '';
+        if (trimmed.length < 4) return 'Room codes are 4 characters.';
+        if (!VALID_ROOM_CODE_CHARS.test(trimmed)) return 'Use A-Z (excluding I, O) and 2-9.';
+        return '';
+    }, [trimmed]);
+    const canJoin = !mpLoading && backendReady && !validationError && trimmed.length === 4;
     return (
         <div className="animate-in slide-in-from-bottom-4 duration-300">
             <div className="flex flex-col items-center gap-1 mb-4 text-white/60 text-sm">
@@ -36,26 +46,37 @@ export function LobbyMultiplayerPanel({
                     {mpLoading && mpLoadingAction === 'create' ? t('lobby.creating') : t('lobby.createRoom')}
                 </button>
 
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={joinCode}
-                        onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                        placeholder={t('lobby.roomCode')}
-                        maxLength={6}
-                        className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-lg text-center tracking-widest font-bold uppercase"
-                    />
-                    <button
-                        onClick={handleJoinRoom}
-                        disabled={mpLoading || !backendReady || joinCode.trim().length < 4}
-                        className="px-6 py-3 bg-white/20 text-white font-bold rounded-xl hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
-                        aria-busy={mpLoading && mpLoadingAction === 'join'}
-                        aria-label={mpLoading && mpLoadingAction === 'join' ? 'Joining room...' : 'Join room'}
-                    >
-                        {mpLoading && mpLoadingAction === 'join' ? t('lobby.joining') : t('lobby.join')}
-                    </button>
+                <div>
+                    <div className="flex gap-2">
+                        <label htmlFor="lobby-join-code" className="sr-only">{t('lobby.roomCode')}</label>
+                        <input
+                            id="lobby-join-code"
+                            type="text"
+                            value={joinCode}
+                            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                            placeholder={t('lobby.roomCode')}
+                            maxLength={6}
+                            aria-invalid={Boolean(validationError)}
+                            aria-describedby={validationError ? 'lobby-join-code-error' : undefined}
+                            className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-lg text-center tracking-widest font-bold uppercase"
+                        />
+                        <button
+                            onClick={handleJoinRoom}
+                            disabled={!canJoin}
+                            className="px-6 py-3 bg-white/20 text-white font-bold rounded-xl hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                            aria-busy={mpLoading && mpLoadingAction === 'join'}
+                            aria-label={mpLoading && mpLoadingAction === 'join' ? 'Joining room...' : 'Join room'}
+                        >
+                            {mpLoading && mpLoadingAction === 'join' ? t('lobby.joining') : t('lobby.join')}
+                        </button>
+                    </div>
+                    {validationError && (
+                        <p id="lobby-join-code-error" role="alert" aria-live="polite" className="text-sm text-red-300 mt-2 text-center">
+                            {validationError}
+                        </p>
+                    )}
                 </div>
-                {joinCode.trim().length >= 4 && (
+                {trimmed.length >= 4 && !validationError && (
                     <button
                         onClick={handleJoinAsSpectator}
                         disabled={mpLoading}

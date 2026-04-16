@@ -149,7 +149,7 @@ supabase/
 | Metric | Value |
 |--------|-------|
 | Features | 93 across 5 phases |
-| Unit/integration tests | 598 across 47 test files |
+| Unit/integration tests | 613 across 48 test files |
 | E2E specs | 5 Playwright spec files |
 | Lines of code | ~22K (src/) |
 | Main chunk (gzipped) | 149 KB |

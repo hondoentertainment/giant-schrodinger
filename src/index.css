@@ -113,3 +113,34 @@
   60% { transform: translateX(3px); }
   75% { transform: translateX(-2px); }
 }
+
+/* Respect OS-level motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Allow loading spinners and essential feedback to still indicate activity */
+  .animate-spin {
+    animation-duration: 1500ms !important;
+  }
+
+  /* Tailwind's animate-in / animate-pulse should still fade but without bouncing */
+  .animate-pulse {
+    animation-duration: 2s !important;
+  }
+
+  .animate-bounce,
+  .animate-in,
+  .zoom-in-95,
+  .slide-in-from-top-4,
+  .fade-in {
+    animation: none !important;
+    transform: none !important;
+  }
+}

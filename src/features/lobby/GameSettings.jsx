@@ -19,8 +19,8 @@ export function GameSettings({
     return (
         <>
             {/* Scoring mode toggle */}
-            <div className="mb-4">
-                <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">Scoring</label>
+            <div className="mb-4" role="group" aria-labelledby="game-settings-scoring-label">
+                <span id="game-settings-scoring-label" className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">Scoring</span>
                 <div className="flex gap-2 justify-center">
                     <button
                         type="button"
@@ -73,8 +73,9 @@ export function GameSettings({
 
             {/* Prompt Pack Selector */}
             <div className="w-full max-w-md mb-4">
-                <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Concept Pack</label>
+                <label htmlFor="game-settings-prompt-pack" className="block text-white/50 text-xs uppercase tracking-wider mb-2">Concept Pack</label>
                 <select
+                    id="game-settings-prompt-pack"
                     value={user?.promptPack || ''}
                     onChange={(e) => login({ ...user, promptPack: e.target.value || null })}
                     className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
@@ -91,8 +92,8 @@ export function GameSettings({
 
             {/* Session length (only when not in active session) */}
             {!sessionId && (
-                <div className="mb-4">
-                    <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">Session length</label>
+                <div className="mb-4" role="group" aria-labelledby="game-settings-session-length-label">
+                    <span id="game-settings-session-length-label" className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">Session length</span>
                     <div className="flex gap-2 justify-center">
                         {[3, 5, 7].map((rounds) => (
                             <button

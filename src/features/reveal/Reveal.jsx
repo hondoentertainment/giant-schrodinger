@@ -10,7 +10,6 @@ import { submitScore, getPlayerRank, submitSeasonalScore } from '../../services/
 import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
 import { trackEvent } from '../../services/analytics';
 import { autoSaveHighlight } from '../../services/highlights';
-import { getConnectionExplanation } from '../../services/aiFeatures';
 import { ShareCardCanvas } from '../../components/ShareCardCanvas';
 import { checkAchievements } from '../../services/achievements';
 import { AchievementProgress } from '../../components/AchievementProgress';
@@ -24,6 +23,21 @@ import SocialShareButtons from '../../components/SocialShareButtons';
 import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
 import { ContextualTip } from '../../components/ContextualTip';
+import { FusionImageCard } from './sections/FusionImageCard';
+import { ScoreBreakdownGrid } from './sections/ScoreBreakdownGrid';
+import { RetentionHooksPanel } from './sections/RetentionHooksPanel';
+import { ModifierResultBanner } from './sections/ModifierResultBanner';
+import { CoachingTips } from './sections/CoachingTips';
+import { HumanJudgeForm } from './sections/HumanJudgeForm';
+import { ScoreRollupDisplay } from './sections/ScoreRollupDisplay';
+import { ComebackOverlay } from './sections/ComebackOverlay';
+import { ConnectionExplanation } from './sections/ConnectionExplanation';
+import { ChallengeFriendButton } from './sections/ChallengeFriendButton';
+import { CommentaryBlockquote } from './sections/CommentaryBlockquote';
+import { PercentileRankBadge } from './sections/PercentileRankBadge';
+import { ScoringErrorBanner } from './sections/ScoringErrorBanner';
+import { ProcessErrorView } from './sections/ProcessErrorView';
+import { ShareActionsRow } from './sections/ShareActionsRow';
 
 export function Reveal({ submission, assets }) {
     const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, sessionResults, isDailyChallenge } = useGame();
@@ -364,23 +378,52 @@ export function Reveal({ submission, assets }) {
         completeRound({ score: finalScore, baseScore: scoreValue });
     };
 
+    const handleRetryScoring = async () => {
+        setRetrying(true);
+        setScoringError(null);
+        try {
+            const retryResult = await scoreSubmission(submission, assets.left, assets.right, mediaType);
+            const finalScore = Math.min(10, Math.max(1, Math.round(retryResult.score * scoreMultiplier)));
+            const resultPayload = {
+                ...retryResult,
+                finalScore,
+                scoreMultiplier,
+            };
+            setResult(resultPayload);
+            setProcessError(null);
+            if (!savedRef.current) {
+                finalizeCollision({
+                    submission,
+                    imageUrl: fusionImage?.url,
+                    fallbackImageUrl: fusionImage?.fallbackUrl,
+                    score: finalScore,
+                    baseScore: retryResult.score,
+                    breakdown: retryResult.breakdown,
+                    commentary: retryResult.commentary,
+                    themeId: theme?.id,
+                    scoringMode,
+                    roundNumber,
+                    totalRounds,
+                    scoreMultiplier,
+                }, finalScore);
+            }
+            completeRound({ score: finalScore, baseScore: retryResult.score, breakdown: retryResult.breakdown });
+        } catch {
+            setScoringError({ message: 'Still unable to score. Using offline mode.', errorId: scoringError?.errorId });
+        }
+        setRetrying(false);
+    };
+
     if (processError) {
         return (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-in fade-in duration-500">
-                <div className="text-6xl mb-4" role="img" aria-hidden="true">⚠️</div>
-                <h2 className="text-2xl font-display font-bold text-white mb-2">Something went wrong</h2>
-                <p className="text-white/60 text-sm mb-6 max-w-sm">{processError}</p>
-                <button
-                    onClick={() => {
-                        setProcessError(null);
-                        savedRef.current = false;
-                        setRetryTrigger((t) => t + 1);
-                    }}
-                    className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform"
-                >
-                    Try Again
-                </button>
-            </div>
+            <ProcessErrorView
+                processError={processError}
+                onRetry={() => {
+                    setProcessError(null);
+                    savedRef.current = false;
+                    setRetryTrigger((t) => t + 1);
+                }}
+            />
         );
     }
 
@@ -398,79 +441,17 @@ export function Reveal({ submission, assets }) {
 
     if (scoringMode === 'human' && !result) {
         return (
-            <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
-                <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl">
-                    <div className="glass-panel rounded-[22px] p-8 text-center max-w-2xl">
-                        <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-6 border border-white/10">
-                            HUMAN JUDGE
-                        </div>
-                        <div className="relative aspect-[4/3] sm:aspect-square w-full max-w-xs sm:max-w-sm mx-auto rounded-2xl overflow-hidden mb-6 sm:mb-8 shadow-2xl ring-1 ring-white/20">
-                            <img
-                                src={fusionImage.url}
-                                alt="Fusion"
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                                data-fallback={fusionImage.fallbackUrl}
-                                onError={(event) => {
-                                    const fallback = event.currentTarget.dataset.fallback;
-                                    if (fallback && event.currentTarget.src !== fallback) {
-                                        event.currentTarget.src = fallback;
-                                    }
-                                }}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                            <div className="absolute bottom-6 left-6 text-left">
-                                <div className="text-white/60 text-sm uppercase tracking-wider">Concept</div>
-                                <div className="text-2xl font-bold text-white">{submission}</div>
-                            </div>
-                        </div>
-
-                        <form onSubmit={handleHumanScore} className="space-y-4 text-left">
-                            <div>
-                                <label className="block text-sm font-medium text-white/60 mb-2">Score (1-10)</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="10"
-                                    value={humanScore}
-                                    onChange={(e) => setHumanScore(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                                    placeholder="10"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-white/60 mb-2">Relevance</label>
-                                <select
-                                    value={humanRelevance}
-                                    onChange={(e) => setHumanRelevance(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                                >
-                                    <option value="Highly Logical">Highly Logical</option>
-                                    <option value="Absurdly Creative">Absurdly Creative</option>
-                                    <option value="Wild Card">Wild Card</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-white/60 mb-2">Commentary</label>
-                                <textarea
-                                    value={humanCommentary}
-                                    onChange={(e) => setHumanCommentary(e.target.value)}
-                                    rows="3"
-                                    className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                                    placeholder="Share your verdict..."
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                className="w-full py-4 bg-white text-black font-bold text-lg rounded-full hover:scale-[1.01] transition-transform shadow-[0_0_30px_rgba(255,255,255,0.3)]"
-                            >
-                                Submit Score
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+            <HumanJudgeForm
+                fusionImage={fusionImage}
+                submission={submission}
+                humanScore={humanScore}
+                setHumanScore={setHumanScore}
+                humanRelevance={humanRelevance}
+                setHumanRelevance={setHumanRelevance}
+                humanCommentary={humanCommentary}
+                setHumanCommentary={setHumanCommentary}
+                onSubmit={handleHumanScore}
+            />
         );
     }
 
@@ -480,17 +461,7 @@ export function Reveal({ submission, assets }) {
 
     return (
         <div className={`w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700 ${shaking ? 'screen-shake' : ''}`}>
-            {showComeback && comebackData && (
-                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 animate-in zoom-in-95 duration-500">
-                    <div className="text-7xl mb-4 animate-bounce">&#x1F525;</div>
-                    <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 mb-2">
-                        COMEBACK KID!
-                    </h2>
-                    <p className="text-white/60 text-lg">
-                        From {comebackData.prevScore}/10 &rarr; {comebackData.currentScore}/10
-                    </p>
-                </div>
-            )}
+            {showComeback && <ComebackOverlay comebackData={comebackData} />}
             <Confetti active={showConfetti} duration={4000} particleCount={comebackData ? 120 : 60} />
             {newlyUnlocked.length > 0 && (
                 <MilestoneCelebration
@@ -518,90 +489,19 @@ export function Reveal({ submission, assets }) {
                     </div>
 
                     {/* Error state with retry */}
-                    {scoringError && (
-                        <div className="w-full max-w-md p-4 rounded-2xl bg-red-500/10 border border-red-500/20 mb-4">
-                            <div className="text-red-300 font-semibold mb-1">{scoringError.message}</div>
-                            <div className="text-white/40 text-xs mb-3">Error ID: {scoringError.errorId}</div>
-                            <button
-                                onClick={async () => {
-                                    setRetrying(true);
-                                    setScoringError(null);
-                                    try {
-                                        const retryResult = await scoreSubmission(submission, assets.left, assets.right, mediaType);
-                                        const finalScore = Math.min(10, Math.max(1, Math.round(retryResult.score * scoreMultiplier)));
-                                        const resultPayload = {
-                                            ...retryResult,
-                                            finalScore,
-                                            scoreMultiplier,
-                                        };
-                                        setResult(resultPayload);
-                                        setProcessError(null);
-                                        if (!savedRef.current) {
-                                            finalizeCollision({
-                                                submission,
-                                                imageUrl: fusionImage?.url,
-                                                fallbackImageUrl: fusionImage?.fallbackUrl,
-                                                score: finalScore,
-                                                baseScore: retryResult.score,
-                                                breakdown: retryResult.breakdown,
-                                                commentary: retryResult.commentary,
-                                                themeId: theme?.id,
-                                                scoringMode,
-                                                roundNumber,
-                                                totalRounds,
-                                                scoreMultiplier,
-                                            }, finalScore);
-                                        }
-                                        completeRound({ score: finalScore, baseScore: retryResult.score, breakdown: retryResult.breakdown });
-                                    } catch {
-                                        setScoringError({ message: 'Still unable to score. Using offline mode.', errorId: scoringError.errorId });
-                                    }
-                                    setRetrying(false);
-                                }}
-                                disabled={retrying}
-                                className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 text-sm font-semibold hover:bg-red-500/30 transition"
-                            >
-                                {retrying ? 'Retrying...' : 'Retry Scoring'}
-                            </button>
-                        </div>
-                    )}
+                    <ScoringErrorBanner
+                        scoringError={scoringError}
+                        retrying={retrying}
+                        onRetry={handleRetryScoring}
+                    />
 
-                    <div className="relative aspect-[4/3] sm:aspect-square w-full max-w-xs sm:max-w-sm mx-auto rounded-2xl overflow-hidden mb-6 sm:mb-8 shadow-2xl ring-1 ring-white/20">
-                        <img
-                            src={fusionImage.url}
-                            alt="Fusion"
-                            className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
-                            data-fallback={fusionImage.fallbackUrl}
-                            onError={(event) => {
-                                const fallback = event.currentTarget.dataset.fallback;
-                                if (fallback && event.currentTarget.src !== fallback) {
-                                    event.currentTarget.src = fallback;
-                                }
-                            }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                        <div className="absolute bottom-6 left-6 text-left">
-                            <div className="text-white/60 text-sm uppercase tracking-wider">Concept</div>
-                            <div className="text-2xl font-bold text-white">{submission}</div>
-                        </div>
-                    </div>
+                    <FusionImageCard fusionImage={fusionImage} submission={submission} />
 
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <div className={`text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br ${scoreBand?.color || 'from-yellow-300 to-amber-600'} transition-all`}>
-                                {Math.round(animatedScore)}/10
-                            </div>
-                            <div className="text-white/40 text-xs uppercase tracking-widest mt-1">
-                                {scoreBand?.label || 'Final Score'}
-                            </div>
-                        </div>
-                        <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                            <div className="text-lg font-bold text-white/90">
-                                {result.relevance}
-                            </div>
-                        </div>
-                    </div>
+                    <ScoreRollupDisplay
+                        animatedScore={animatedScore}
+                        scoreBand={scoreBand}
+                        relevance={result.relevance}
+                    />
 
                     {/* Achievement progress */}
                     {!rolling && (
@@ -611,71 +511,22 @@ export function Reveal({ submission, assets }) {
                     )}
 
                     {/* Percentile rank */}
-                    {playerRank && playerRank.total > 0 && (
-                        <div className="mb-6 p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 animate-in fade-in duration-500">
-                            <div className="text-sm font-bold text-purple-300">
-                                Top {Math.max(1, Math.round(100 - playerRank.percentile))}% today!
-                            </div>
-                            <div className="text-white/40 text-xs">
-                                Rank #{playerRank.rank} of {playerRank.total} players
-                            </div>
-                        </div>
-                    )}
+                    <PercentileRankBadge playerRank={playerRank} />
 
-                    {result.breakdown && (
-                        <>
-                            <p className="text-white/50 text-xs mb-2">Your connection was scored on:</p>
-                            <div className="grid grid-cols-2 gap-3 mb-4 text-sm text-white/70">
-                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Wit: <span className="text-white">{result.breakdown.wit}/10</span></div>
-                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Logic: <span className="text-white">{result.breakdown.logic}/10</span></div>
-                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Originality: <span className="text-white">{result.breakdown.originality}/10</span></div>
-                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Clarity: <span className="text-white">{result.breakdown.clarity}/10</span></div>
-                            </div>
-                        </>
-                    )}
+                    <ScoreBreakdownGrid breakdown={result.breakdown} />
                     {scoreMultiplier !== 1 && (
                         <div className="mb-6 text-sm text-white/50">
                             Base {(result.baseScore ?? result.score)?.toFixed(1)} × {scoreMultiplier.toFixed(2)} = <span className="text-white">{finalScoreDisplay}/10</span>
                         </div>
                     )}
 
-                    <blockquote className="text-xl italic text-white/80 font-serif mb-8 border-l-4 border-purple-500 pl-4 py-2 bg-white/5 rounded-r-xl">
-                        &ldquo;{result.commentary}&rdquo;
-                        <footer className="text-xs text-white/40 not-italic mt-2">
-                            — {scoringMode === 'human' ? 'Human Judge' : 'Gemini AI Host'}
-                        </footer>
-                    </blockquote>
+                    <CommentaryBlockquote commentary={result.commentary} scoringMode={scoringMode} />
 
                     {/* Connection Explanation */}
-                    {result && assets?.left?.label && assets?.right?.label && (
-                        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
-                            <div className="text-blue-300 text-xs uppercase tracking-wider font-bold mb-2">Why this score?</div>
-                            <p className="text-white/70 text-sm leading-relaxed">
-                                {getConnectionExplanation(submission, result.finalScore || result.score, assets.left.label, assets.right.label)}
-                            </p>
-                        </div>
-                    )}
+                    <ConnectionExplanation result={result} submission={submission} assets={assets} />
 
                     {/* Score coaching tips */}
-                    {result?.breakdown && (
-                        <div className="mt-3 space-y-1">
-                            {result.breakdown.wit < 4 && (
-                                <p className="text-purple-300 text-xs">Tip: Try wordplay or puns -- clever language boosts wit scores</p>
-                            )}
-                            {result.breakdown.originality < 4 && (
-                                <p className="text-purple-300 text-xs">Tip: Think sideways -- unexpected connections score higher on originality</p>
-                            )}
-                            {result.breakdown.logic < 4 && (
-                                <p className="text-purple-300 text-xs">Tip: Make the connection clearer -- the thread between concepts needs to be obvious</p>
-                            )}
-                            {result.breakdown.clarity < 4 && (
-                                <p className="text-purple-300 text-xs">Tip: Keep it simple -- one sentence, one idea scores better for clarity</p>
-                            )}
-                            {(result.score || result.finalScore) >= 8 && (
-                                <p className="text-green-300 text-xs">Great work! Your connection shows strong creative thinking</p>
-                            )}
-                        </div>
-                    )}
+                    <CoachingTips result={result} />
 
                     {/* Visual Share Card */}
                     {savedCollision && (
@@ -710,111 +561,38 @@ export function Reveal({ submission, assets }) {
 
                     {/* Challenge a friend */}
                     {savedCollision && (
-                        <button
+                        <ChallengeFriendButton
                             onClick={handleChallengeShare}
-                            className="w-full mb-4 p-4 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 transition-all text-center group"
-                        >
-                            <div className="text-lg font-bold text-amber-300 group-hover:scale-105 transition-transform">
-                                {challengeCopied ? 'Challenge link copied!' : `Challenge a friend to beat your ${finalScoreDisplay}/10!`}
-                            </div>
-                            <div className="text-white/40 text-xs mt-1">
-                                They&apos;ll play the same concepts and try to outscore you
-                            </div>
-                        </button>
+                            challengeCopied={challengeCopied}
+                            finalScoreDisplay={finalScoreDisplay}
+                        />
                     )}
 
                     {/* Post-reveal retention hooks */}
-                    {result && (
-                        <div className="w-full max-w-md mt-6 p-4 rounded-2xl bg-white/5 border border-white/10">
-                            <div className="text-white/50 text-xs uppercase tracking-wider font-bold mb-3">Keep Going</div>
-                            <div className="space-y-2">
-                                {/* Battle pass XP */}
-                                {(() => {
-                                    const xpGained = (result.finalScore || result.score || 0) * 10;
-                                    return (
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <span className="text-purple-400">&#11088;</span>
-                                            <span className="text-white/70">+{xpGained} XP earned this round</span>
-                                        </div>
-                                    );
-                                })()}
-
-                                {/* Streak status */}
-                                {stats?.currentStreak > 0 && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="text-orange-400">&#128293;</span>
-                                        <span className="text-white/70">Day {stats.currentStreak} streak — play tomorrow to keep it!</span>
-                                    </div>
-                                )}
-
-                                {/* Daily challenge prompt */}
-                                {!isDailyChallenge && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="text-amber-400">&#128197;</span>
-                                        <span className="text-white/70">Daily challenge available — try it for 1.5x bonus!</span>
-                                    </div>
-                                )}
-
-                                {/* Rounds remaining */}
-                                {roundNumber < totalRounds && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="text-cyan-400">&#127919;</span>
-                                        <span className="text-white/70">{totalRounds - roundNumber} round{totalRounds - roundNumber > 1 ? 's' : ''} left in this session</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
+                    <RetentionHooksPanel
+                        result={result}
+                        stats={stats}
+                        isDailyChallenge={isDailyChallenge}
+                        roundNumber={roundNumber}
+                        totalRounds={totalRounds}
+                    />
 
                     {/* Round modifier result */}
-                    {mod && mod.id === 'doubleOrNothing' && (
-                        <div className={`mb-6 p-4 rounded-2xl border text-center animate-in zoom-in-95 duration-500 ${
-                            finalScoreDisplay >= (mod.scoreThreshold || 7)
-                                ? 'bg-emerald-500/10 border-emerald-500/30'
-                                : 'bg-red-500/10 border-red-500/30'
-                        }`}>
-                            <div className="text-2xl mb-1">
-                                {finalScoreDisplay >= (mod.scoreThreshold || 7) ? '🎲 DOUBLED!' : '🎲 BUST!'}
-                            </div>
-                            <div className="text-white/60 text-sm">
-                                {finalScoreDisplay >= (mod.scoreThreshold || 7)
-                                    ? `Scored ${finalScoreDisplay}+ — your points are doubled!`
-                                    : `Needed ${mod.scoreThreshold || 7}+ to keep your points.`}
-                            </div>
-                        </div>
-                    )}
-
-                    {mod && mod.id === 'showdown' && (
-                        <div className="mb-6 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-center animate-in zoom-in-95 duration-500">
-                            <div className="text-2xl mb-1">🏆 Final Showdown Complete!</div>
-                            <div className="text-white/60 text-sm">2x points applied to your final round.</div>
-                        </div>
-                    )}
+                    <ModifierResultBanner mod={mod} finalScoreDisplay={finalScoreDisplay} />
 
                     {/* Contextual tip */}
                     <div className="mb-4">
                         <ContextualTip context="reveal" totalRounds={getStats().totalRounds} />
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        <div>
-                            <button
-                                onClick={handleShareForJudging}
-                                disabled={!savedCollision}
-                                className="px-8 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-50"
-                                title="Send this link to a friend — they'll score your connection. Press S for shortcut."
-                            >
-                                {shareCopied ? 'Link copied! Send to a friend' : 'Share for friend to judge'}
-                            </button>
-                            <p className="text-white/30 text-xs mt-1.5">Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-white/50">S</kbd> to copy link</p>
-                        </div>
-                        <button
-                            onClick={handleNext}
-                            className="px-12 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)]"
-                        >
-                            {roundNumber >= totalRounds ? 'See Results' : 'Next Round →'}
-                        </button>
-                    </div>
+                    <ShareActionsRow
+                        onShareForJudging={handleShareForJudging}
+                        shareCopied={shareCopied}
+                        savedCollision={savedCollision}
+                        onNext={handleNext}
+                        roundNumber={roundNumber}
+                        totalRounds={totalRounds}
+                    />
                 </div>
             </div>
         </div>

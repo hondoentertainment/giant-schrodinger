@@ -21,6 +21,7 @@ export function Round({ onSubmit }) {
     const [showTimeUp, setShowTimeUp] = useState(false);
     const [shakeInput, setShakeInput] = useState(false);
     const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+    const [validationMessage, setValidationMessage] = useState('');
     const submittedRef = useRef(false);
     const stats = getStats();
     const rawTheme = getThemeById(user?.themeId);
@@ -115,9 +116,17 @@ export function Round({ onSubmit }) {
         if (submittedRef.current) return;
 
         // Block empty submissions unless auto-submitted by timer
+        if (!forceEmpty && !submission) {
+            haptic('warning');
+            setShakeInput(true);
+            setValidationMessage('Please enter your answer before submitting.');
+            setTimeout(() => setShakeInput(false), TIMINGS.SHAKE_ANIMATION);
+            return;
+        }
         if (!forceEmpty && !submission.trim()) {
             haptic('warning');
             setShakeInput(true);
+            setValidationMessage('Please enter more than just whitespace.');
             setTimeout(() => setShakeInput(false), TIMINGS.SHAKE_ANIMATION);
             return;
         }
@@ -134,6 +143,7 @@ export function Round({ onSubmit }) {
         }
 
         submittedRef.current = true;
+        setValidationMessage('');
         haptic('success');
 
         if (onSubmit) {
@@ -274,8 +284,11 @@ export function Round({ onSubmit }) {
                         id="submission-input"
                         type="text"
                         value={submission}
-                        onChange={(e) => setSubmission(e.target.value)}
-                        aria-describedby="submission-help"
+                        onChange={(e) => {
+                            setSubmission(e.target.value);
+                            if (validationMessage) setValidationMessage('');
+                        }}
+                        aria-describedby="submission-help submission-validation"
                         placeholder={
                             mediaType === MEDIA_TYPES.AUDIO
                                 ? 'What connects these two sounds?'
@@ -291,6 +304,14 @@ export function Round({ onSubmit }) {
                         maxLength={200}
                     />
                 </div>
+                <p
+                    id="submission-validation"
+                    role="alert"
+                    aria-live="polite"
+                    className="text-center text-red-400 text-xs sm:text-sm mt-2 min-h-[1rem]"
+                >
+                    {validationMessage}
+                </p>
                 {submission.trim() && (
                     <button
                         type="submit"

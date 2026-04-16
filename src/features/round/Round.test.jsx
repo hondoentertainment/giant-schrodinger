@@ -237,4 +237,47 @@ describe('Round', () => {
         expect(screen.getByText(/SPEED ROUND/)).toBeInTheDocument();
         expect(screen.getByText('Speed Round')).toBeInTheDocument();
     });
+
+    it('submitting empty input surfaces a polite aria-live message mentioning "enter your answer"', async () => {
+        vi.useRealTimers();
+        const user = userEvent.setup();
+        render(<Round onSubmit={mockOnSubmit} />);
+        const input = screen.getByPlaceholderText('What connects these two?');
+        await user.type(input, '{Enter}');
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent(/enter your answer/i);
+        expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it('submitting whitespace-only surfaces a message mentioning "whitespace"', async () => {
+        vi.useRealTimers();
+        const user = userEvent.setup();
+        render(<Round onSubmit={mockOnSubmit} />);
+        const input = screen.getByPlaceholderText('What connects these two?');
+        await user.type(input, '   {Enter}');
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent(/whitespace/i);
+        expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it('typing after a validation message clears it', async () => {
+        vi.useRealTimers();
+        const user = userEvent.setup();
+        render(<Round onSubmit={mockOnSubmit} />);
+        const input = screen.getByPlaceholderText('What connects these two?');
+        await user.type(input, '{Enter}');
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent(/enter your answer/i);
+        // Typing should clear the validation message
+        await user.type(input, 'a');
+        await waitFor(() => {
+            expect(screen.getByRole('alert')).toHaveTextContent('');
+        });
+    });
+
+    it('the validation live region has aria-live="polite"', () => {
+        render(<Round onSubmit={mockOnSubmit} />);
+        const alert = screen.getByRole('alert');
+        expect(alert).toHaveAttribute('aria-live', 'polite');
+    });
 });

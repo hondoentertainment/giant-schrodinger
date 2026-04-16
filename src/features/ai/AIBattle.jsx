@@ -280,6 +280,7 @@ export function AIBattle({ onDone }) {
                         onChange={(e) => setSubmission(e.target.value)}
                         placeholder="What connects these two?"
                         className={`w-full bg-black/40 backdrop-blur-xl border-2 rounded-full px-8 py-5 text-xl text-center text-white placeholder-white/20 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-2xl ${shakeInput ? 'border-red-500/60 animate-[shake_0.5s_ease-in-out]' : 'border-white/20'}`}
+                        // eslint-disable-next-line jsx-a11y/no-autofocus -- game-flow UX: player is expected to type immediately
                         autoFocus
                         maxLength={200}
                     />

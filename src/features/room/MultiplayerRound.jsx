@@ -164,6 +164,7 @@ export function MultiplayerRound() {
                         onChange={(e) => setSubmission(e.target.value)}
                         placeholder="What connects these two?"
                         className="w-full bg-black/40 backdrop-blur-xl border-2 border-white/20 rounded-full px-8 py-6 text-2xl text-center text-white placeholder-white/20 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-2xl"
+                        // eslint-disable-next-line jsx-a11y/no-autofocus -- game-flow UX: player is expected to type immediately
                         autoFocus
                     />
                     <div className="mt-4 text-center text-white/40 text-sm space-y-1">

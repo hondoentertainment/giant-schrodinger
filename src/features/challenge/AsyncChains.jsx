@@ -109,12 +109,12 @@ export function AsyncChains({ onBack }) {
             {showCreate && (
                 <form onSubmit={handleCreateChain} className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/10 animate-in slide-in-from-top-4 duration-300 space-y-3">
                     <div>
-                        <label className="block text-sm text-white/60 mb-1">Players (comma-separated)</label>
-                        <input type="text" value={newChainPlayers} onChange={(e) => setNewChainPlayers(e.target.value)} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50" placeholder="Alice, Bob, Charlie" />
+                        <label htmlFor="async-chain-players" className="block text-sm text-white/60 mb-1">Players (comma-separated)</label>
+                        <input id="async-chain-players" type="text" value={newChainPlayers} onChange={(e) => setNewChainPlayers(e.target.value)} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50" placeholder="Alice, Bob, Charlie" />
                     </div>
                     <div>
-                        <label className="block text-sm text-white/60 mb-1">Rounds per player</label>
-                        <select value={newChainPrompts} onChange={(e) => setNewChainPrompts(Number(e.target.value))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50">
+                        <label htmlFor="async-chain-rounds" className="block text-sm text-white/60 mb-1">Rounds per player</label>
+                        <select id="async-chain-rounds" value={newChainPrompts} onChange={(e) => setNewChainPrompts(Number(e.target.value))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50">
                             <option value={3}>3 rounds</option>
                             <option value={5}>5 rounds</option>
                             <option value={10}>10 rounds</option>

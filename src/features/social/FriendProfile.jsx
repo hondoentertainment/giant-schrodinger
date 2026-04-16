@@ -41,18 +41,21 @@ export function FriendProfile({ friend, onClose, onChallenge }) {
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={onClose}
             role="dialog"
             aria-modal="true"
             aria-label={`${friend.name}'s profile`}
         >
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close profile"
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-default"
+            />
 
             {/* Modal content */}
             <div
                 className="relative w-full max-w-sm rounded-3xl bg-gradient-to-br from-purple-900/90 to-purple-800/90 border border-purple-500/30 shadow-2xl p-6 animate-in zoom-in-95 duration-300"
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* Close button */}
                 <button

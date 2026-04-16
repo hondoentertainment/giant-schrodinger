@@ -119,6 +119,7 @@ function VennVideo({ asset }) {
                     <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
                 </div>
             )}
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption -- ambient random visual clips have no spoken content to caption */}
             <video
                 ref={videoRef}
                 src={asset.url}
@@ -264,6 +265,7 @@ function VennAudio({ asset }) {
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 to-pink-900/60" />
             )}
 
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption -- ambient looped audio clip with no spoken content */}
             <audio
                 ref={audioRef}
                 src={asset.url}

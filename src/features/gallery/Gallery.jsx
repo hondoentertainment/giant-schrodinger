@@ -8,6 +8,13 @@ import { getHighlights } from '../../services/highlights';
 import { flagContent } from '../../services/moderation';
 import { getScoreBand } from '../../lib/scoreBands';
 
+function formatCollisionDate(timestamp) {
+    if (!timestamp) return 'Recently';
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return 'Recently';
+    return d.toLocaleDateString();
+}
+
 const MOCK_COMMUNITY = [
     { id: 'c1', playerName: 'WitMaster', avatar: '\uD83E\uDDE0', submission: 'Both peak at 3AM when no one is watching', score: 9, theme: 'neon', conceptLeft: '3AM Taxi Ride', conceptRight: 'Midnight Arcade Fever', votes: 42, createdAt: Date.now() - 3600000 },
     { id: 'c2', playerName: 'PunQueen', avatar: '\uD83D\uDC51', submission: 'They both make waves that no one asked for', score: 8, theme: 'ocean', conceptLeft: "Poseidon's Living Room", conceptRight: 'The Wave That Writes Poetry', votes: 38, createdAt: Date.now() - 7200000 },
@@ -120,9 +127,11 @@ function LazyImage({ collision, displayJudgement }) {
     return (
         <article
             ref={ref}
+            role="listitem"
             className="group relative aspect-square rounded-2xl overflow-hidden glass-panel transition-transform hover:scale-[1.02] focus-within:scale-[1.02] focus-within:ring-2 focus-within:ring-purple-500 focus-within:outline-none"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- listitem is focusable so users can arrow-navigate through the gallery
             tabIndex={0}
-            aria-label={`Connection: "${collision.submission}". Score ${collision.score} out of 10. ${new Date(collision.timestamp).toLocaleDateString()}.${fj ? ` Judged by ${fj.judgeName || fj.judge_name || 'a friend'}: ${fj.score}/10.` : ''}`}
+            aria-label={`Connection: "${collision.submission}". Score ${collision.score} out of 10. ${formatCollisionDate(collision.timestamp)}.${fj ? ` Judged by ${fj.judgeName || fj.judge_name || 'a friend'}: ${fj.score}/10.` : ''}`}
         >
             {imageStatus === 'loading' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/5 z-10">
@@ -152,7 +161,7 @@ function LazyImage({ collision, displayJudgement }) {
                 <div className="text-2xl font-bold text-white mb-1">{collision.submission}</div>
                 <div className="flex flex-col gap-1">
                     <div className="flex justify-between items-center">
-                        <div className="text-white/60 text-sm">{new Date(collision.timestamp).toLocaleDateString()}</div>
+                        <div className="text-white/60 text-sm">{formatCollisionDate(collision.timestamp)}</div>
                         <div className="text-yellow-400 font-bold">{collision.score}/10</div>
                     </div>
                     {/* Voting & Report */}
@@ -243,7 +252,7 @@ function CommunityVoteButtons({ entry }) {
 function CommunityCard({ entry }) {
     const band = getScoreBand(entry.score);
     return (
-        <div className="group relative rounded-2xl overflow-hidden glass-panel p-5 transition-transform hover:scale-[1.02]">
+        <div role="listitem" className="group relative rounded-2xl overflow-hidden glass-panel p-5 transition-transform hover:scale-[1.02]">
             <div className="flex items-center gap-2 mb-3">
                 <span className="text-2xl" role="img" aria-hidden="true">{entry.avatar}</span>
                 <span className="font-bold text-white text-sm">{entry.playerName}</span>
@@ -568,6 +577,7 @@ export function Gallery() {
                             Loading friend feedback...
                         </p>
                     )}
+                    {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- arrow-key navigation between listitems is a standard pattern; focus still lives on the listitem children */}
                     <div
                         ref={galleryGridRef}
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"

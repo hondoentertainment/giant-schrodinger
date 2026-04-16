@@ -212,8 +212,9 @@ export function JudgeRound({ payload, onDone }) {
             {showDetailedForm && (
                 <form onSubmit={handleSubmit} className="w-full max-w-xl space-y-4 animate-in slide-in-from-top-4 duration-300">
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Your name (optional)</label>
+                        <label htmlFor="judge-round-name" className="block text-sm font-medium text-white/60 mb-2">Your name (optional)</label>
                         <input
+                            id="judge-round-name"
                             type="text"
                             value={judgeName}
                             onChange={(e) => setJudgeName(e.target.value)}

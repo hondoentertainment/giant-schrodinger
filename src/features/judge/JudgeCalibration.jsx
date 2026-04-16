@@ -113,8 +113,9 @@ export function JudgeCalibration({ onComplete }) {
       {!feedback ? (
         <form onSubmit={handleSubmitScore} className="w-full space-y-4">
           <div>
-            <label className="block text-sm font-medium text-white/60 mb-2">Your Score (1-10)</label>
+            <label htmlFor="judge-calibration-score" className="block text-sm font-medium text-white/60 mb-2">Your Score (1-10)</label>
             <input
+              id="judge-calibration-score"
               type="number"
               min="1"
               max="10"

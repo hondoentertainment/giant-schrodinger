@@ -169,15 +169,15 @@ describe('Gallery', () => {
     ];
     render(<Gallery />);
     const list = await screen.findByRole('list', { name: /your connection gallery/i });
-    // Each LazyImage renders an <article>; collect them in DOM order.
-    let items = within(list).getAllByRole('article');
+    // Each LazyImage renders an <article> with role="listitem" (list semantics override).
+    let items = within(list).getAllByRole('listitem');
     // Default sort is 'newest' — "Low score one" has the newer timestamp, so it appears first.
     expect(items[0].getAttribute('aria-label')).toMatch(/Low score one/);
 
     // Switch to "Highest score" — "High score one" should move to position 0.
     const sortSelect = screen.getByLabelText(/Sort gallery/i);
     await user.selectOptions(sortSelect, 'score-high');
-    items = within(list).getAllByRole('article');
+    items = within(list).getAllByRole('listitem');
     expect(items[0].getAttribute('aria-label')).toMatch(/High score one/);
   });
 
@@ -208,16 +208,57 @@ describe('Gallery', () => {
     expect(themeLabels.length).toBe(filteredList.childElementCount);
   });
 
-  it('renders LazyImage cards as accessible articles with IntersectionObserver triggering image load', async () => {
+  it('renders LazyImage cards as accessible list items with IntersectionObserver triggering image load', async () => {
     mockCollisions = [
       { id: 'lazy1', submission: 'Lazy thing', score: 6, timestamp: Date.now(), imageUrl: 'https://example.com/lazy.jpg' },
     ];
     render(<Gallery />);
     // The mocked IntersectionObserver fires isIntersecting=true immediately,
     // so the <img> should be present (rather than only the placeholder).
-    const card = await screen.findByRole('article');
+    const list = await screen.findByRole('list', { name: /your connection gallery/i });
+    const [card] = within(list).getAllByRole('listitem');
     expect(card).toHaveAttribute('aria-label', expect.stringContaining('Lazy thing'));
     const img = await within(card).findByAltText('Lazy thing');
     expect(img).toHaveAttribute('src', 'https://example.com/lazy.jpg');
+  });
+
+  it('exposes each gallery card as a listitem for screen readers', async () => {
+    mockCollisions = [
+      { id: 'li1', submission: 'One', score: 5, timestamp: Date.now(), imageUrl: 'https://example.com/1.jpg' },
+      { id: 'li2', submission: 'Two', score: 6, timestamp: Date.now() - 1000, imageUrl: 'https://example.com/2.jpg' },
+      { id: 'li3', submission: 'Three', score: 7, timestamp: Date.now() - 2000, imageUrl: 'https://example.com/3.jpg' },
+    ];
+    render(<Gallery />);
+    const list = await screen.findByRole('list', { name: /your connection gallery/i });
+    await waitFor(() => {
+      const items = within(list).getAllByRole('listitem');
+      expect(items).toHaveLength(mockCollisions.length);
+    });
+  });
+
+  it('renders "Recently" fallback when a collision has no timestamp (no "Invalid Date")', async () => {
+    mockCollisions = [
+      { id: 'no-ts', submission: 'Missing time', score: 4, timestamp: undefined, imageUrl: 'https://example.com/nots.jpg' },
+    ];
+    render(<Gallery />);
+    const list = await screen.findByRole('list', { name: /your connection gallery/i });
+    const [card] = within(list).getAllByRole('listitem');
+    await waitFor(() => {
+      expect(card.getAttribute('aria-label')).toMatch(/Recently/);
+    });
+    expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+  });
+
+  it('renders "Recently" fallback when a collision has an invalid timestamp string', async () => {
+    mockCollisions = [
+      { id: 'bad-ts', submission: 'Bad time', score: 3, timestamp: 'not-a-date', imageUrl: 'https://example.com/bad.jpg' },
+    ];
+    render(<Gallery />);
+    const list = await screen.findByRole('list', { name: /your connection gallery/i });
+    const [card] = within(list).getAllByRole('listitem');
+    await waitFor(() => {
+      expect(card.getAttribute('aria-label')).toMatch(/Recently/);
+    });
+    expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
   });
 });

@@ -6,8 +6,8 @@ export function FriendsList({ show, onSelectFriend }) {
     const friends = getFriends();
     if (friends.length === 0) return null;
     return (
-        <div className="w-full max-w-md mb-4">
-            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Friends</label>
+        <div className="w-full max-w-md mb-4" role="group" aria-labelledby="friends-list-label">
+            <span id="friends-list-label" className="block text-white/50 text-xs uppercase tracking-wider mb-2">Friends</span>
             <div className="flex flex-wrap gap-2">
                 {friends.map((f) => (
                     <button

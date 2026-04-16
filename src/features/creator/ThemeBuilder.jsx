@@ -113,8 +113,9 @@ export function ThemeBuilder({ onBack }) {
 
                     {/* Theme Name */}
                     <div className="space-y-2">
-                        <label className="text-sm text-white/60 font-medium">Theme Name</label>
+                        <label htmlFor="theme-builder-name" className="text-sm text-white/60 font-medium">Theme Name</label>
                         <input
+                            id="theme-builder-name"
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
@@ -125,10 +126,10 @@ export function ThemeBuilder({ onBack }) {
 
                     {/* Color Palette */}
                     <div className="space-y-2">
-                        <label className="text-sm text-white/60 font-medium flex items-center gap-2">
+                        <span className="text-sm text-white/60 font-medium flex items-center gap-2">
                             <Palette className="w-4 h-4" />
                             Color Palette
-                        </label>
+                        </span>
                         <div className="flex gap-2 flex-wrap">
                             {COLOR_PALETTES.map((palette, i) => (
                                 <button
@@ -146,11 +147,12 @@ export function ThemeBuilder({ onBack }) {
 
                     {/* Timer Slider */}
                     <div className="space-y-2">
-                        <label className="text-sm text-white/60 font-medium flex items-center gap-2">
+                        <label htmlFor="theme-builder-timer" className="text-sm text-white/60 font-medium flex items-center gap-2">
                             <Clock className="w-4 h-4" />
                             Timer: {timer}s
                         </label>
                         <input
+                            id="theme-builder-timer"
                             type="range"
                             min={30}
                             max={90}
@@ -175,8 +177,9 @@ export function ThemeBuilder({ onBack }) {
 
                     {/* Image URLs */}
                     <div className="space-y-2">
-                        <label className="text-sm text-white/60 font-medium">Image URLs (one per line)</label>
+                        <label htmlFor="theme-builder-images" className="text-sm text-white/60 font-medium">Image URLs (one per line)</label>
                         <textarea
+                            id="theme-builder-images"
                             value={imageUrls}
                             onChange={(e) => setImageUrls(e.target.value)}
                             rows={5}

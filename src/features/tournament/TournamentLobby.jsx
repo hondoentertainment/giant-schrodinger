@@ -219,19 +219,19 @@ export function TournamentLobby({ onBack }) {
                 <h2 className="text-2xl font-display font-bold text-white mb-6 text-center">Create Tournament</h2>
                 <form onSubmit={handleCreate} className="space-y-4">
                     <div>
-                        <label className="block text-sm text-white/60 mb-2">Tournament Name</label>
-                        <input type="text" value={createForm.name} onChange={(e) => setCreateForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50" placeholder="Weekend Showdown" required />
+                        <label htmlFor="tournament-name" className="block text-sm text-white/60 mb-2">Tournament Name</label>
+                        <input id="tournament-name" type="text" value={createForm.name} onChange={(e) => setCreateForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50" placeholder="Weekend Showdown" required />
                     </div>
                     <div>
-                        <label className="block text-sm text-white/60 mb-2">Format</label>
-                        <select value={createForm.format} onChange={(e) => setCreateForm(f => ({ ...f, format: e.target.value }))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50">
+                        <label htmlFor="tournament-format" className="block text-sm text-white/60 mb-2">Format</label>
+                        <select id="tournament-format" value={createForm.format} onChange={(e) => setCreateForm(f => ({ ...f, format: e.target.value }))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50">
                             <option value="bracket">Bracket (Single Elimination)</option>
                             <option value="swiss">Swiss (5 Rounds)</option>
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm text-white/60 mb-2">Max Players</label>
-                        <select value={createForm.maxPlayers} onChange={(e) => setCreateForm(f => ({ ...f, maxPlayers: Number(e.target.value) }))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50">
+                        <label htmlFor="tournament-max-players" className="block text-sm text-white/60 mb-2">Max Players</label>
+                        <select id="tournament-max-players" value={createForm.maxPlayers} onChange={(e) => setCreateForm(f => ({ ...f, maxPlayers: Number(e.target.value) }))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50">
                             <option value={8}>8 Players</option>
                             <option value={16}>16 Players</option>
                             <option value={32}>32 Players</option>
