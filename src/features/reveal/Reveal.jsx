@@ -8,7 +8,7 @@ import { createJudgeShareUrl } from '../../services/share';
 import { createChallenge, createChallengeUrl } from '../../services/challenges';
 import { submitScore, getPlayerRank, submitSeasonalScore } from '../../services/leaderboard';
 import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
-import { trackEvent } from '../../services/analytics';
+import { trackEvent, trackFunnel } from '../../services/analytics';
 import { autoSaveHighlight } from '../../services/highlights';
 import { ShareCardCanvas } from '../../components/ShareCardCanvas';
 import { checkAchievements } from '../../services/achievements';
@@ -110,6 +110,7 @@ export function Reveal({ submission, assets }) {
                 setAnimatedScore(finalScore);
                 setRolling(false);
                 setScoreAnimationDone(true);
+                trackFunnel('first_score_revealed');
                 // Trigger screen shake on perfect 10
                 if (finalScore >= 10) {
                     setShaking(true);

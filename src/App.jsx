@@ -33,6 +33,7 @@ import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
 import { parseThemeFromUrl, clearThemeFromUrl, importThemeFromLink, saveSharedTheme } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
 import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider, teardownAnalytics } from './services/analytics'
+import { initWebVitals } from './services/webVitals'
 import { initErrorMonitoring } from './services/errorMonitoring'
 import { processOfflineQueue, getQueueCount } from './services/offlineQueue'
 import { scoreSubmission } from './services/gemini'
@@ -49,6 +50,7 @@ function LoadingFallback() {
 // Module-level analytics init (safe to run once)
 registerAnalyticsProvider(ConsoleAnalyticsProvider);
 trackRetention();
+initWebVitals();
 initPWAInstall();
 
 // Register service worker for PWA
@@ -92,7 +94,11 @@ function PhaseTransition({ children, phase }) {
             });
         }, 150);
         return () => clearTimeout(timer);
-    }, [phase]); // Only transition when phase changes
+        // Intentionally exclude `children`: the fade-out/in animation is phase-scoped,
+        // so we only want to transition when `phase` changes. `children` is read inside
+        // the timeout and captures the latest value via closure at that moment.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [phase]);
 
     return (
         <div className={animClass}>
@@ -144,7 +150,7 @@ function GameContent() {
         };
         window.addEventListener('hashchange', onHashChange);
         return () => window.removeEventListener('hashchange', onHashChange);
-    }, []);
+    }, [setGameState]);
 
     // Initialize audio on first user interaction
     useEffect(() => {

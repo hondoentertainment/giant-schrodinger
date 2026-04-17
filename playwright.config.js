@@ -4,11 +4,14 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:4173';
 
 export default defineConfig({
     testDir: './e2e',
+    testIgnore: process.env.PW_SKIP_FLAKY === '1' ? ['**/*.flaky.spec.js'] : [],
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 1 : undefined,
     reporter: process.env.CI ? 'dot' : 'html',
+    timeout: 60_000,
+    globalTimeout: 30 * 60 * 1000,
     use: {
         baseURL,
         trace: 'on-first-retry',

@@ -143,15 +143,24 @@ export function RoomProvider({ children }) {
         };
     }, [attemptReconnect]);
 
-    // Auto-exit after timeout when disconnected
+    // Auto-exit after timeout when disconnected.
+    //
+    // We intentionally depend ONLY on `connectionState` here. Including
+    // `leaveCurrentRoom` in the dep array would tear down and restart the
+    // 30-second timer every time its identity changes (it closes over `room`,
+    // `playerName`, `toast`, `setGameState`), which could extend the timeout
+    // window indefinitely and defeat the auto-exit behavior. We route the
+    // call through a ref so the timer always fires the latest callback while
+    // the countdown itself is anchored to the CLOSED transition.
+    const leaveCurrentRoomRef = useRef(null);
     useEffect(() => {
         if (connectionState === 'disconnected') {
             reconnectTimerRef.current = setTimeout(() => {
-                leaveCurrentRoom();
+                leaveCurrentRoomRef.current?.();
             }, 30000); // 30 second timeout
         }
         return () => clearTimeout(reconnectTimerRef.current);
-    }, [connectionState]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [connectionState]);
 
     // ============================================================
     // Realtime handlers
@@ -337,6 +346,12 @@ export function RoomProvider({ children }) {
         toast.info('Left the room');
     }, [room, playerName, cleanup, toast, setGameState]);
 
+    // Keep the ref used by the disconnect-timeout effect pointed at the
+    // latest `leaveCurrentRoom` so the auto-exit still sees current room/player.
+    useEffect(() => {
+        leaveCurrentRoomRef.current = leaveCurrentRoom;
+    }, [leaveCurrentRoom]);
+
     const startMultiplayerRound = useCallback(async () => {
         if (!room || !isHost) return false;
 
@@ -447,7 +462,7 @@ export function RoomProvider({ children }) {
 
         // Move to revealing
         await setRoomStatus(room.id, 'revealing');
-    }, [room, isHost]);
+    }, [room, isHost, toast]);
 
     const advanceToNextRound = useCallback(async () => {
         if (!room || !isHost) return;

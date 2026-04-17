@@ -9,6 +9,7 @@ import { haptic } from '../../lib/haptics';
 import { TIMINGS } from '../../lib/timings';
 import { useRoundTimer } from '../../hooks/useRoundTimer';
 import { validateSubmission } from '../../lib/validation';
+import { trackFunnel } from '../../services/analytics';
 import { ContextualTip } from '../../components/ContextualTip';
 
 export function Round({ onSubmit }) {
@@ -147,6 +148,7 @@ export function Round({ onSubmit }) {
         haptic('success');
 
         if (onSubmit) {
+            trackFunnel('first_round_submitted');
             onSubmit({ submission: submission.trim() || '(no answer)', assets, modifier: mod });
             setGameState('REVEAL');
         }
@@ -300,7 +302,6 @@ export function Round({ onSubmit }) {
                             shakeInput ? 'border-red-500/60 animate-[shake_0.5s_ease-in-out]' : 'border-white/20'
                         }`}
                         autoComplete="off"
-                        autoFocus
                         maxLength={200}
                     />
                 </div>

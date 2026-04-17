@@ -25,7 +25,7 @@ module.exports = {
   rules: {
     "react/prop-types": "off",
     "react-refresh/only-export-components": "off",
-    "react-hooks/exhaustive-deps": "off",
+    "react-hooks/exhaustive-deps": "error",
   },
   overrides: [
     {
@@ -60,6 +60,15 @@ module.exports = {
         "jsx-a11y/label-has-associated-control": "warn",
         "jsx-a11y/media-has-caption": "warn",
         "jsx-a11y/no-static-element-interactions": "warn",
+      },
+    },
+    {
+      // Other agents own src/features/**; downgrade exhaustive-deps to warn
+      // so their stale-closure issues surface without blocking CI. Phase 11
+      // will do the feature-level cleanup.
+      files: ["src/features/**/*.{js,jsx}"],
+      rules: {
+        "react-hooks/exhaustive-deps": "warn",
       },
     },
   ],

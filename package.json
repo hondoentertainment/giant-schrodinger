@@ -16,7 +16,8 @@
     "test:e2e:desktop": "playwright test --project=Desktop Chrome",
     "test:e2e:mobile": "playwright test --project=Mobile Safari",
     "check:bundle": "node scripts/check-bundle-size.mjs",
-    "check:schema": "node scripts/check-schema-drift.mjs"
+    "check:schema": "node scripts/check-schema-drift.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.40.0",
@@ -25,7 +26,8 @@
     "lucide-react": "^0.344.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "tailwind-merge": "^2.2.1"
+    "tailwind-merge": "^2.2.1",
+    "web-vitals": "^4.2.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",

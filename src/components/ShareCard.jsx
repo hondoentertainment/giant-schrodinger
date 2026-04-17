@@ -15,36 +15,6 @@ const ShareCard = React.memo(function ShareCard({
     const canvasRef = useRef(null);
     const [previewUrl, setPreviewUrl] = useState(null);
 
-    const drawCard = useCallback(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        try {
-            // Gradient background: dark purple to black
-            const gradient = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
-            gradient.addColorStop(0, '#2d1b69');
-            gradient.addColorStop(1, '#0a0a0a');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
-
-            // Subtle border
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(1, 1, CARD_WIDTH - 2, CARD_HEIGHT - 2);
-
-            drawText(ctx);
-
-            const dataUrl = canvas.toDataURL('image/png');
-            setPreviewUrl(dataUrl);
-            onGenerated?.(dataUrl);
-        } catch (err) {
-            console.error('ShareCard: canvas draw failed', err);
-        }
-    }, [submission, score, playerName, leftAsset, rightAsset, onGenerated]);
-
     const drawText = useCallback(
         (ctx) => {
             const textX = fusionImageUrl ? 400 : 60;
@@ -94,6 +64,36 @@ const ShareCard = React.memo(function ShareCard({
         },
         [submission, score, playerName, leftAsset, rightAsset, fusionImageUrl]
     );
+
+    const drawCard = useCallback(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        try {
+            // Gradient background: dark purple to black
+            const gradient = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
+            gradient.addColorStop(0, '#2d1b69');
+            gradient.addColorStop(1, '#0a0a0a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+
+            // Subtle border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(1, 1, CARD_WIDTH - 2, CARD_HEIGHT - 2);
+
+            drawText(ctx);
+
+            const dataUrl = canvas.toDataURL('image/png');
+            setPreviewUrl(dataUrl);
+            onGenerated?.(dataUrl);
+        } catch (err) {
+            console.error('ShareCard: canvas draw failed', err);
+        }
+    }, [drawText, onGenerated]);
 
     useEffect(() => {
         if (!fusionImageUrl) {

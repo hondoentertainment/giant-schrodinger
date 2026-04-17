@@ -150,6 +150,51 @@ The job runs at 03:00 UTC daily under the name `decay-inactive-ratings`. To chan
 
 ---
 
+## Deployment environments
+
+The project is deployed to GitHub Pages via two workflows:
+
+| Environment | Trigger branches | Destination | Workflow |
+|-------------|------------------|-------------|----------|
+| **Production** | `main` | `/giant-schrodinger/` | `.github/workflows/deploy.yml` |
+| **Staging** | `staging/**`, `claude/**` | `/giant-schrodinger/staging/` | `.github/workflows/staging.yml` |
+
+The two workflows use separate concurrency groups (`pages-prod` and
+`pages-staging`) so a staging push never cancels a production deploy and
+vice versa.
+
+### GitHub Pages environment setup
+
+Each workflow references a GitHub Pages deployment environment configured
+in the repository's **Settings → Environments** UI:
+
+- `github-pages` — used by the production workflow. Already configured.
+- `github-pages-staging` — **must be created once** before the staging
+  workflow can deploy. Until that environment exists the staging workflow
+  will fail at the deploy job with a "missing environment" error.
+
+See the GitHub docs for configuring Pages environments:
+<https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages>
+and
+<https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment>.
+
+### Staging env vars
+
+Staging builds read `VITE_APP_ENV=staging` and, if defined, the
+`*_STAGING` Supabase variables (see `.env.example`). Setting these as
+repo-level secrets keeps staging data isolated from production.
+
+### Cross-browser E2E
+
+`.github/workflows/cross-browser-e2e.yml` runs the full Playwright matrix
+(Desktop Chrome, Desktop Firefox, Mobile Safari) on every PR that touches
+`src/**`, `e2e/**`, or `playwright.config.js`, plus a weekly schedule
+(Mondays 03:00 UTC) and manual dispatch. Only Desktop Chrome is required
+to pass; Firefox and Mobile Safari runs upload reports but use
+`continue-on-error` until we're confident in their stability.
+
+---
+
 ## Without Env Vars
 
 The app runs without any of these env vars:

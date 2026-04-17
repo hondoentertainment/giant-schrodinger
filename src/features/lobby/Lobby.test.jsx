@@ -88,6 +88,7 @@ vi.mock('../../services/referrals', () => ({
 
 vi.mock('../../services/analytics', () => ({
     trackEvent: vi.fn(),
+    trackFunnel: vi.fn(),
 }));
 
 vi.mock('../../services/sounds', () => ({

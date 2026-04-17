@@ -11,6 +11,7 @@
 
 const STORAGE_KEY = 'vwf_analytics';
 const SESSION_ID_KEY = 'vwf_session_id';
+const FUNNEL_KEY = 'vwf_funnel_seen';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const FLUSH_INTERVAL_MS = 5000;
 
@@ -169,6 +170,25 @@ export function trackDailyChallenge(completed) {
  */
 export function trackRetention() {
   trackEvent('app_load', { date: new Date().toISOString().slice(0, 10) });
+}
+
+/**
+ * Track a funnel stage at most once per session.
+ *
+ * Stages are persisted in `sessionStorage` under `FUNNEL_KEY` so each stage
+ * fires exactly one `funnel_<stage>` event per browser session — giving us a
+ * clean "first_*" signal for the acquisition-to-share funnel.
+ *
+ * Wrapped in try/catch: instrumentation must never break the app.
+ */
+export function trackFunnel(stage) {
+  try {
+    const seen = new Set(JSON.parse(sessionStorage.getItem(FUNNEL_KEY) || '[]'));
+    if (seen.has(stage)) return;
+    seen.add(stage);
+    sessionStorage.setItem(FUNNEL_KEY, JSON.stringify([...seen]));
+    trackEvent(`funnel_${stage}`, { stage });
+  } catch { /* never break */ }
 }
 
 // --- Query functions ---

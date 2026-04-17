@@ -1,4 +1,5 @@
 import React from 'react';
+import { trackFunnel } from '../../../services/analytics';
 
 export function ShareActionsRow({
     onShareForJudging,
@@ -12,7 +13,10 @@ export function ShareActionsRow({
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <div>
                 <button
-                    onClick={onShareForJudging}
+                    onClick={() => {
+                        trackFunnel('first_share_clicked');
+                        onShareForJudging();
+                    }}
                     disabled={!savedCollision}
                     className="px-8 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-50"
                     title="Send this link to a friend — they'll score your connection. Press S for shortcut."

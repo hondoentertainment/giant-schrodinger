@@ -7,7 +7,7 @@ import { getDailyChallenge, hasDailyChallengeBeenPlayed } from '../../services/d
 import { getTimeUntilNextChallenge, formatCountdown } from '../../services/countdown';
 import { getStreakBonus } from '../../services/challenges';
 import { parseReferralFromUrl, trackReferral, generateReferralCode } from '../../services/referrals';
-import { trackEvent } from '../../services/analytics';
+import { trackEvent, trackFunnel } from '../../services/analytics';
 import { isMuted } from '../../services/sounds';
 import { getCurrentWeeklyEvent } from '../../services/weeklyEvents';
 import { validatePlayerName } from '../../lib/validation';
@@ -164,6 +164,7 @@ export function Lobby() {
     const needsOnboarding = !localStorage.getItem('venn_onboarding_complete');
 
     const startGame = () => {
+        trackFunnel('first_play_started');
         if (!sessionId && stats.totalRounds === 0 && needsOnboarding) {
             setShowTour(true);
             return;
