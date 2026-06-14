@@ -98,7 +98,6 @@ function getSentryConfig() {
     }
     const parsed = parseSentryDsn(dsn);
     if (!parsed) {
-        // eslint-disable-next-line no-console
         console.warn('[errorMonitoring] Invalid VITE_SENTRY_DSN; Sentry reporting disabled.');
         sentryParsed = null;
         return null;
