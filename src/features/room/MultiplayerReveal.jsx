@@ -21,7 +21,6 @@ function ScoreBar({ label, value, max = 10 }) {
     );
 }
 
-// Phases: countdown -> reveal -> voting -> results
 const REVEAL_PHASES = {
     COUNTDOWN: 'countdown',
     REVEAL: 'reveal',
@@ -34,62 +33,71 @@ export function MultiplayerReveal() {
         room,
         players,
         submissions,
+        votes,
         isHost,
         roomPhase,
         playerName,
+        castVoteForSubmission,
+        finalizeMultiplayerVoting,
         advanceToNextRound,
         leaveCurrentRoom,
     } = useRoom();
     const { toast } = useToast();
 
     const [advancing, setAdvancing] = useState(false);
+    const [finishingVotes, setFinishingVotes] = useState(false);
     const [allSubmissions, setAllSubmissions] = useState([]);
     const [revealPhase, setRevealPhase] = useState(REVEAL_PHASES.COUNTDOWN);
     const [countdownValue, setCountdownValue] = useState(3);
     const [revealedCount, setRevealedCount] = useState(0);
-    const [votes, setVotes] = useState({});
     const [hasVoted, setHasVoted] = useState(false);
+    const [selectedVoteId, setSelectedVoteId] = useState(null);
 
     const theme = getThemeById(room?.theme_id);
     const multiplier = theme?.modifier?.scoreMultiplier || 1;
-    const isFinished = roomPhase === 'finished';
     const scoringMode = room?.scoring_mode || 'ai';
+    const isFinished = roomPhase === 'finished';
+    const isResultsReady = roomPhase === 'results' || room?.status === 'results' || isFinished;
+    const expectedVoteCount = scoringMode === 'human' ? Math.max(submissions.length, 0) : 0;
+    const currentVoteCount = votes.length;
 
-    // Fetch all submissions for finished state
     useEffect(() => {
         if (!isFinished || !room?.id) return undefined;
         let cancelled = false;
         getRoomSubmissions(room.id).then((data) => {
             if (!cancelled) setAllSubmissions(data);
         });
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [isFinished, room?.id]);
 
-    // Dramatic countdown on mount
     useEffect(() => {
-        if (isFinished) {
-            setRevealPhase(REVEAL_PHASES.RESULTS);
-            return;
-        }
-        setRevealPhase(REVEAL_PHASES.COUNTDOWN);
+        setRevealedCount(0);
         setCountdownValue(3);
-    }, [isFinished]);
+        setHasVoted(false);
+        setSelectedVoteId(null);
+
+        if (isResultsReady) {
+            setRevealPhase(REVEAL_PHASES.RESULTS);
+        } else {
+            setRevealPhase(REVEAL_PHASES.COUNTDOWN);
+        }
+    }, [room?.id, room?.round_number, roomPhase, isResultsReady]);
 
     useEffect(() => {
-        if (revealPhase !== REVEAL_PHASES.COUNTDOWN) return;
+        if (revealPhase !== REVEAL_PHASES.COUNTDOWN || isResultsReady) return;
         if (countdownValue <= 0) {
             setRevealPhase(REVEAL_PHASES.REVEAL);
             return;
         }
-        const timer = setTimeout(() => setCountdownValue((v) => v - 1), 800);
+        const timer = setTimeout(() => setCountdownValue((value) => value - 1), 800);
         return () => clearTimeout(timer);
-    }, [countdownValue, revealPhase]);
+    }, [countdownValue, isResultsReady, revealPhase]);
 
-    // Staggered reveal of answers
     useEffect(() => {
-        if (revealPhase !== REVEAL_PHASES.REVEAL) return;
-        const currentSubs = submissions;
-        if (revealedCount >= currentSubs.length) {
+        if (revealPhase !== REVEAL_PHASES.REVEAL || isResultsReady) return;
+        if (revealedCount >= submissions.length) {
             const moveToNext = setTimeout(() => {
                 if (scoringMode === 'ai') {
                     setRevealPhase(REVEAL_PHASES.RESULTS);
@@ -99,69 +107,107 @@ export function MultiplayerReveal() {
             }, 1000);
             return () => clearTimeout(moveToNext);
         }
-        const timer = setTimeout(() => setRevealedCount((c) => c + 1), 600);
+
+        const timer = setTimeout(() => setRevealedCount((count) => count + 1), 600);
         return () => clearTimeout(timer);
-    }, [revealPhase, revealedCount, submissions.length, scoringMode]);
+    }, [isResultsReady, revealPhase, revealedCount, scoringMode, submissions.length]);
 
-    const handleVote = useCallback((submissionId) => {
-        if (hasVoted) return;
-        setVotes((prev) => ({
-            ...prev,
-            [submissionId]: (prev[submissionId] || 0) + 1,
-        }));
+    useEffect(() => {
+        if (isResultsReady) {
+            setRevealPhase(REVEAL_PHASES.RESULTS);
+        }
+    }, [isResultsReady]);
+
+    useEffect(() => {
+        if (!playerName) return;
+        const existingVote = votes.find((entry) => entry.voter_name === playerName);
+        if (!existingVote) return;
         setHasVoted(true);
+        setSelectedVoteId(existingVote.submission_id);
+    }, [playerName, votes]);
+
+    const handleVote = useCallback(async (submissionId) => {
+        if (hasVoted) return;
+
+        const result = await castVoteForSubmission(submissionId);
+        if (!result.ok) {
+            if ((result.error || '').toLowerCase().includes('already')) {
+                setHasVoted(true);
+            }
+            return;
+        }
+
+        setHasVoted(true);
+        setSelectedVoteId(submissionId);
         toast.success('Vote cast!');
-    }, [hasVoted, toast]);
+    }, [castVoteForSubmission, hasVoted, toast]);
 
-    const handleFinishVoting = useCallback(() => {
+    const handleFinishVoting = useCallback(async () => {
+        setFinishingVotes(true);
+        const ok = await finalizeMultiplayerVoting();
+        if (!ok) {
+            setFinishingVotes(false);
+            return;
+        }
+        setFinishingVotes(false);
         setRevealPhase(REVEAL_PHASES.RESULTS);
-    }, []);
+    }, [finalizeMultiplayerVoting]);
 
-    // Build scored list
+    const sourceSubmissions = isFinished ? allSubmissions : submissions;
     const scored = useMemo(() => {
-        const subs = isFinished ? allSubmissions : submissions;
-        return [...subs]
-            .map((s) => {
-                const score = s.score || {};
-                const player = players.find((p) => p.player_name === s.player_name);
-                const voteCount = votes[s.id] || 0;
+        return [...sourceSubmissions]
+            .map((entry) => {
+                const parsedScore = entry.score && typeof entry.score === 'object' ? entry.score : {};
+                const player = players.find((p) => p.player_name === entry.player_name);
+                const voteCount = Number(parsedScore.voteCount || 0);
+
                 return {
-                    ...s,
-                    parsedScore: score,
-                    finalScore: score.finalScore || score.score || 0,
+                    ...entry,
+                    parsedScore,
+                    finalScore: Number(parsedScore.finalScore ?? parsedScore.score ?? voteCount ?? 0),
                     voteCount,
                     avatar: player?.avatar || '👽',
                 };
             })
             .sort((a, b) => {
-                if (revealPhase === REVEAL_PHASES.VOTING || (scoringMode !== 'ai' && revealPhase === REVEAL_PHASES.RESULTS)) {
-                    return b.voteCount - a.voteCount;
+                if (scoringMode !== 'ai' && (isResultsReady || revealPhase === REVEAL_PHASES.RESULTS)) {
+                    return b.voteCount - a.voteCount || b.finalScore - a.finalScore;
                 }
                 return b.finalScore - a.finalScore;
             });
-    }, [submissions, allSubmissions, players, isFinished, votes, revealPhase, scoringMode]);
+    }, [isFinished, isResultsReady, players, revealPhase, scoringMode, sourceSubmissions]);
 
     const sessionLeaderboard = useMemo(() => {
         const totals = new Map();
         for (const entry of scored) {
-            const prev = totals.get(entry.player_name) || { totalScore: 0, rounds: 0, avatar: entry.avatar, totalVotes: 0 };
+            const previous = totals.get(entry.player_name) || {
+                totalScore: 0,
+                totalVotes: 0,
+                rounds: 0,
+                avatar: entry.avatar,
+            };
             totals.set(entry.player_name, {
-                avatar: prev.avatar || entry.avatar,
-                totalScore: prev.totalScore + entry.finalScore,
-                totalVotes: prev.totalVotes + entry.voteCount,
-                rounds: prev.rounds + 1,
+                avatar: previous.avatar || entry.avatar,
+                totalScore: previous.totalScore + entry.finalScore,
+                totalVotes: previous.totalVotes + entry.voteCount,
+                rounds: previous.rounds + 1,
             });
         }
 
         return players
             .map((player) => {
-                const agg = totals.get(player.player_name) || { totalScore: 0, rounds: 0, avatar: player.avatar || '👽', totalVotes: 0 };
+                const aggregate = totals.get(player.player_name) || {
+                    totalScore: 0,
+                    totalVotes: 0,
+                    rounds: 0,
+                    avatar: player.avatar || '👽',
+                };
                 return {
                     playerName: player.player_name,
-                    avatar: agg.avatar || '👽',
-                    totalScore: agg.totalScore,
-                    totalVotes: agg.totalVotes,
-                    rounds: agg.rounds,
+                    avatar: aggregate.avatar || '👽',
+                    totalScore: aggregate.totalScore,
+                    totalVotes: aggregate.totalVotes,
+                    rounds: aggregate.rounds,
                 };
             })
             .sort((a, b) => b.totalScore - a.totalScore || b.totalVotes - a.totalVotes);
@@ -172,10 +218,10 @@ export function MultiplayerReveal() {
     const handleNext = async () => {
         setAdvancing(true);
         await advanceToNextRound();
+        setAdvancing(false);
     };
 
-    // Countdown screen
-    if (revealPhase === REVEAL_PHASES.COUNTDOWN && !isFinished) {
+    if (revealPhase === REVEAL_PHASES.COUNTDOWN && !isResultsReady) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center justify-center min-h-[50vh]">
                 <div className="text-center animate-in zoom-in-95 duration-500">
@@ -198,8 +244,7 @@ export function MultiplayerReveal() {
         );
     }
 
-    // Staggered reveal screen
-    if (revealPhase === REVEAL_PHASES.REVEAL && !isFinished) {
+    if (revealPhase === REVEAL_PHASES.REVEAL && !isResultsReady) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
                 <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
@@ -214,7 +259,7 @@ export function MultiplayerReveal() {
                         </div>
 
                         <div className="space-y-4">
-                            {submissions.slice(0, revealedCount).map((entry, idx) => {
+                            {submissions.slice(0, revealedCount).map((entry) => {
                                 const player = players.find((p) => p.player_name === entry.player_name);
                                 return (
                                     <div
@@ -244,8 +289,7 @@ export function MultiplayerReveal() {
         );
     }
 
-    // Voting screen (for non-AI scoring)
-    if (revealPhase === REVEAL_PHASES.VOTING && !isFinished) {
+    if (revealPhase === REVEAL_PHASES.VOTING && !isResultsReady) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
                 <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
@@ -255,10 +299,15 @@ export function MultiplayerReveal() {
                                 VOTE FOR THE BEST
                             </div>
                             <h2 className="text-2xl font-display font-bold text-white mb-2">
-                                Which connection is the best?
+                                Which connection wins this round?
                             </h2>
                             <p className="text-white/40 text-sm">
-                                {hasVoted ? 'You\'ve voted! Waiting for results...' : 'Tap the one you think deserves to win (you can\'t vote for yourself)'}
+                                {hasVoted
+                                    ? 'Your vote is locked in. Waiting for the host to reveal results...'
+                                    : 'Tap one connection to cast your vote. You cannot vote for yourself.'}
+                            </p>
+                            <p className="text-white/30 text-xs mt-2">
+                                Votes locked in: {currentVoteCount}/{expectedVoteCount || submissions.length}
                             </p>
                         </div>
 
@@ -266,6 +315,8 @@ export function MultiplayerReveal() {
                             {scored.map((entry) => {
                                 const isOwnSubmission = entry.player_name === playerName;
                                 const canVote = !hasVoted && !isOwnSubmission;
+                                const isSelected = selectedVoteId === entry.id;
+
                                 return (
                                     <button
                                         key={entry.id}
@@ -278,8 +329,8 @@ export function MultiplayerReveal() {
                                                 ? 'opacity-50 cursor-not-allowed'
                                                 : 'cursor-default'
                                         } ${
-                                            entry.voteCount > 0
-                                                ? 'bg-purple-500/10 border-purple-500/30'
+                                            isSelected
+                                                ? 'bg-purple-500/15 border-purple-400/50'
                                                 : 'bg-white/5 border-white/10'
                                         }`}
                                     >
@@ -290,10 +341,10 @@ export function MultiplayerReveal() {
                                                 {isOwnSubmission && <span className="text-white/30 text-xs ml-2">(you)</span>}
                                                 <p className="text-white/70 italic text-lg mt-1">&ldquo;{entry.submission}&rdquo;</p>
                                             </div>
-                                            {entry.voteCount > 0 && (
-                                                <div className="flex items-center gap-1 text-purple-400">
+                                            {isSelected && (
+                                                <div className="flex items-center gap-1 text-purple-300">
                                                     <ThumbsUp className="w-5 h-5" />
-                                                    <span className="font-bold">{entry.voteCount}</span>
+                                                    <span className="font-bold">Voted</span>
                                                 </div>
                                             )}
                                         </div>
@@ -303,12 +354,20 @@ export function MultiplayerReveal() {
                         </div>
 
                         {isHost && (
-                            <button
-                                onClick={handleFinishVoting}
-                                className="mt-6 w-full py-3 bg-white/10 text-white font-semibold rounded-full hover:bg-white/20 transition-colors border border-white/20"
-                            >
-                                End Voting &amp; Show Results
-                            </button>
+                            <>
+                                <button
+                                    onClick={handleFinishVoting}
+                                    disabled={finishingVotes}
+                                    className="mt-6 w-full py-3 bg-white/10 text-white font-semibold rounded-full hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-60"
+                                >
+                                    {finishingVotes ? 'Finalizing...' : `Show Results (${currentVoteCount}/${expectedVoteCount || submissions.length} votes)`}
+                                </button>
+                                <p className="mt-3 text-center text-xs text-white/30">
+                                    {currentVoteCount >= expectedVoteCount && expectedVoteCount > 0
+                                        ? 'All submitted players have voted.'
+                                        : 'You can wait for the remaining submitted players or reveal results now.'}
+                                </p>
+                            </>
                         )}
                     </div>
                 </div>
@@ -316,12 +375,10 @@ export function MultiplayerReveal() {
         );
     }
 
-    // Results screen (final reveal with scores)
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
             <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                 <div className="glass-panel rounded-[22px] p-8">
-                    {/* Header */}
                     <div className="text-center mb-8">
                         <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 border border-white/10">
                             {isFinished ? 'FINAL STANDINGS' : `ROUND ${room?.round_number} RESULTS`}
@@ -331,11 +388,10 @@ export function MultiplayerReveal() {
                         </h2>
                     </div>
 
-                    {/* Per-round leaderboard */}
                     {!isFinished && (
                         <div className="space-y-4 mb-8">
-                            {scored.map((entry, idx) => {
-                                const isWinner = idx === 0;
+                            {scored.map((entry, index) => {
+                                const isWinner = index === 0;
                                 const breakdown = entry.parsedScore?.breakdown;
 
                                 return (
@@ -346,30 +402,30 @@ export function MultiplayerReveal() {
                                                 ? 'bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/30 shadow-[0_0_30px_rgba(245,158,11,0.15)]'
                                                 : 'bg-white/5 border-white/10'
                                         }`}
-                                        style={{ animationDelay: `${idx * 150}ms` }}
+                                        style={{ animationDelay: `${index * 150}ms` }}
                                     >
                                         <div className="flex items-center gap-4 mb-3">
                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                                                 isWinner ? 'bg-amber-500 text-black' : 'bg-white/10 text-white/50'
                                             }`}>
-                                                {isWinner ? <Trophy className="w-4 h-4" /> : idx + 1}
+                                                {isWinner ? <Trophy className="w-4 h-4" /> : index + 1}
                                             </div>
                                             <span className="text-2xl">{entry.avatar}</span>
                                             <span className="text-white font-bold text-lg flex-1">{entry.player_name}</span>
                                             <div className="flex items-center gap-3">
-                                                {entry.voteCount > 0 && (
-                                                    <div className="flex items-center gap-1 text-purple-400 text-sm">
-                                                        <ThumbsUp className="w-4 h-4" />
-                                                        <span>{entry.voteCount}</span>
-                                                    </div>
-                                                )}
-                                                {scoringMode === 'ai' && (
+                                                {scoringMode === 'ai' ? (
                                                     <div className={`text-3xl font-black ${
                                                         isWinner
                                                             ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500'
                                                             : 'text-white/80'
                                                     }`}>
                                                         {entry.finalScore}/10
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-1 text-purple-300 text-sm">
+                                                        <ThumbsUp className="w-4 h-4" />
+                                                        <span className="font-bold">{entry.voteCount}</span>
+                                                        <span className="text-white/50">vote{entry.voteCount === 1 ? '' : 's'}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -399,23 +455,22 @@ export function MultiplayerReveal() {
                         </div>
                     )}
 
-                    {/* Session leaderboard (finished state) */}
                     {isFinished && (
                         <div className="space-y-3 mb-8">
-                            {sessionLeaderboard.map((entry, idx) => (
+                            {sessionLeaderboard.map((entry, index) => (
                                 <div
                                     key={entry.playerName}
                                     className={`rounded-2xl border p-4 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-500 ${
-                                        idx === 0
+                                        index === 0
                                             ? 'bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]'
                                             : 'bg-white/5 border-white/10'
                                     }`}
-                                    style={{ animationDelay: `${idx * 100}ms` }}
+                                    style={{ animationDelay: `${index * 100}ms` }}
                                 >
                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                                        idx === 0 ? 'bg-amber-500 text-black' : idx === 1 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
+                                        index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
                                     }`}>
-                                        {idx === 0 ? <Crown className="w-5 h-5" /> : idx === 1 ? <Star className="w-4 h-4" /> : idx + 1}
+                                        {index === 0 ? <Crown className="w-5 h-5" /> : index === 1 ? <Star className="w-4 h-4" /> : index + 1}
                                     </div>
                                     <span className="text-3xl">{entry.avatar}</span>
                                     <div className="flex-1">
@@ -426,7 +481,9 @@ export function MultiplayerReveal() {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className={`text-3xl font-black ${idx === 0 ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500' : 'text-white'}`}>
+                                        <div className={`text-3xl font-black ${
+                                            index === 0 ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500' : 'text-white'
+                                        }`}>
                                             {entry.totalScore}
                                         </div>
                                         <div className="text-xs text-white/50">total pts</div>
@@ -436,7 +493,6 @@ export function MultiplayerReveal() {
                         </div>
                     )}
 
-                    {/* No scores yet */}
                     {!isFinished && scored.length === 0 && (
                         <div className="text-center py-12 text-white/40">
                             <div className="w-12 h-12 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mx-auto mb-4" />
@@ -444,14 +500,12 @@ export function MultiplayerReveal() {
                         </div>
                     )}
 
-                    {/* Multiplier note */}
                     {!isFinished && multiplier !== 1 && (
                         <div className="text-center text-sm text-white/40 mb-6">
                             Theme multiplier: <span className="text-white">x{multiplier.toFixed(2)}</span>
                         </div>
                     )}
 
-                    {/* Actions */}
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         {!isFinished && isHost && hasNextRound && (
                             <button
@@ -474,7 +528,7 @@ export function MultiplayerReveal() {
                         )}
                         {!isFinished && !isHost && (
                             <div className="text-white/40 text-sm">
-                                {hasNextRound ? 'Waiting for host to start next round...' : 'Game complete — waiting for final results...'}
+                                {hasNextRound ? 'Waiting for host to start next round...' : 'Game complete - waiting for final results...'}
                             </div>
                         )}
                     </div>

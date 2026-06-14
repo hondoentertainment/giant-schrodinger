@@ -31,7 +31,7 @@ export function Round({ onSubmit }) {
         const useCustom = mediaType === MEDIA_TYPES.IMAGE && user?.useCustomImages && customPool.length >= 2;
         if (useCustom) {
             const shuffled = [...customPool].sort(() => Math.random() - 0.5);
-            [left, right] = shuffled.slice(0, 2).map((img, i) => ({
+            [left, right] = shuffled.slice(0, 2).map((img) => ({
                 id: img.id,
                 label: img.label,
                 type: MEDIA_TYPES.IMAGE,

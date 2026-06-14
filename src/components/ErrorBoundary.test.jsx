@@ -40,16 +40,18 @@ describe('ErrorBoundary', () => {
         expect(screen.getByText(/Refresh Page/)).toBeInTheDocument();
     });
 
-    it('Try Again button is clickable', async () => {
+    it('Try Again re-renders the recovery UI when the child still throws', async () => {
         const user = userEvent.setup();
         render(
             <ErrorBoundary>
                 <ThrowError shouldThrow={true} />
             </ErrorBoundary>
         );
-        const tryAgain = screen.getByRole('button', { name: /Try Again/i });
-        await user.click(tryAgain);
-        expect(tryAgain).toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: /Try Again/i }));
+
+        expect(screen.getByText(/Something went wrong/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Try Again/i })).toBeInTheDocument();
     });
 
     it('has accessible recovery buttons', () => {

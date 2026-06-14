@@ -20,7 +20,36 @@ Score the connection from 1-10 on four criteria (each 1-10):
 Respond with ONLY valid JSON, no other text:
 {"wit": N, "logic": N, "originality": N, "clarity": N, "relevance": "Highly Logical" or "Absurdly Creative" or "Wild Card", "commentary": "One witty sentence"}`;
 
+function buildFusionPrompt(theme, submission, asset1, asset2) {
+    const themeLabel = theme?.label || 'Venn with Friends';
+    const themeKeywords = Array.isArray(theme?.keywords) && theme.keywords.length
+        ? theme.keywords.slice(0, 4).join(', ')
+        : 'bold color, surreal composition, social-first poster energy';
+    const leftLabel = getAssetLabel(asset1, 'left concept');
+    const rightLabel = getAssetLabel(asset2, 'right concept');
+    const conceptLine = submission
+        ? `Visualize the phrase "${submission}" as a clever collision between "${leftLabel}" and "${rightLabel}".`
+        : `Create a clever visual collision between "${leftLabel}" and "${rightLabel}".`;
+
+    return [
+        `Create an instantly shareable hero image for a party game called Venn with Friends.`,
+        `Theme: ${themeLabel}. Reference mood: ${themeKeywords}.`,
+        conceptLine,
+        `The image should feel viral, witty, and poster-worthy rather than generic abstract art.`,
+        `Use one bold focal idea, striking contrast, crisp silhouette readability, playful surrealism, premium lighting, and composition that looks great as a social post.`,
+        `Avoid text, watermarks, logos, UI, split-screen layouts, stock-photo realism, muddy detail, or bland wallpaper aesthetics.`,
+        `Aim for something surprising enough that a friend would screenshot and repost it.`
+    ].join(' ');
+}
+
+function getAssetLabel(asset, fallbackLabel) {
+    return asset?.label || fallbackLabel;
+}
+
 function mockScore(submission, asset1, asset2) {
+    const leftLabel = getAssetLabel(asset1, 'the first concept');
+    const rightLabel = getAssetLabel(asset2, 'the second concept');
+    const safeSubmission = submission || 'your connection';
     const breakdown = {
         wit: Math.floor(Math.random() * 4) + 7,
         logic: Math.floor(Math.random() * 4) + 6,
@@ -36,7 +65,7 @@ function mockScore(submission, asset1, asset2) {
         breakdown,
         score: baseScore,
         relevance,
-        commentary: `An interesting bridge between ${asset1.label} and ${asset2.label}. '${submission}' is ${relevance.toLowerCase()}!`,
+        commentary: `An interesting bridge between ${leftLabel} and ${rightLabel}. '${safeSubmission}' is ${relevance.toLowerCase()}!`,
     };
 }
 
@@ -85,20 +114,18 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
     } catch (err) {
         console.warn('Gemini scoring failed, using mock:', err);
         await new Promise((r) => setTimeout(r, 500));
-        return { ...mockScore(submission, asset1, asset2), isMock: true, errorReason: 'AI scoring unavailable — using mock scores' };
+        return { ...mockScore(submission, asset1, asset2), isMock: true, errorReason: 'AI scoring unavailable - using mock scores' };
     }
 }
 
-export async function generateFusionImage(theme, submission) {
+export async function generateFusionImage(theme, submission, asset1 = null, asset2 = null) {
     if (!ai || !API_KEY) {
         await new Promise((r) => setTimeout(r, 1500));
         return { ...getFusionImage(theme), isFallback: true };
     }
 
     try {
-        const prompt = submission
-            ? `Abstract artistic fusion image visualizing the concept: "${submission}". Surreal, dreamlike, colorful.`
-            : `Abstract surreal art, colorful dreamscape, fluid shapes.`;
+        const prompt = buildFusionPrompt(theme, submission, asset1, asset2);
 
         const response = await ai.models.generateImages({
             model: 'imagen-3.0-generate-002',
@@ -124,5 +151,5 @@ export async function generateFusionImage(theme, submission) {
     }
 
     await new Promise((r) => setTimeout(r, 800));
-    return { ...getFusionImage(theme), isFallback: true, errorReason: 'AI image generation failed — using curated image' };
+    return { ...getFusionImage(theme), isFallback: true, errorReason: 'AI image generation failed - using curated image' };
 }

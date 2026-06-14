@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, Trash2, ImagePlus } from 'lucide-react';
-import { getCustomImages, addCustomImage, removeCustomImage } from '../services/customImages';
+import { addCustomImage, removeCustomImage } from '../services/customImages';
 
 export function CustomImagesManager({ customImages, onRefresh, useCustomImages, onUseCustomImagesChange }) {
     const [uploading, setUploading] = useState(false);

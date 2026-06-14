@@ -15,7 +15,7 @@ export function JudgeRound({ payload, onDone }) {
     const [resolvedPayload, setResolvedPayload] = useState(payload?.backendId ? null : payload);
     const [loading, setLoading] = useState(!!payload?.backendId);
     const [error, setError] = useState(null);
-    const [errorType, setErrorType] = useState(null); // 'not_found' | 'network' | 'invalid'
+    const [errorType, setErrorType] = useState(null);
     const [judgeName, setJudgeName] = useState('');
     const formRef = useRef(null);
     const effectivePayload = resolvedPayload || payload;
@@ -32,7 +32,7 @@ export function JudgeRound({ payload, onDone }) {
                     if (!data) {
                         setError('Round not found');
                         setErrorType('not_found');
-                        toast.error('Could not load this round — it may have expired');
+                        toast.error('Could not load this round - it may have expired');
                     }
                 }
             })
@@ -40,14 +40,14 @@ export function JudgeRound({ payload, onDone }) {
                 if (!cancelled) {
                     setError('Failed to load round');
                     setErrorType('network');
-                    toast.error('Failed to load round — check your connection');
+                    toast.error('Failed to load round - check your connection');
                 }
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
             });
         return () => { cancelled = true; };
-    }, [payload?.backendId]);
+    }, [payload?.backendId, toast]);
 
     if (loading) {
         return (
@@ -63,11 +63,11 @@ export function JudgeRound({ payload, onDone }) {
             errorType === 'not_found'
                 ? 'This judging link has expired or the round was removed. Ask your friend to share a fresh link.'
                 : errorType === 'network'
-                ? 'Couldn\'t load the round — check your internet connection and try again.'
+                ? 'Couldn\'t load the round - check your internet connection and try again.'
                 : 'This link is invalid or malformed. Make sure you copied the full URL from your friend.';
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md px-4">
-                <div className="text-6xl mb-4" role="img" aria-hidden="true">🔗</div>
+                <div className="text-6xl mb-4" role="img" aria-hidden="true">??</div>
                 <h2 className="text-2xl font-display font-bold text-white mb-2">Can&apos;t load this round</h2>
                 <p className="text-white/60 mb-6">{errorMessage}</p>
                 <button
@@ -92,13 +92,22 @@ export function JudgeRound({ payload, onDone }) {
             judgeName: judgeName.trim() || 'A friend',
         };
 
-        const roundId = effectivePayload.id || effectivePayload.backendId || effectivePayload.roundId || `judge-${Date.now()}`;
-        saveJudgement(roundId, judgement);
+        const roundId = effectivePayload.id || effectivePayload.roundId || effectivePayload.backendId || `judge-${Date.now()}`;
+        const collisionId = effectivePayload.collisionId || null;
+        const backendId = effectivePayload.backendId || effectivePayload.id || null;
 
-        if (effectivePayload.id || effectivePayload.backendId) {
-            const saved = await saveJudgementToBackend(roundId, judgement);
+        saveJudgement({
+            roundId,
+            collisionId,
+            backendId,
+            judgeMode: effectivePayload.judgeMode || 'friend',
+            judgement,
+        });
+
+        if (backendId) {
+            const saved = await saveJudgementToBackend(backendId, judgement);
             if (!saved) {
-                toast.warn('Judgement saved locally — backend sync failed');
+                toast.warn('Judgement saved locally - backend sync failed');
             }
         }
 
@@ -113,7 +122,7 @@ export function JudgeRound({ payload, onDone }) {
     if (submitted) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-in zoom-in-95 duration-500">
-                <div className="text-6xl mb-4">✅</div>
+                <div className="text-6xl mb-4">?</div>
                 <h2 className="text-3xl font-display font-bold text-white mb-2">Thanks for judging!</h2>
                 <p className="text-white/60">Your friend will see your score. Redirecting...</p>
             </div>
@@ -124,7 +133,7 @@ export function JudgeRound({ payload, onDone }) {
         <div ref={formRef} className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-700">
             <div className="mb-6 text-center">
                 <h2 className="text-2xl font-display font-bold text-white mb-1">Judge a Friend&apos;s Connection</h2>
-                <p className="text-white/60 text-sm">Score their connection — they&apos;ll see your feedback in their gallery.</p>
+                <p className="text-white/60 text-sm">Score their connection - they&apos;ll see your feedback in their gallery and summary when available.</p>
             </div>
 
             <VennDiagram leftAsset={effectivePayload.assets.left} rightAsset={effectivePayload.assets.right} />
@@ -147,7 +156,7 @@ export function JudgeRound({ payload, onDone }) {
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-white/60 mb-2">Score (1–10)</label>
+                    <label className="block text-sm font-medium text-white/60 mb-2">Score (1-10)</label>
                     <input
                         type="number"
                         min="1"

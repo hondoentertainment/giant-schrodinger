@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
 import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
-import { getJudgement } from '../../services/judgements';
+import { getJudgementForCollision } from '../../services/judgements';
 const SORT_OPTIONS = [
     { id: 'newest', label: 'Newest', fn: (a, b) => new Date(b.timestamp) - new Date(a.timestamp) },
     { id: 'oldest', label: 'Oldest', fn: (a, b) => new Date(a.timestamp) - new Date(b.timestamp) },
@@ -113,7 +113,7 @@ export function Gallery() {
     }, []);
 
     const getDisplayJudgement = (collision) =>
-        friendJudgements[collision.id] || getJudgement(collision.id);
+        friendJudgements[collision.id] || getJudgementForCollision(collision.id);
 
     const sortOpt = SORT_OPTIONS.find((o) => o.id === sortBy) ?? SORT_OPTIONS[0];
     const sorted = [...collisions].sort(sortOpt.fn);
@@ -180,3 +180,4 @@ export function Gallery() {
         </div>
     );
 }
+

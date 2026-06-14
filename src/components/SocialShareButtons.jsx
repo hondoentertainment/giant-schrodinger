@@ -103,8 +103,8 @@ export default function SocialShareButtons({ shareData, imageUrl, onToast }) {
 
     const handleDownload = () => {
         if (!imageUrl) return;
-        downloadFusionImage(imageUrl);
-        onToast?.('success', 'Image downloaded!');
+        downloadFusionImage(imageUrl, shareData);
+        onToast?.('success', 'Share card downloaded!');
     };
 
     const handleWebShare = async () => {
@@ -117,7 +117,7 @@ export default function SocialShareButtons({ shareData, imageUrl, onToast }) {
     return (
         <div className="w-full">
             <p className="text-white/40 text-xs uppercase tracking-widest text-center mb-3">
-                Share your result
+                Share your masterpiece
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
                 {/* Twitter / X */}
@@ -165,10 +165,10 @@ export default function SocialShareButtons({ shareData, imageUrl, onToast }) {
                     <button
                         onClick={handleDownload}
                         className={`${BUTTON_BASE} bg-white/5 hover:bg-purple-500/20 text-white/80 hover:text-purple-400`}
-                        title="Download fusion image"
+                        title="Download social share card"
                     >
                         <DownloadIcon />
-                        <span className="hidden sm:inline">Save</span>
+                        <span className="hidden sm:inline">Save Card</span>
                     </button>
                 )}
 

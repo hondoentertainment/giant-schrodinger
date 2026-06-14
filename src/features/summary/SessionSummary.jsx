@@ -1,11 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { getScoreBand } from '../../lib/scoreBands';
-import { Trophy, Star, Zap, ArrowRight, Home } from 'lucide-react';
+import { ArrowRight, Home } from 'lucide-react';
 import SocialShareButtons from '../../components/SocialShareButtons';
+import { getJudgementsByCollisionIds } from '../../services/backend';
+import { getJudgementForCollision } from '../../services/judgements';
 
-function RoundCard({ result, index }) {
+function RoundCard({ result, index, feedback }) {
     const mod = result.modifier;
     const score = result.score || 0;
     const band = getScoreBand(score);
@@ -21,9 +23,7 @@ function RoundCard({ result, index }) {
             </div>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                    <span className="text-white/50 text-sm">
-                        Round {index + 1}
-                    </span>
+                    <span className="text-white/50 text-sm">Round {index + 1}</span>
                     {isSpecial && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70 font-semibold">
                             {mod.label}
@@ -33,6 +33,11 @@ function RoundCard({ result, index }) {
                 {result.breakdown && (
                     <div className="text-white/30 text-xs mt-0.5">
                         W:{result.breakdown.wit} L:{result.breakdown.logic} O:{result.breakdown.originality} C:{result.breakdown.clarity}
+                    </div>
+                )}
+                {feedback && (
+                    <div className="text-white/50 text-xs mt-1">
+                        Friend feedback: {feedback.judgeName || 'A friend'} gave it {feedback.score}/10
                     </div>
                 )}
             </div>
@@ -46,6 +51,35 @@ function RoundCard({ result, index }) {
 export function SessionSummary() {
     const { sessionResults, sessionScore, totalRounds, endSession, isDailyChallenge, setGameState } = useGame();
     const { toast } = useToast();
+    const [feedbackByCollision, setFeedbackByCollision] = useState({});
+
+    useEffect(() => {
+        const collisionIds = sessionResults.map((result) => result.collisionId).filter(Boolean);
+        if (!collisionIds.length) {
+            setFeedbackByCollision({});
+            return;
+        }
+
+        const localFeedback = {};
+        collisionIds.forEach((collisionId) => {
+            const feedback = getJudgementForCollision(collisionId);
+            if (feedback) {
+                localFeedback[collisionId] = feedback;
+            }
+        });
+        setFeedbackByCollision(localFeedback);
+
+        let cancelled = false;
+        getJudgementsByCollisionIds(collisionIds).then((backendFeedback) => {
+            if (!cancelled && backendFeedback) {
+                setFeedbackByCollision((prev) => ({ ...prev, ...backendFeedback }));
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [sessionResults]);
 
     const stats = useMemo(() => {
         if (!sessionResults.length) return null;
@@ -56,6 +90,11 @@ export function SessionSummary() {
         const specialRounds = sessionResults.filter((r) => r.modifier && r.modifier.id !== 'normal').length;
         return { avg, best, worst, specialRounds };
     }, [sessionResults]);
+
+    const feedbackCount = useMemo(
+        () => sessionResults.filter((result) => result.collisionId && feedbackByCollision[result.collisionId]).length,
+        [sessionResults, feedbackByCollision]
+    );
 
     const overallBand = getScoreBand(Math.round(stats?.avg || 0));
 
@@ -83,23 +122,19 @@ export function SessionSummary() {
         <div className="w-full max-w-xl flex flex-col items-center animate-in zoom-in-95 duration-700">
             <div className="bg-gradient-to-br from-amber-900/30 via-purple-900/40 to-pink-900/30 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                 <div className="glass-panel rounded-[22px] p-8">
-                    {/* Header */}
                     <div className="text-center mb-8">
                         <div className="inline-block px-4 py-1 rounded-full bg-amber-500/10 text-sm font-bold tracking-widest text-amber-400 mb-4 border border-amber-500/20">
                             {isDailyChallenge ? 'DAILY CHALLENGE COMPLETE' : 'SESSION COMPLETE'}
                         </div>
-                        <div className="text-6xl mb-3">
-                            {stats.avg >= 9 ? '🌟' : stats.avg >= 7 ? '🔥' : stats.avg >= 5 ? '👍' : '💪'}
+                        <div className="text-4xl mb-3 font-black tracking-widest text-white/70">
+                            {stats.avg >= 9 ? 'A+' : stats.avg >= 7 ? 'A' : stats.avg >= 5 ? 'B' : 'NEXT'}
                         </div>
                         <div className={`text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br ${overallBand?.color || 'from-yellow-300 to-amber-600'} mb-2`}>
                             {sessionScore}
                         </div>
-                        <div className="text-white/50 text-sm uppercase tracking-widest">
-                            Total Points
-                        </div>
+                        <div className="text-white/50 text-sm uppercase tracking-widest">Total Points</div>
                     </div>
 
-                    {/* Stats grid */}
                     <div className="grid grid-cols-3 gap-3 mb-8">
                         <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
                             <div className="text-2xl font-bold text-white">{stats.avg.toFixed(1)}</div>
@@ -115,7 +150,6 @@ export function SessionSummary() {
                         </div>
                     </div>
 
-                    {/* Performance verdict */}
                     <div className="mb-8 p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
                         <div className="text-lg font-bold text-white mb-1">{overallBand?.label}</div>
                         <div className="text-white/50 text-sm">
@@ -125,21 +159,29 @@ export function SessionSummary() {
                                 ? 'Sharp mind, clever connections. You\'ve got the gift.'
                                 : stats.avg >= 5
                                 ? 'Solid effort! Your connections are getting stronger.'
-                                : 'Keep playing — every round sharpens your creative instincts.'}
+                                : 'Keep playing - every round sharpens your creative instincts.'}
                         </div>
+                        {feedbackCount > 0 && (
+                            <div className="mt-3 text-xs text-white/45">
+                                Friend feedback is now attached to {feedbackCount} round{feedbackCount === 1 ? '' : 's'} in this session.
+                            </div>
+                        )}
                     </div>
 
-                    {/* Round-by-round breakdown */}
                     <div className="mb-8">
                         <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Round Breakdown</div>
                         <div className="space-y-2">
                             {sessionResults.map((result, idx) => (
-                                <RoundCard key={idx} result={result} index={idx} />
+                                <RoundCard
+                                    key={idx}
+                                    result={result}
+                                    index={idx}
+                                    feedback={result.collisionId ? feedbackByCollision[result.collisionId] : null}
+                                />
                             ))}
                         </div>
                     </div>
 
-                    {/* Social sharing */}
                     <div className="mb-8">
                         <SocialShareButtons
                             shareData={{
@@ -152,7 +194,6 @@ export function SessionSummary() {
                         />
                     </div>
 
-                    {/* Actions */}
                     <div className="flex flex-col gap-3">
                         <button
                             onClick={handlePlayAgain}
@@ -174,3 +215,4 @@ export function SessionSummary() {
         </div>
     );
 }
+

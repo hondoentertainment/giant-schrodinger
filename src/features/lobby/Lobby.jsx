@@ -11,6 +11,7 @@ import { OnboardingModal } from '../../components/OnboardingModal';
 import { UnlockModal } from '../../components/UnlockModal';
 import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
+import { ServiceStatusCard } from '../../components/ServiceStatusCard';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -190,6 +191,7 @@ export function Lobby() {
                     <p className="text-white/40 text-sm mb-4">
                         Complete {sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.
                     </p>
+                    <ServiceStatusCard className="mb-4" />
                     <div className="mb-4 flex flex-wrap gap-3 justify-center text-sm text-white/60">
                         <span>Scoring: <span className="text-white font-semibold">{scoringMode === 'human' ? 'Manual Judge' : 'AI Judge'}</span></span>
                         <span>Media: <span className="text-white font-semibold">
@@ -430,6 +432,7 @@ export function Lobby() {
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
             <h2 className="text-2xl font-display font-bold text-white mb-2 text-center">Create Profile</h2>
             <p className="text-white/50 text-sm text-center mb-6">Customize your experience and unlock rewards by playing</p>
+            <ServiceStatusCard className="mb-6" />
             <form onSubmit={handleSubmit} className="space-y-6">
                 <section aria-labelledby="profile-username">
                     <label id="profile-username" className="block text-sm font-medium text-white/60 mb-2">Username</label>
@@ -705,3 +708,4 @@ export function Lobby() {
         </div>
     );
 }
+

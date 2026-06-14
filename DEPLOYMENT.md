@@ -1,226 +1,134 @@
-# Deploying Venn with Friends to GitHub Pages
+# Deployment Guide
 
-## Quick Deploy (Recommended)
+This repo is set up for static frontend deployment, with GitHub Pages as the primary documented path and Vercel as a secondary option.
 
-### Option 1: Using GitHub Actions (Automated)
+## Current deployment assets in the repo
 
-1. **Create GitHub Actions workflow file**:
+- GitHub Pages workflow: `.github/workflows/deploy.yml`
+- Vercel config: `vercel.json`
+- Vite config with CI-aware base path: `vite.config.js`
 
-   Create `.github/workflows/deploy.yml`:
+## Recommended path: GitHub Pages
 
-   ```yaml
-   name: Deploy to GitHub Pages
+### 1. Confirm repository settings
 
-   on:
-     push:
-       branches: [ main ]
-     workflow_dispatch:
+- Repository Pages source should be set to `GitHub Actions`
+- Default branch should include the workflow file
 
-   permissions:
-     contents: read
-     pages: write
-     id-token: write
+### 2. Optional secrets
 
-   jobs:
-     build:
-       runs-on: ubuntu-latest
-       steps:
-         - uses: actions/checkout@v4
-         
-         - name: Setup Node
-           uses: actions/setup-node@v4
-           with:
-             node-version: '18'
-             cache: 'npm'
-         
-         - name: Install dependencies
-           run: npm ci
-         
-         - name: Build
-           run: npm run build
-         
-         - name: Upload artifact
-           uses: actions/upload-pages-artifact@v3
-           with:
-             path: ./dist
+Add these only if you want live services in production:
 
-     deploy:
-       environment:
-         name: github-pages
-         url: ${{ steps.deployment.outputs.page_url }}
-       runs-on: ubuntu-latest
-       needs: build
-       steps:
-         - name: Deploy to GitHub Pages
-           id: deployment
-           uses: actions/deploy-pages@v4
-   ```
+- `VITE_GEMINI_API_KEY`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-2. **Enable GitHub Pages**:
-   - Go to your repository on GitHub
-   - Settings > Pages
-   - Source: "GitHub Actions"
-   - Save
+If no secrets are configured, the app still deploys and remains playable in local/mock mode for supported features.
 
-3. **Push to trigger deployment**:
-   ```bash
-   git add .
-   git commit -m "Add GitHub Actions deployment"
-   git push origin main
-   ```
+### 3. Workflow behavior
 
-4. **Your site will be live at**: `https://hondoentertainment.github.io/giant-schrodinger`
+The existing workflow currently does this on pushes to `main`:
 
----
+1. `npm ci`
+2. `npm run lint`
+3. `npm run test`
+4. install Playwright Chromium
+5. `npm run test:e2e:desktop`
+6. `npm run build`
+7. deploy `dist/` to GitHub Pages
 
-### Option 2: Manual Deploy with gh-pages Package
+## Local preflight before shipping
 
-1. **Install gh-pages**:
-   ```bash
-   npm install --save-dev gh-pages
-   ```
+Run these locally before pushing:
 
-2. **Add deploy script to package.json**:
-   ```json
-   {
-     "scripts": {
-       "deploy": "npm run build && gh-pages -d dist"
-     }
-   }
-   ```
-
-3. **Deploy**:
-   ```bash
-   npm run deploy
-   ```
-
----
-
-### Option 3: PowerShell Deploy Script
-
-Create `scripts/deploy.ps1`:
-
-```powershell
-#!/usr/bin/env pwsh
-
-Write-Host "🚀 Deploying Venn with Friends to GitHub Pages..." -ForegroundColor Cyan
-
-# Build the project
-Write-Host "`n📦 Building production bundle..." -ForegroundColor Yellow
-npm run build
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Build failed!" -ForegroundColor Red
-    exit 1
-}
-
-# Navigate to dist
-Set-Location dist
-
-# Initialize git in dist if not exists
-if (-not (Test-Path .git)) {
-    git init
-    git branch -M gh-pages
-}
-
-# Add and commit
-git add -A
-git commit -m "Deploy to GitHub Pages"
-
-# Force push to gh-pages branch
-Write-Host "`n🚀 Pushing to GitHub Pages..." -ForegroundColor Yellow
-git push -f git@github.com:HondoEntertainment/giant-schrodinger.git gh-pages
-
-Write-Host "`n✅ Deployment complete!" -ForegroundColor Green
-Write-Host "Your site should be live at: https://hondoentertainment.github.io/giant-schrodinger" -ForegroundColor Cyan
-
-# Return to root
-Set-Location ..
-```
-
-Run with:
 ```bash
-./scripts/deploy.ps1
+npm run lint
+npm run test
+npm run build
+npm run preview
 ```
 
----
+Preview default URL:
 
-## Important Configuration
+- `http://localhost:4173/`
 
-### ✅ Already Configured
+When built in GitHub Actions, the app uses the `/giant-schrodinger/` base path automatically.
 
-Your `vite.config.js` is now correctly set with:
+## Production-readiness checks
 
-```javascript
-export default defineConfig({
-    plugins: [react()],
-    base: '/giant-schrodinger/', // Required for GitHub Pages
-})
+### Functional checks
+
+- Landing/lobby loads without console errors
+- Solo round can be completed end to end
+- Reveal screen shows score and/or fallback output correctly
+- Share-for-judging link can be generated
+- Multiplayer room creation/join works if Supabase is configured
+
+### Failure-state checks
+
+- No Gemini key: mock scoring and curated image fallback still work
+- No Supabase keys: solo play still works and multiplayer is clearly marked unavailable
+- Broken/expired judging link shows a recoverable error state
+
+### Build checks
+
+- Lint passes
+- Unit tests pass
+- Desktop E2E passes
+- Production build passes
+- No missing asset errors in preview
+
+## Backend hardening for production
+
+Before you rely on Supabase in production, apply `supabase/schema.sql`. The current production path expects:
+
+- share and judgement writes to go through RPCs instead of open anonymous inserts
+- multiplayer room/session writes to go through token-validated RPCs
+- manual multiplayer scoring to persist votes and finalized results in backend state
+
+If the SQL migration has not been applied yet, the app can still fall back to older behavior, but that mode should be treated as compatibility-only rather than production-safe.
+
+## Observability
+
+The app emits structured telemetry through:
+
+- `window.__VWF_TELEMETRY__` as either an array or function sink
+- the browser event `vwf:telemetry`
+
+This keeps the frontend vendor-neutral while making it easy to plug in Sentry, PostHog, or another monitor later.
+
+## Vercel option
+
+`vercel.json` is already present.
+
+Typical deploy flow:
+
+```bash
+vercel
+vercel --prod
 ```
 
-### Environment Variables for Production
-
-If you need environment variables in production:
-
-1. **For GitHub Actions**: Add secrets in repository settings
-   - Settings > Secrets and variables > Actions
-   - Add: `VITE_GEMINI_API_KEY`, `VITE_SUPABASE_URL`, etc.
-
-2. **Update workflow** to use secrets:
-   ```yaml
-   - name: Build
-     env:
-       VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
-       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-     run: npm run build
-   ```
-
----
+Use Vercel if you want preview deployments and simpler SPA hosting behavior.
 
 ## Troubleshooting
 
-### 404 on refresh
-- This is normal for SPAs on GitHub Pages
-- Solution: Use hash routing or configure 404.html redirect
+### Assets 404 on GitHub Pages
 
-### Assets not loading (404)
-- Check `base` in `vite.config.js` matches repo name
-- Should be `/giant-schrodinger/` for your repo
+- Check that Pages is deploying from the workflow
+- Confirm repo name still matches `/giant-schrodinger/`
+- Confirm the workflow is building in CI, not from a local custom command
 
-### Changes not appearing
-- Clear browser cache (Ctrl+Shift+R)
-- Wait 1-2 minutes for GitHub Pages to update
-- Check Actions tab for deployment status
+### Workflow fails on tests
 
----
+- Run `npm run test` locally first
+- If E2E is failing, inspect Playwright configuration and environment assumptions
 
-## Verifying Deployment
+### Live app loads but multiplayer does not work
 
-1. **Check build locally first**:
-   ```bash
-   npm run build
-   npm run preview
-   ```
-   Visit: `http://localhost:4173/giant-schrodinger/`
+- Confirm `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are configured in deployment secrets
+- Confirm Supabase tables and realtime policies are set up
 
-2. **Check GitHub Actions**:
-   - Go to Actions tab in GitHub
-   - Ensure workflow completed successfully
+## Release checklist
 
-3. **Visit your site**:
-   - https://hondoentertainment.github.io/giant-schrodinger
-
-4. **Check console for errors**:
-   - F12 > Console
-   - Look for 404s or CORS errors
-
----
-
-## Next Steps
-
-1. Choose deployment method (GitHub Actions recommended)
-2. Set up environment variables if needed
-3. Deploy
-4. Test thoroughly using `TEST_REVIEW_CHECKLIST.md`
-5. Share with friends! 🎉
+Use [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) as the canonical ship/no-ship checklist.
+For a full launch rehearsal, use [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md).

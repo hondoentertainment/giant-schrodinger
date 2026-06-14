@@ -11,9 +11,10 @@ import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { haptic } from '../../lib/haptics';
+import { reportAppError, reportAppEvent } from '../../lib/telemetry';
 
 export function Reveal({ submission, assets }) {
-    const { setGameState, user, completeRound, roundNumber, totalRounds, currentModifier, nextRound } = useGame();
+    const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound } = useGame();
     const { toast } = useToast();
     const [result, setResult] = useState(null);
     const [fusionImage, setFusionImage] = useState(null);
@@ -47,6 +48,11 @@ export function Reveal({ submission, assets }) {
                     const scoreResult = await scoreSubmission(submission, assets.left, assets.right, mediaType);
                     if (!mounted) return;
                     if (scoreResult.isMock) {
+                        reportAppEvent('ai_mock_score_fallback', {
+                            reason: scoreResult.errorReason || 'AI scoring unavailable',
+                            mediaType,
+                            themeId: theme?.id || null,
+                        });
                         toast.warn(scoreResult.errorReason || 'AI unavailable — using mock scoring');
                     }
                     const finalScore = Math.min(10, Math.max(1, Math.round(scoreResult.score * scoreMultiplier)));
@@ -59,17 +65,22 @@ export function Reveal({ submission, assets }) {
 
                     // 2. Generate Image
                     setStatus("Dreaming up the fusion...");
-                    const image = await generateFusionImage(theme, submission);
+                    const image = await generateFusionImage(theme, submission, assets.left, assets.right);
                     if (!mounted) return;
                     if (image.isFallback && image.errorReason) {
+                        reportAppEvent('fusion_image_fallback', {
+                            reason: image.errorReason,
+                            themeId: theme?.id || null,
+                        });
                         toast.info(image.errorReason);
                     }
                     setFusionImage(image);
                     setStatus("Complete");
 
                     // 3. Save
+                    let collision = savedCollision;
                     if (!savedRef.current) {
-                        const collision = saveCollision({
+                        collision = saveCollision({
                             submission,
                             imageUrl: image.url,
                             fallbackImageUrl: image.fallbackUrl,
@@ -88,13 +99,23 @@ export function Reveal({ submission, assets }) {
                         if (unlocked?.length) setNewlyUnlocked(unlocked);
                         savedRef.current = true;
                     }
-                    completeRound({ score: finalScore, baseScore: scoreResult.score, breakdown: scoreResult.breakdown });
+                    completeRound({
+                        score: finalScore,
+                        baseScore: scoreResult.score,
+                        breakdown: scoreResult.breakdown,
+                        collisionId: collision?.id,
+                        judgeMode: scoringMode,
+                    });
                 } else {
                     // Human scoring path
                     setStatus("Dreaming up the fusion...");
-                    const image = await generateFusionImage(theme, submission);
+                    const image = await generateFusionImage(theme, submission, assets.left, assets.right);
                     if (!mounted) return;
                     if (image.isFallback && image.errorReason) {
+                        reportAppEvent('fusion_image_fallback', {
+                            reason: image.errorReason,
+                            themeId: theme?.id || null,
+                        });
                         toast.info(image.errorReason);
                     }
                     setFusionImage(image);
@@ -103,6 +124,11 @@ export function Reveal({ submission, assets }) {
             } catch (err) {
                 if (mounted) {
                     console.error('Reveal processRound failed:', err);
+                    reportAppError('reveal_process_round', err, {
+                        scoringMode,
+                        mediaType,
+                        themeId: theme?.id || null,
+                    });
                     setProcessError(err?.message || 'Something went wrong');
                 }
             }
@@ -140,6 +166,7 @@ export function Reveal({ submission, assets }) {
             imageUrl: fusionImage?.url,
             shareFrom: user?.name || 'A friend',
             collisionId: savedCollision.id,
+            judgeMode: 'friend',
         };
         const backendId = await saveSharedRound(roundPayload);
         if (!backendId) {
@@ -175,8 +202,9 @@ export function Reveal({ submission, assets }) {
         setResult(scoreResult);
         setStatus("Complete");
 
+        let collision = savedCollision;
         if (fusionImage?.url && !savedRef.current) {
-            const collision = saveCollision({
+            collision = saveCollision({
                 submission,
                 imageUrl: fusionImage.url,
                 fallbackImageUrl: fusionImage.fallbackUrl,
@@ -194,7 +222,7 @@ export function Reveal({ submission, assets }) {
             if (unlocked?.length) setNewlyUnlocked(unlocked);
             savedRef.current = true;
         }
-        completeRound({ score: finalScore, baseScore: scoreValue });
+        completeRound({ score: finalScore, baseScore: scoreValue, collisionId: collision?.id, judgeMode: scoringMode });
     };
 
     if (processError) {
@@ -449,3 +477,5 @@ export function Reveal({ submission, assets }) {
         </div>
     );
 }
+
+

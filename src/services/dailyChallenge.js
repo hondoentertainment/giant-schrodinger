@@ -1,4 +1,4 @@
-import { THEMES, getThemeById } from '../data/themes';
+import { THEMES } from '../data/themes';
 
 const DAILY_STORAGE_KEY = 'vwf_daily';
 

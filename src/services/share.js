@@ -1,5 +1,6 @@
 const SHARE_HASH_PREFIX = 'judge=';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SHARE_TOKEN_REGEX = /^[A-Za-z0-9_-]{20,120}$/;
 
 export function createJudgeShareUrl(payload) {
     try {
@@ -19,18 +20,22 @@ export function parseJudgeShareUrl() {
     const hash = window.location.hash || '';
     const search = window.location.search || '';
     let encoded = null;
+    let fromQuery = false;
 
     if (hash.startsWith('#') && hash.includes(SHARE_HASH_PREFIX)) {
         encoded = hash.slice(hash.indexOf(SHARE_HASH_PREFIX) + SHARE_HASH_PREFIX.length);
     } else {
         const params = new URLSearchParams(search);
         encoded = params.get('judge');
+        fromQuery = true;
     }
 
     if (!encoded) return null;
 
-    if (UUID_REGEX.test(encoded.trim())) {
-        return { backendId: encoded.trim() };
+    const trimmed = encoded.trim();
+
+    if (fromQuery && (UUID_REGEX.test(trimmed) || SHARE_TOKEN_REGEX.test(trimmed))) {
+        return { backendId: trimmed };
     }
 
     try {

@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { beforeEach, vi } from 'vitest';
 
 // Mock window.location for share service tests
 const mockLocation = {

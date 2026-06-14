@@ -1,53 +1,66 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from './ToastContext';
-import { isBackendEnabled, supabase } from '../lib/supabase';
+import { isBackendEnabled } from '../lib/supabase';
 import {
     createRoom,
     joinRoom,
     getRoomPlayers,
     getRoundSubmissions,
+    getRoundVotes,
     leaveRoom,
     startRound as startRoundApi,
     setRoomStatus,
     submitAnswer,
     updateSubmissionScore,
+    castVote,
+    finalizeRoomVoting,
+    advanceRoom,
     subscribeToRoom,
 } from '../services/multiplayer';
 import { buildThemeAssets, getThemeById, MEDIA_TYPES } from '../data/themes';
 import { scoreSubmission } from '../services/gemini';
 import { getCustomImages } from '../services/customImages';
 import { useGame } from './GameContext';
+import { reportAppError, reportAppEvent } from '../lib/telemetry';
 
 const RoomContext = createContext();
 
-function createAggregateSubmission(submissions) {
-    if (!submissions || submissions.length === 0) return 'No submissions';
-    if (submissions.length === 1) return submissions[0].submission;
-    return submissions.map((s) => `${s.player_name}: "${s.submission}"`).join(' | ');
+function getRoomPhaseFromStatus(status) {
+    switch (status) {
+    case 'playing':
+        return 'playing';
+    case 'revealing':
+        return 'revealing';
+    case 'results':
+        return 'results';
+    case 'finished':
+        return 'finished';
+    case 'waiting':
+    default:
+        return 'lobby';
+    }
 }
 
 export function RoomProvider({ children }) {
     const { toast } = useToast();
     const { user } = useGame();
 
-    // Room state
-    const [room, setRoom] = useState(null);           // The room DB row
-    const [players, setPlayers] = useState([]);        // Room players list
-    const [submissions, setSubmissions] = useState([]); // Current round's submissions
+    const [room, setRoom] = useState(null);
+    const [players, setPlayers] = useState([]);
+    const [submissions, setSubmissions] = useState([]);
+    const [votes, setVotes] = useState([]);
     const [isHost, setIsHost] = useState(false);
     const [playerName, setPlayerName] = useState('');
-    const [roomPhase, setRoomPhase] = useState('none'); // none | lobby | playing | revealing | finished
+    const [roomSession, setRoomSession] = useState(null);
+    const [roomPhase, setRoomPhase] = useState('none');
 
     const unsubRef = useRef(null);
+    const hydrateRequestRef = useRef(0);
 
-    // Derived state
     const isMultiplayer = !!room;
     const roomCode = room?.code || null;
     const allSubmitted = players.length > 0 && submissions.length >= players.length;
 
-    // ============================================================
-    // Cleanup
-    // ============================================================
     const cleanup = useCallback(() => {
         if (unsubRef.current) {
             unsubRef.current();
@@ -56,102 +69,136 @@ export function RoomProvider({ children }) {
         setRoom(null);
         setPlayers([]);
         setSubmissions([]);
+        setVotes([]);
         setIsHost(false);
+        setPlayerName('');
+        setRoomSession(null);
         setRoomPhase('none');
     }, []);
 
-    // Clean up on unmount
     useEffect(() => {
         return () => {
             if (unsubRef.current) unsubRef.current();
         };
     }, []);
 
-    // ============================================================
-    // Realtime handlers
-    // ============================================================
+    const hydrateRoomState = useCallback(async (nextRoom) => {
+        if (!nextRoom?.id) {
+            setSubmissions([]);
+            setVotes([]);
+            return;
+        }
+
+        const requestId = hydrateRequestRef.current + 1;
+        hydrateRequestRef.current = requestId;
+
+        const shouldLoadRoundState = ['revealing', 'results', 'finished'].includes(nextRoom.status);
+        const shouldLoadVotes = shouldLoadRoundState && (nextRoom.scoring_mode || 'ai') === 'human';
+
+        if (!shouldLoadRoundState) {
+            setSubmissions([]);
+            setVotes([]);
+            return;
+        }
+
+        const [roundSubmissions, roundVotes] = await Promise.all([
+            getRoundSubmissions(nextRoom.id, nextRoom.round_number),
+            shouldLoadVotes ? getRoundVotes(nextRoom.id, nextRoom.round_number) : Promise.resolve([]),
+        ]);
+
+        if (hydrateRequestRef.current !== requestId) {
+            return;
+        }
+
+        setSubmissions(roundSubmissions);
+        setVotes(roundVotes);
+    }, []);
+
     const setupSubscriptions = useCallback((roomId) => {
         if (unsubRef.current) unsubRef.current();
 
         const unsub = subscribeToRoom(roomId, {
             onRoomUpdate: (updatedRoom) => {
                 setRoom(updatedRoom);
-                const newStatus = updatedRoom.status;
-                if (newStatus === 'playing') {
-                    setRoomPhase('playing');
-                    setSubmissions([]); // Clear submissions for new round
-                } else if (newStatus === 'revealing') {
-                    setRoomPhase('revealing');
-                } else if (newStatus === 'finished') {
-                    setRoomPhase('finished');
-                } else if (newStatus === 'waiting') {
-                    setRoomPhase('lobby');
-                }
+                setRoomPhase(getRoomPhaseFromStatus(updatedRoom.status));
+                hydrateRoomState(updatedRoom);
             },
             onPlayerJoin: (player) => {
                 setPlayers((prev) => {
-                    if (prev.some((p) => p.id === player.id)) return prev;
+                    if (prev.some((entry) => entry.id === player.id)) return prev;
                     return [...prev, player];
                 });
                 toast.info(`${player.player_name} joined the room`);
             },
             onPlayerLeave: (player) => {
-                setPlayers((prev) => prev.filter((p) => p.id !== player.id));
+                setPlayers((prev) => prev.filter((entry) => entry.id !== player.id));
                 if (player.player_name) {
                     toast.info(`${player.player_name} left the room`);
                 }
             },
-            onSubmission: (sub) => {
+            onSubmission: (submission) => {
                 setSubmissions((prev) => {
-                    if (prev.some((s) => s.id === sub.id)) return prev;
-                    return [...prev, sub];
+                    if (prev.some((entry) => entry.id === submission.id)) return prev;
+                    return [...prev, submission];
                 });
             },
-            onSubmissionUpdate: (sub) => {
+            onSubmissionUpdate: (submission) => {
                 setSubmissions((prev) =>
-                    prev.map((s) => (s.id === sub.id ? sub : s))
+                    prev.map((entry) => (entry.id === submission.id ? submission : entry))
                 );
+            },
+            onVote: (vote) => {
+                setVotes((prev) => {
+                    if (prev.some((entry) => entry.id === vote.id)) return prev;
+                    return [...prev, vote];
+                });
             },
         });
 
         unsubRef.current = unsub;
-    }, [toast]);
-
-    // ============================================================
-    // Actions
-    // ============================================================
+    }, [hydrateRoomState, toast]);
 
     const hostRoom = useCallback(async ({ hostName, themeId, totalRounds, scoringMode }) => {
         if (!isBackendEnabled()) {
-            toast.error('Multiplayer requires Supabase — check your .env');
+            toast.error('Multiplayer requires Supabase - check your .env');
             return null;
         }
 
-        const roomData = await createRoom({ hostName, themeId, totalRounds, scoringMode });
-        if (!roomData) {
+        const result = await createRoom({
+            hostName,
+            themeId,
+            totalRounds,
+            scoringMode,
+            avatar: user?.avatar || null,
+        });
+        if (!result?.room) {
             toast.error('Failed to create room');
             return null;
         }
 
-        setRoom(roomData);
+        setRoom(result.room);
+        setRoomSession(result.session || null);
         setIsHost(true);
-        setPlayerName(hostName);
-        setRoomPhase('lobby');
+        setPlayerName(result.session?.playerName || hostName);
+        setRoomPhase(getRoomPhaseFromStatus(result.room.status));
 
-        // Fetch initial players
-        const roomPlayers = await getRoomPlayers(roomData.id);
+        const roomPlayers = await getRoomPlayers(result.room.id);
         setPlayers(roomPlayers);
+        await hydrateRoomState(result.room);
+        setupSubscriptions(result.room.id);
 
-        // Subscribe to realtime
-        setupSubscriptions(roomData.id);
-
-        toast.success(`Room ${roomData.code} created!`);
-        return roomData;
-    }, [toast, setupSubscriptions]);
+        toast.success(`Room ${result.room.code} created!`);
+        reportAppEvent('multiplayer_room_created', {
+            secureMode: result.session?.secureMode !== false,
+            scoringMode,
+            totalRounds,
+        });
+        return result.room;
+    }, [setupSubscriptions, toast, user?.avatar]);
 
     const joinRoomByCode = useCallback(async (code, name, avatar) => {
         if (!isBackendEnabled()) {
-            toast.error('Multiplayer requires Supabase — check your .env');
+            toast.error('Multiplayer requires Supabase - check your .env');
             return null;
         }
 
@@ -166,37 +213,42 @@ export function RoomProvider({ children }) {
         }
 
         setRoom(result.room);
+        setRoomSession(result.session || null);
         setIsHost(false);
-        setPlayerName(name);
-        setRoomPhase('lobby');
+        setPlayerName(result.session?.playerName || name);
+        setRoomPhase(getRoomPhaseFromStatus(result.room.status));
 
-        // Fetch current players
         const roomPlayers = await getRoomPlayers(result.room.id);
         setPlayers(roomPlayers);
-
-        // Subscribe to realtime
+        await hydrateRoomState(result.room);
         setupSubscriptions(result.room.id);
 
         toast.success(`Joined room ${result.room.code}!`);
+        reportAppEvent('multiplayer_room_joined', {
+            secureMode: result.session?.secureMode !== false,
+            roomCode: result.room.code,
+        });
         return result.room;
-    }, [toast, setupSubscriptions]);
+    }, [setupSubscriptions, toast]);
 
     const leaveCurrentRoom = useCallback(async () => {
         if (room && playerName) {
-            await leaveRoom(room.id, playerName);
+            await leaveRoom(room.id, playerName, roomSession);
         }
         cleanup();
         toast.info('Left the room');
-    }, [room, playerName, cleanup, toast]);
+    }, [cleanup, playerName, room, roomSession, toast]);
 
     const startMultiplayerRound = useCallback(async () => {
         if (!room || !isHost) return false;
 
         const theme = getThemeById(room.theme_id);
         const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
-        let left, right;
         const customPool = getCustomImages();
         const useCustom = mediaType === MEDIA_TYPES.IMAGE && user?.useCustomImages && customPool.length >= 2;
+
+        let left;
+        let right;
         if (useCustom) {
             const shuffled = [...customPool].sort(() => Math.random() - 0.5);
             [left, right] = shuffled.slice(0, 2).map((img) => ({
@@ -209,133 +261,155 @@ export function RoomProvider({ children }) {
         } else {
             [left, right] = buildThemeAssets(theme, 2, mediaType);
         }
-        const assets = { left, right };
 
-        const success = await startRoundApi(room.id, room.round_number, assets);
+        const success = await startRoundApi(room.id, room.round_number, { left, right }, roomSession);
         if (!success) {
             toast.error('Failed to start round');
             return false;
         }
         return true;
-    }, [room, isHost, toast, user?.useCustomImages, user?.mediaType]);
+    }, [isHost, room, roomSession, toast, user?.mediaType, user?.useCustomImages]);
 
     const submitMultiplayerAnswer = useCallback(async (submission) => {
         if (!room || !playerName) return false;
 
-        const success = await submitAnswer(room.id, room.round_number, playerName, submission);
+        const success = await submitAnswer(room.id, room.round_number, playerName, submission, {
+            ...roomSession,
+            playerName,
+        });
         if (!success) {
             toast.error('Failed to submit answer');
             return false;
         }
         toast.success('Answer submitted!');
         return true;
-    }, [room, playerName, toast]);
+    }, [playerName, room, roomSession, toast]);
 
     const scoreAllSubmissions = useCallback(async () => {
         if (!room || !isHost) return;
-        
+
         const scoringMode = room.scoring_mode || 'ai';
-        
+
         if (scoringMode === 'ai') {
-            // Handle AI scoring
             const theme = getThemeById(room.theme_id);
             const assets = room.assets;
-            
-            // Fetch all submissions for this round
-            const subs = await getRoundSubmissions(room.id, room.round_number);
-            
-            for (const sub of subs) {
-                if (sub.score) continue; // Already scored
+            const roundSubmissions = await getRoundSubmissions(room.id, room.round_number);
+
+            for (const submission of roundSubmissions) {
+                if (submission.score) continue;
                 try {
-                    const scoreResult = await scoreSubmission(sub.submission, assets.left, assets.right);
+                    const scoreResult = await scoreSubmission(submission.submission, assets.left, assets.right);
                     const multiplier = theme?.modifier?.scoreMultiplier || 1;
                     const finalScore = Math.min(10, Math.max(1, Math.round(scoreResult.score * multiplier)));
-                    await updateSubmissionScore(sub.id, {
-                        ...scoreResult,
-                        finalScore,
-                        scoreMultiplier: multiplier,
-                    });
+                    await updateSubmissionScore(
+                        submission.id,
+                        {
+                            ...scoreResult,
+                            finalScore,
+                            scoreMultiplier: multiplier,
+                        },
+                        roomSession
+                    );
                 } catch (err) {
                     console.warn('Failed to score submission:', err);
+                    reportAppError('multiplayer_score_submission', err, {
+                        roomId: room.id,
+                        roundNumber: room.round_number,
+                    });
                 }
             }
-            
-        } else if (scoringMode === 'human' || scoringMode === 'hybrid' || scoringMode === 'friends') {
-            // Handle human scoring - create shared round for friends to judge
-            try {
-                const { saveSharedRound } = await import('../services/backend');
-                
-                const subs = await getRoundSubmissions(room.id, room.round_number);
-                
-                // Create a shared round for this multiplayer round
-                const sharedRound = {
-                    assets: room.assets,
-                    submission: createAggregateSubmission(subs),
-                    shareFrom: `multiplayer-${scoringMode}`,
-                    roomCode: room.code,
-                    theme: room.theme_id,
-                };
-                
-                await saveSharedRound(sharedRound);
-                
-                await setRoomStatus(room.id, 'revealing');
-                toast.info('Round set up for friend judging! Share the link with others.');
-                
-            } catch (err) {
-                console.warn('Failed to set up friend judging:', err);
-                await setRoomStatus(room.id, 'revealing');
-                toast.warn('Failed to set up friend judging — showing results anyway.');
-            }
+        } else {
+            toast.info('All answers are in - vote for the winner.');
         }
 
-        // Move to revealing
-        await setRoomStatus(room.id, 'revealing');
-    }, [room, isHost]);
+        await setRoomStatus(room.id, 'revealing', roomSession);
+    }, [isHost, room, roomSession, toast]);
+
+    const castVoteForSubmission = useCallback(async (submissionId) => {
+        if (!room) return { ok: false, error: 'Room not available' };
+
+        const result = await castVote(room.id, room.round_number, submissionId, {
+            ...roomSession,
+            playerName,
+        });
+        if (!result.ok && result.error) {
+            toast.warn(result.error);
+            reportAppError('multiplayer_cast_vote', new Error(result.error), {
+                roomId: room.id,
+                roundNumber: room.round_number,
+            });
+        }
+        return result;
+    }, [playerName, room, roomSession, toast]);
+
+    const finalizeMultiplayerVoting = useCallback(async () => {
+        if (!room || !isHost) return false;
+
+        const result = await finalizeRoomVoting(room.id, room.round_number, roomSession);
+        if (!result.ok) {
+            toast.error(result.error || 'Failed to finalize votes');
+            reportAppError('multiplayer_finalize_votes', new Error(result.error || 'Failed to finalize votes'), {
+                roomId: room.id,
+                roundNumber: room.round_number,
+            });
+            return false;
+        }
+
+        toast.success('Votes finalized!');
+        reportAppEvent('multiplayer_votes_finalized', {
+            roomId: room.id,
+            roundNumber: room.round_number,
+        });
+        return true;
+    }, [isHost, room, roomSession, toast]);
 
     const advanceToNextRound = useCallback(async () => {
         if (!room || !isHost) return;
 
         const nextRound = room.round_number + 1;
-        if (nextRound > room.total_rounds) {
-            await setRoomStatus(room.id, 'finished');
+        if (roomSession?.hostToken) {
+            const result = await advanceRoom(room.id, roomSession);
+            if (!result.ok) {
+                toast.error(result.error || 'Failed to advance round');
+            }
             return;
         }
 
-        // Update room to waiting with incremented round
-        try {
-            if (!isBackendEnabled() || !supabase) {
-                toast.error('Supabase is not configured');
-                return;
-            }
-            const { error } = await supabase
-                .from('rooms')
-                .update({ status: 'waiting', round_number: nextRound, assets: null })
-                .eq('id', room.id);
-            if (error) throw error;
-        } catch (err) {
-            toast.error('Failed to advance round');
+        if (nextRound > room.total_rounds) {
+            await setRoomStatus(room.id, 'finished', roomSession);
+            return;
         }
-    }, [room, isHost, toast]);
+
+        const moved = await setRoomStatus(room.id, 'waiting', roomSession);
+        if (!moved) {
+            toast.error('Failed to advance round');
+            return;
+        }
+
+        setRoom((prev) => prev ? { ...prev, round_number: nextRound, assets: null, status: 'waiting' } : prev);
+        setSubmissions([]);
+        setVotes([]);
+    }, [isHost, room, roomSession, toast]);
 
     const value = {
-        // State
         room,
         players,
         submissions,
+        votes,
         isHost,
         isMultiplayer,
         roomCode,
         playerName,
         roomPhase,
         allSubmitted,
-
-        // Actions
         hostRoom,
         joinRoomByCode,
         leaveCurrentRoom,
         startMultiplayerRound,
         submitMultiplayerAnswer,
         scoreAllSubmissions,
+        castVoteForSubmission,
+        finalizeMultiplayerVoting,
         advanceToNextRound,
         cleanup,
     };

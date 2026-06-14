@@ -1,121 +1,113 @@
-# Venn with Friends 🎯
+# Venn with Friends
 
-A creative multiplayer party game where players connect two random concepts with witty, clever phrases. Players can share their creations and get scored by friends or AI!
+A creative party game where players connect two prompts with one witty phrase. The current app already supports solo sessions, shareable friend judging, progression/unlocks, and Supabase-backed realtime multiplayer.
 
-## Features
+## Current Product
 
-- **Solo Play**: Create connections between random concepts and get AI-scored
-- **Multiplayer**: Real-time rooms where players compete simultaneously  
-- **Friend Judging**: Share your creations via URL for friends to judge
-- **AI Scoring**: Google Gemini evaluates submissions on wit, logic, originality, and clarity
-- **Fusion Images**: AI-generated visualizations of creative connections
+### Core loops
+
+- Solo sessions with 3, 5, or 7 rounds
+- Daily challenge mode
+- AI judge and manual judge options
+- Share a round for friend judging
+- Realtime multiplayer rooms
+- Gallery/history of saved creations
+- Unlocks, streaks, avatars, and themes
+- Image, video, and audio prompt modes
+- Optional custom image packs for image play
+
+### Feature status
+
+| Area | Works without keys | Works with Gemini | Works with Supabase | Notes |
+|---|---|---|---|---|
+| Solo sessions | Yes | Yes | N/A | Core local loop works out of the box |
+| AI scoring | Mock fallback | Yes | N/A | Falls back to mock scoring when Gemini is unavailable |
+| Fusion images | Curated fallback | Yes | N/A | Falls back to curated fusion art |
+| Friend judging links | Basic/local fallback | N/A | Yes | Backend persistence is best when Supabase is configured |
+| Gallery/history | Yes | N/A | Optional | Local-first, enriched by backend judgements when available |
+| Multiplayer rooms | No | Optional | Yes | Requires Supabase for realtime room play |
+| Multiplayer manual/friend scoring | No | N/A | Yes | Secure room voting, vote recovery, and shared results depend on the latest Supabase RPC schema |
 
 ## Quick Start
 
-1. **Install dependencies**:
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. **Configure environment** (optional - game works without):
+2. Configure environment variables if you want live services:
    - Copy `.env.example` to `.env`
-   - Add Supabase credentials for multiplayer
-   - Add Gemini API key for AI scoring/image generation
+   - Add `VITE_GEMINI_API_KEY` for live AI scoring and generated fusion images
+   - Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for realtime multiplayer and backend persistence
+   - If you plan to use Supabase in production, apply `supabase/schema.sql` so secure RPCs and authoritative multiplayer voting are available
 
-3. **Run in development**:
+3. Start development:
    ```bash
    npm run dev
    ```
 
-4. **Build for production**:
+4. Run tests:
+   ```bash
+   npm run test
+   ```
+
+5. Build production assets:
    ```bash
    npm run build
    ```
 
-5. **Deploy to GitHub Pages**:
-   ```bash
-   # Run the deployment script
-   ./scripts/deploy.ps1  # On Windows PowerShell
-   ```
-   See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment options.
+## Deployment
 
-## Tech Stack
+The repo already includes a GitHub Pages workflow at `.github/workflows/deploy.yml`.
 
-- **Frontend**: React + Vite + Tailwind CSS
-- **Backend**: Supabase (real-time database)
-- **AI**: Google Gemini (scoring & image generation)
-- **Multiplayer**: Real-time via Supabase realtime subscriptions
+### GitHub Pages
 
-## Game Flow
+- Push to `main` to trigger the Pages workflow
+- Make sure GitHub Pages is enabled with source set to `GitHub Actions`
+- For Pages builds, Vite uses `/giant-schrodinger/` as the base path automatically in CI
 
-### Solo Mode
-1. Two random concept images appear
-2. Player creates a witty connection phrase
-3. AI judges submission on wit, logic, originality, clarity
-4. Share results via URL for friend judging
+### Vercel
 
-### Multiplayer Mode  
-1. Host creates room with room code
-2. Players join with avatars and names
-3. All players play rounds simultaneously
-4. AI scoring determines winners
-5. Real-time updates for all players
+`vercel.json` is also present for Vercel deployment. Vercel is useful if you want cleaner SPA routing and a simpler hosted preview flow.
 
-## Configuration
+More detail: [DEPLOYMENT.md](DEPLOYMENT.md)
 
-See [SETUP.md](SETUP.md) for detailed environment setup instructions.
-
-### Environment Variables
+## Environment Variables
 
 | Variable | Purpose | Required |
-|----------|---------|----------|
-| `VITE_SUPABASE_URL` | Multiplayer backend | Optional |
-| `VITE_SUPABASE_ANON_KEY` | Database access | Optional |
-| `VITE_GEMINI_API_KEY` | AI scoring & images | Optional |
+|---|---|---|
+| `VITE_GEMINI_API_KEY` | Live AI judging and generated fusion images | Optional |
+| `VITE_SUPABASE_URL` | Realtime multiplayer and backend persistence | Optional |
+| `VITE_SUPABASE_ANON_KEY` | Realtime multiplayer and backend persistence | Optional |
 
-**Note**: The app runs fine without these - multiplayer uses mock data, scoring uses mock scores, and images use curated themes.
-
-## Development
+## Validation Commands
 
 ```bash
-# Start development server
-npm run dev
-
-# Run linting
 npm run lint
-
-# Build for production  
+npm run test
+npm run test:e2e:desktop
 npm run build
-
-# Preview production build
 npm run preview
 ```
 
-## File Structure
+For release readiness, use [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
+For a launch rehearsal, use [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md).
 
-```
+## Project Structure
+
+```text
 src/
-├── components/          # Reusable UI components
-├── context/            # React context providers
-├── features/           # Feature-specific components
-│   ├── gallery/        # Results gallery
-│   ├── judge/          # Friend judging interface
-│   ├── lobby/          # Game lobby/intro
-│   ├── reveal/         # Results reveal
-│   └── round/          # Core gameplay
-├── services/           # API and external services
-├── data/              # Static data and themes
-└── lib/               # Utility functions
+  components/   reusable UI
+  context/      React providers and app state
+  data/         themes and prompt assets
+  features/     lobby, round, reveal, gallery, judge, room, summary
+  hooks/        shared hooks
+  lib/          utilities
+  services/     storage, sharing, AI, multiplayer, backend access
 ```
 
-## Contributing
+## Product Planning
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-MIT License - feel free to use and modify!
+- Product roadmap and current-state review: [PRD.md](PRD.md)
+- Deployment and release guidance: [DEPLOYMENT.md](DEPLOYMENT.md)
+- Manual QA support: [TEST_REVIEW_CHECKLIST.md](TEST_REVIEW_CHECKLIST.md), [MANUAL_TESTING_GUIDE.md](MANUAL_TESTING_GUIDE.md)

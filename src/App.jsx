@@ -58,6 +58,7 @@ function GameContent() {
                 {roomPhase === 'lobby' && <RoomLobby />}
                 {roomPhase === 'playing' && <MultiplayerRound />}
                 {roomPhase === 'revealing' && <MultiplayerReveal />}
+                {roomPhase === 'results' && <MultiplayerReveal />}
                 {roomPhase === 'finished' && <MultiplayerReveal />}
             </Layout>
         );

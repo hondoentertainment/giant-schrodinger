@@ -17,18 +17,25 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Run lint
+        run: npm run lint
 
       - name: Run unit tests
         run: npm run test
@@ -40,10 +47,13 @@ jobs:
         run: npm run test:e2e:desktop
         env:
           CI: true
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Build
         run: npm run build
-      
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
