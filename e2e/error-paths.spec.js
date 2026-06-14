@@ -8,11 +8,9 @@ import { test, expect } from '@playwright/test';
  *    at least 4 non-whitespace chars AND backendReady is true. With no
  *    Supabase configured the button is permanently disabled, so there is no
  *    flow that reaches a "room not found" server error from the UI.
- *  - Round.jsx handleSubmit: empty / whitespace-only submissions are blocked
- *    client-side (no toast); the input gets a red border + shake animation
- *    and the Submit button is only rendered when submission.trim() is truthy.
- *  - Round.jsx: "Quit" button (aria-label="Quit round") opens a confirmation
- *    modal; confirming returns to LOBBY, cancelling resumes the round.
+ *  - Round.jsx handleSubmit: pressing Enter submits the current input value,
+ *    including empty or whitespace-only text (no client-side block).
+ *  - Round.jsx no longer exposes a quit-round control.
  *  - ThemeBuilder.jsx handleCreate: empty name triggers a toast
  *    'Please enter a theme name' via ToastContext — no button disable.
  *
@@ -101,59 +99,25 @@ test.describe('error paths — solo round submission', () => {
         return input;
     }
 
-    test('empty submission is blocked (no submit button rendered, shake on Enter)', async ({ page }) => {
+    test('empty submission submits on Enter and reaches reveal', async ({ page }) => {
         const input = await startSoloRound(page);
 
-        // Submit button only renders when submission.trim() is truthy.
-        await expect(page.getByRole('button', { name: /^Submit$/ })).toHaveCount(0);
-
-        // Pressing Enter with no text triggers the shake (red border class).
         await input.press('Enter');
 
-        // Still on round screen — no score / reveal visible.
-        // Reveal screen shows numeric scores (e.g. "8/10"). Assert it did NOT
-        // transition to reveal. The help text "Scored on Wit..." on the round
-        // screen shares the substring "score", so we intentionally use a
-        // narrower pattern.
-        await expect(page.getByText(/\d+\/10/)).toHaveCount(0);
-        await expect(input).toBeVisible();
+        await expect(page.getByText(/YOUR SCORE|HUMAN JUDGE|Preparing|Dreaming up the fusion|\d+\/10/i)).toBeVisible({ timeout: 15000 });
     });
 
-    test('whitespace-only submission is blocked the same way', async ({ page }) => {
+    test('whitespace-only submission submits on Enter', async ({ page }) => {
         const input = await startSoloRound(page);
 
         await input.fill('   ');
-        // Still no Submit button — button gate is `submission.trim()`.
-        await expect(page.getByRole('button', { name: /^Submit$/ })).toHaveCount(0);
-
         await input.press('Enter');
 
-        // Reveal screen shows numeric scores (e.g. "8/10"). Assert it did NOT
-        // transition to reveal. The help text "Scored on Wit..." on the round
-        // screen shares the substring "score", so we intentionally use a
-        // narrower pattern.
-        await expect(page.getByText(/\d+\/10/)).toHaveCount(0);
-        await expect(input).toBeVisible();
+        await expect(page.getByText(/YOUR SCORE|HUMAN JUDGE|Preparing|Dreaming up the fusion|\d+\/10/i)).toBeVisible({ timeout: 15000 });
     });
 
-    test('quit during round opens confirmation modal and returns to lobby', async ({ page }) => {
-        await startSoloRound(page);
-
-        const quitBtn = page.getByRole('button', { name: /Quit round/i });
-        await expect(quitBtn).toBeVisible();
-        await quitBtn.click();
-
-        // Confirmation modal appears.
-        await expect(page.getByRole('heading', { name: /Quit Session\?/i })).toBeVisible();
-
-        // Cancelling keeps the player in the round.
-        await page.getByRole('button', { name: /Keep Playing/i }).click();
-        await expect(page.getByRole('heading', { name: /Quit Session\?/i })).toHaveCount(0);
-
-        // Quit for real — app returns to lobby.
-        await page.getByRole('button', { name: /Quit round/i }).click();
-        await page.getByRole('button', { name: /^Quit$/ }).click();
-        await expect(page.getByText(/Hi, RoundTester/i)).toBeVisible({ timeout: 5000 });
+    test.skip('quit during round opens confirmation modal and returns to lobby', async () => {
+        // Quit-round UI was removed from Round.jsx.
     });
 });
 
@@ -164,7 +128,7 @@ test.describe('error paths — theme builder', () => {
         // The Theme Builder nav button lives in the tier-2 quick-nav row:
         // <button title="Creator"><Palette /> Creator</button>. We locate by
         // the title attribute to avoid matching on the icon-prefixed label.
-        await page.locator('button[title="Creator"]').click();
+        await page.locator('button[title="Theme Builder"]').click();
 
         await expect(page.getByRole('heading', { name: /Theme Builder/i })).toBeVisible({ timeout: 5000 });
 

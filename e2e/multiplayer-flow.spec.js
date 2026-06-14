@@ -1,39 +1,38 @@
 import { test, expect } from '@playwright/test';
 
+const APP_URL = '/giant-schrodinger/';
+
+async function createProfile(page, name = 'TestPlayer') {
+  await page.goto(APP_URL);
+  await page.getByPlaceholder(/Enter your name/i).fill(name);
+  await page.getByRole('button', { name: /Join Lobby/i }).click();
+  await expect(page.getByText(new RegExp(`Hi, ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+}
+
+async function startSoloRound(page) {
+  await page.getByRole('button', { name: /Solo Session|Start Round/i }).first().click();
+  const roundInput = page.getByPlaceholder(/What connects these two/i);
+  await expect(roundInput).toBeVisible({ timeout: 10000 });
+  return roundInput;
+}
+
 test.describe('Multiplayer Flow', () => {
   test('create and join room', async ({ page }) => {
-    await page.goto('/');
-    // Create profile
-    await page.fill('[placeholder*="name" i]', 'Player1');
-    await page.click('button:has-text("Start")');
-    // Navigate to multiplayer (if visible)
-    // This tests the basic lobby flow
-    await expect(page.locator('text=/Venn with Friends/i')).toBeVisible();
+    await createProfile(page, 'Player1');
+    await expect(page.getByRole('button', { name: /Play with Friends/i })).toBeVisible();
   });
 
   test('solo round flow completes', async ({ page }) => {
-    await page.goto('/');
-    await page.fill('[placeholder*="name" i]', 'TestPlayer');
-    await page.click('button:has-text("Start")');
-    // Wait for round to load (get-ready countdown)
-    await page.waitForTimeout(4000); // 3s countdown + buffer
-    // Type submission
-    const input = page.locator('[placeholder*="connects" i]');
-    if (await input.isVisible()) {
-      await input.fill('Both are creative expressions');
-      await input.press('Enter');
-      // Wait for score
-      await expect(page.locator('text=/\\/10/')).toBeVisible({ timeout: 10000 });
-    }
+    await createProfile(page);
+    const input = await startSoloRound(page);
+    await input.fill('Both are creative expressions');
+    await input.press('Enter');
+    await expect(page.getByText(/YOUR SCORE|HUMAN JUDGE|Preparing|Dreaming up the fusion|\d+\/10/i)).toBeVisible({ timeout: 15000 });
   });
 
   test('gallery shows past rounds', async ({ page }) => {
-    await page.goto('/');
-    // Check gallery is accessible
-    const galleryBtn = page.locator('button:has-text("Gallery"), [aria-label*="gallery" i]');
-    if (await galleryBtn.isVisible()) {
-      await galleryBtn.click();
-      await expect(page.locator('text=/connections/i')).toBeVisible({ timeout: 5000 });
-    }
+    await createProfile(page);
+    await page.getByRole('button', { name: /View connection gallery|Gallery/i }).click();
+    await expect(page.getByText(/Connection Gallery/i)).toBeVisible({ timeout: 5000 });
   });
 });
