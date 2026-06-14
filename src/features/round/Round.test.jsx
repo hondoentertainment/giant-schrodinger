@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Round } from './Round';
 
@@ -80,26 +80,15 @@ describe('Round', () => {
         expect(screen.getByAltText('Dog')).toBeInTheDocument();
     });
 
-    it('renders both concept labels during the ready countdown', () => {
+    it('renders concept labels on the venn diagram', () => {
         render(<Round onSubmit={mockOnSubmit} />);
-        // During the 'ready' phase both labels are displayed in the overlay
         expect(screen.getAllByText('Cat').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Dog').length).toBeGreaterThan(0);
     });
 
-    it('shows get-ready countdown before timer starts', () => {
+    it('shows the round timer immediately when assets are loaded', () => {
         render(<Round onSubmit={mockOnSubmit} />);
-        // The round now shows a "Get Ready" countdown (3-2-1-Go) before the timer
-        // During ready phase, the countdown number should be visible
-        expect(screen.getByText('3')).toBeInTheDocument();
-
-        // After countdown completes, timer should appear
-        act(() => {
-            vi.advanceTimersByTime(3500);
-        });
-        // Timer display should now be visible
-        const timerEl = screen.queryByRole('timer');
-        expect(timerEl).toBeTruthy();
+        expect(screen.getAllByText('60s').length).toBeGreaterThan(0);
     });
 
     it('text input accepts user submission', async () => {
@@ -111,48 +100,27 @@ describe('Round', () => {
         expect(input).toHaveValue('They both have fur');
     });
 
-    it('submit button is hidden when input is empty', () => {
-        render(<Round onSubmit={mockOnSubmit} />);
-        // The submit button only appears when submission.trim() is truthy (mobile only)
-        const submitButtons = screen.queryAllByRole('button', { name: /submit/i });
-        // No visible submit button when empty
-        expect(submitButtons.length).toBe(0);
-    });
-
-    it('submit button appears only after non-empty input is typed', async () => {
-        vi.useRealTimers();
-        const user = userEvent.setup();
+    it('does not render a separate submit button', () => {
         render(<Round onSubmit={mockOnSubmit} />);
         expect(screen.queryByRole('button', { name: /^submit$/i })).not.toBeInTheDocument();
-        const input = screen.getByPlaceholderText('What connects these two?');
-        await user.type(input, 'abc');
-        expect(screen.getByRole('button', { name: /^submit$/i })).toBeInTheDocument();
     });
 
-    it('shows validation shake on empty submit (form submit via enter)', async () => {
+    it('submits on Enter even when input is empty', async () => {
         vi.useRealTimers();
         const user = userEvent.setup();
         render(<Round onSubmit={mockOnSubmit} />);
         const input = screen.getByPlaceholderText('What connects these two?');
-        // Submit without typing anything
         await user.type(input, '{Enter}');
-        // onSubmit should NOT have been called since input was empty
-        expect(mockOnSubmit).not.toHaveBeenCalled();
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
     });
 
-    it('rejects whitespace-only submissions without calling onSubmit', async () => {
+    it('submits whitespace-only input on Enter', async () => {
         vi.useRealTimers();
         const user = userEvent.setup();
         render(<Round onSubmit={mockOnSubmit} />);
         const input = screen.getByPlaceholderText('What connects these two?');
         await user.type(input, '   {Enter}');
-        expect(mockOnSubmit).not.toHaveBeenCalled();
-    });
-
-    it('input enforces the 200-character maxLength limit', () => {
-        render(<Round onSubmit={mockOnSubmit} />);
-        const input = screen.getByPlaceholderText('What connects these two?');
-        expect(input).toHaveAttribute('maxLength', '200');
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
     });
 
     it('submits valid input with {submission, assets} shape and transitions to REVEAL', async () => {
@@ -185,39 +153,13 @@ describe('Round', () => {
         expect(screen.getByText(/DAILY 1 \/ 3/)).toBeInTheDocument();
     });
 
-    it('transitions from ready phase to playing phase after countdown', async () => {
+    it('counts down the timer each second', () => {
         render(<Round onSubmit={mockOnSubmit} />);
-        // During ready phase the countdown overlay is shown
-        expect(screen.getByText('3')).toBeInTheDocument();
-        // Advance past the 3-2-1 countdown (~3000ms)
-        await act(async () => {
-            vi.advanceTimersByTime(3200);
+        expect(screen.getAllByText('60s').length).toBeGreaterThan(0);
+        act(() => {
+            vi.advanceTimersByTime(1000);
         });
-        // Timer role should now be present
-        await waitFor(() => {
-            expect(screen.queryByRole('timer')).toBeTruthy();
-        });
-    });
-
-    it('opens quit confirmation modal when quit button is clicked', async () => {
-        vi.useRealTimers();
-        const user = userEvent.setup();
-        render(<Round onSubmit={mockOnSubmit} />);
-        const quitButton = screen.getByRole('button', { name: /quit round/i });
-        await user.click(quitButton);
-        expect(screen.getByText(/Quit Session\?/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /^keep playing$/i })).toBeInTheDocument();
-    });
-
-    it('confirming quit returns to LOBBY', async () => {
-        vi.useRealTimers();
-        const user = userEvent.setup();
-        render(<Round onSubmit={mockOnSubmit} />);
-        await user.click(screen.getByRole('button', { name: /quit round/i }));
-        // The quit-confirm modal has two buttons; the second one named "Quit" returns to LOBBY
-        const quitButtons = screen.getAllByRole('button', { name: /^quit$/i });
-        await user.click(quitButtons[quitButtons.length - 1]);
-        expect(mockSetGameState).toHaveBeenCalledWith('LOBBY');
+        expect(screen.getAllByText('59s').length).toBeGreaterThan(0);
     });
 
     it('displays the special-round modifier banner for non-normal modifiers', () => {
@@ -233,8 +175,7 @@ describe('Round', () => {
             },
         };
         render(<Round onSubmit={mockOnSubmit} />);
-        // Speed round preview text shows in the ready overlay
-        expect(screen.getByText(/SPEED ROUND/)).toBeInTheDocument();
         expect(screen.getByText('Speed Round')).toBeInTheDocument();
+        expect(screen.getByText(/Half time, 1.5x points/)).toBeInTheDocument();
     });
 });

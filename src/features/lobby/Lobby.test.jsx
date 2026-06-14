@@ -119,6 +119,17 @@ vi.mock('../../lib/supabase', () => ({
     isBackendEnabled: () => mockBackendEnabled,
 }));
 
+vi.mock('../../lib/runtimeConfig', () => ({
+    getRuntimeStatus: () => ({
+        backendEnabled: mockBackendEnabled,
+        geminiEnabled: false,
+        aiScoringMode: 'mock',
+        fusionImageMode: 'curated',
+        multiplayerMode: mockBackendEnabled ? 'live' : 'disabled',
+        friendJudgingMode: mockBackendEnabled ? 'persisted' : 'local-only',
+    }),
+}));
+
 vi.mock('../../lib/haptics', () => ({
     haptic: vi.fn(),
 }));
@@ -204,33 +215,32 @@ describe('Lobby', () => {
         expect(screen.getByText('Create Profile')).toBeInTheDocument();
     });
 
-    it('shows streak-related display when streak is 0', () => {
+    it('does not show a streak badge when streak is 0', () => {
         mockUser = loggedInUser;
         render(<Lobby />);
-        // With currentStreak: 0, the lobby shows "Play today to start a streak!"
-        expect(screen.getByText('Play today to start a streak!')).toBeInTheDocument();
+        expect(screen.queryByText(/day streak/i)).not.toBeInTheDocument();
     });
 
     it('shows streak counter when streak > 0', () => {
         mockUser = loggedInUser;
         globalThis.__testStreakValue = 3;
         render(<Lobby />);
-        // The streak hero display shows "Day Streak" text
-        expect(screen.getByText('Day Streak')).toBeInTheDocument();
+        expect(screen.getByText(/3 day streak/)).toBeInTheDocument();
     });
 
-    it('shows offline mode indicator when backend is not enabled', () => {
+    it('shows runtime status card when backend is not enabled', () => {
         mockUser = loggedInUser;
         mockBackendEnabled = false;
         render(<Lobby />);
-        expect(screen.getByText(/Offline mode/)).toBeInTheDocument();
+        expect(screen.getByText(/Runtime Status/i)).toBeInTheDocument();
+        expect(screen.getByText(/Supabase missing/i)).toBeInTheDocument();
     });
 
-    it('does not show offline mode indicator when backend is enabled', () => {
+    it('does not show backend-disabled messaging when backend is enabled', () => {
         mockUser = loggedInUser;
         mockBackendEnabled = true;
         render(<Lobby />);
-        expect(screen.queryByText(/Offline mode/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Supabase missing/i)).not.toBeInTheDocument();
     });
 
     it('play button exists and is clickable', async () => {

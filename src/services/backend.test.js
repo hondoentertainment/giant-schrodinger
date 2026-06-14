@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../lib/supabase', () => ({
-    supabase: { from: vi.fn() },
+    supabase: { from: vi.fn(), rpc: vi.fn() },
     isBackendEnabled: vi.fn(),
 }));
 
@@ -51,6 +51,8 @@ describe('backend service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         isBackendEnabled.mockReturnValue(true);
+        // RPC helpers may be unavailable in test env; fall back to table access.
+        supabase.rpc.mockRejectedValue({ code: 'PGRST202', message: 'could not find the function' });
         // Silence console.warn from caught errors
         vi.spyOn(console, 'warn').mockImplementation(() => {});
     });
@@ -96,6 +98,7 @@ describe('backend service', () => {
                 image_url: 'https://img.example/x.png',
                 share_from: 'player-1',
                 collision_id: 'coll-xyz',
+                judge_mode: 'friend',
             });
             expect(chain.select).toHaveBeenCalledWith('id');
         });
@@ -132,16 +135,20 @@ describe('backend service', () => {
             });
             supabase.from.mockReturnValue(chain);
 
-            const result = await getSharedRound('r1');
+            const result = await getSharedRound('00000000-0000-4000-8000-000000000001');
             expect(result).toEqual({
                 id: 'r1',
+                backendId: 'r1',
                 roundId: 'r1',
                 assets: { left: 'L', right: 'R' },
                 submission: 'sub',
                 imageUrl: 'http://img',
                 shareFrom: 'p1',
+                collisionId: null,
+                judgeMode: 'friend',
+                expiresAt: null,
             });
-            expect(chain.eq).toHaveBeenCalledWith('id', 'r1');
+            expect(chain.eq).toHaveBeenCalledWith('id', '00000000-0000-4000-8000-000000000001');
         });
 
         it('returns null on supabase error', async () => {

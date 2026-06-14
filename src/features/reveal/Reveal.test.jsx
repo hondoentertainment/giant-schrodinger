@@ -156,11 +156,10 @@ describe('Reveal', () => {
         expect(scoreDisplays.length).toBeGreaterThan(0);
     });
 
-    it('shows "Why this score?" explanation section', async () => {
+    it('shows score breakdown and commentary after scoring', async () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
-        const explanation = await screen.findByText('Why this score?', {}, { timeout: 3000 });
-        expect(explanation).toBeInTheDocument();
-        expect(await screen.findByText(/beloved household pets/)).toBeInTheDocument();
+        expect(await screen.findByText(/Great connection between Cat and Dog!/, {}, { timeout: 3000 })).toBeInTheDocument();
+        expect(await screen.findByText(/Wit:/)).toBeInTheDocument();
     });
 
     it('share button exists after scoring', async () => {

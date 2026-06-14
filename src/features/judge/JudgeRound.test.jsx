@@ -29,13 +29,6 @@ vi.mock('../../hooks/useFocusTrap', () => ({
     useFocusTrap: vi.fn(),
 }));
 
-// Mock JudgeCalibration to skip calibration gate
-vi.mock('./JudgeCalibration', () => ({
-    JudgeCalibration: ({ onComplete }) => (
-        <button data-testid="skip-calibration" onClick={onComplete}>Skip Calibration</button>
-    ),
-}));
-
 // Mock VennDiagram to simplify rendering
 vi.mock('../round/VennDiagram', () => ({
     VennDiagram: ({ leftAsset, rightAsset }) => (
@@ -61,58 +54,32 @@ describe('JudgeRound', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        // Mark judge as calibrated so calibration gate is skipped
-        localStorage.setItem('venn_judge_calibrated', 'true');
     });
 
-    it('shows quick judge buttons (Fire, Solid, Meh)', () => {
+    it('shows the score form fields', () => {
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
-        expect(screen.getByText('Fire')).toBeInTheDocument();
-        expect(screen.getByText('Solid')).toBeInTheDocument();
-        expect(screen.getByText('Meh')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('10')).toBeInTheDocument();
+        expect(screen.getByDisplayValue('Highly Logical')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Share your verdict...')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Submit Judgement/i })).toBeInTheDocument();
     });
 
-    it('quick judge buttons submit appropriate scores', async () => {
+    it('submits a score through the form', async () => {
         const { saveJudgement } = await import('../../services/judgements');
         const user = userEvent.setup();
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
 
-        const fireBtn = screen.getByText('Fire').closest('button');
-        await user.click(fireBtn);
+        await user.type(screen.getByPlaceholderText('10'), '10');
+        await user.click(screen.getByRole('button', { name: /Submit Judgement/i }));
 
         expect(saveJudgement).toHaveBeenCalledWith(
-            'round-1',
-            expect.objectContaining({ score: 10 })
+            expect.objectContaining({
+                roundId: 'round-1',
+                collisionId: 'test-collision-1',
+                judgement: expect.objectContaining({ score: 10 }),
+            })
         );
         expect(mockToast.success).toHaveBeenCalledWith('Judgement submitted!');
-    });
-
-    it('Solid button submits score of 8', async () => {
-        const { saveJudgement } = await import('../../services/judgements');
-        const user = userEvent.setup();
-        render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
-
-        const solidBtn = screen.getByText('Solid').closest('button');
-        await user.click(solidBtn);
-
-        expect(saveJudgement).toHaveBeenCalledWith(
-            'round-1',
-            expect.objectContaining({ score: 8 })
-        );
-    });
-
-    it('Meh button submits score of 5', async () => {
-        const { saveJudgement } = await import('../../services/judgements');
-        const user = userEvent.setup();
-        render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
-
-        const mehBtn = screen.getByText('Meh').closest('button');
-        await user.click(mehBtn);
-
-        expect(saveJudgement).toHaveBeenCalledWith(
-            'round-1',
-            expect.objectContaining({ score: 5 })
-        );
     });
 
     it('shows the submission text being judged', () => {

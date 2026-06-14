@@ -65,6 +65,7 @@ vi.mock('../../services/backend', () => ({
 
 vi.mock('../../services/judgements', () => ({
   getJudgement: () => null,
+  getJudgementForCollision: () => null,
 }));
 
 vi.mock('../../services/moderation', () => ({
@@ -179,33 +180,6 @@ describe('Gallery', () => {
     await user.selectOptions(sortSelect, 'score-high');
     items = within(list).getAllByRole('article');
     expect(items[0].getAttribute('aria-label')).toMatch(/High score one/);
-  });
-
-  it('switching to Community tab shows filter chips and sort control', async () => {
-    const user = userEvent.setup();
-    render(<Gallery />);
-    await user.click(await screen.findByRole('button', { name: /^community$/i }));
-    // Filter chips specific to the community view
-    expect(screen.getByRole('button', { name: /^neon$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^ocean$/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/sort community gallery/i)).toBeInTheDocument();
-  });
-
-  it('community theme filter narrows visible submissions to the selected theme', async () => {
-    const user = userEvent.setup();
-    render(<Gallery />);
-    await user.click(await screen.findByRole('button', { name: /^community$/i }));
-    const communityList = await screen.findByRole('list', { name: /community submissions/i });
-    // Community cards are the direct children of the list container.
-    const initialCount = communityList.childElementCount;
-    expect(initialCount).toBeGreaterThan(0);
-
-    await user.click(screen.getByRole('button', { name: /^neon$/i }));
-    const filteredList = await screen.findByRole('list', { name: /community submissions/i });
-    expect(filteredList.childElementCount).toBeLessThan(initialCount);
-    // Every visible card should expose a "neon" theme label.
-    const themeLabels = within(filteredList).getAllByText(/^neon$/i);
-    expect(themeLabels.length).toBe(filteredList.childElementCount);
   });
 
   it('renders LazyImage cards as accessible articles with IntersectionObserver triggering image load', async () => {

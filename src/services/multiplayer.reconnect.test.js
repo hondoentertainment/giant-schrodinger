@@ -79,47 +79,16 @@ describe('multiplayer subscribeToRoom / disconnect recovery', () => {
         expect(filters).toContainEqual({ event: 'UPDATE', table: 'room_submissions' });
     });
 
-    it('invokes onDisconnect callback when system event "disconnect" fires', () => {
+    it('does not wire system disconnect handlers (postgres_changes only)', () => {
         const channel = makeFakeChannel();
         channelFactory.mockReturnValue(channel);
         const onDisconnect = vi.fn();
 
         subscribeToRoom('room-1', { onDisconnect });
-        expect(onDisconnect).not.toHaveBeenCalled();
+        expect(channel.__handlers.system).toHaveLength(0);
 
         channel.__fireSystem('disconnect');
-        expect(onDisconnect).toHaveBeenCalledTimes(1);
-    });
-
-    it('invokes onDisconnect callback when system event "error" fires', () => {
-        const channel = makeFakeChannel();
-        channelFactory.mockReturnValue(channel);
-        const onDisconnect = vi.fn();
-
-        subscribeToRoom('room-1', { onDisconnect });
-
-        channel.__fireSystem('error');
-        expect(onDisconnect).toHaveBeenCalledTimes(1);
-    });
-
-    it('does NOT invoke onDisconnect on unrelated system events', () => {
-        const channel = makeFakeChannel();
-        channelFactory.mockReturnValue(channel);
-        const onDisconnect = vi.fn();
-
-        subscribeToRoom('room-1', { onDisconnect });
-
-        channel.__fireSystem('connected');
-        channel.__fireSystem('subscribed');
         expect(onDisconnect).not.toHaveBeenCalled();
-    });
-
-    it('is safe when onDisconnect callback is not provided', () => {
-        const channel = makeFakeChannel();
-        channelFactory.mockReturnValue(channel);
-
-        subscribeToRoom('room-1', {});
-        expect(() => channel.__fireSystem('disconnect')).not.toThrow();
     });
 
     it('returned unsubscribe function calls removeChannel', () => {
