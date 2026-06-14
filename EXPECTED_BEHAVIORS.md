@@ -1,4 +1,4 @@
-# 🎯 Venn with Friends - Expected Behaviors & Feature Status
+# Venn with Friends - Expected Behaviors & Feature Status
 
 ## Environment Configuration
 
@@ -31,7 +31,7 @@
 
 ---
 
-## 🎮 Feature-by-Feature Expected Behavior
+## Feature-by-Feature Expected Behavior
 
 ### 1. Landing Page / Lobby
 
@@ -312,7 +312,156 @@
 
 ---
 
-## 🎨 Visual Design Expectations
+### 10. Ranked System
+
+#### Elo Rating:
+- New players start at 1000 Elo
+- Wins increase Elo; losses decrease it
+- The magnitude of change depends on the opponent's rating (larger gain for beating a higher-rated player)
+- Elo is clamped to a minimum of 0
+
+#### Tiers:
+- **Bronze**: 0-999
+- **Silver**: 1000-1499
+- **Gold**: 1500-1999
+- **Platinum**: 2000-2499
+- **Diamond**: 2500+
+- Tier badge updates automatically when Elo crosses a threshold
+
+#### Decay:
+- Elo decays if the player has not played a ranked match for 14+ days
+- Decay is gradual (small daily reduction) and stops at the floor of the current tier
+
+#### Seasonal Reset:
+- At the start of each season, Elo is soft-reset toward 1000 (compressed, not zeroed)
+- Season rewards are granted based on peak tier achieved
+
+#### Expected Behavior:
+1. Ranked panel shows current Elo, tier badge, and win/loss record
+2. After a ranked match, Elo changes are shown with an animation
+3. Promotion and demotion between tiers trigger a celebration or warning
+4. Leaderboard has a "Seasonal" tab showing current season rankings
+
+---
+
+### 11. Spectator Mode
+
+#### Expected Behavior:
+1. In a multiplayer room, non-players can join as spectators
+2. Spectators see the concepts and a live status of who has submitted
+3. Spectators cannot type or submit answers
+4. During the reveal phase, spectators see all answers and scores
+5. Spectators can send **reactions** (emoji reactions visible to all players)
+6. Spectators see **banners** (e.g., "Player X scored 95!" highlight banners)
+7. Spectator count is visible in the room UI
+
+#### Potential Issues:
+- Spectator reactions not appearing for players
+- Spectator count not updating when someone joins/leaves
+- Spectators able to submit (should be blocked)
+
+---
+
+### 12. Community Gallery
+
+#### Tabs:
+- **Recent**: Newest submissions from all players
+- **Trending**: Submissions with the most votes in the last 24-48 hours
+- **Top Rated**: Highest-scored submissions of all time
+
+#### Voting:
+- Players can upvote or downvote gallery submissions
+- Each player gets one vote per submission
+- Vote count is displayed on each card
+- Trending algorithm weights recent votes more heavily
+
+#### Expected Behavior:
+1. Gallery loads with three tab buttons at the top
+2. Switching tabs fetches and displays the appropriate list
+3. Each card shows the Venn diagram, answer text, score, and vote count
+4. Clicking a card expands it to full detail view
+5. Voting updates the count immediately (optimistic update)
+
+#### Without Supabase:
+- Gallery shows locally stored submissions only
+- Voting is client-side and does not persist across sessions
+
+---
+
+### 13. Progressive Lobby Disclosure
+
+#### Expected Behavior:
+1. **First visit**: Lobby shows only "Play Solo" and basic instructions
+2. **After 1-2 games**: Multiplayer options appear
+3. **After 5+ games**: Ranked, tournaments, daily challenge, and gallery become visible
+4. **After 10+ games**: All features are disclosed (shop, battle pass, achievements panel)
+
+#### Implementation:
+- Play count is tracked in localStorage
+- The lobby component reads the count and conditionally renders sections
+- An onboarding tour (contextual tips) appears for first-time users
+
+#### Potential Issues:
+- Features never appearing (localStorage not incrementing)
+- All features showing immediately (disclosure not gating)
+
+---
+
+### 14. Colorblind Mode
+
+#### Expected Behavior:
+1. Toggle is available in the settings panel
+2. When enabled, the Venn diagram uses patterns (stripes, dots) in addition to colors
+3. Score bands use icons alongside colors (checkmark, star, etc.)
+4. Tier badges use distinct shapes per tier
+5. All color-dependent UI elements have a secondary visual indicator
+
+#### Potential Issues:
+- Patterns not rendering on the Venn diagram
+- Setting not persisting across sessions
+
+---
+
+### 15. Server-Side Scoring
+
+#### Expected Behavior:
+1. When `VITE_SUPABASE_URL` is configured, scoring requests go through the `score-submission` Edge Function
+2. The Gemini API key is stored server-side (never exposed to the client)
+3. The Edge Function validates the submission, calls Gemini, and returns the score
+4. If the Edge Function is unavailable, the client falls back to client-side Gemini scoring (if `VITE_GEMINI_API_KEY` is set) or mock scoring
+
+#### Without Supabase:
+- Scoring is done client-side via the Gemini API directly
+- If no Gemini key either, mock scoring is used
+
+---
+
+### 16. Disconnect Recovery
+
+#### Expected Behavior:
+1. If a player disconnects during a multiplayer round, their submission state is preserved
+2. On reconnect (within 60 seconds), they rejoin the same room automatically
+3. If the round ended while disconnected, they see the results on rejoin
+4. A "Reconnecting..." banner appears during the disconnection
+5. Other players see a "Disconnected" status next to the player's name
+
+#### Without Supabase:
+- Not applicable (mock multiplayer does not simulate disconnects)
+
+---
+
+### 17. Offline Queue (PWA)
+
+#### Expected Behavior:
+1. When the device is offline, the app still loads from the service worker cache
+2. Solo rounds can be played offline with mock scoring
+3. Submissions made offline are queued in localStorage
+4. When connectivity returns, queued submissions are sent to the server
+5. A banner indicates offline status: "You are offline -- scores will sync when connected"
+
+---
+
+## Visual Design Expectations
 
 ### Color Scheme:
 - **Background**: Dark (near black) with subtle gradients

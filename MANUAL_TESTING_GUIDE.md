@@ -1,18 +1,20 @@
-# 🎯 Venn with Friends - Manual Testing Guide
+# Venn with Friends - Manual Testing Guide
 
-## 🚀 Quick Start
+## Quick Start
 
-Your development server is running at: **http://localhost:5173/giant-schrodinger/**
+Development server: **http://localhost:5173/giant-schrodinger/**
 
-Open this URL in your browser to begin testing.
+The project has 179 automated tests across 21 files (16 unit/integration + 5 Playwright E2E specs in `e2e/`). This guide covers manual testing for features that benefit from human verification.
+
+Run automated tests first:
+```bash
+npm run test              # Unit/integration tests
+npm run test:e2e:desktop  # Playwright E2E tests
+```
 
 ---
 
-## 📸 How to Take Screenshots
-
-### Windows:
-- **Full screen**: Press `Win + Shift + S` or use Snipping Tool
-- **Browser**: F12 > Right-click page > "Capture screenshot" (full page option)
+## Screenshots
 
 ### Chrome DevTools Full Page Screenshot:
 1. Press F12
@@ -24,7 +26,7 @@ Save all screenshots to: `screenshots/` folder in your project
 
 ---
 
-## 🧪 Testing Sequence
+## Testing Sequence
 
 ### Phase 1: Initial Load (5 minutes)
 
@@ -546,7 +548,139 @@ All screenshots saved in: `screenshots/`
 
 ---
 
-## ⚡ Fast Track (15-minute version)
+### Phase 10: Ranked Mode & Competitive Features (10 minutes)
+
+1. **Ranked Panel**:
+   - Navigate to Ranked mode from the lobby
+   - Check that your Elo rating, tier, and rank are displayed
+   - Verify the tier badge matches your rating range
+   - Play a ranked round and confirm Elo updates after the match
+
+2. **Spectator Mode**:
+   - In a multiplayer room, check for a "Spectate" option
+   - Spectators should see live gameplay without being able to submit
+   - Verify spectator reactions (emoji reactions) and banners display
+
+3. **Leaderboards**:
+   - Check global, friends, and seasonal tabs
+   - Verify sorting is correct (highest score first)
+
+**Checklist**:
+- [ ] Ranked panel shows Elo, tier, and rank
+- [ ] Elo updates after ranked match
+- [ ] Spectator mode displays gameplay without input
+- [ ] Spectator reactions work
+- [ ] Leaderboard tabs render correctly
+
+---
+
+### Phase 11: Community & Social Features (10 minutes)
+
+1. **Community Gallery**:
+   - Open the community gallery from the lobby
+   - Check tabs: Recent, Trending, Top Rated
+   - Verify voting (upvote/downvote) works on submissions
+   - Check that trending algorithm surfaces popular recent content
+
+2. **Story Sharing**:
+   - After a round, look for "Share Story" option
+   - Verify a shareable image is generated
+   - Check that the image includes the Venn diagram and score
+
+3. **Theme Sharing**:
+   - In the shop or profile, look for custom theme options
+   - Verify themes can be shared via URL or code
+
+4. **Comeback Celebration**:
+   - After scoring lower, then scoring higher, check for comeback animation
+   - Verify the celebration is proportional to the improvement
+
+**Checklist**:
+- [ ] Community gallery loads with tabs
+- [ ] Voting works on gallery submissions
+- [ ] Story sharing generates an image
+- [ ] Theme sharing produces a shareable link
+- [ ] Comeback celebration triggers after improvement
+
+---
+
+### Phase 12: Progression & Events (10 minutes)
+
+1. **Achievement Progress**:
+   - Open the achievements panel
+   - Verify progress bars show partial completion
+   - Check that milestone popups appear when thresholds are crossed
+   - Verify achievement categories are organized
+
+2. **Score Coaching**:
+   - After a round, check for coaching feedback below the score
+   - Verify tips are contextual (e.g., "Try more specific connections" for low originality)
+   - Check that score bands display (Amazing / Great / Solid / Room to grow)
+
+3. **Weekly Events**:
+   - Check the lobby for a weekly event banner
+   - Verify the event has a theme, timer, and special rules
+   - Play a round in the event and confirm scores count toward the event leaderboard
+
+4. **Battle Pass**:
+   - Open the battle pass panel from the lobby or shop
+   - Verify tiers show locked/unlocked status
+   - Check that XP progress is tracked across games
+
+**Checklist**:
+- [ ] Achievement progress bars display correctly
+- [ ] Score coaching tips appear after rounds
+- [ ] Weekly event banner and timer show in lobby
+- [ ] Battle pass tiers and XP progress render
+
+---
+
+### Phase 13: Accessibility & Progressive Disclosure (5 minutes)
+
+1. **Colorblind Mode**:
+   - Toggle colorblind mode in settings
+   - Verify Venn diagram uses high-contrast or pattern-based differentiation
+   - Check that score bands and tier badges remain distinguishable
+
+2. **Progressive Lobby Disclosure**:
+   - Clear localStorage to simulate a new user
+   - Verify the lobby shows a simplified UI (fewer buttons, guided flow)
+   - Play a few rounds and confirm more features appear in the lobby over time
+
+3. **Keyboard Navigation**:
+   - Tab through the lobby, round, and results screens
+   - Verify focus indicators are visible
+   - Check that modals trap focus correctly
+
+**Checklist**:
+- [ ] Colorblind mode changes diagram colors/patterns
+- [ ] New users see simplified lobby
+- [ ] Lobby complexity increases with play count
+- [ ] Focus trapping works in modals
+- [ ] Keyboard navigation reaches all interactive elements
+
+---
+
+### Phase 14: E2E Test Coverage Reference
+
+The `e2e/` directory contains 5 Playwright spec files covering automated flows:
+
+| Spec | What it tests |
+|------|--------------|
+| `solo-flow.spec.js` | Full solo round from lobby to results |
+| `multiplayer-flow.spec.js` | Room creation, joining, and gameplay |
+| `judge-share.spec.js` | Share link generation and judge interface |
+| `responsive.spec.js` | Mobile and tablet layout breakpoints |
+| `accessibility.spec.js` | Focus management, ARIA labels, keyboard nav |
+
+Run them with:
+```bash
+npm run test:e2e:desktop
+```
+
+---
+
+## Fast Track (15-minute version)
 
 If you're short on time, test these critical paths:
 

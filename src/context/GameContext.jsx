@@ -81,6 +81,7 @@ export function GameProvider({ children }) {
     const [sessionResults, setSessionResults] = useState([]);
     const [sessionArc, setSessionArc] = useState([]);
     const [isDailyChallenge, setIsDailyChallenge] = useState(false);
+    const [usedAssetIds, setUsedAssetIds] = useState([]);
 
     const currentModifier = useMemo(() => {
         if (!sessionArc.length || roundNumber < 1) return ROUND_MODIFIERS.normal;
@@ -114,8 +115,15 @@ export function GameProvider({ children }) {
         setRoundComplete(false);
         setSessionArc(arc);
         setIsDailyChallenge(daily);
+        setUsedAssetIds([]);
         setGameState('LOBBY');
     };
+
+    const trackUsedAssets = (assets) => {
+        setUsedAssetIds((prev) => [...prev, ...assets.map((a) => a.id).filter(Boolean)]);
+    };
+
+    const getUsedAssetIds = () => usedAssetIds;
 
     const beginRound = () => {
         setRoundComplete(false);
@@ -130,11 +138,17 @@ export function GameProvider({ children }) {
             finalScore = finalScore >= (mod.scoreThreshold || 7) ? finalScore * 2 : 0;
         }
 
+        // Daily challenge bonus: 1.5x multiplier
+        if (isDailyChallenge) {
+            finalScore = Math.round(finalScore * 1.5);
+        }
+
         const enrichedResult = {
             ...result,
             score: finalScore,
             modifier: mod,
             roundNumber,
+            isDailyChallenge,
         };
         setSessionResults((prev) => [...prev, enrichedResult]);
         setSessionScore((prev) => prev + finalScore);
@@ -164,6 +178,7 @@ export function GameProvider({ children }) {
         setSessionResults([]);
         setSessionArc([]);
         setIsDailyChallenge(false);
+        setUsedAssetIds([]);
         setGameState('LOBBY');
     };
 
@@ -190,6 +205,8 @@ export function GameProvider({ children }) {
                 advanceRound,
                 nextRound,
                 endSession,
+                trackUsedAssets,
+                getUsedAssetIds,
             }}
         >
             {children}

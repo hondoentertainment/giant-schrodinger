@@ -40,9 +40,17 @@ npm-shrinkwrap.json
 # Vite
 .vite/
 
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
 # Vercel
 .vercel/
 
 # Temporary files
 *.tmp
 *.temp
+
+# Claude Code
+.claude/

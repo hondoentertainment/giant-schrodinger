@@ -5,6 +5,14 @@ import {
     clearJudgeFromUrl,
 } from './share';
 
+// Mock backend imports so createJudgeShareUrl falls through to hash encoding
+vi.mock('./backend.js', () => ({
+    saveSharedRound: vi.fn().mockResolvedValue(null),
+}));
+vi.mock('../lib/supabase.js', () => ({
+    isBackendEnabled: vi.fn().mockReturnValue(false),
+}));
+
 describe('share service', () => {
     beforeEach(() => {
         Object.defineProperty(window, 'location', {
@@ -20,26 +28,20 @@ describe('share service', () => {
     });
 
     describe('createJudgeShareUrl', () => {
-        it('creates URL with backendId when present', () => {
-            const payload = { backendId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' };
-            const url = createJudgeShareUrl(payload);
-            expect(url).toContain('?judge=a1b2c3d4-e5f6-7890-abcd-ef1234567890');
-        });
-
-        it('creates URL with encoded payload when no backendId', () => {
+        it('creates URL with encoded payload (backend unavailable)', async () => {
             const payload = {
                 assets: { left: { label: 'A' }, right: { label: 'B' } },
                 submission: 'test',
             };
-            const url = createJudgeShareUrl(payload);
-            expect(url).toContain('#judge=');
-            expect(url).toMatch(/^http:\/\/localhost:5173\/#judge=/);
+            const url = await createJudgeShareUrl(payload);
+            expect(url).toContain('#judge_');
+            expect(url).toMatch(/^http:\/\/localhost:5173\/#judge_/);
         });
 
-        it('returns null on serialization error', () => {
+        it('returns null on serialization error', async () => {
             const circular = {};
             circular.self = circular;
-            const url = createJudgeShareUrl(circular);
+            const url = await createJudgeShareUrl(circular);
             expect(url).toBeNull();
         });
     });
@@ -58,13 +60,25 @@ describe('share service', () => {
             expect(result).toEqual({ backendId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' });
         });
 
-        it('parses base64 JSON from hash', () => {
+        it('parses base64 JSON from hash (legacy judge= prefix)', () => {
             const payload = {
                 assets: { left: { label: 'Cat' }, right: { label: 'Dog' } },
                 submission: 'both are fluffy',
             };
             const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
             window.location.hash = `#judge=${encoded}`;
+            window.location.search = '';
+            const result = parseJudgeShareUrl();
+            expect(result).toEqual(payload);
+        });
+
+        it('parses base64 JSON from hash (new judge_ prefix)', () => {
+            const payload = {
+                assets: { left: { label: 'Cat' }, right: { label: 'Dog' } },
+                submission: 'both are fluffy',
+            };
+            const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+            window.location.hash = `#judge_${encoded}`;
             window.location.search = '';
             const result = parseJudgeShareUrl();
             expect(result).toEqual(payload);

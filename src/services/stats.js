@@ -3,8 +3,13 @@ const MILESTONES = [
     { id: 'first_round', threshold: 1, type: 'rounds', reward: 'avatar', rewardId: '🎯', label: 'First Connection' },
     { id: 'five_rounds', threshold: 5, type: 'rounds', reward: 'avatar', rewardId: '⭐', label: '5 Rounds Played' },
     { id: 'ten_rounds', threshold: 10, type: 'rounds', reward: 'avatar', rewardId: '🏆', label: '10 Rounds Played' },
+    { id: 'twentyfive_rounds', threshold: 25, type: 'rounds', reward: 'avatar', rewardId: '💎', label: '25 Rounds — Diamond' },
+    { id: 'fifty_rounds', threshold: 50, type: 'rounds', reward: 'avatar', rewardId: '🌟', label: '50 Rounds — All-Star' },
+    { id: 'hundred_rounds', threshold: 100, type: 'rounds', reward: 'avatar', rewardId: '👑', label: '100 Rounds — Centurion' },
     { id: 'streak_3', threshold: 3, type: 'streak', reward: 'avatar', rewardId: '🔥', label: '3-Day Streak' },
-    { id: 'streak_7', threshold: 7, type: 'streak', reward: 'theme', rewardId: 'mystery', label: '7-Day Streak' },
+    { id: 'streak_7', threshold: 7, type: 'streak', reward: 'theme', rewardId: 'mystery', label: '7-Day Streak — Mystery Box' },
+    { id: 'streak_14', threshold: 14, type: 'streak', reward: 'avatar', rewardId: '⚡', label: '14-Day Streak Master' },
+    { id: 'streak_30', threshold: 30, type: 'streak', reward: 'avatar', rewardId: '🏅', label: '30-Day Legend' },
 ];
 
 function getTodayKey() {

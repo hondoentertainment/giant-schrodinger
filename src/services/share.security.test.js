@@ -1,5 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { parseJudgeShareUrl, createJudgeShareUrl } from './share';
+
+vi.mock('./backend.js', () => ({
+    saveSharedRound: vi.fn().mockResolvedValue(null),
+}));
+vi.mock('../lib/supabase.js', () => ({
+    isBackendEnabled: vi.fn().mockReturnValue(false),
+}));
 
 /**
  * Security tests: share URL parsing and payload handling.
@@ -62,7 +69,7 @@ describe('share service - security', () => {
         expect(parseJudgeShareUrl()).toBeNull();
     });
 
-    it('does not execute script in parsed payload', () => {
+    it('does not execute script in parsed payload', async () => {
         const payload = {
             assets: {
                 left: { label: '<script>alert(1)</script>' },
@@ -70,11 +77,11 @@ describe('share service - security', () => {
             },
             submission: '<img src=x onerror=alert(1)>',
         };
-        const url = createJudgeShareUrl(payload);
+        const url = await createJudgeShareUrl(payload);
         expect(url).toBeTruthy();
-        const encoded = url?.split('#judge=')[1];
+        const encoded = url?.split('#judge_')[1] || url?.split('#judge=')[1];
         if (encoded) {
-            window.location.hash = `#judge=${encoded}`;
+            window.location.hash = `#judge_${encoded}`;
             const result = parseJudgeShareUrl();
             expect(result).toBeDefined();
             expect(result.assets.left.label).toContain('script');
@@ -83,9 +90,9 @@ describe('share service - security', () => {
         }
     });
 
-    it('handles null/undefined in payload', () => {
+    it('handles null/undefined in payload', async () => {
         const payload = { assets: null, submission: undefined };
-        const url = createJudgeShareUrl(payload);
+        const url = await createJudgeShareUrl(payload);
         expect(url).toBeTruthy();
     });
 

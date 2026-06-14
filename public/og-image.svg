@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a0533"/>
+      <stop offset="100%" stop-color="#0a0118"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <!-- Subtle center glow -->
+  <ellipse cx="600" cy="300" rx="500" ry="300" fill="url(#glow)"/>
+  <!-- Left Venn circle -->
+  <circle cx="500" cy="290" r="150" fill="none" stroke="#a855f7" stroke-width="4" opacity="0.7"/>
+  <circle cx="500" cy="290" r="150" fill="#a855f7" opacity="0.1"/>
+  <!-- Right Venn circle -->
+  <circle cx="700" cy="290" r="150" fill="none" stroke="#6366f1" stroke-width="4" opacity="0.7"/>
+  <circle cx="700" cy="290" r="150" fill="#6366f1" opacity="0.1"/>
+  <!-- Overlap highlight -->
+  <clipPath id="leftClip">
+    <circle cx="500" cy="290" r="150"/>
+  </clipPath>
+  <circle cx="700" cy="290" r="150" fill="#d946ef" opacity="0.25" clip-path="url(#leftClip)"/>
+  <!-- Crosshair in overlap center -->
+  <circle cx="600" cy="290" r="20" fill="none" stroke="#ffffff" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="600" cy="290" r="6" fill="#ffffff" opacity="0.8"/>
+  <line x1="600" y1="262" x2="600" y2="275" stroke="#ffffff" stroke-width="2.5" opacity="0.8"/>
+  <line x1="600" y1="305" x2="600" y2="318" stroke="#ffffff" stroke-width="2.5" opacity="0.8"/>
+  <line x1="572" y1="290" x2="585" y2="290" stroke="#ffffff" stroke-width="2.5" opacity="0.8"/>
+  <line x1="615" y1="290" x2="628" y2="290" stroke="#ffffff" stroke-width="2.5" opacity="0.8"/>
+  <!-- Title -->
+  <text x="600" y="510" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="52" font-weight="700" fill="#ffffff" letter-spacing="1">Venn with Friends</text>
+  <!-- Subtitle -->
+  <text x="600" y="560" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="24" fill="#c4b5fd" opacity="0.85" letter-spacing="2">Connect concepts with creative wit</text>
+  <!-- Subtle border -->
+  <rect x="2" y="2" width="1196" height="626" rx="8" fill="none" stroke="#a855f7" stroke-width="2" opacity="0.2"/>
+</svg>
