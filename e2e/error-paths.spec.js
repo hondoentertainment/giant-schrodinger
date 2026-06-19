@@ -27,6 +27,7 @@ const APP_URL = '/giant-schrodinger/';
 async function openLobbyAsLoggedInUser(page, name = 'ErrorTester') {
     await page.addInitScript(() => {
         // Reveal every tier of lobby features up-front.
+        window.localStorage.setItem('vwf_e2e_mock_room', 'true');
         window.localStorage.setItem('vwf_show_all_features', 'true');
         window.localStorage.setItem('venn_onboarding_complete', 'true');
         // Pretend the user has already played — skips OnboardingTour AND
@@ -64,27 +65,26 @@ test.describe('error paths — multiplayer join', () => {
         // getByRole uses) and visible text "Join".
         const joinBtn = page.getByRole('button', { name: /Join room/i });
         await expect(joinBtn).toBeVisible();
-        // No input yet — disabled (joinCode.trim().length < 4 AND !backendReady).
+        // No input yet — disabled by the minimum room-code length.
         await expect(joinBtn).toBeDisabled();
 
         // Clearly invalid code (2 chars < 4-char minimum) — still disabled.
         await codeInput.fill('XX');
         await expect(joinBtn).toBeDisabled();
 
-        // Bumping to 4 chars satisfies the length rule, but backend is not
-        // configured in e2e so the button stays disabled (backendReady=false).
+        // Bumping to 4 chars satisfies the length rule in the e2e mock backend.
         await codeInput.fill('ABCD');
-        await expect(joinBtn).toBeDisabled();
+        await expect(joinBtn).toBeEnabled();
     });
 
-    test('join surfaces server error for non-existent room code', async () => {
-        test.skip(
-            true,
-            'TODO: app requires a live Supabase backend to actually dispatch a ' +
-            'join request. Without one, the Join button is disabled before we can ' +
-            'observe a server-side "room not found" error. Re-enable once a mock ' +
-            'multiplayer harness is available (Phase 9 follow-up).'
-        );
+    test('join surfaces server error for non-existent room code', async ({ page }) => {
+        await openLobbyAsLoggedInUser(page, 'NoRoom');
+
+        await page.getByRole('button', { name: /Play with Friends/i }).click();
+        await page.getByPlaceholder(/Room code/i).fill('NOPE');
+        await page.getByRole('button', { name: /Join room/i }).click();
+
+        await expect(page.getByText(/Room not found/i)).toBeVisible({ timeout: 5000 });
     });
 });
 
@@ -125,10 +125,7 @@ test.describe('error paths — theme builder', () => {
     test('empty name shows error toast on Create', async ({ page }) => {
         await openLobbyAsLoggedInUser(page, 'ThemeTester');
 
-        // The Theme Builder nav button lives in the tier-2 quick-nav row:
-        // <button title="Creator"><Palette /> Creator</button>. We locate by
-        // the title attribute to avoid matching on the icon-prefixed label.
-        await page.locator('button[title="Theme Builder"]').click();
+        await page.getByRole('button', { name: /Creator/i }).click();
 
         await expect(page.getByRole('heading', { name: /Theme Builder/i })).toBeVisible({ timeout: 5000 });
 

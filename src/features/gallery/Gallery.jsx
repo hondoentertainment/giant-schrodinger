@@ -10,6 +10,12 @@ const SORT_OPTIONS = [
     { id: 'score-low', label: 'Lowest score', fn: (a, b) => (a.score ?? 0) - (b.score ?? 0) },
 ];
 
+function formatCollisionDate(timestamp) {
+    const date = timestamp ? new Date(timestamp) : null;
+    if (!date || Number.isNaN(date.getTime())) return 'Date unknown';
+    return date.toLocaleDateString();
+}
+
 function LazyImage({ collision, displayJudgement }) {
     const [imageStatus, setImageStatus] = useState('loading');
     const [isVisible, setIsVisible] = useState(false);
@@ -40,13 +46,18 @@ function LazyImage({ collision, displayJudgement }) {
     };
 
     const fj = displayJudgement;
+    const displayDate = formatCollisionDate(collision.timestamp);
 
     return (
-        <article
+        <div
             ref={ref}
+            role="listitem"
+            className="contents"
+        >
+        <article
             className="group relative aspect-square rounded-2xl overflow-hidden glass-panel transition-transform hover:scale-[1.02] focus-within:scale-[1.02] focus-within:ring-2 focus-within:ring-purple-500 focus-within:outline-none"
             tabIndex={0}
-            aria-label={`Connection: "${collision.submission}". Score ${collision.score} out of 10. ${new Date(collision.timestamp).toLocaleDateString()}.${fj ? ` Judged by ${fj.judgeName || fj.judge_name || 'a friend'}: ${fj.score}/10.` : ''}`}
+            aria-label={`Connection: "${collision.submission}". Score ${collision.score} out of 10. ${displayDate}.${fj ? ` Judged by ${fj.judgeName || fj.judge_name || 'a friend'}: ${fj.score}/10.` : ''}`}
         >
             {imageStatus === 'loading' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/5 z-10">
@@ -76,7 +87,7 @@ function LazyImage({ collision, displayJudgement }) {
                 <div className="text-2xl font-bold text-white mb-1">{collision.submission}</div>
                 <div className="flex flex-col gap-1">
                     <div className="flex justify-between items-center">
-                        <div className="text-white/60 text-sm">{new Date(collision.timestamp).toLocaleDateString()}</div>
+                        <div className="text-white/60 text-sm">{displayDate}</div>
                         <div className="text-yellow-400 font-bold">{collision.score}/10</div>
                     </div>
                     {fj && (
@@ -88,6 +99,7 @@ function LazyImage({ collision, displayJudgement }) {
                 </div>
             </div>
         </article>
+        </div>
     );
 }
 
@@ -97,6 +109,7 @@ export function Gallery() {
     const [friendJudgements, setFriendJudgements] = useState({});
     const [loadingJudgements, setLoadingJudgements] = useState(true);
     const [sortBy, setSortBy] = useState('newest');
+    const [feedbackFilter, setFeedbackFilter] = useState('all');
 
     useEffect(() => {
         const list = getCollisions();
@@ -116,7 +129,14 @@ export function Gallery() {
         friendJudgements[collision.id] || getJudgementForCollision(collision.id);
 
     const sortOpt = SORT_OPTIONS.find((o) => o.id === sortBy) ?? SORT_OPTIONS[0];
-    const sorted = [...collisions].sort(sortOpt.fn);
+    const judgedCount = collisions.filter((collision) => getDisplayJudgement(collision)).length;
+    const averageScore = collisions.length
+        ? collisions.reduce((sum, collision) => sum + (collision.score || 0), 0) / collisions.length
+        : 0;
+    const filtered = feedbackFilter === 'judged'
+        ? collisions.filter((collision) => getDisplayJudgement(collision))
+        : collisions;
+    const sorted = [...filtered].sort(sortOpt.fn);
 
     return (
         <div className="w-full max-w-6xl animate-in fade-in duration-700">
@@ -157,9 +177,48 @@ export function Gallery() {
                 </div>
             ) : (
                 <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+                            <div className="text-white/40 text-xs uppercase tracking-wider">Saved</div>
+                            <div className="text-2xl font-black text-white">{collisions.length}</div>
+                        </div>
+                        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+                            <div className="text-white/40 text-xs uppercase tracking-wider">Average</div>
+                            <div className="text-2xl font-black text-white">{averageScore.toFixed(1)}/10</div>
+                        </div>
+                        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+                            <div className="text-white/40 text-xs uppercase tracking-wider">Friend Feedback</div>
+                            <div className="text-2xl font-black text-white">{judgedCount}</div>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        {[
+                            { id: 'all', label: 'All saved' },
+                            { id: 'judged', label: 'With friend feedback' },
+                        ].map((option) => (
+                            <button
+                                key={option.id}
+                                type="button"
+                                onClick={() => setFeedbackFilter(option.id)}
+                                aria-pressed={feedbackFilter === option.id}
+                                className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                                    feedbackFilter === option.id
+                                        ? 'bg-white text-black'
+                                        : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                }`}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
                     {loadingJudgements && (
                         <p className="text-white/40 text-sm mb-4" role="status" aria-live="polite">
                             Loading friend feedback...
+                        </p>
+                    )}
+                    {!loadingJudgements && sorted.length === 0 && (
+                        <p className="text-white/40 text-sm mb-4" role="status">
+                            No saved connections match this filter yet.
                         </p>
                     )}
                     <div

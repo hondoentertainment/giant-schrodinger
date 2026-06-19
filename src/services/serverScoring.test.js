@@ -78,8 +78,8 @@ describe('serverScoring', () => {
         expect(url).toBe('https://example.supabase.co/functions/v1/score-submission');
         expect(opts.method).toBe('POST');
         expect(JSON.parse(opts.body)).toEqual({
-            conceptLeft,
-            conceptRight,
+            conceptLeft: 'Cat',
+            conceptRight: 'Dog',
             submission: 'fuzzy',
             difficulty: 'hard',
         });

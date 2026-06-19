@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -45,7 +45,6 @@ jobs:
 
       - name: Run E2E tests
         run: npm run test:e2e:desktop
-        continue-on-error: true
         env:
           CI: true
           VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}

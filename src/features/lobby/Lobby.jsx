@@ -5,13 +5,14 @@ import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked } from '../../services/stats';
 import { getDailyChallenge, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock } from 'lucide-react';
+import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { UnlockModal } from '../../components/UnlockModal';
 import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
 import { ServiceStatusCard } from '../../components/ServiceStatusCard';
+import { isE2EMockRoomEnabled } from '../../lib/e2eMockRoom';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -56,6 +57,7 @@ export function Lobby() {
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [onboardingDismissCallback, setOnboardingDismissCallback] = useState(null);
     const [showUnlockModal, setShowUnlockModal] = useState(false);
+    const [showAllFeatures, setShowAllFeatures] = useState(() => localStorage.getItem('vwf_show_all_features') === 'true');
 
     // Multiplayer state
     const [showMultiplayer, setShowMultiplayer] = useState(false);
@@ -66,7 +68,16 @@ export function Lobby() {
     const theme = getThemeById(themeId);
     const stats = getStats();
     const milestones = getMilestones();
-    const backendReady = isBackendEnabled();
+    const backendReady = isBackendEnabled() || isE2EMockRoomEnabled();
+    const lobbyTier = stats.totalRounds >= 5 ? 3 : stats.totalRounds >= 3 ? 2 : stats.totalRounds >= 1 ? 1 : 0;
+    const showFeatureNav = showAllFeatures || lobbyTier >= 2;
+    const showAdvancedModes = showAllFeatures || lobbyTier >= 3;
+
+    const handleShowAllFeatures = () => {
+        const nextValue = !showAllFeatures;
+        setShowAllFeatures(nextValue);
+        localStorage.setItem('vwf_show_all_features', String(nextValue));
+    };
 
     const handleInvite = () => {
         const url = window.location.origin + window.location.pathname;
@@ -341,6 +352,98 @@ export function Lobby() {
                                 Play with Friends
                                 {!backendReady && <WifiOff className="w-4 h-4 opacity-50" />}
                             </button>
+
+                            {showFeatureNav && (
+                                <div className="mt-4 grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => setGameState('LEADERBOARD')}
+                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <Trophy className="w-4 h-4" />
+                                        Leaderboard
+                                    </button>
+                                    <button
+                                        onClick={() => setGameState('ACHIEVEMENTS')}
+                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <Award className="w-4 h-4" />
+                                        Achievements
+                                    </button>
+                                    <button
+                                        onClick={() => setGameState('THEME_BUILDER')}
+                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <Palette className="w-4 h-4" />
+                                        Creator
+                                    </button>
+                                    <button
+                                        onClick={() => setGameState('SHOP')}
+                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <ShoppingBag className="w-4 h-4" />
+                                        Shop
+                                    </button>
+                                </div>
+                            )}
+
+                            {showAdvancedModes && (
+                                <div className="mt-3 grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => setGameState('RANKED')}
+                                        className="py-3 px-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-100 text-sm font-semibold flex items-center justify-center gap-2 transition-colors border border-indigo-400/20"
+                                    >
+                                        <Shield className="w-4 h-4" />
+                                        Ranked
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (!sessionId) startSession(sessionLength);
+                                            setGameState('AI_BATTLE');
+                                        }}
+                                        className="py-3 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-100 text-sm font-semibold flex items-center justify-center gap-2 transition-colors border border-red-400/20"
+                                    >
+                                        <Brain className="w-4 h-4" />
+                                        AI Battle
+                                    </button>
+                                    <button
+                                        onClick={() => setGameState('TOURNAMENT')}
+                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <Trophy className="w-4 h-4" />
+                                        Tournament
+                                    </button>
+                                    <button
+                                        onClick={() => setGameState('ASYNC_CHAINS')}
+                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <Link className="w-4 h-4" />
+                                        Challenge Links
+                                    </button>
+                                    <button
+                                        onClick={() => setGameState('AI_SETTINGS')}
+                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <Brain className="w-4 h-4" />
+                                        AI Settings
+                                    </button>
+                                    <button
+                                        onClick={() => setGameState('ANALYTICS')}
+                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <BarChart3 className="w-4 h-4" />
+                                        Stats
+                                    </button>
+                                </div>
+                            )}
+
+                            {lobbyTier < 3 && (
+                                <button
+                                    onClick={handleShowAllFeatures}
+                                    className="mt-3 text-sm text-white/40 hover:text-white underline"
+                                >
+                                    {showAllFeatures ? 'Hide advanced features' : 'Show all features'}
+                                </button>
+                            )}
                         </>
                     )}
 

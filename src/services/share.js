@@ -5,6 +5,10 @@ const SHARE_TOKEN_REGEX = /^[A-Za-z0-9_-]{20,120}$/;
 export async function createJudgeShareUrl(round) {
     const baseUrl = window.location.origin + window.location.pathname;
 
+    if (round?.backendId) {
+        return `${baseUrl}?judge=${round.backendId}`;
+    }
+
     // Try server persistence first
     try {
         const { saveSharedRound } = await import('./backend.js');
@@ -36,10 +40,10 @@ export async function resolveShareLink(url) {
     const search = parsed ? parsed.search : (window.location.search || '');
     const hash = parsed ? parsed.hash : (window.location.hash || '');
 
-    // Check for ?judge=UUID param first -> fetch from backend
+    // Check for ?judge=UUID/token param first -> fetch from backend
     const params = new URLSearchParams(search);
     const judgeParam = params.get('judge');
-    if (judgeParam && UUID_REGEX.test(judgeParam.trim())) {
+    if (judgeParam && (UUID_REGEX.test(judgeParam.trim()) || SHARE_TOKEN_REGEX.test(judgeParam.trim()))) {
         try {
             const { getSharedRound } = await import('./backend.js');
             const round = await getSharedRound(judgeParam.trim());

@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { getFusionImage } from '../data/themes';
+import { scoreViaServer } from './serverScoring';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
@@ -70,6 +71,17 @@ function mockScore(submission, asset1, asset2) {
 }
 
 export async function scoreSubmission(submission, asset1, asset2, mediaType = 'image') {
+    if (submission && asset1 && asset2) {
+        const serverScore = await scoreViaServer(submission, asset1, asset2);
+        if (serverScore) {
+            return {
+                ...serverScore,
+                isMock: false,
+                isServerScored: true,
+            };
+        }
+    }
+
     if (!ai || !submission || !asset1 || !asset2) {
         await new Promise((r) => setTimeout(r, 1500));
         return { ...mockScore(submission, asset1, asset2), isMock: true };

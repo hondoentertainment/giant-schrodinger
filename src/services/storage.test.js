@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
     getCollisions,
     saveCollision,
@@ -24,8 +24,11 @@ describe('storage service', () => {
         });
 
         it('returns empty array on corrupted JSON', () => {
+            const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
             localStorage.setItem('venn_collisions', 'invalid json{');
             expect(getCollisions()).toEqual([]);
+            expect(warnSpy).toHaveBeenCalled();
+            warnSpy.mockRestore();
         });
     });
 

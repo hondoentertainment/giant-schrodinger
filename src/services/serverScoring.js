@@ -5,8 +5,16 @@ const SERVER_SCORE_URL = import.meta.env.VITE_SUPABASE_URL
   ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/score-submission`
   : null;
 
+function getConceptLabel(concept, fallback) {
+  if (typeof concept === 'string') return concept;
+  return concept?.label || fallback;
+}
+
 export async function scoreViaServer(submission, conceptLeft, conceptRight, difficulty = 'normal') {
   if (!SERVER_SCORE_URL || !isBackendEnabled()) return null;
+
+  const leftLabel = getConceptLabel(conceptLeft, 'left concept');
+  const rightLabel = getConceptLabel(conceptRight, 'right concept');
 
   let response;
   try {
@@ -16,7 +24,12 @@ export async function scoreViaServer(submission, conceptLeft, conceptRight, diff
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ conceptLeft, conceptRight, submission, difficulty }),
+      body: JSON.stringify({
+        conceptLeft: leftLabel,
+        conceptRight: rightLabel,
+        submission,
+        difficulty,
+      }),
     });
   } catch (err) {
     logError({

@@ -523,7 +523,9 @@ export function subscribeToRoom(roomId, callbacks) {
         (payload) => callbacks.onVote?.(payload.new)
     );
 
-    channel.subscribe();
+    channel.subscribe((status) => {
+        callbacks.onConnectionStatus?.(status);
+    });
 
     return () => {
         supabase.removeChannel(channel);

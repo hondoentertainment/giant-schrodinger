@@ -29,8 +29,11 @@ describe('asyncPlay service', () => {
     });
 
     it('returns null for fewer than 2 players', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         expect(createChallengeChain(['Solo'], 3)).toBeNull();
         expect(createChallengeChain(null, 3)).toBeNull();
+        expect(warnSpy).toHaveBeenCalledTimes(2);
+        warnSpy.mockRestore();
     });
 
     it('submitChainScore records scores for a player', () => {

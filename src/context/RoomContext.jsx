@@ -22,6 +22,7 @@ import { scoreSubmission } from '../services/gemini';
 import { getCustomImages } from '../services/customImages';
 import { useGame } from './GameContext';
 import { reportAppError, reportAppEvent } from '../lib/telemetry';
+import { buildE2EMockRoom, isE2EMockRoomEnabled, subscribeToE2EMockRoom } from '../lib/e2eMockRoom';
 
 const RoomContext = createContext();
 
@@ -53,9 +54,11 @@ export function RoomProvider({ children }) {
     const [playerName, setPlayerName] = useState('');
     const [roomSession, setRoomSession] = useState(null);
     const [roomPhase, setRoomPhase] = useState('none');
+    const [connectionState, setConnectionState] = useState('connected');
 
     const unsubRef = useRef(null);
     const hydrateRequestRef = useRef(0);
+    const reconnectToastShownRef = useRef(false);
 
     const isMultiplayer = !!room;
     const roomCode = room?.code || null;
@@ -74,6 +77,7 @@ export function RoomProvider({ children }) {
         setPlayerName('');
         setRoomSession(null);
         setRoomPhase('none');
+        setConnectionState('connected');
     }, []);
 
     useEffect(() => {
@@ -117,7 +121,7 @@ export function RoomProvider({ children }) {
     const setupSubscriptions = useCallback((roomId) => {
         if (unsubRef.current) unsubRef.current();
 
-        const unsub = subscribeToRoom(roomId, {
+        const callbacks = {
             onRoomUpdate: (updatedRoom) => {
                 setRoom(updatedRoom);
                 setRoomPhase(getRoomPhaseFromStatus(updatedRoom.status));
@@ -153,12 +157,71 @@ export function RoomProvider({ children }) {
                     return [...prev, vote];
                 });
             },
-        });
+            onConnectionStatus: (status) => {
+                if (status === 'SUBSCRIBED') {
+                    setConnectionState((prev) => {
+                        if (prev !== 'connected' && reconnectToastShownRef.current) {
+                            toast.success('Room connection restored');
+                            reconnectToastShownRef.current = false;
+                        }
+                        return 'connected';
+                    });
+                    setRoom((currentRoom) => {
+                        if (currentRoom?.id) hydrateRoomState(currentRoom);
+                        return currentRoom;
+                    });
+                    return;
+                }
+
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    reconnectToastShownRef.current = true;
+                    setConnectionState('reconnecting');
+                    reportAppError('multiplayer_realtime_connection', new Error(`Realtime ${status}`), { roomId });
+                    return;
+                }
+
+                if (status === 'CLOSED') {
+                    reconnectToastShownRef.current = true;
+                    setConnectionState('disconnected');
+                    reportAppError('multiplayer_realtime_connection', new Error('Realtime channel closed'), { roomId });
+                }
+            },
+        };
+
+        const unsub = isE2EMockRoomEnabled()
+            ? subscribeToE2EMockRoom(callbacks)
+            : subscribeToRoom(roomId, callbacks);
 
         unsubRef.current = unsub;
     }, [hydrateRoomState, toast]);
 
+    const attemptReconnect = useCallback(() => {
+        if (!room?.id) return;
+        setConnectionState('reconnecting');
+        setupSubscriptions(room.id);
+        hydrateRoomState(room);
+    }, [hydrateRoomState, room, setupSubscriptions]);
+
     const hostRoom = useCallback(async ({ hostName, themeId, totalRounds, scoringMode }) => {
+        if (isE2EMockRoomEnabled()) {
+            const { room: mockRoom, players: mockPlayers } = buildE2EMockRoom({
+                hostName,
+                playerName: 'Guest',
+                themeId,
+                totalRounds,
+                scoringMode,
+            });
+            setRoom(mockRoom);
+            setPlayers(mockPlayers);
+            setRoomSession({ playerName: hostName, isHost: true, secureMode: false });
+            setIsHost(true);
+            setPlayerName(hostName);
+            setRoomPhase(getRoomPhaseFromStatus(mockRoom.status));
+            setupSubscriptions(mockRoom.id);
+            toast.success(`Room ${mockRoom.code} created!`);
+            return mockRoom;
+        }
+
         if (!isBackendEnabled()) {
             toast.error('Multiplayer requires Supabase - check your .env');
             return null;
@@ -197,6 +260,30 @@ export function RoomProvider({ children }) {
     }, [setupSubscriptions, toast, user?.avatar]);
 
     const joinRoomByCode = useCallback(async (code, name, avatar) => {
+        if (isE2EMockRoomEnabled()) {
+            if (code.toUpperCase().trim() === 'NOPE') {
+                toast.error('Room not found');
+                return null;
+            }
+            const { room: mockRoom, players: mockPlayers } = buildE2EMockRoom({
+                code: code.toUpperCase().trim() || 'MOCK42',
+                hostName: 'Host',
+                playerName: name,
+                themeId: user?.themeId || 'neon',
+                totalRounds: 3,
+                scoringMode: user?.scoringMode || 'human',
+            });
+            setRoom(mockRoom);
+            setPlayers(mockPlayers);
+            setRoomSession({ playerName: name, isHost: false, secureMode: false });
+            setIsHost(false);
+            setPlayerName(name);
+            setRoomPhase(getRoomPhaseFromStatus(mockRoom.status));
+            setupSubscriptions(mockRoom.id);
+            toast.success(`Joined room ${mockRoom.code}!`);
+            return mockRoom;
+        }
+
         if (!isBackendEnabled()) {
             toast.error('Multiplayer requires Supabase - check your .env');
             return null;
@@ -229,7 +316,7 @@ export function RoomProvider({ children }) {
             roomCode: result.room.code,
         });
         return result.room;
-    }, [setupSubscriptions, toast]);
+    }, [setupSubscriptions, toast, user?.scoringMode, user?.themeId]);
 
     const leaveCurrentRoom = useCallback(async () => {
         if (room && playerName) {
@@ -401,6 +488,7 @@ export function RoomProvider({ children }) {
         roomCode,
         playerName,
         roomPhase,
+        connectionState,
         allSubmitted,
         hostRoom,
         joinRoomByCode,
@@ -411,6 +499,7 @@ export function RoomProvider({ children }) {
         castVoteForSubmission,
         finalizeMultiplayerVoting,
         advanceToNextRound,
+        attemptReconnect,
         cleanup,
     };
 

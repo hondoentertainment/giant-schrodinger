@@ -9,22 +9,42 @@ import { test, expect } from '@playwright/test';
  * connectionState from RoomContext and becomes visible on 'reconnecting' or
  * 'disconnected'. A window 'offline' event triggers setConnectionState('reconnecting').
  *
- * IMPORTANT FINDING — multiplayer requires a live Supabase backend
- * (see src/context/RoomContext.jsx hostRoom/joinRoomByCode: both short-circuit
- * with `isBackendEnabled()` returning false and emit a toast error). In the e2e
- * environment there is no Supabase configured (see src/lib/supabase.js), so we
- * cannot actually enter a room. That means the ConnectionBanner cannot be
- * rendered in e2e without a real backend.
- *
- * What we cover here:
- *  1) Baseline: banner text is NOT present on the landing page (regression guard)
- *  2) Firing browser 'offline' / 'online' events on landing does not crash the
- *     app (exercises the `useEffect` listener wiring added in RoomContext)
- *  3) The full disconnect -> reconnect UI flow is skipped with a clear TODO
- *     noting the backend dependency
+ * Playwright builds the app with Vite mode "e2e", which enables a localStorage-
+ * gated mock room harness. Normal production builds do not include that active
+ * path, and tests must still opt in with `vwf_e2e_mock_room=true`.
  */
 
 const APP_URL = '/giant-schrodinger/';
+
+async function openLobbyWithMockRoom(page, name = 'MockHost') {
+    await page.addInitScript(() => {
+        window.localStorage.setItem('vwf_e2e_mock_room', 'true');
+        window.localStorage.setItem('vwf_show_all_features', 'true');
+        window.localStorage.setItem('venn_onboarding_complete', 'true');
+        window.localStorage.setItem(
+            'vwf_stats',
+            JSON.stringify({
+                lastPlayedDate: null,
+                currentStreak: 0,
+                maxStreak: 0,
+                totalRounds: 20,
+                totalCollisions: 0,
+                milestonesUnlocked: [],
+            })
+        );
+    });
+    await page.goto(APP_URL);
+    await page.getByPlaceholder(/Enter your name/i).fill(name);
+    await page.getByRole('button', { name: /Join Lobby/i }).click();
+    await expect(page.getByText(new RegExp(`Hi, ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+}
+
+async function createMockRoom(page) {
+    await openLobbyWithMockRoom(page);
+    await page.getByRole('button', { name: /Play with Friends/i }).click();
+    await page.getByRole('button', { name: /Create Room/i }).click();
+    await expect(page.getByText(/MULTIPLAYER ROOM/i)).toBeVisible({ timeout: 5000 });
+}
 
 test.describe('multiplayer disconnect recovery', () => {
     test('connection banner is absent on landing (no room joined)', async ({ page }) => {
@@ -57,23 +77,26 @@ test.describe('multiplayer disconnect recovery', () => {
         await expect(page.getByRole('heading', { name: /VENN/i })).toBeVisible();
     });
 
-    test('shows connection banner after disconnect in an active room', async () => {
-        test.skip(
-            true,
-            'TODO: multiplayer requires a live Supabase backend (isBackendEnabled()=false ' +
-            'in e2e). hostRoom/joinRoomByCode short-circuit with a toast error, so we ' +
-            'cannot enter a room to render ConnectionBanner. Enable this test once the ' +
-            'mock multiplayer harness exposes a way to simulate an in-room state without ' +
-            'real Supabase (Phase 9 follow-up).'
-        );
+    test('shows connection banner after disconnect in an active room', async ({ page, context }) => {
+        await createMockRoom(page);
+
+        await context.setOffline(true);
+        await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+
+        await expect(page.getByText(/Connection lost\. Reconnecting/i)).toBeVisible({ timeout: 5000 });
+
+        await context.setOffline(false);
     });
 
-    test('connection banner disappears after reconnect', async () => {
-        test.skip(
-            true,
-            'TODO: blocked by same backend dependency as the disconnect test above. ' +
-            'Reconnect path calls fetchRoomState which requires Supabase. Re-enable ' +
-            'with a mock multiplayer harness (Phase 9 follow-up).'
-        );
+    test('connection banner disappears after reconnect', async ({ page, context }) => {
+        await createMockRoom(page);
+
+        await context.setOffline(true);
+        await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+        await expect(page.getByText(/Connection lost\. Reconnecting/i)).toBeVisible({ timeout: 5000 });
+
+        await context.setOffline(false);
+        await page.evaluate(() => window.dispatchEvent(new Event('online')));
+        await expect(page.getByText(/Connection lost\. Reconnecting|Disconnected\./i)).toHaveCount(0);
     });
 });

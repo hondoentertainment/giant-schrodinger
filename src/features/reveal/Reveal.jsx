@@ -3,9 +3,8 @@ import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { scoreSubmission, generateFusionImage } from '../../services/gemini';
 import { saveCollision } from '../../services/storage';
-import { recordPlay } from '../../services/stats';
+import { getMilestones, getStats, recordPlay } from '../../services/stats';
 import { createJudgeShareUrl } from '../../services/share';
-import { saveSharedRound } from '../../services/backend';
 import { getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
@@ -168,14 +167,10 @@ export function Reveal({ submission, assets }) {
             collisionId: savedCollision.id,
             judgeMode: 'friend',
         };
-        const backendId = await saveSharedRound(roundPayload);
-        if (!backendId) {
+        const url = await createJudgeShareUrl(roundPayload);
+        if (url?.includes('#judge_')) {
             toast.warn('Backend unavailable — sharing via link encoding');
         }
-        const payload = backendId
-            ? { backendId, ...roundPayload }
-            : { roundId: savedCollision.id, ...roundPayload };
-        const url = createJudgeShareUrl(payload);
         if (url && navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(url);
             haptic('success');
@@ -336,6 +331,18 @@ export function Reveal({ submission, assets }) {
     }
 
     const scoreBand = result && getScoreBand(result.finalScore || result.score);
+    const statsSnapshot = getStats();
+    const nextMilestone = getMilestones()
+        .filter((milestone) => !statsSnapshot.milestonesUnlocked.includes(milestone.id))
+        .map((milestone) => {
+            const value = milestone.type === 'rounds' ? statsSnapshot.totalRounds : statsSnapshot.currentStreak;
+            return {
+                ...milestone,
+                value,
+                remaining: Math.max(0, milestone.threshold - value),
+            };
+        })
+        .sort((a, b) => a.remaining - b.remaining)[0];
 
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
@@ -452,6 +459,27 @@ export function Reveal({ submission, assets }) {
                             <div className="text-white/60 text-sm">2x points applied to your final round.</div>
                         </div>
                     )}
+
+                    <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-left">
+                        <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/40 mb-3">What&apos;s next</div>
+                        <div className="space-y-2 text-sm text-white/70">
+                            <p>
+                                {roundNumber >= totalRounds
+                                    ? 'Review your session results, then share your best connection or start a fresh run.'
+                                    : `Round ${roundNumber + 1} is ready when you are.`}
+                            </p>
+                            {nextMilestone && (
+                                <p>
+                                    {nextMilestone.remaining === 0
+                                        ? `${nextMilestone.label} is ready to unlock.`
+                                        : `${nextMilestone.remaining} more ${nextMilestone.type === 'rounds' ? 'rounds' : 'streak days'} to unlock ${nextMilestone.label}.`}
+                                </p>
+                            )}
+                            {statsSnapshot.currentStreak > 0 && (
+                                <p>Day {statsSnapshot.currentStreak} streak: come back tomorrow to keep it alive.</p>
+                            )}
+                        </div>
+                    </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <div>

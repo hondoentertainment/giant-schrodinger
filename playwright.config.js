@@ -23,7 +23,7 @@ export default defineConfig({
     webServer: process.env.PLAYWRIGHT_BASE_URL
         ? undefined
         : {
-              command: 'npm run build && npm run preview',
+              command: 'npm run build:e2e && npm run preview',
               url: baseURL,
               reuseExistingServer: !process.env.CI,
               timeout: 120000,

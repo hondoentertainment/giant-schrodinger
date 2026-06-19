@@ -62,12 +62,22 @@ export const ConsoleAnalyticsProvider = {
  * Supabase provider - writes events to an analytics_events table when backend is available.
  */
 export const SupabaseAnalyticsProvider = {
-  track: async () => {
+  track: async (event, props) => {
     try {
-      const { isBackendEnabled } = await import('./backend.js');
+      const { supabase, isBackendEnabled } = await import('../lib/supabase.js');
       if (!isBackendEnabled()) return;
-      // Stub: when Supabase is configured, insert into analytics_events table
-    } catch { /* silent */ }
+      const { error } = await supabase
+        .from('analytics_events')
+        .insert({
+          event,
+          properties: props || {},
+        });
+      if (error && import.meta.env.DEV) {
+        console.debug('[Analytics] Supabase insert failed', error);
+      }
+    } catch {
+      // Analytics should never affect gameplay.
+    }
   },
 };
 

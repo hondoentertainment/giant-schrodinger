@@ -34,6 +34,11 @@ Object.defineProperty(window, 'location', {
     writable: true,
 });
 
+if (typeof HTMLCanvasElement !== 'undefined') {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => null);
+    HTMLCanvasElement.prototype.toDataURL = vi.fn(() => 'data:image/jpeg;base64,dGVzdA==');
+}
+
 // Reset localStorage between tests to avoid cross-test pollution
 beforeEach(() => {
     localStorage.clear();

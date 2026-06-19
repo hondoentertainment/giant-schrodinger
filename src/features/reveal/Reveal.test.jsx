@@ -50,7 +50,8 @@ vi.mock('../../services/storage', () => ({
 
 vi.mock('../../services/stats', () => ({
     recordPlay: vi.fn(() => ({ newlyUnlocked: [] })),
-    getStats: vi.fn(() => ({ currentStreak: 0, totalRounds: 0 })),
+    getStats: vi.fn(() => ({ currentStreak: 0, totalRounds: 0, milestonesUnlocked: [] })),
+    getMilestones: vi.fn(() => []),
 }));
 
 vi.mock('../../services/offlineQueue', () => ({
@@ -174,8 +175,9 @@ describe('Reveal', () => {
         expect(nextBtn).toBeInTheDocument();
     });
 
-    it('shows the submission in quotes while loading', () => {
+    it('shows the submission in quotes while loading', async () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
         expect(screen.getByText(`\u201c${mockSubmission}\u201d`)).toBeInTheDocument();
+        expect(await screen.findByText(/Great connection between Cat and Dog!/, {}, { timeout: 3000 })).toBeInTheDocument();
     });
 });
