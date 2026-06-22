@@ -9,6 +9,23 @@ async function createProfile(page, name = 'TestPlayer') {
   await expect(page.getByText(new RegExp(`Hi, ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
 }
 
+async function unlockAdvancedLobby(page) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('vwf_show_all_features', 'true');
+    window.localStorage.setItem('vwf_stats', JSON.stringify({
+      lastPlayedDate: null,
+      currentStreak: 0,
+      maxStreak: 0,
+      totalRounds: 5,
+      totalCollisions: 5,
+      scores: [],
+      dailyScores: [],
+      themesPlayed: [],
+      milestonesUnlocked: [],
+    }));
+  });
+}
+
 async function startSoloRound(page) {
   await page.getByRole('button', { name: /Solo Session|Start Round/i }).first().click();
 
@@ -24,6 +41,7 @@ async function startSoloRound(page) {
 
 test.describe('Multiplayer Flow', () => {
   test('create and join room', async ({ page }) => {
+    await unlockAdvancedLobby(page);
     await createProfile(page, 'Player1');
     await expect(page.getByRole('button', { name: /Play with Friends/i })).toBeVisible();
   });

@@ -46,12 +46,14 @@ export function createShareText(shareData) {
   const hook = pickShareHook(score, scoreBand);
   const cleanSubmission = clampText(submission, 90);
   const cleanCommentary = clampText(commentary, 110);
+  const context = buildShareContext(shareData);
+  const contextPrefix = context ? `${context}: ` : '';
 
   const templates = [
-    `I turned "${leftAsset}" + "${rightAsset}" into "${cleanSubmission}" and somehow pulled a ${score}/10. ${hook} ${cleanCommentary} #VennWithFriends`,
-    `${score}/10 for "${cleanSubmission}". The prompt pair was ${leftAsset} x ${rightAsset}. ${hook} #VennWithFriends #CreativeChaos`,
-    `Fresh Venn with Friends chaos: ${leftAsset} + ${rightAsset} = "${cleanSubmission}". ${score}/10 energy. ${hook} ${cleanCommentary} #PartyGame`,
-    `This round gave me ${leftAsset}, ${rightAsset}, and a dangerous amount of confidence. "${cleanSubmission}" scored ${score}/10. #VennWithFriends`,
+    `${contextPrefix}I turned "${leftAsset}" + "${rightAsset}" into "${cleanSubmission}" and pulled a ${score}/10. ${hook} ${cleanCommentary} #VennWithFriends`,
+    `${contextPrefix}${score}/10 for "${cleanSubmission}". The prompt pair was ${leftAsset} x ${rightAsset}. ${hook} #VennWithFriends #CreativeChaos`,
+    `${contextPrefix}Fresh Venn with Friends chaos: ${leftAsset} + ${rightAsset} = "${cleanSubmission}". ${score}/10 energy. ${hook} ${cleanCommentary} #PartyGame`,
+    `${contextPrefix}This round gave me ${leftAsset}, ${rightAsset}, and a dangerous amount of confidence. "${cleanSubmission}" scored ${score}/10. #VennWithFriends`,
   ];
 
   return templates[Math.floor(Math.random() * templates.length)];
@@ -67,6 +69,22 @@ function buildCardFooter(shareData) {
   const commentary = clampText(shareData.commentary, 120);
   if (commentary) return commentary;
   return pickShareHook(shareData.score || 0, shareData.scoreBand);
+}
+
+function getJudgeLabel(judgeMode) {
+  if (judgeMode === 'friend') return 'Friend Judge';
+  if (judgeMode === 'human') return 'Manual Judge';
+  if (judgeMode === 'ai') return 'AI Judge';
+  return null;
+}
+
+function buildShareContext(shareData) {
+  const pieces = [];
+  const judgeLabel = getJudgeLabel(shareData.judgeMode);
+  if (judgeLabel) pieces.push(judgeLabel);
+  if (shareData.isDailyChallenge) pieces.push('Daily Challenge');
+  if (shareData.friendScore) pieces.push(`Friend score ${shareData.friendScore}/10`);
+  return pieces.join(' · ');
 }
 
 function loadImage(imageUrl) {

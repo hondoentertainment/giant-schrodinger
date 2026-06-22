@@ -5,6 +5,7 @@ import { THEMES, buildThemeAssets, getThemeById, MEDIA_TYPES } from '../../data/
 import { getCustomImages } from '../../services/customImages';
 import { getStats, isThemeUnlocked } from '../../services/stats';
 import { haptic } from '../../lib/haptics';
+import { trackEvent } from '../../services/analytics';
 
 export function Round({ onSubmit }) {
     const { setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge } = useGame();
@@ -23,6 +24,7 @@ export function Round({ onSubmit }) {
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
     const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const mod = currentModifier;
+    const showFirstRoundCoaching = stats.totalRounds === 0 && roundNumber === 1;
 
     useEffect(() => {
         submittedRef.current = false;
@@ -69,12 +71,19 @@ export function Round({ onSubmit }) {
         if (submittedRef.current) return;
         submittedRef.current = true;
         haptic('success');
+        if (stats.totalRounds === 0 && roundNumber === 1) {
+            trackEvent('first_session_round_submitted', {
+                hasSubmission: Boolean(submission.trim()),
+                mediaType,
+                themeId: theme?.id || null,
+            });
+        }
 
         if (onSubmit) {
             onSubmit({ submission, assets, modifier: mod });
             setGameState('REVEAL');
         }
-    }, [submission, assets, mod, onSubmit, setGameState]);
+    }, [submission, assets, mod, onSubmit, setGameState, stats.totalRounds, roundNumber, mediaType, theme?.id]);
 
     useEffect(() => {
         if (timer > 0) {
@@ -164,6 +173,14 @@ export function Round({ onSubmit }) {
             <VennDiagram leftAsset={assets.left} rightAsset={assets.right} />
 
             <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 relative z-20">
+                {showFirstRoundCoaching && (
+                    <div className="mb-4 rounded-2xl border border-purple-400/30 bg-purple-500/10 p-4 text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <p className="text-white font-semibold">First round tip</p>
+                        <p className="text-white/60 text-sm">
+                            Aim for a phrase that works for both prompts and has a little surprise. Specific beats generic.
+                        </p>
+                    </div>
+                )}
                 <p className="text-center text-white/60 text-sm mb-3">
                     {mediaType === MEDIA_TYPES.AUDIO
                         ? 'One witty phrase that connects both sounds'

@@ -4,6 +4,7 @@ import {
     hasDailyChallengeBeenPlayed,
     markDailyChallengeComplete,
     getDailyChallengeHistory,
+    getDailyChallengeSummary,
 } from './dailyChallenge';
 
 describe('dailyChallenge service', () => {
@@ -100,6 +101,36 @@ describe('dailyChallenge service', () => {
         it('returns empty array on malformed JSON', () => {
             localStorage.setItem('vwf_daily', 'invalid');
             expect(getDailyChallengeHistory()).toEqual([]);
+        });
+    });
+
+    describe('getDailyChallengeSummary', () => {
+        it('summarizes empty daily history', () => {
+            const summary = getDailyChallengeSummary();
+            expect(summary.completions).toBe(0);
+            expect(summary.bestScore).toBeNull();
+            expect(summary.shareLine).toMatch(/Complete the daily challenge/i);
+        });
+
+        it('returns latest, best, average, and share line for completed dailies', () => {
+            localStorage.setItem(
+                'vwf_daily',
+                JSON.stringify({
+                    date: '2026-06-22',
+                    score: 9,
+                    history: [
+                        { date: '2026-06-22', score: 9, completedAt: 'x' },
+                        { date: '2026-06-21', score: 6, completedAt: 'x' },
+                    ],
+                })
+            );
+
+            const summary = getDailyChallengeSummary();
+            expect(summary.completions).toBe(2);
+            expect(summary.latestScore).toBe(9);
+            expect(summary.bestScore).toBe(9);
+            expect(summary.averageScore).toBe(7.5);
+            expect(summary.shareLine).toContain('Daily Venn complete');
         });
     });
 });

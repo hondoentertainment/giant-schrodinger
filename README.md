@@ -90,6 +90,12 @@ npm run build
 npm run preview
 ```
 
+For a release preflight that matches the deployment workflow, run:
+
+```bash
+npm run verify:release
+```
+
 For release readiness, use [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 For a launch rehearsal, use [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md).
 
@@ -108,6 +114,7 @@ src/
 
 ## Product Planning
 
-- Product roadmap and current-state review: [PRD.md](PRD.md)
+- Implementation roadmap: [ROADMAP.md](ROADMAP.md)
+- Product requirements and current-state review: [PRD.md](PRD.md)
 - Deployment and release guidance: [DEPLOYMENT.md](DEPLOYMENT.md)
 - Manual QA support: [TEST_REVIEW_CHECKLIST.md](TEST_REVIEW_CHECKLIST.md), [MANUAL_TESTING_GUIDE.md](MANUAL_TESTING_GUIDE.md)

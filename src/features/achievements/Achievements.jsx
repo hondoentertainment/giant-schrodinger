@@ -124,7 +124,8 @@ export function Achievements({ onBack }) {
                     <div className="flex items-center gap-3 mb-6">
                         <button
                             onClick={onBack}
-                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors min-h-[44px] min-w-[44px]"
+                            aria-label="Back to lobby"
                         >
                             <ArrowLeft className="w-5 h-5 text-white/70" />
                         </button>
@@ -192,7 +193,7 @@ export function Achievements({ onBack }) {
                     )}
 
                     {/* Category tabs */}
-                    <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
+                    <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1 -mx-1 px-1" role="tablist" aria-label="Achievement categories">
                         {CATEGORIES.map((cat) => {
                             const Icon = cat.icon;
                             const isActive = activeCategory === cat.id;
@@ -200,6 +201,10 @@ export function Achievements({ onBack }) {
                                 <button
                                     key={cat.id}
                                     onClick={() => setActiveCategory(cat.id)}
+                                    role="tab"
+                                    id={`achievement-tab-${cat.id}`}
+                                    aria-selected={isActive}
+                                    aria-controls="achievement-panel"
                                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-xs whitespace-nowrap transition-all ${
                                         isActive
                                             ? 'bg-white/15 text-white border border-white/20'
@@ -214,7 +219,12 @@ export function Achievements({ onBack }) {
                     </div>
 
                     {/* Achievement cards */}
-                    <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                    <div
+                        id="achievement-panel"
+                        role="tabpanel"
+                        aria-labelledby={`achievement-tab-${activeCategory}`}
+                        className="space-y-2 max-h-[420px] overflow-y-auto pr-1"
+                    >
                         {filteredAchievements.length > 0 ? (
                             filteredAchievements.map((achievement, idx) => (
                                 <div

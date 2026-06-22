@@ -133,10 +133,26 @@ export function JudgeRound({ payload, onDone }) {
         <div ref={formRef} className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-700">
             <div className="mb-6 text-center">
                 <h2 className="text-2xl font-display font-bold text-white mb-1">Judge a Friend&apos;s Connection</h2>
-                <p className="text-white/60 text-sm">Score their connection - they&apos;ll see your feedback in their gallery and summary when available.</p>
+                <p className="text-white/60 text-sm">
+                    {effectivePayload.shareFrom || 'A friend'} made a Venn connection. Score the answer for wit, logic, originality, and clarity.
+                </p>
+                <p className="text-white/40 text-xs mt-2">
+                    Be generous when it is clever, be honest when it is generic. Your feedback helps make the next round better.
+                </p>
             </div>
 
             <VennDiagram leftAsset={effectivePayload.assets.left} rightAsset={effectivePayload.assets.right} />
+
+            {effectivePayload.imageUrl && (
+                <div className="w-full max-w-xl mt-6 rounded-2xl overflow-hidden border border-white/10 bg-white/5 shadow-2xl">
+                    <img
+                        src={effectivePayload.imageUrl}
+                        alt="Fusion created from this connection"
+                        className="w-full max-h-80 object-cover"
+                        referrerPolicy="no-referrer"
+                    />
+                </div>
+            )}
 
             <div className="w-full max-w-xl mt-8 mb-6 p-6 rounded-2xl bg-white/5 border border-white/10">
                 <div className="text-white/50 text-sm uppercase tracking-wider mb-2">Their answer</div>

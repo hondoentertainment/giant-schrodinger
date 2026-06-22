@@ -3,6 +3,7 @@ import { useGame } from '../../context/GameContext';
 import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgementForCollision } from '../../services/judgements';
+import { getHighlights } from '../../services/highlights';
 const SORT_OPTIONS = [
     { id: 'newest', label: 'Newest', fn: (a, b) => new Date(b.timestamp) - new Date(a.timestamp) },
     { id: 'oldest', label: 'Oldest', fn: (a, b) => new Date(a.timestamp) - new Date(b.timestamp) },
@@ -16,7 +17,7 @@ function formatCollisionDate(timestamp) {
     return date.toLocaleDateString();
 }
 
-function LazyImage({ collision, displayJudgement }) {
+function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyShare }) {
     const [imageStatus, setImageStatus] = useState('loading');
     const [isVisible, setIsVisible] = useState(false);
     const ref = useRef(null);
@@ -97,6 +98,29 @@ function LazyImage({ collision, displayJudgement }) {
                         </div>
                     )}
                 </div>
+                <div className="mt-3 flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => onSelect(collision)}
+                        className="flex-1 rounded-xl bg-white text-black px-3 py-2 text-sm font-bold"
+                    >
+                        Details
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onCopyShare(collision)}
+                        className="flex-1 rounded-xl bg-white/10 text-white px-3 py-2 text-sm font-bold border border-white/20"
+                    >
+                        Copy share
+                    </button>
+                </div>
+            </div>
+            <div className="absolute left-3 right-3 bottom-3 rounded-xl bg-black/70 p-3 text-left opacity-100 group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity md:hidden">
+                <div className="flex items-center justify-between gap-3">
+                    <span className="text-white font-semibold truncate">{collision.submission}</span>
+                    <span className="text-yellow-300 font-bold">{collision.score}/10</span>
+                </div>
+                {isHighlight && <div className="text-amber-300 text-xs mt-1">Highlight</div>}
             </div>
         </article>
         </div>
@@ -110,6 +134,8 @@ export function Gallery() {
     const [loadingJudgements, setLoadingJudgements] = useState(true);
     const [sortBy, setSortBy] = useState('newest');
     const [feedbackFilter, setFeedbackFilter] = useState('all');
+    const [selectedCollision, setSelectedCollision] = useState(null);
+    const [shareCopiedId, setShareCopiedId] = useState(null);
 
     useEffect(() => {
         const list = getCollisions();
@@ -129,14 +155,32 @@ export function Gallery() {
         friendJudgements[collision.id] || getJudgementForCollision(collision.id);
 
     const sortOpt = SORT_OPTIONS.find((o) => o.id === sortBy) ?? SORT_OPTIONS[0];
+    const highlightIds = new Set(getHighlights().map((highlight) => highlight.id));
     const judgedCount = collisions.filter((collision) => getDisplayJudgement(collision)).length;
+    const highlightCount = collisions.filter((collision) => highlightIds.has(collision.id) || (collision.score || 0) >= 8).length;
     const averageScore = collisions.length
         ? collisions.reduce((sum, collision) => sum + (collision.score || 0), 0) / collisions.length
         : 0;
-    const filtered = feedbackFilter === 'judged'
-        ? collisions.filter((collision) => getDisplayJudgement(collision))
-        : collisions;
+    const filtered = collisions.filter((collision) => {
+        if (feedbackFilter === 'judged') return Boolean(getDisplayJudgement(collision));
+        if (feedbackFilter === 'highlights') return highlightIds.has(collision.id) || (collision.score || 0) >= 8;
+        return true;
+    });
     const sorted = [...filtered].sort(sortOpt.fn);
+
+    const handleCopyShare = async (collision) => {
+        const judgement = getDisplayJudgement(collision);
+        const friendLine = judgement
+            ? ` Friend Judge: ${judgement.judgeName || judgement.judge_name || 'A friend'} gave it ${judgement.score}/10${judgement.commentary ? ` — "${judgement.commentary}"` : ''}.`
+            : '';
+        const highlightLine = (collision.score || 0) >= 8 ? ' Highlight-worthy.' : '';
+        const text = `My Venn connection: "${collision.submission}" scored ${collision.score}/10.${friendLine}${highlightLine} Play Venn with Friends: ${window.location.origin}${window.location.pathname}`;
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            setShareCopiedId(collision.id);
+            setTimeout(() => setShareCopiedId(null), 2000);
+        }
+    };
 
     return (
         <div className="w-full max-w-6xl animate-in fade-in duration-700">
@@ -190,11 +234,17 @@ export function Gallery() {
                             <div className="text-white/40 text-xs uppercase tracking-wider">Friend Feedback</div>
                             <div className="text-2xl font-black text-white">{judgedCount}</div>
                         </div>
+                        <div className="rounded-2xl bg-white/5 border border-white/10 p-4 sm:col-span-3">
+                            <div className="text-white/40 text-xs uppercase tracking-wider">Highlights</div>
+                            <div className="text-2xl font-black text-white">{highlightCount}</div>
+                            <div className="text-white/40 text-xs mt-1">Scores 8+ are treated as reshare-worthy highlights.</div>
+                        </div>
                     </div>
                     <div className="flex flex-wrap gap-2 mb-4">
                         {[
                             { id: 'all', label: 'All saved' },
                             { id: 'judged', label: 'With friend feedback' },
+                            { id: 'highlights', label: 'Highlights' },
                         ].map((option) => (
                             <button
                                 key={option.id}
@@ -218,7 +268,11 @@ export function Gallery() {
                     )}
                     {!loadingJudgements && sorted.length === 0 && (
                         <p className="text-white/40 text-sm mb-4" role="status">
-                            No saved connections match this filter yet.
+                            {feedbackFilter === 'judged'
+                                ? 'No friend feedback yet. Share a round for judging to fill this view.'
+                                : feedbackFilter === 'highlights'
+                                ? 'No highlights yet. Score 8+ to build your best-of archive.'
+                                : 'No saved connections match this filter yet.'}
                         </p>
                     )}
                     <div
@@ -231,9 +285,64 @@ export function Gallery() {
                                 key={c.id}
                                 collision={c}
                                 displayJudgement={getDisplayJudgement(c)}
+                                isHighlight={highlightIds.has(c.id) || (c.score || 0) >= 8}
+                                onSelect={setSelectedCollision}
+                                onCopyShare={handleCopyShare}
                             />
                         ))}
                     </div>
+                    {shareCopiedId && (
+                        <p className="mt-4 text-center text-emerald-300 text-sm" role="status">
+                            Share text copied.
+                        </p>
+                    )}
+                    {selectedCollision && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="gallery-detail-title">
+                            <div className="glass-panel w-full max-w-lg rounded-3xl border border-white/10 p-6">
+                                <h3 id="gallery-detail-title" className="text-2xl font-display font-bold text-white mb-2">Saved Connection</h3>
+                                <p className="text-white/80 text-xl italic mb-4">&ldquo;{selectedCollision.submission}&rdquo;</p>
+                                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                                    <div className="rounded-xl bg-white/5 p-3">
+                                        <div className="text-white/40 uppercase tracking-wider text-xs">Score</div>
+                                        <div className="text-white font-bold">{selectedCollision.score}/10</div>
+                                    </div>
+                                    <div className="rounded-xl bg-white/5 p-3">
+                                        <div className="text-white/40 uppercase tracking-wider text-xs">Saved</div>
+                                        <div className="text-white font-bold">{formatCollisionDate(selectedCollision.timestamp)}</div>
+                                    </div>
+                                </div>
+                                {getDisplayJudgement(selectedCollision) && (
+                                    <div className="rounded-xl bg-white/5 p-3 text-sm text-white/70 mb-4">
+                                        <div className="text-white font-semibold">Friend Judge Result</div>
+                                        <div className="mt-1">
+                                            {getDisplayJudgement(selectedCollision).judgeName || 'A friend'} gave it {getDisplayJudgement(selectedCollision).score}/10.
+                                        </div>
+                                        {getDisplayJudgement(selectedCollision).commentary && (
+                                            <div className="mt-2 text-white/50 italic">
+                                                &ldquo;{getDisplayJudgement(selectedCollision).commentary}&rdquo;
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCopyShare(selectedCollision)}
+                                        className="flex-1 rounded-xl bg-white text-black py-3 font-bold"
+                                    >
+                                        Copy Share Text
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedCollision(null)}
+                                        className="flex-1 rounded-xl bg-white/10 text-white py-3 font-bold border border-white/20"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
         </div>

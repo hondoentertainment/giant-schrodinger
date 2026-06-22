@@ -83,6 +83,15 @@ export function OnboardingModal({ onDismiss }) {
                     Scored on <span className="text-white">Wit</span>, <span className="text-white">Logic</span>, <span className="text-white">Originality</span>, and <span className="text-white">Clarity</span>.
                 </p>
 
+                <div className="rounded-xl bg-white/5 border border-white/10 p-4 mb-3">
+                    <p className="text-white text-sm font-semibold mb-2">Pick how the round gets judged:</p>
+                    <ul className="space-y-1.5 text-white/60 text-xs">
+                        <li><span className="text-white">AI Judge:</span> Gemini scores automatically when configured; mock scoring keeps the round playable without a key.</li>
+                        <li><span className="text-white">Manual Judge:</span> you enter the score yourself after seeing the fusion.</li>
+                        <li><span className="text-white">Friend Judge:</span> copy a judge link so someone else can score the same round.</li>
+                    </ul>
+                </div>
+
                 <div className="rounded-xl bg-white/5 border border-white/10 p-3 mb-6 text-center">
                     <p className="text-amber-400 text-sm font-semibold">Play daily to build a streak!</p>
                     <p className="text-white/40 text-xs">Streaks unlock bonus scoring multipliers and exclusive rewards.</p>

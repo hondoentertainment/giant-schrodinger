@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { MEDIA_TYPES } from '../data/themes';
+import { markDailyChallengeComplete } from '../services/dailyChallenge';
+import { trackDailyChallenge } from '../services/analytics';
 
 const GameContext = createContext();
 
@@ -162,6 +164,11 @@ export function GameProvider({ children }) {
 
     const nextRound = () => {
         if (roundNumber >= totalRounds) {
+            if (isDailyChallenge) {
+                const averageScore = totalRounds > 0 ? Math.round(sessionScore / totalRounds) : 0;
+                markDailyChallengeComplete(averageScore);
+                trackDailyChallenge(true);
+            }
             setGameState('SESSION_SUMMARY');
             return;
         }

@@ -3,7 +3,7 @@ import { useGame } from '../../context/GameContext';
 import { useRoom } from '../../context/RoomContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked } from '../../services/stats';
-import { getDailyChallenge, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
+import { getDailyChallenge, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { isBackendEnabled } from '../../lib/supabase';
 import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
@@ -13,6 +13,8 @@ import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
 import { ServiceStatusCard } from '../../components/ServiceStatusCard';
 import { isE2EMockRoomEnabled } from '../../lib/e2eMockRoom';
+import { trackEvent } from '../../services/analytics';
+import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -58,6 +60,7 @@ export function Lobby() {
     const [onboardingDismissCallback, setOnboardingDismissCallback] = useState(null);
     const [showUnlockModal, setShowUnlockModal] = useState(false);
     const [showAllFeatures, setShowAllFeatures] = useState(() => localStorage.getItem('vwf_show_all_features') === 'true');
+    const [welcomeDismissed, setWelcomeDismissed] = useState(false);
 
     // Multiplayer state
     const [showMultiplayer, setShowMultiplayer] = useState(false);
@@ -70,6 +73,20 @@ export function Lobby() {
     const milestones = getMilestones();
     const backendReady = isBackendEnabled() || isE2EMockRoomEnabled();
     const lobbyTier = stats.totalRounds >= 5 ? 3 : stats.totalRounds >= 3 ? 2 : stats.totalRounds >= 1 ? 1 : 0;
+    const isFirstSession = lobbyTier === 0 && !sessionId;
+    const weeklyEvent = useMemo(() => getCurrentWeeklyEvent(), []);
+    const weeklyCountdown = useMemo(() => formatWeeklyCountdown(getTimeUntilNextWeek()), []);
+    const welcomeMessage = useMemo(() => {
+        if (!user || !stats.lastPlayedDate || stats.totalRounds === 0) return null;
+        const lastPlayed = new Date(`${stats.lastPlayedDate}T00:00:00`);
+        if (Number.isNaN(lastPlayed.getTime())) return null;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const daysAway = Math.round((today - lastPlayed) / (24 * 60 * 60 * 1000));
+        if (daysAway <= 0) return `Welcome back, ${user.name}. Your streak is active today.`;
+        if (daysAway === 1) return `Welcome back, ${user.name}. Keep yesterday's momentum going.`;
+        return `Welcome back, ${user.name}. Fresh prompts are waiting.`;
+    }, [stats.lastPlayedDate, stats.totalRounds, user]);
     const showFeatureNav = showAllFeatures || lobbyTier >= 2;
     const showAdvancedModes = showAllFeatures || lobbyTier >= 3;
 
@@ -94,14 +111,21 @@ export function Lobby() {
         e.preventDefault();
         const trimmedName = name.trim();
         if (!trimmedName) return;
+        trackEvent('first_session_profile_created', {
+            scoringMode,
+            mediaType,
+            themeId,
+        });
         login({ name: trimmedName, avatar, themeId, gradient: theme.gradient, scoringMode, mediaType, useCustomImages });
     };
 
     const dailyChallenge = useMemo(() => getDailyChallenge(), []);
+    const dailySummary = useMemo(() => getDailyChallengeSummary(), []);
     const dailyPlayed = useMemo(() => hasDailyChallengeBeenPlayed(), []);
 
     const startGame = () => {
         if (!sessionId && stats.totalRounds === 0) {
+            trackEvent('first_session_onboarding_opened', { source: 'solo' });
             setOnboardingDismissCallback(() => handleOnboardingDismiss);
             setShowOnboarding(true);
             return;
@@ -128,8 +152,10 @@ export function Lobby() {
 
     const startDailyChallenge = () => {
         if (!sessionId && stats.totalRounds === 0) {
+            trackEvent('first_session_onboarding_opened', { source: 'daily' });
             setOnboardingDismissCallback(() => {
                 setShowOnboarding(false);
+                trackEvent('first_session_onboarding_completed', { source: 'daily' });
                 startSession(3, true);
                 beginRound();
             });
@@ -142,6 +168,7 @@ export function Lobby() {
 
     const handleOnboardingDismiss = () => {
         setShowOnboarding(false);
+        trackEvent('first_session_onboarding_completed', { source: 'solo' });
         startSession(sessionLength);
         beginRound();
     };
@@ -181,6 +208,19 @@ export function Lobby() {
                 {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
             <div className="w-full max-w-md space-y-8 glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
                 <div className="text-center">
+                    {welcomeMessage && !welcomeDismissed && !isFirstSession && (
+                        <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-left flex items-center gap-3">
+                            <p className="text-emerald-200 text-sm flex-1">{welcomeMessage}</p>
+                            <button
+                                type="button"
+                                onClick={() => setWelcomeDismissed(true)}
+                                className="min-h-[44px] min-w-[44px] text-white/50 hover:text-white"
+                                aria-label="Dismiss welcome back message"
+                            >
+                                &times;
+                            </button>
+                        </div>
+                    )}
                     {/* Avatar with prominent Edit Profile */}
                     <div className="relative inline-block mb-4 group">
                         <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${getThemeById(user?.themeId).gradient} flex items-center justify-center text-5xl shadow-lg ring-4 ring-white/5 transition-transform group-hover:ring-white/10`}>
@@ -198,11 +238,15 @@ export function Lobby() {
                     <h2 className="text-3xl font-display font-bold text-white mb-2">
                         Hi, {user.name}!
                     </h2>
-                    <p className="text-white/60 mb-4">Ready to make some connections?</p>
-                    <p className="text-white/40 text-sm mb-4">
-                        Complete {sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.
+                    <p className="text-white/60 mb-4">
+                        {isFirstSession ? 'Your first run is a guided 3-round warmup.' : 'Ready to make some connections?'}
                     </p>
-                    <ServiceStatusCard className="mb-4" />
+                    <p className="text-white/40 text-sm mb-4">
+                        {isFirstSession
+                            ? 'Write one clever phrase, score it, then send the best one to a friend.'
+                            : `Complete ${sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.`}
+                    </p>
+                    {!isFirstSession && <ServiceStatusCard className="mb-4" />}
                     <div className="mb-4 flex flex-wrap gap-3 justify-center text-sm text-white/60">
                         <span>Scoring: <span className="text-white font-semibold">{scoringMode === 'human' ? 'Manual Judge' : 'AI Judge'}</span></span>
                         <span>Media: <span className="text-white font-semibold">
@@ -214,7 +258,7 @@ export function Lobby() {
                         )}
                         <span>{stats.totalRounds} rounds played</span>
                     </div>
-                    {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE && (
+                    {!isFirstSession && (user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE && (
                         <div className="mb-4">
                             <CustomImagesManager
                                 customImages={customImages}
@@ -260,7 +304,7 @@ export function Lobby() {
                     )}
 
                     {/* Daily Challenge */}
-                    {!showMultiplayer && !dailyPlayed && (
+                    {!isFirstSession && !showMultiplayer && !dailyPlayed && (
                         <button
                             onClick={startDailyChallenge}
                             disabled={!!sessionId}
@@ -276,15 +320,33 @@ export function Lobby() {
                                         <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">NEW</span>
                                     </div>
                                     <div className="text-white/50 text-sm">{dailyChallenge.prompt}</div>
+                                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-amber-200/70">
+                                        <span>{dailySummary.completions} daily completion{dailySummary.completions === 1 ? '' : 's'}</span>
+                                        {dailySummary.bestScore !== null && <span>Best daily: {dailySummary.bestScore}/10</span>}
+                                    </div>
                                 </div>
                                 <Zap className="w-5 h-5 text-amber-400" />
                             </div>
                         </button>
                     )}
+                    {!isFirstSession && !showMultiplayer && weeklyEvent && (
+                        <div className="w-full mb-4 p-4 rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 text-left">
+                            <div className="flex items-center justify-between gap-3 mb-1">
+                                <span className="text-purple-300 text-xs uppercase tracking-wider font-bold">This Week&apos;s Event</span>
+                                <span className="text-white/40 text-xs">Ends in {weeklyCountdown}</span>
+                            </div>
+                            <div className="text-white font-bold">{weeklyEvent.name}</div>
+                            <div className="text-white/60 text-sm">{weeklyEvent.description}</div>
+                        </div>
+                    )}
                     {!showMultiplayer && dailyPlayed && (
-                        <div className="w-full mb-4 p-3 rounded-xl border border-white/10 bg-white/5 text-center text-white/40 text-sm">
-                            <CalendarDays className="w-4 h-4 inline mr-2" />
-                            Daily challenge completed! Come back tomorrow.
+                        <div className="w-full mb-4 p-4 rounded-xl border border-amber-400/20 bg-amber-500/10 text-left text-sm">
+                            <div className="flex items-center gap-2 text-amber-200 font-semibold">
+                                <CalendarDays className="w-4 h-4" />
+                                Daily challenge complete
+                            </div>
+                            <p className="mt-1 text-white/60">{dailySummary.shareLine}</p>
+                            <p className="mt-2 text-white/40 text-xs">Come back tomorrow for a new prompt and another streak check-in.</p>
                         </div>
                     )}
 
@@ -292,7 +354,7 @@ export function Lobby() {
                     {!showMultiplayer && (
                         <>
                             {/* Session length (only when not in active session) */}
-                            {!sessionId && (
+                            {!sessionId && !isFirstSession && (
                                 <div className="mb-4">
                                     <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">Session length</label>
                                     <div className="flex gap-2 justify-center">
@@ -327,7 +389,9 @@ export function Lobby() {
                                             : `Start round ${roundComplete ? roundNumber + 1 : roundNumber}`
                                         : `Start solo session (${sessionLength} rounds)`}
                                 >
-                                    {sessionId
+                                    {isFirstSession
+                                        ? 'Start First Round'
+                                        : sessionId
                                         ? roundComplete && roundNumber === totalRounds
                                             ? 'Session Complete'
                                             : `Start Round ${roundComplete ? roundNumber + 1 : roundNumber}`
@@ -343,15 +407,16 @@ export function Lobby() {
                                 </button>
                             </div>
 
-                            {/* Multiplayer button */}
-                            <button
-                                onClick={() => setShowMultiplayer(true)}
-                                className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Users className="w-5 h-5" />
-                                Play with Friends
-                                {!backendReady && <WifiOff className="w-4 h-4 opacity-50" />}
-                            </button>
+                            {!isFirstSession && (
+                                <button
+                                    onClick={() => setShowMultiplayer(true)}
+                                    className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Users className="w-5 h-5" />
+                                    Play with Friends
+                                    {!backendReady && <WifiOff className="w-4 h-4 opacity-50" />}
+                                </button>
+                            )}
 
                             {showFeatureNav && (
                                 <div className="mt-4 grid grid-cols-2 gap-2">
@@ -654,7 +719,7 @@ export function Lobby() {
                             type="button"
                             onClick={() => setScoringMode('human')}
                             aria-pressed={scoringMode === 'human'}
-                            aria-label="Manual judge — you or a friend score each round"
+                            aria-label="Manual judge — you enter the score yourself after each round"
                             className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all ${scoringMode === 'human'
                                     ? 'bg-white text-black shadow-lg'
                                     : 'bg-white/10 text-white hover:bg-white/20'
@@ -677,8 +742,8 @@ export function Lobby() {
                     </div>
                     <p className="mt-2 text-center text-white/50 text-xs">
                         {scoringMode === 'human'
-                            ? 'You or a friend score each round manually.'
-                            : 'Gemini AI scores your connections automatically.'
+                            ? 'Manual Judge means you score the reveal yourself. Friend Judge links can still be copied after the round.'
+                            : 'AI Judge scores automatically with Gemini when configured, and falls back gracefully when unavailable.'
                         }
                     </p>
                 </section>

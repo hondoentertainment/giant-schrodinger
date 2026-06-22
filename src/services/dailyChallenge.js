@@ -113,3 +113,29 @@ export function getDailyChallengeHistory() {
         return [];
     }
 }
+
+export function getDailyChallengeSummary() {
+    const history = getDailyChallengeHistory();
+    if (history.length === 0) {
+        return {
+            completions: 0,
+            bestScore: null,
+            latestScore: null,
+            averageScore: null,
+            shareLine: 'Today is open. Complete the daily challenge to start your streak ritual.',
+        };
+    }
+
+    const scores = history.map((entry) => Number(entry.score) || 0);
+    const bestScore = Math.max(...scores);
+    const latestScore = scores[0];
+    const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+
+    return {
+        completions: history.length,
+        bestScore,
+        latestScore,
+        averageScore,
+        shareLine: `Daily Venn complete: ${latestScore}/10 today, best ${bestScore}/10 across ${history.length} day${history.length === 1 ? '' : 's'}.`,
+    };
+}

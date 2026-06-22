@@ -6,6 +6,9 @@ import { ArrowRight, Home } from 'lucide-react';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgementForCollision } from '../../services/judgements';
+import { getStats } from '../../services/stats';
+import { getDailyChallengeHistory } from '../../services/dailyChallenge';
+import { AchievementProgress } from '../../components/AchievementProgress';
 
 function RoundCard({ result, index, feedback }) {
     const mod = result.modifier;
@@ -52,6 +55,8 @@ export function SessionSummary() {
     const { sessionResults, sessionScore, totalRounds, endSession, isDailyChallenge, setGameState } = useGame();
     const { toast } = useToast();
     const [feedbackByCollision, setFeedbackByCollision] = useState({});
+    const playerStats = useMemo(() => getStats(), []);
+    const dailyHistory = useMemo(() => getDailyChallengeHistory(), []);
 
     useEffect(() => {
         const collisionIds = sessionResults.map((result) => result.collisionId).filter(Boolean);
@@ -168,6 +173,25 @@ export function SessionSummary() {
                         )}
                     </div>
 
+                    <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Keep the run going</div>
+                        <div className="space-y-3 text-sm text-white/65">
+                            {playerStats.currentStreak > 0 ? (
+                                <p>
+                                    Day <span className="text-amber-300 font-bold">{playerStats.currentStreak}</span> streak is alive. Come back tomorrow to keep it.
+                                </p>
+                            ) : (
+                                <p>Play again tomorrow to start a streak and unlock richer rewards.</p>
+                            )}
+                            {isDailyChallenge && dailyHistory.length > 0 && (
+                                <p>
+                                    Daily challenge history: {dailyHistory.length} completion{dailyHistory.length === 1 ? '' : 's'} saved locally.
+                                </p>
+                            )}
+                            <AchievementProgress score={Math.round(stats.avg)} stats={playerStats} />
+                        </div>
+                    </div>
+
                     <div className="mb-8">
                         <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Round Breakdown</div>
                         <div className="space-y-2">
@@ -189,6 +213,8 @@ export function SessionSummary() {
                                 score: Math.round(stats.avg),
                                 scoreBand: overallBand?.label,
                                 commentary: `Average: ${stats.avg.toFixed(1)}/10 | Best: ${stats.best}/10`,
+                                judgeMode: sessionResults.some((result) => result.judgeMode === 'ai') ? 'ai' : 'human',
+                                isDailyChallenge,
                             }}
                             onToast={(type, msg) => toast[type]?.(msg)}
                         />
@@ -208,6 +234,15 @@ export function SessionSummary() {
                         >
                             <Home className="w-5 h-5" />
                             Back to Lobby
+                        </button>
+                        <button
+                            onClick={() => {
+                                endSession();
+                                setGameState('GALLERY');
+                            }}
+                            className="w-full py-3 bg-white/10 text-white/70 font-semibold rounded-full hover:bg-white/20 transition-colors"
+                        >
+                            View Saved Gallery
                         </button>
                     </div>
                 </div>

@@ -1,31 +1,24 @@
 import React, { useMemo } from 'react';
-import { getStats } from '../../services/stats';
+import { getMilestones, getStats } from '../../services/stats';
 import { getCollisions } from '../../services/storage';
-
-const MILESTONES = [
-  { threshold: 1, field: 'totalRounds', icon: '🎮', label: 'First Round' },
-  { threshold: 5, field: 'totalRounds', icon: '⭐', label: '5 Rounds Played' },
-  { threshold: 10, field: 'totalRounds', icon: '🔥', label: '10 Rounds Played' },
-  { threshold: 25, field: 'totalRounds', icon: '💪', label: '25 Rounds' },
-  { threshold: 50, field: 'totalRounds', icon: '🏆', label: '50 Rounds' },
-  { threshold: 100, field: 'totalRounds', icon: '👑', label: '100 Rounds' },
-  { threshold: 3, field: 'currentStreak', icon: '📅', label: '3-Day Streak' },
-  { threshold: 7, field: 'currentStreak', icon: '🗓️', label: '7-Day Streak' },
-  { threshold: 14, field: 'maxStreak', icon: '📆', label: '14-Day Streak' },
-];
 
 export function MilestoneTimeline() {
   const stats = useMemo(() => getStats(), []);
   const collisions = useMemo(() => getCollisions() || [], []);
+  const milestones = useMemo(() => getMilestones().map((m) => ({
+    ...m,
+    field: m.type === 'rounds' ? 'totalRounds' : 'currentStreak',
+    icon: m.reward === 'avatar' ? m.rewardId : '🎨',
+  })), []);
 
   const bestScore = collisions.reduce((best, c) => Math.max(best, c.score || 0), 0);
 
-  const achieved = MILESTONES.filter(m => {
+  const achieved = milestones.filter(m => {
     if (m.field === 'bestScore') return bestScore >= m.threshold;
     return (stats[m.field] || 0) >= m.threshold;
   });
 
-  const nextMilestone = MILESTONES.find(m => {
+  const nextMilestone = milestones.find(m => {
     if (m.field === 'bestScore') return bestScore < m.threshold;
     return (stats[m.field] || 0) < m.threshold;
   });

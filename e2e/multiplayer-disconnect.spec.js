@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
  * inside all room-scoped views (RoomLobby, MultiplayerRound, MultiplayerReveal,
  * VotingPhase, ResultsPhase, CountdownPhase, RevealPhase). It reads
  * connectionState from RoomContext and becomes visible on 'reconnecting' or
- * 'disconnected'. A window 'offline' event triggers setConnectionState('reconnecting').
+ * 'disconnected'. A window 'offline' event triggers the disconnected recovery state.
  *
  * Playwright builds the app with Vite mode "e2e", which enables a localStorage-
  * gated mock room harness. Normal production builds do not include that active
@@ -29,6 +29,9 @@ async function openLobbyWithMockRoom(page, name = 'MockHost') {
                 maxStreak: 0,
                 totalRounds: 20,
                 totalCollisions: 0,
+                scores: [],
+                dailyScores: [],
+                themesPlayed: [],
                 milestonesUnlocked: [],
             })
         );
@@ -83,7 +86,7 @@ test.describe('multiplayer disconnect recovery', () => {
         await context.setOffline(true);
         await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
-        await expect(page.getByText(/Connection lost\. Reconnecting/i)).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText(/Disconnected\./i)).toBeVisible({ timeout: 5000 });
 
         await context.setOffline(false);
     });
@@ -93,7 +96,7 @@ test.describe('multiplayer disconnect recovery', () => {
 
         await context.setOffline(true);
         await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-        await expect(page.getByText(/Connection lost\. Reconnecting/i)).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText(/Disconnected\./i)).toBeVisible({ timeout: 5000 });
 
         await context.setOffline(false);
         await page.evaluate(() => window.dispatchEvent(new Event('online')));

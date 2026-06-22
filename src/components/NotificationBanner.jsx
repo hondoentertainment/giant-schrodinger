@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { requestNotificationPermission, subscribeToPush, isPushSupported } from '../services/pushNotifications';
+import { getStats } from '../services/stats';
 
 const DISMISSED_KEY = 'venn_notification_banner_dismissed';
-const ROUNDS_KEY = 'venn_rounds_played';
 const PUSH_PREF_KEY = 'venn_push_enabled';
 
 export function NotificationBanner() {
@@ -14,8 +14,8 @@ export function NotificationBanner() {
         if (localStorage.getItem(PUSH_PREF_KEY)) return;
         if (!isPushSupported()) return;
 
-        const roundsPlayed = parseInt(localStorage.getItem(ROUNDS_KEY) || '0', 10);
-        if (roundsPlayed >= 3) {
+        const stats = getStats();
+        if ((stats.totalRounds || 0) >= 3) {
             setVisible(true);
         }
     }, []);

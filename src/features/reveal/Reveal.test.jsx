@@ -1,20 +1,25 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Reveal } from './Reveal';
 
 // ── Mock GameContext ──
 const mockSetGameState = vi.fn();
 const mockCompleteRound = vi.fn();
 const mockNextRound = vi.fn();
+let mockScoringMode = 'ai';
+let mockRoundNumber = 1;
+let mockTotalRounds = 3;
+const mockClipboardWriteText = vi.fn();
 
 vi.mock('../../context/GameContext', () => ({
     useGame: () => ({
         setGameState: mockSetGameState,
-        user: { name: 'TestUser', avatar: '👽', themeId: 'classic', scoringMode: 'ai', mediaType: 'image' },
+        user: { name: 'TestUser', avatar: '👽', themeId: 'classic', scoringMode: mockScoringMode, mediaType: 'image' },
         completeRound: mockCompleteRound,
-        roundNumber: 1,
-        totalRounds: 3,
+        roundNumber: mockRoundNumber,
+        totalRounds: mockTotalRounds,
         currentModifier: { id: 'normal', label: 'Standard Round', timeFactor: 1.0, scoreFactor: 1.0, icon: '🎯' },
         nextRound: mockNextRound,
     }),
@@ -145,7 +150,17 @@ describe('Reveal', () => {
     const mockSubmission = 'They both have fur';
 
     beforeEach(() => {
+        mockScoringMode = 'ai';
+        mockRoundNumber = 1;
+        mockTotalRounds = 3;
         vi.clearAllMocks();
+        mockClipboardWriteText.mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'clipboard', {
+            configurable: true,
+            value: {
+                writeText: mockClipboardWriteText,
+            },
+        });
     });
 
     it('displays score when result is provided', async () => {
@@ -169,10 +184,48 @@ describe('Reveal', () => {
         expect(shareBtn).toBeInTheDocument();
     });
 
+    it('lets manual scoring users ask a friend to judge before self-scoring', async () => {
+        mockScoringMode = 'human';
+        const user = userEvent.setup();
+        const { createJudgeShareUrl } = await import('../../services/share');
+
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+
+        const friendJudgeButton = await screen.findByRole('button', { name: /ask a friend to judge/i }, { timeout: 3000 });
+        await user.click(friendJudgeButton);
+
+        expect(createJudgeShareUrl).toHaveBeenCalledWith(expect.objectContaining({
+            submission: mockSubmission,
+            collisionId: null,
+            judgeMode: 'friend',
+        }));
+        expect(await screen.findByRole('button', { name: /friend judge link copied/i })).toBeInTheDocument();
+    });
+
     it('Next Round button navigates forward', async () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
         const nextBtn = await screen.findByRole('button', { name: /Next Round/i }, { timeout: 3000 });
         expect(nextBtn).toBeInTheDocument();
+    });
+
+    it('shows a recommended workflow after a standout round', async () => {
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+
+        expect(await screen.findByText(/Recommended next move/i, {}, { timeout: 3000 })).toBeInTheDocument();
+        expect(screen.getByText(/Share this standout round for friend feedback/i)).toBeInTheDocument();
+        expect(screen.getByText(/Saved to your gallery/i)).toBeInTheDocument();
+        expect(screen.getByText(/Continue to round 2/i)).toBeInTheDocument();
+    });
+
+    it('recommends session summary on the final round', async () => {
+        mockRoundNumber = 3;
+        mockTotalRounds = 3;
+
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+
+        expect(await screen.findByText(/Review your session summary/i, {}, { timeout: 3000 })).toBeInTheDocument();
+        expect(screen.getByText(/Open your session summary/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /See Results/i })).toBeInTheDocument();
     });
 
     it('shows the submission in quotes while loading', async () => {

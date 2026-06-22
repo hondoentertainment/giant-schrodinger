@@ -4,6 +4,7 @@ import { isBackendEnabled } from '../lib/supabase';
 import {
     createRoom,
     joinRoom,
+    getRoomById,
     getRoomPlayers,
     getRoundSubmissions,
     getRoundVotes,
@@ -59,6 +60,7 @@ export function RoomProvider({ children }) {
     const unsubRef = useRef(null);
     const hydrateRequestRef = useRef(0);
     const reconnectToastShownRef = useRef(false);
+    const scoringRoundRef = useRef(null);
 
     const isMultiplayer = !!room;
     const roomCode = room?.code || null;
@@ -96,7 +98,7 @@ export function RoomProvider({ children }) {
         const requestId = hydrateRequestRef.current + 1;
         hydrateRequestRef.current = requestId;
 
-        const shouldLoadRoundState = ['revealing', 'results', 'finished'].includes(nextRoom.status);
+        const shouldLoadRoundState = ['playing', 'revealing', 'results', 'finished'].includes(nextRoom.status);
         const shouldLoadVotes = shouldLoadRoundState && (nextRoom.scoring_mode || 'ai') === 'human';
 
         if (!shouldLoadRoundState) {
@@ -117,6 +119,19 @@ export function RoomProvider({ children }) {
         setSubmissions(roundSubmissions);
         setVotes(roundVotes);
     }, []);
+
+    const resyncRoomSnapshot = useCallback(async (currentRoom = room) => {
+        if (!currentRoom?.id) return;
+
+        const snapshotRoom = await getRoomById(currentRoom.id);
+        const nextRoom = snapshotRoom || currentRoom;
+        const roomPlayers = await getRoomPlayers(nextRoom.id);
+
+        setRoom(nextRoom);
+        setRoomPhase(getRoomPhaseFromStatus(nextRoom.status));
+        setPlayers(roomPlayers);
+        await hydrateRoomState(nextRoom);
+    }, [hydrateRoomState, room]);
 
     const setupSubscriptions = useCallback((roomId) => {
         if (unsubRef.current) unsubRef.current();
@@ -167,7 +182,7 @@ export function RoomProvider({ children }) {
                         return 'connected';
                     });
                     setRoom((currentRoom) => {
-                        if (currentRoom?.id) hydrateRoomState(currentRoom);
+                        if (currentRoom?.id) resyncRoomSnapshot(currentRoom);
                         return currentRoom;
                     });
                     return;
@@ -193,14 +208,39 @@ export function RoomProvider({ children }) {
             : subscribeToRoom(roomId, callbacks);
 
         unsubRef.current = unsub;
-    }, [hydrateRoomState, toast]);
+    }, [resyncRoomSnapshot, toast]);
 
     const attemptReconnect = useCallback(() => {
         if (!room?.id) return;
         setConnectionState('reconnecting');
         setupSubscriptions(room.id);
-        hydrateRoomState(room);
-    }, [hydrateRoomState, room, setupSubscriptions]);
+        resyncRoomSnapshot(room);
+    }, [resyncRoomSnapshot, room, setupSubscriptions]);
+
+    useEffect(() => {
+        if (!room?.id || typeof window === 'undefined') return undefined;
+
+        const handleOffline = () => {
+            reconnectToastShownRef.current = true;
+            setConnectionState('disconnected');
+            reportAppError('multiplayer_browser_offline', new Error('Browser reported offline'), {
+                roomId: room.id,
+            });
+        };
+        const handleOnline = () => {
+            reconnectToastShownRef.current = true;
+            setConnectionState('reconnecting');
+            setupSubscriptions(room.id);
+            resyncRoomSnapshot(room);
+        };
+
+        window.addEventListener('offline', handleOffline);
+        window.addEventListener('online', handleOnline);
+        return () => {
+            window.removeEventListener('offline', handleOffline);
+            window.removeEventListener('online', handleOnline);
+        };
+    }, [resyncRoomSnapshot, room, setupSubscriptions]);
 
     const hostRoom = useCallback(async ({ hostName, themeId, totalRounds, scoringMode }) => {
         if (isE2EMockRoomEnabled()) {
@@ -376,40 +416,52 @@ export function RoomProvider({ children }) {
         if (!room || !isHost) return;
 
         const scoringMode = room.scoring_mode || 'ai';
+        const scoringKey = `${room.id}:${room.round_number}`;
+        if (scoringRoundRef.current === scoringKey) return;
+        scoringRoundRef.current = scoringKey;
 
-        if (scoringMode === 'ai') {
-            const theme = getThemeById(room.theme_id);
-            const assets = room.assets;
-            const roundSubmissions = await getRoundSubmissions(room.id, room.round_number);
+        try {
+            if (scoringMode === 'ai') {
+                const theme = getThemeById(room.theme_id);
+                const assets = room.assets;
+                const roundSubmissions = await getRoundSubmissions(room.id, room.round_number);
 
-            for (const submission of roundSubmissions) {
-                if (submission.score) continue;
-                try {
-                    const scoreResult = await scoreSubmission(submission.submission, assets.left, assets.right);
-                    const multiplier = theme?.modifier?.scoreMultiplier || 1;
-                    const finalScore = Math.min(10, Math.max(1, Math.round(scoreResult.score * multiplier)));
-                    await updateSubmissionScore(
-                        submission.id,
-                        {
-                            ...scoreResult,
-                            finalScore,
-                            scoreMultiplier: multiplier,
-                        },
-                        roomSession
-                    );
-                } catch (err) {
-                    console.warn('Failed to score submission:', err);
-                    reportAppError('multiplayer_score_submission', err, {
-                        roomId: room.id,
-                        roundNumber: room.round_number,
-                    });
+                for (const submission of roundSubmissions) {
+                    if (submission.score) continue;
+                    try {
+                        const scoreResult = await scoreSubmission(submission.submission, assets.left, assets.right);
+                        const multiplier = theme?.modifier?.scoreMultiplier || 1;
+                        const finalScore = Math.min(10, Math.max(1, Math.round(scoreResult.score * multiplier)));
+                        await updateSubmissionScore(
+                            submission.id,
+                            {
+                                ...scoreResult,
+                                finalScore,
+                                scoreMultiplier: multiplier,
+                            },
+                            roomSession
+                        );
+                    } catch (err) {
+                        console.warn('Failed to score submission:', err);
+                        reportAppError('multiplayer_score_submission', err, {
+                            roomId: room.id,
+                            roundNumber: room.round_number,
+                        });
+                    }
                 }
+            } else {
+                toast.info('All answers are in - vote for the winner.');
             }
-        } else {
-            toast.info('All answers are in - vote for the winner.');
-        }
 
-        await setRoomStatus(room.id, 'revealing', roomSession);
+            const moved = await setRoomStatus(room.id, 'revealing', roomSession);
+            if (!moved) {
+                scoringRoundRef.current = null;
+                toast.error('Failed to reveal answers');
+            }
+        } catch (err) {
+            scoringRoundRef.current = null;
+            throw err;
+        }
     }, [isHost, room, roomSession, toast]);
 
     const castVoteForSubmission = useCallback(async (submissionId) => {

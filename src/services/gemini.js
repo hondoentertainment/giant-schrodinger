@@ -44,7 +44,21 @@ function buildFusionPrompt(theme, submission, asset1, asset2) {
 }
 
 function getAssetLabel(asset, fallbackLabel) {
-    return asset?.label || fallbackLabel;
+    if (typeof asset === 'string' && asset.trim()) return asset.trim();
+    return asset?.label || asset?.title || asset?.name || fallbackLabel;
+}
+
+function hasScorableAsset(asset) {
+    return getAssetLabel(asset, '').trim().length > 0;
+}
+
+function getFallbackReason(submission, asset1, asset2) {
+    if (!submission) return 'Missing submission - using mock scores';
+    if (!hasScorableAsset(asset1) || !hasScorableAsset(asset2)) {
+        return 'Missing prompt assets - using mock scores';
+    }
+    if (!ai) return 'AI scoring unavailable - using mock scores';
+    return null;
 }
 
 function mockScore(submission, asset1, asset2) {
@@ -71,7 +85,9 @@ function mockScore(submission, asset1, asset2) {
 }
 
 export async function scoreSubmission(submission, asset1, asset2, mediaType = 'image') {
-    if (submission && asset1 && asset2) {
+    const fallbackReason = getFallbackReason(submission, asset1, asset2);
+
+    if (!fallbackReason) {
         const serverScore = await scoreViaServer(submission, asset1, asset2);
         if (serverScore) {
             return {
@@ -82,16 +98,18 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
         }
     }
 
-    if (!ai || !submission || !asset1 || !asset2) {
+    if (fallbackReason) {
         await new Promise((r) => setTimeout(r, 1500));
-        return { ...mockScore(submission, asset1, asset2), isMock: true };
+        return { ...mockScore(submission, asset1, asset2), isMock: true, errorReason: fallbackReason };
     }
 
     const mediaLabel = mediaType === 'video' ? 'video clip' : mediaType === 'audio' ? 'audio clip' : 'image';
+    const leftLabel = getAssetLabel(asset1, 'left concept');
+    const rightLabel = getAssetLabel(asset2, 'right concept');
 
     try {
-        const prompt = SCORING_PROMPT.replace(/\{\{left\}\}/g, asset1.label)
-            .replace(/\{\{right\}\}/g, asset2.label)
+        const prompt = SCORING_PROMPT.replace(/\{\{left\}\}/g, leftLabel)
+            .replace(/\{\{right\}\}/g, rightLabel)
             .replace(/\{\{submission\}\}/g, submission.replace(/"/g, '\\"'))
             .replace(/\{\{mediaType\}\}/g, mediaLabel);
 
@@ -120,7 +138,7 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
             },
             score: Math.min(10, Math.max(1, baseScore)),
             relevance: parsed.relevance || 'Highly Logical',
-            commentary: parsed.commentary || `Solid connection between ${asset1.label} and ${asset2.label}!`,
+            commentary: parsed.commentary || `Solid connection between ${leftLabel} and ${rightLabel}!`,
             isMock: false,
         };
     } catch (err) {

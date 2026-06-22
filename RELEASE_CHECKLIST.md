@@ -4,6 +4,7 @@ Use this before pushing a release candidate or merging a deployment-bound change
 
 ## 1. Code health
 
+- [ ] `npm run verify:release` passes
 - [ ] `npm run lint` passes
 - [ ] `npm run test` passes
 - [ ] `npm run test:e2e:desktop` passes
@@ -15,14 +16,18 @@ Use this before pushing a release candidate or merging a deployment-bound change
 
 - [ ] App loads into the lobby without console errors
 - [ ] A full solo round can be played end to end
+- [ ] First-session onboarding opens for a new profile and starts a guided first round
 - [ ] Reveal works with AI configured
 - [ ] Reveal also works without Gemini configured using fallback behavior
 - [ ] Session summary works after multiple rounds
+- [ ] Daily challenge completion is marked after a daily session
 
 ## 3. Sharing and judgement
 
 - [ ] Share-for-judging link can be generated
+- [ ] Manual-mode reveal can generate a friend-judging link before self-scoring
 - [ ] Judging link opens successfully
+- [ ] Judging page shows enough prompt/image context for a friend to score confidently
 - [ ] Invalid or expired judging links fail gracefully
 - [ ] Judgement appears in history where backend support exists
 
@@ -32,6 +37,7 @@ Use this before pushing a release candidate or merging a deployment-bound change
 - [ ] Second player can join with room code
 - [ ] Round start, submission, reveal, and next-round transitions stay synchronized
 - [ ] Manual-vote multiplayer produces the same winner in both browsers
+- [ ] Disconnect/reconnect messaging appears during reveal, voting, and results
 - [ ] Join/rejoin during reveal or results does not strand players in the lobby view
 - [ ] Leaving the room does not trap users in a broken state
 - [ ] Non-AI multiplayer scoring behavior is verified for the currently supported product model

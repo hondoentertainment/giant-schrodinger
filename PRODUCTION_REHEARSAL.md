@@ -22,11 +22,8 @@ Run this once before the first public launch and again before any major release.
 
 ## 3. Core smoke test
 
-1. Run `npm run lint`
-2. Run `npm run test`
-3. Run `npm run test:e2e:desktop`
-4. Run `npm run build`
-5. Open the deployed site and confirm the runtime status card reflects the expected services.
+1. Run `npm run verify:release`
+2. Open the deployed site and confirm the runtime status card reflects the expected services.
 
 ## 4. Live product rehearsal
 

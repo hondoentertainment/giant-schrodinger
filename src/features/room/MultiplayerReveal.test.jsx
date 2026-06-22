@@ -25,6 +25,8 @@ const mocks = vi.hoisted(() => ({
         isHost: false,
         roomPhase: 'revealing',
         playerName: 'Alex',
+        connectionState: 'connected',
+        attemptReconnect: vi.fn(),
         castVoteForSubmission: vi.fn(),
         finalizeMultiplayerVoting: vi.fn(),
         advanceToNextRound: vi.fn(),
@@ -64,6 +66,7 @@ import { MultiplayerReveal } from './MultiplayerReveal';
 describe('MultiplayerReveal', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mocks.roomState.connectionState = 'connected';
         vi.useFakeTimers();
     });
 
@@ -83,5 +86,13 @@ describe('MultiplayerReveal', () => {
         expect(screen.getByText(/Your vote is locked in/i)).toBeInTheDocument();
         expect(screen.getByText(/Votes locked in: 1\/2/i)).toBeInTheDocument();
         expect(screen.getByText(/Voted/i)).toBeInTheDocument();
+    });
+
+    it('shows connection recovery controls during reveal when disconnected', async () => {
+        mocks.roomState.connectionState = 'disconnected';
+        render(<MultiplayerReveal />);
+
+        expect(screen.getByText(/Disconnected\./i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
     });
 });

@@ -24,4 +24,22 @@ describe('socialShare', () => {
         expect(text).toContain('9/10');
         expect(text).toContain('#');
     });
+
+    it('includes judge and daily challenge context when provided', () => {
+        const text = createShareText({
+            submission: 'cosmic breakfast club',
+            score: 8,
+            judgeMode: 'friend',
+            isDailyChallenge: true,
+            friendScore: 9,
+            assets: {
+                left: { label: 'Comet' },
+                right: { label: 'Pancake' },
+            },
+        });
+
+        expect(text).toContain('Friend Judge');
+        expect(text).toContain('Daily Challenge');
+        expect(text).toContain('Friend score 9/10');
+    });
 });

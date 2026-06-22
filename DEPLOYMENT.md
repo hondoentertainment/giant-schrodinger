@@ -30,27 +30,24 @@ If no secrets are configured, the app still deploys and remains playable in loca
 The existing workflow currently does this on pushes to `main`:
 
 1. `npm ci`
-2. `npm run lint`
-3. `npm run test`
-4. install Playwright Chromium
-5. `npm run test:e2e:desktop`
-6. `npm run build`
-7. deploy `dist/` to GitHub Pages
+2. install Playwright Chromium
+3. `npm run verify:release`
+4. deploy `dist/` to GitHub Pages
 
 ## Local preflight before shipping
 
 Run these locally before pushing:
 
 ```bash
-npm run lint
-npm run test
-npm run build
+npm run verify:release
 npm run preview
 ```
 
 Preview default URL:
 
 - `http://localhost:4173/`
+
+Playwright release verification starts its own strict preview server on `http://localhost:4174/` by default so it cannot accidentally reuse another local app on Vite's default port. Override with `PLAYWRIGHT_PORT` when needed, or set `PLAYWRIGHT_BASE_URL` to test an already-hosted environment.
 
 When built in GitHub Actions, the app uses the `/giant-schrodinger/` base path automatically.
 
@@ -72,10 +69,7 @@ When built in GitHub Actions, the app uses the `/giant-schrodinger/` base path a
 
 ### Build checks
 
-- Lint passes
-- Unit tests pass
-- Desktop E2E passes
-- Production build passes
+- `npm run verify:release` passes
 - No missing asset errors in preview
 
 ## Backend hardening for production

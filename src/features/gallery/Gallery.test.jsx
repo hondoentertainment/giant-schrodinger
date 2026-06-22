@@ -103,7 +103,7 @@ describe('Gallery', () => {
   it('shows connection entries', async () => {
     render(<Gallery />);
     await waitFor(() => {
-      expect(screen.getByText(/No connections yet|Test connection/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Test connection/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -159,6 +159,29 @@ describe('Gallery', () => {
       expect(screen.getByText(/Judged by Alice: 10\/10/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/Brilliant!/)).toBeInTheDocument();
+  });
+
+  it('includes friend judgement details in copied gallery share text', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    mockCollisions = [
+      { id: 'abc', submission: 'Witty take', score: 9, timestamp: Date.now(), imageUrl: 'https://example.com/j.jpg' },
+    ];
+    mockJudgementsResolve = () => ({
+      abc: { judgeName: 'Alice', score: 10, commentary: 'Brilliant!' },
+    });
+
+    render(<Gallery />);
+
+    const copyButton = await screen.findByRole('button', { name: /Copy share/i });
+    await user.click(copyButton);
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Friend Judge: Alice gave it 10/10'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Brilliant!'));
   });
 
   it('changing sort select reorders collision items', async () => {

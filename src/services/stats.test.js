@@ -21,6 +21,9 @@ describe('stats service', () => {
                 maxStreak: 0,
                 totalRounds: 0,
                 totalCollisions: 0,
+                scores: [],
+                dailyScores: [],
+                themesPlayed: [],
                 milestonesUnlocked: [],
             });
         });
@@ -31,6 +34,13 @@ describe('stats service', () => {
             expect(s.totalRounds).toBe(1);
             expect(s.totalCollisions).toBe(1);
             expect(s.lastPlayedDate).toBeTruthy();
+        });
+
+        it('records score, daily score, and theme history when provided', () => {
+            const { stats } = recordPlay(9, { isDailyChallenge: true, themeId: 'classic' });
+            expect(stats.scores).toEqual([9]);
+            expect(stats.dailyScores).toEqual([9]);
+            expect(stats.themesPlayed).toEqual(['classic']);
         });
 
         it('handles corrupted localStorage', () => {

@@ -8,12 +8,14 @@ import { createJudgeShareUrl } from '../../services/share';
 import { getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
+import { AchievementProgress } from '../../components/AchievementProgress';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { haptic } from '../../lib/haptics';
 import { reportAppError, reportAppEvent } from '../../lib/telemetry';
+import { checkAchievements } from '../../services/achievements';
 
 export function Reveal({ submission, assets }) {
-    const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound } = useGame();
+    const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, isDailyChallenge } = useGame();
     const { toast } = useToast();
     const [result, setResult] = useState(null);
     const [fusionImage, setFusionImage] = useState(null);
@@ -32,6 +34,7 @@ export function Reveal({ submission, assets }) {
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
     const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const mod = currentModifier;
+    const canShareForJudging = Boolean(fusionImage?.url && assets?.left && assets?.right);
 
     useEffect(() => {
         let mounted = true;
@@ -94,8 +97,22 @@ export function Reveal({ submission, assets }) {
                             scoreMultiplier,
                         });
                         setSavedCollision(collision);
-                        const { newlyUnlocked: unlocked } = recordPlay();
+                        const { stats: updatedStats = getStats(), newlyUnlocked: unlocked } = recordPlay(finalScore, {
+                            isDailyChallenge,
+                            themeId: theme?.id,
+                        });
                         if (unlocked?.length) setNewlyUnlocked(unlocked);
+                        const achievements = checkAchievements({
+                            score: finalScore,
+                            isSpeedRound: mod?.id === 'speed',
+                            isDoubleOrNothing: mod?.id === 'doubleOrNothing',
+                            previousScore: null,
+                            stats: updatedStats,
+                            sessionRoundCount: roundNumber,
+                        }) || [];
+                        achievements.forEach((achievement) => {
+                            toast.success(`Achievement unlocked: ${achievement.name}`);
+                        });
                         savedRef.current = true;
                     }
                     completeRound({
@@ -158,16 +175,21 @@ export function Reveal({ submission, assets }) {
     }, [result, savedCollision]); // handleShareForJudging is stable enough for this use
 
     const handleShareForJudging = async () => {
-        if (!savedCollision || !assets?.left || !assets?.right) return;
+        if (!canShareForJudging) return;
         const roundPayload = {
             assets: { left: assets.left, right: assets.right },
             submission,
             imageUrl: fusionImage?.url,
             shareFrom: user?.name || 'A friend',
-            collisionId: savedCollision.id,
+            collisionId: savedCollision?.id || null,
             judgeMode: 'friend',
         };
         const url = await createJudgeShareUrl(roundPayload);
+        reportAppEvent('friend_judge_share_created', {
+            hasSavedCollision: Boolean(savedCollision?.id),
+            scoringMode,
+            roundNumber,
+        });
         if (url?.includes('#judge_')) {
             toast.warn('Backend unavailable — sharing via link encoding');
         }
@@ -213,8 +235,22 @@ export function Reveal({ submission, assets }) {
                 scoreMultiplier,
             });
             setSavedCollision(collision);
-            const { newlyUnlocked: unlocked } = recordPlay();
+            const { stats: updatedStats = getStats(), newlyUnlocked: unlocked } = recordPlay(finalScore, {
+                isDailyChallenge,
+                themeId: theme?.id,
+            });
             if (unlocked?.length) setNewlyUnlocked(unlocked);
+            const achievements = checkAchievements({
+                score: finalScore,
+                isSpeedRound: mod?.id === 'speed',
+                isDoubleOrNothing: mod?.id === 'doubleOrNothing',
+                previousScore: null,
+                stats: updatedStats,
+                sessionRoundCount: roundNumber,
+            }) || [];
+            achievements.forEach((achievement) => {
+                toast.success(`Achievement unlocked: ${achievement.name}`);
+            });
             savedRef.current = true;
         }
         completeRound({ score: finalScore, baseScore: scoreValue, collisionId: collision?.id, judgeMode: scoringMode });
@@ -260,6 +296,9 @@ export function Reveal({ submission, assets }) {
                         <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-6 border border-white/10">
                             HUMAN JUDGE
                         </div>
+                        <p className="text-white/60 text-sm mb-6">
+                            Score it yourself now, or copy a link and let a friend be the judge.
+                        </p>
                         <div className="relative aspect-square w-full max-w-sm mx-auto rounded-2xl overflow-hidden mb-8 shadow-2xl ring-1 ring-white/20">
                             <img
                                 src={fusionImage.url}
@@ -324,13 +363,29 @@ export function Reveal({ submission, assets }) {
                                 Submit Score
                             </button>
                         </form>
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left">
+                            <p className="text-white font-semibold">Want a real reaction?</p>
+                            <p className="text-white/50 text-sm mt-1">
+                                Send this round to a friend. Their score can come back as feedback when backend persistence is available.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={handleShareForJudging}
+                                disabled={!canShareForJudging}
+                                className="mt-3 w-full py-3 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-50"
+                            >
+                                {shareCopied ? 'Friend judge link copied!' : 'Ask a friend to judge'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         );
     }
 
-    const scoreBand = result && getScoreBand(result.finalScore || result.score);
+    const displayScore = result?.finalScore || result?.score || 0;
+    const isFinalRound = roundNumber >= totalRounds;
+    const scoreBand = result && getScoreBand(displayScore);
     const statsSnapshot = getStats();
     const nextMilestone = getMilestones()
         .filter((milestone) => !statsSnapshot.milestonesUnlocked.includes(milestone.id))
@@ -343,6 +398,20 @@ export function Reveal({ submission, assets }) {
             };
         })
         .sort((a, b) => a.remaining - b.remaining)[0];
+    const recommendedNextAction = isFinalRound
+        ? {
+            label: 'Review your session summary',
+            detail: 'Compare every round, then jump into the gallery or start a new run.',
+        }
+        : displayScore >= 8
+        ? {
+            label: 'Share this standout round for friend feedback',
+            detail: 'High-scoring connections make the best invites. Copy the judge link before moving on.',
+        }
+        : {
+            label: 'Keep momentum with the next round',
+            detail: `Round ${roundNumber + 1} is ready. Build on this idea while it is fresh.`,
+        };
 
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
@@ -382,7 +451,7 @@ export function Reveal({ submission, assets }) {
                     <div className="grid grid-cols-2 gap-4 mb-8">
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                             <div className={`text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br ${scoreBand?.color || 'from-yellow-300 to-amber-600'}`}>
-                                {result.finalScore || result.score}/10
+                                {displayScore}/10
                             </div>
                             <div className="text-white/40 text-xs uppercase tracking-widest mt-1">
                                 {scoreBand?.label || 'Final Score'}
@@ -407,7 +476,7 @@ export function Reveal({ submission, assets }) {
                     )}
                     {scoreMultiplier !== 1 && (
                         <div className="mb-6 text-sm text-white/50">
-                            Base {(result.baseScore ?? result.score)?.toFixed(1)} × {scoreMultiplier.toFixed(2)} = <span className="text-white">{result.finalScore || result.score}/10</span>
+                            Base {(result.baseScore ?? result.score)?.toFixed(1)} × {scoreMultiplier.toFixed(2)} = <span className="text-white">{displayScore}/10</span>
                         </div>
                     )}
 
@@ -424,10 +493,12 @@ export function Reveal({ submission, assets }) {
                             <SocialShareButtons
                                 shareData={{
                                     submission,
-                                    score: result.finalScore || result.score,
+                                    score: displayScore,
                                     scoreBand: scoreBand?.label,
                                     commentary: result.commentary,
                                     assets,
+                                    judgeMode: scoringMode,
+                                    isDailyChallenge,
                                 }}
                                 imageUrl={fusionImage?.url}
                                 onToast={(type, msg) => toast[type]?.(msg)}
@@ -460,11 +531,37 @@ export function Reveal({ submission, assets }) {
                         </div>
                     )}
 
-                    <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-left">
-                        <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/40 mb-3">What&apos;s next</div>
-                        <div className="space-y-2 text-sm text-white/70">
+                    <div
+                        className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-left"
+                        aria-labelledby="reveal-workflow-title"
+                    >
+                        <div id="reveal-workflow-title" className="text-xs font-bold uppercase tracking-[0.2em] text-white/40 mb-3">
+                            What&apos;s next
+                        </div>
+                        <div className="mb-4 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3">
+                            <div className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-amber-200/70 mb-1">
+                                Recommended next move
+                            </div>
+                            <div className="text-white font-semibold">{recommendedNextAction.label}</div>
+                            <div className="text-white/55 text-sm mt-1">{recommendedNextAction.detail}</div>
+                        </div>
+                        <ol className="space-y-2 text-sm text-white/70">
+                            <li className="flex gap-3">
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-xs font-bold text-emerald-200">1</span>
+                                <span>{savedCollision ? 'Saved to your gallery for later sharing and review.' : 'Generated and ready to save after scoring completes.'}</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">2</span>
+                                <span>Optional: copy a friend judge link if you want an outside score.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">3</span>
+                                <span>{isFinalRound ? 'Open your session summary to choose the next run.' : `Continue to round ${roundNumber + 1} when you are ready.`}</span>
+                            </li>
+                        </ol>
+                        <div className="space-y-2 text-sm text-white/70 mt-4">
                             <p>
-                                {roundNumber >= totalRounds
+                                {isFinalRound
                                     ? 'Review your session results, then share your best connection or start a fresh run.'
                                     : `Round ${roundNumber + 1} is ready when you are.`}
                             </p>
@@ -481,11 +578,15 @@ export function Reveal({ submission, assets }) {
                         </div>
                     </div>
 
+                    <div className="mb-6 flex justify-center">
+                        <AchievementProgress score={displayScore} stats={statsSnapshot} />
+                    </div>
+
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <div>
                             <button
                                 onClick={handleShareForJudging}
-                                disabled={!savedCollision}
+                                disabled={!canShareForJudging}
                                 className="px-8 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-50"
                                 title="Send this link to a friend — they'll score your connection. Press S for shortcut."
                             >
@@ -497,7 +598,7 @@ export function Reveal({ submission, assets }) {
                             onClick={handleNext}
                             className="px-12 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)]"
                         >
-                            {roundNumber >= totalRounds ? 'See Results' : 'Next Round →'}
+                            {isFinalRound ? 'See Results' : 'Next Round →'}
                         </button>
                     </div>
                 </div>

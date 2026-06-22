@@ -46,6 +46,7 @@ describe('JudgeRound', () => {
             right: { id: 'dog', label: 'Dog', type: 'image', url: 'https://example.com/dog.jpg' },
         },
         submission: 'They both have fur',
+        imageUrl: 'https://example.com/fusion.jpg',
         shareFrom: 'Alice',
         collisionId: 'test-collision-1',
         roundId: 'round-1',
@@ -90,5 +91,11 @@ describe('JudgeRound', () => {
     it('shows the judge heading', () => {
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
         expect(screen.getByText(/Judge a Friend/)).toBeInTheDocument();
+    });
+
+    it('shows shared fusion image context when available', () => {
+        render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
+        expect(screen.getByAltText(/Fusion created from this connection/i)).toHaveAttribute('src', mockPayload.imageUrl);
+        expect(screen.getByText(/Alice made a Venn connection/i)).toBeInTheDocument();
     });
 });

@@ -4,6 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
 import { Trophy, ArrowRight, Home, ThumbsUp, Crown, Star } from 'lucide-react';
 import { getRoomSubmissions } from '../../services/multiplayer';
+import { ConnectionBanner } from './ConnectionBanner';
 
 function ScoreBar({ label, value, max = 10 }) {
     const pct = Math.round((value / max) * 100);
@@ -221,8 +222,15 @@ export function MultiplayerReveal() {
         setAdvancing(false);
     };
 
+    const withConnectionBanner = (content) => (
+        <>
+            <ConnectionBanner />
+            {content}
+        </>
+    );
+
     if (revealPhase === REVEAL_PHASES.COUNTDOWN && !isResultsReady) {
-        return (
+        return withConnectionBanner(
             <div className="w-full max-w-4xl flex flex-col items-center justify-center min-h-[50vh]">
                 <div className="text-center animate-in zoom-in-95 duration-500">
                     <div className="text-white/40 text-lg uppercase tracking-widest mb-4">
@@ -245,7 +253,7 @@ export function MultiplayerReveal() {
     }
 
     if (revealPhase === REVEAL_PHASES.REVEAL && !isResultsReady) {
-        return (
+        return withConnectionBanner(
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
                 <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                     <div className="glass-panel rounded-[22px] p-8">
@@ -290,7 +298,7 @@ export function MultiplayerReveal() {
     }
 
     if (revealPhase === REVEAL_PHASES.VOTING && !isResultsReady) {
-        return (
+        return withConnectionBanner(
             <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
                 <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                     <div className="glass-panel rounded-[22px] p-8">
@@ -375,7 +383,7 @@ export function MultiplayerReveal() {
         );
     }
 
-    return (
+    return withConnectionBanner(
         <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
             <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
                 <div className="glass-panel rounded-[22px] p-8">

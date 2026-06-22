@@ -60,6 +60,13 @@ vi.mock('../../services/stats', () => ({
 
 vi.mock('../../services/dailyChallenge', () => ({
     getDailyChallenge: () => ({ prompt: 'Test daily prompt' }),
+    getDailyChallengeSummary: () => ({
+        completions: 2,
+        bestScore: 9,
+        latestScore: 7,
+        averageScore: 8,
+        shareLine: 'Daily Venn complete: 7/10 today, best 9/10 across 2 days.',
+    }),
     hasDailyChallengeBeenPlayed: () => false,
 }));
 
@@ -226,6 +233,14 @@ describe('Lobby', () => {
         globalThis.__testStreakValue = 3;
         render(<Lobby />);
         expect(screen.getByText(/3 day streak/)).toBeInTheDocument();
+    });
+
+    it('shows daily challenge ritual context in the lobby', () => {
+        mockUser = loggedInUser;
+        render(<Lobby />);
+        expect(screen.getByText(/Test daily prompt/i)).toBeInTheDocument();
+        expect(screen.getByText(/2 daily completions/i)).toBeInTheDocument();
+        expect(screen.getByText(/Best daily: 9\/10/i)).toBeInTheDocument();
     });
 
     it('shows runtime status card when backend is not enabled', () => {

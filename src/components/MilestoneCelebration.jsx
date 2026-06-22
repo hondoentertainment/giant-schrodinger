@@ -1,23 +1,34 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { getMilestones } from '../services/stats';
 import { haptic } from '../lib/haptics';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export function MilestoneCelebration({ newlyUnlocked, onDismiss }) {
+    const dialogRef = useRef(null);
+    useFocusTrap(true, dialogRef);
     const milestones = getMilestones();
     const unlocked = milestones.filter((m) => newlyUnlocked.includes(m.id));
-
-    if (unlocked.length === 0) return null;
 
     const handleDismiss = () => {
         haptic('success');
         onDismiss();
     };
 
+    useEffect(() => {
+        const handleEscape = (event) => {
+            if (event.key === 'Escape') handleDismiss();
+        };
+        window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
+    });
+
+    if (unlocked.length === 0) return null;
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="w-full max-w-md glass-panel rounded-3xl p-8 animate-in zoom-in-95 duration-300 border border-amber-500/30 shadow-[0_0_60px_rgba(245,158,11,0.2)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300" role="dialog" aria-modal="true" aria-labelledby="milestone-title">
+            <div ref={dialogRef} className="w-full max-w-md glass-panel rounded-3xl p-8 animate-in zoom-in-95 duration-300 border border-amber-500/30 shadow-[0_0_60px_rgba(245,158,11,0.2)]">
                 <div className="text-6xl text-center mb-4">🎉</div>
-                <h2 className="text-2xl font-display font-bold text-white mb-2 text-center">
+                <h2 id="milestone-title" className="text-2xl font-display font-bold text-white mb-2 text-center">
                     Milestone Unlocked!
                 </h2>
                 <div className="space-y-3 mb-6">

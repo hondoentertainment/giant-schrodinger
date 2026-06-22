@@ -49,7 +49,7 @@ This PRD replaces the current doc gap between "what the app claims to be" and "w
 
 - README and testing docs need to stay aligned with the current shipped-vs-live-ready distinction
 - Multiplayer authority now depends on the secure Supabase RPC path, so hosted verification matters more than local UI proof
-- The product lacks a clear progression from "fun solo experience" to "sticky social game"
+- The product now has a clearer progression from first solo play into friend judging, gallery, achievements, daily completion, and weekly-event retention
 - Deployment and operational docs are still ahead of actual live-product proof
 
 #### Verification snapshot
@@ -61,6 +61,7 @@ This PRD replaces the current doc gap between "what the app claims to be" and "w
   - `npm run build`: passes
 - Remaining gap:
   - Hosted verification with real Supabase and optional Gemini secrets still needs to be completed end to end
+  - Local code now includes reconnect resync, reveal-phase connection messaging, early friend-judge sharing, and expanded local e2e coverage, but those still need production rehearsal
 
 ### 3. Product Vision
 

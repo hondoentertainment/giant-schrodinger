@@ -33,6 +33,9 @@ export function getStats() {
             maxStreak: parsed.maxStreak ?? 0,
             totalRounds: parsed.totalRounds ?? 0,
             totalCollisions: parsed.totalCollisions ?? 0,
+            scores: Array.isArray(parsed.scores) ? parsed.scores : [],
+            dailyScores: Array.isArray(parsed.dailyScores) ? parsed.dailyScores : [],
+            themesPlayed: Array.isArray(parsed.themesPlayed) ? parsed.themesPlayed : [],
             milestonesUnlocked: Array.isArray(parsed.milestonesUnlocked) ? parsed.milestonesUnlocked : [],
         };
     } catch {
@@ -42,12 +45,15 @@ export function getStats() {
             maxStreak: 0,
             totalRounds: 0,
             totalCollisions: 0,
+            scores: [],
+            dailyScores: [],
+            themesPlayed: [],
             milestonesUnlocked: [],
         };
     }
 }
 
-export function recordPlay() {
+export function recordPlay(score = null, options = {}) {
     const today = getTodayKey();
     const stats = getStats();
     let currentStreak = stats.currentStreak;
@@ -75,6 +81,13 @@ export function recordPlay() {
         maxStreak,
         totalRounds: stats.totalRounds + 1,
         totalCollisions: stats.totalCollisions + 1,
+        scores: Number.isFinite(score) ? [...stats.scores, score].slice(-100) : stats.scores,
+        dailyScores: options.isDailyChallenge && Number.isFinite(score)
+            ? [...stats.dailyScores, score].slice(-30)
+            : stats.dailyScores,
+        themesPlayed: options.themeId
+            ? [...new Set([...stats.themesPlayed, options.themeId])]
+            : stats.themesPlayed,
     };
 
     const newlyUnlocked = checkMilestones(updated);

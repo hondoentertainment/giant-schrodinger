@@ -171,6 +171,21 @@ export async function getRoomByCode(code) {
     }
 }
 
+export async function getRoomById(roomId) {
+    if (!isBackendEnabled() || !roomId) return null;
+    try {
+        const { data, error } = await supabase
+            .from('rooms')
+            .select('*')
+            .eq('id', roomId)
+            .single();
+        if (error || !data) return null;
+        return data;
+    } catch {
+        return null;
+    }
+}
+
 export async function getRoomPlayers(roomId) {
     if (!isBackendEnabled()) return [];
     try {
