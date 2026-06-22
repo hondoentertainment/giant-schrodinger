@@ -6,15 +6,16 @@ Repository: https://github.com/hondoentertainment/giant-schrodinger
 
 Production URL: https://giant-schrodinger.vercel.app
 
-Latest verified commit: `419e721 feat(launch): improve social workflow and release readiness`
+Latest smoke-passed app commit: `2499e7c fix(deploy): support Vercel root production smoke`
 
 ## Deployment Status
 
-- Vercel deployment: `dpl_4JJ6ZQGiuU44e8h2XckvdYMht3rN`
+- Vercel deployment: `dpl_7Z3XDYjLFSerCj2Ueck8tGaukudp`
 - Deployment target: production
 - Deployment status: Ready
 - Production alias: https://giant-schrodinger.vercel.app
-- Deployment URL: https://giant-schrodinger-byrxs3uhi-hondo4185-5820s-projects.vercel.app
+- Deployment URL: https://giant-schrodinger-qlkff21ie-hondo4185-5820s-projects.vercel.app
+- Inspect URL: https://vercel.com/hondo4185-5820s-projects/giant-schrodinger/7Z3XDYjLFSerCj2Ueck8tGaukudp
 
 ## Automated Verification
 
@@ -23,6 +24,7 @@ Latest verified commit: `419e721 feat(launch): improve social workflow and relea
 - Desktop E2E: 26 passed, 1 intentionally skipped
 - Production build: passed
 - Lint: passed
+- `npm run smoke:production`: passed against https://giant-schrodinger.vercel.app
 
 ## Post-Deploy Fix
 
