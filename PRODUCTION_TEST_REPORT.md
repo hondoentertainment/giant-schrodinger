@@ -1,120 +1,50 @@
 # Production Test Report
 
-**Report Date**: March 28, 2026
-**Repository**: https://github.com/hondoentertainment/giant-schrodinger
-**Expected URL**: https://hondoentertainment.github.io/giant-schrodinger
+Report date: June 22, 2026
 
----
+Repository: https://github.com/hondoentertainment/giant-schrodinger
 
-## Automated Test Results
+Production URL: https://giant-schrodinger.vercel.app
 
-| Metric | Value | Status |
-|--------|-------|--------|
-| Unit/integration tests | 179 across 16 files | Pass |
-| Playwright E2E specs | 5 spec files | Pass |
-| ESLint errors | 0 | Pass |
-| Production build | Succeeds | Pass |
-| Main chunk (gzipped) | 149 KB | Within budget (< 210 KB) |
-| Lazy chunks | 13 | Code splitting active |
+Latest verified commit: `419e721 feat(launch): improve social workflow and release readiness`
 
-### Test Files
+## Deployment Status
 
-**Unit/Integration (Vitest)**:
-- `src/components/ErrorBoundary.test.jsx`
-- `src/hooks/useFocusTrap.test.jsx`
-- `src/lib/scoreBands.test.js`
-- `src/services/promptPacks.test.js`
-- `src/services/achievements.test.js`
-- `src/services/ranked.test.js`
-- `src/services/asyncPlay.test.js`
-- `src/services/customImages.test.js`
-- `src/services/judgements.test.js`
-- `src/services/gemini.test.js`
-- `src/services/storage.test.js`
-- `src/services/stats.test.js`
-- `src/services/tournaments.test.js`
-- `src/services/shop.test.js`
-- `src/services/share.test.js`
-- `src/services/share.security.test.js`
-- `src/features/round/Round.test.jsx`
-- `src/features/lobby/Lobby.test.jsx`
-- `src/features/reveal/Reveal.test.jsx`
-- `src/features/judge/JudgeRound.test.jsx`
-- `src/features/gallery/Gallery.test.jsx`
+- Vercel deployment: `dpl_4JJ6ZQGiuU44e8h2XckvdYMht3rN`
+- Deployment target: production
+- Deployment status: Ready
+- Production alias: https://giant-schrodinger.vercel.app
+- Deployment URL: https://giant-schrodinger-byrxs3uhi-hondo4185-5820s-projects.vercel.app
 
-**Playwright E2E**:
-- `e2e/solo-flow.spec.js`
-- `e2e/multiplayer-flow.spec.js`
-- `e2e/judge-share.spec.js`
-- `e2e/responsive.spec.js`
-- `e2e/accessibility.spec.js`
+## Automated Verification
 
----
+- `npm run verify:release`: passed before production deploy
+- Unit/component tests: 51 files, 595 tests passed
+- Desktop E2E: 26 passed, 1 intentionally skipped
+- Production build: passed
+- Lint: passed
 
-## Build Output
+## Post-Deploy Fix
 
-```
-Production build:
-  Main chunk:    149 KB gzipped
-  Lazy chunks:   13 code-split chunks
-  Total output:  dist/ directory
-```
+The first live smoke attempt against the Vercel root URL exposed a host-specific base-path issue. GitHub Pages needs `/giant-schrodinger/`, while Vercel production serves from `/`.
 
----
+Fix applied:
 
-## CI/CD Pipeline
+- `vite.config.js` now uses `/` when `process.env.VERCEL` is set.
+- GitHub Pages keeps `/giant-schrodinger/`.
+- `npm run smoke:production` verifies that the Vercel root URL loads the app shell.
 
-The GitHub Actions workflow (`deploy.yml`) runs on every push to `main`:
-1. Install dependencies
-2. Run 179 unit/integration tests
-3. Install Playwright and run 5 E2E specs
-4. Build production bundle
-5. Deploy to GitHub Pages
+## Remaining Hosted Rehearsal
 
-A separate Lighthouse CI workflow (`lighthouse.yml`) runs on pull requests.
+These checks require live service credentials and cannot be fully completed from local/mock mode alone:
 
----
+- Apply `supabase/schema.sql` to the target Supabase project.
+- Configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel.
+- Configure `VITE_GEMINI_API_KEY` if live AI judging is part of launch.
+- Verify friend judging persistence with a second browser.
+- Verify multiplayer room create/join/vote/finalize across two browsers.
+- Confirm telemetry events through `window.__VWF_TELEMETRY__` or the `vwf:telemetry` event.
 
-## Deployment Checklist
+## Current Launch Gate
 
-- [x] `vite.config.js` has correct `base: '/giant-schrodinger/'`
-- [x] Production build succeeds with 0 errors
-- [x] All 179 tests pass
-- [x] ESLint reports 0 errors
-- [x] GitHub Actions workflows configured (deploy + Lighthouse CI)
-- [ ] GitHub Pages enabled in repository settings (Source: GitHub Actions)
-- [ ] Edge Functions deployed to Supabase (score-submission, og-tags, discord-bot)
-- [ ] Environment secrets configured in GitHub Actions
-
----
-
-## Feature Coverage
-
-The game includes 93 features across 5 phases:
-
-- **Phase 1**: Core gameplay, solo mode, multiplayer rooms, Venn diagram, AI scoring
-- **Phase 2**: Social sharing, gallery, friend judging, daily challenges, leaderboards
-- **Phase 3**: Ranked mode (Elo), spectator mode, community gallery, tournaments
-- **Phase 4**: Battle pass, story sharing, weekly events, colorblind mode, comeback celebrations
-- **Phase 5**: Achievement progress, score coaching, progressive lobby, theme sharing, PWA offline queue
-
----
-
-## Performance Targets
-
-| Metric | Target | Actual |
-|--------|--------|--------|
-| Main chunk (gzipped) | < 210 KB | 149 KB |
-| Lighthouse Performance | > 85 | Measured via CI |
-| Lighthouse Accessibility | > 90 | Measured via CI |
-| First Contentful Paint | < 2.5s on 3G | Measured via CI |
-
----
-
-## Next Steps
-
-1. Enable GitHub Pages in repository settings
-2. Deploy Supabase Edge Functions
-3. Configure production environment secrets
-4. Run Lighthouse audit on production URL
-5. See [DEPLOYMENT.md](DEPLOYMENT.md) for full instructions
+Code, local release verification, GitHub sync, and Vercel deployment are complete. The remaining launch gate is the credential-backed live rehearsal for Supabase and optional Gemini behavior.

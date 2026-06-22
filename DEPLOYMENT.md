@@ -6,7 +6,7 @@ This repo is set up for static frontend deployment, with GitHub Pages as the pri
 
 - GitHub Pages workflow: `.github/workflows/deploy.yml`
 - Vercel config: `vercel.json`
-- Vite config with CI-aware base path: `vite.config.js`
+- Vite config with host-aware base path: `vite.config.js`
 
 ## Recommended path: GitHub Pages
 
@@ -49,7 +49,15 @@ Preview default URL:
 
 Playwright release verification starts its own strict preview server on `http://localhost:4174/` by default so it cannot accidentally reuse another local app on Vite's default port. Override with `PLAYWRIGHT_PORT` when needed, or set `PLAYWRIGHT_BASE_URL` to test an already-hosted environment.
 
-When built in GitHub Actions, the app uses the `/giant-schrodinger/` base path automatically.
+When built for GitHub Pages, the app uses the `/giant-schrodinger/` base path. When built on Vercel, `vite.config.js` detects `VERCEL` and uses `/` so the production alias works at the domain root.
+
+To smoke-test the Vercel production URL after deploy:
+
+```bash
+npm run smoke:production
+```
+
+Override the target with `PRODUCTION_URL` when needed.
 
 ## Production-readiness checks
 
