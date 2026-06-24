@@ -312,11 +312,19 @@ export function Lobby() {
                         </div>
                     )}
 
+                    {!showMultiplayer && !sessionId && (
+                        <div className="mb-3 text-center">
+                            <div className="text-xs font-bold uppercase tracking-[0.24em] text-white/40">Start here</div>
+                            <p className="text-white/60 text-sm">Play today&apos;s puzzle first, then practice or invite friends.</p>
+                        </div>
+                    )}
+
                     {/* Daily Challenge */}
-                    {!isFirstSession && !showMultiplayer && !dailyPlayed && (
+                    {!showMultiplayer && !dailyPlayed && (
                         <button
                             onClick={startDailyChallenge}
                             disabled={!!sessionId}
+                            aria-label="Start today's Venn daily puzzle"
                             className="w-full mb-4 p-4 wordle-card hover:border-[#b59f3b] transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed group"
                         >
                             <div className="flex items-center gap-3">
@@ -325,8 +333,8 @@ export function Lobby() {
                                 </div>
                                 <div className="flex-1">
                                     <div className="text-white font-bold flex items-center gap-2">
-                                        Daily Challenge
-                                        <span className="text-xs px-2 py-0.5 border border-[#b59f3b] bg-[#b59f3b] text-white">NEW</span>
+                                        Today&apos;s Venn
+                                        <span className="text-xs px-2 py-0.5 border border-[#b59f3b] bg-[#b59f3b] text-white">Daily Challenge</span>
                                     </div>
                                     <div className="text-white/50 text-sm">{dailyChallenge.prompt}</div>
                                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-amber-200/70">
@@ -404,7 +412,7 @@ export function Lobby() {
                                         ? roundComplete && roundNumber === totalRounds
                                             ? 'Session Complete'
                                             : `Start Round ${roundComplete ? roundNumber + 1 : roundNumber}`
-                                        : `Solo Session (${sessionLength} rounds)`}
+                                        : `Practice Run (${sessionLength} rounds)`}
                                 </button>
                                 <button
                                     onClick={() => setGameState('GALLERY')}
@@ -419,7 +427,7 @@ export function Lobby() {
                             {!isFirstSession && (
                                 <button
                                     onClick={() => setShowMultiplayer(true)}
-                                    className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2"
+                                    className="wordle-button mt-4 w-full flex items-center justify-center gap-2"
                                 >
                                     <Users className="w-5 h-5" />
                                     Play with Friends
@@ -534,6 +542,12 @@ export function Lobby() {
                                     </>
                                 )}
                             </div>
+                            {!backendReady && (
+                                <div className="mb-4 wordle-card p-3 text-left text-xs text-white/60">
+                                    <div className="font-bold uppercase tracking-[0.18em] text-amber-200 mb-1">Live-room launch gate</div>
+                                    <p>Configure Supabase env vars and apply `supabase/schema.sql` before public multiplayer. This keeps room joins, votes, reconnects, and final standings authoritative.</p>
+                                </div>
+                            )}
 
                             <div className="space-y-3">
                                 <button

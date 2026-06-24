@@ -10,8 +10,11 @@ This file tracks the remaining work after the world-class implementation pass. T
 - Reconnect snapshot recovery and reveal-phase connection controls have focused unit coverage.
 - Share text now carries judge-mode, daily-challenge, and friend-score context.
 - Gallery share/detail views surface friend judgement results as part of the saved artifact.
+- Saved collisions now retain prompt-pair, judge-mode, and daily-mode metadata for richer gallery artifacts.
 - Daily challenge cards show completion count, best score, and share-ready completion framing.
+- Daily Venn is visible during the first-session path and still routes through onboarding.
 - Onboarding/profile copy separates AI Judge, Manual Judge, and Friend Judge.
+- Multiplayer UI explicitly calls out the Supabase/schema live-room launch gate when backend services are missing.
 
 ## Next Hosted Rehearsal
 

@@ -164,12 +164,20 @@ describe('Reveal', () => {
     });
 
     it('displays score when result is provided', async () => {
+        const { saveCollision } = await import('../../services/storage');
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
         // Initially shows loading/scoring status
         expect(screen.getByRole('status')).toBeInTheDocument();
         // Wait for scoring to complete
         const scoreDisplays = await screen.findAllByText(/\/10/, {}, { timeout: 3000 });
         expect(scoreDisplays.length).toBeGreaterThan(0);
+        expect(saveCollision).toHaveBeenCalledWith(expect.objectContaining({
+            assets: {
+                left: expect.objectContaining({ label: 'Cat' }),
+                right: expect.objectContaining({ label: 'Dog' }),
+            },
+            judgeMode: 'ai',
+        }));
     });
 
     it('shows score breakdown and commentary after scoring', async () => {

@@ -17,6 +17,19 @@ function formatCollisionDate(timestamp) {
     return date.toLocaleDateString();
 }
 
+function getPromptPairLabel(collision) {
+    const left = collision.assets?.left?.label;
+    const right = collision.assets?.right?.label;
+    if (!left || !right) return null;
+    return `${left} x ${right}`;
+}
+
+function getJudgeModeLabel(collision) {
+    if (collision.judgeMode === 'ai' || collision.scoringMode === 'ai') return 'AI Judge';
+    if (collision.judgeMode === 'friend') return 'Friend Judge';
+    return 'Manual Judge';
+}
+
 function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyShare }) {
     const [imageStatus, setImageStatus] = useState('loading');
     const [isVisible, setIsVisible] = useState(false);
@@ -170,11 +183,15 @@ export function Gallery() {
 
     const handleCopyShare = async (collision) => {
         const judgement = getDisplayJudgement(collision);
+        const promptPair = getPromptPairLabel(collision);
+        const promptLine = promptPair ? ` Prompt pair: ${promptPair}.` : '';
+        const judgeLine = ` ${getJudgeModeLabel(collision)} result.`;
+        const dailyLine = collision.isDailyChallenge ? ' Daily Venn.' : '';
         const friendLine = judgement
             ? ` Friend Judge: ${judgement.judgeName || judgement.judge_name || 'A friend'} gave it ${judgement.score}/10${judgement.commentary ? ` — "${judgement.commentary}"` : ''}.`
             : '';
         const highlightLine = (collision.score || 0) >= 8 ? ' Highlight-worthy.' : '';
-        const text = `My Venn connection: "${collision.submission}" scored ${collision.score}/10.${friendLine}${highlightLine} Play Venn with Friends: ${window.location.origin}${window.location.pathname}`;
+        const text = `My Venn connection: "${collision.submission}" scored ${collision.score}/10.${promptLine}${judgeLine}${dailyLine}${friendLine}${highlightLine} Play Venn with Friends: ${window.location.origin}${window.location.pathname}`;
         if (navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(text);
             setShareCopiedId(collision.id);
@@ -301,14 +318,27 @@ export function Gallery() {
                             <div className="glass-panel w-full max-w-lg rounded-3xl border border-white/10 p-6">
                                 <h3 id="gallery-detail-title" className="text-2xl font-display font-bold text-white mb-2">Saved Connection</h3>
                                 <p className="text-white/80 text-xl italic mb-4">&ldquo;{selectedCollision.submission}&rdquo;</p>
+                                {getPromptPairLabel(selectedCollision) && (
+                                    <div className="mb-4 wordle-tile wordle-tile-filled min-h-[44px] px-3 text-sm">
+                                        {getPromptPairLabel(selectedCollision)}
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                                     <div className="rounded-xl bg-white/5 p-3">
                                         <div className="text-white/40 uppercase tracking-wider text-xs">Score</div>
                                         <div className="text-white font-bold">{selectedCollision.score}/10</div>
                                     </div>
                                     <div className="rounded-xl bg-white/5 p-3">
+                                        <div className="text-white/40 uppercase tracking-wider text-xs">Judge</div>
+                                        <div className="text-white font-bold">{getJudgeModeLabel(selectedCollision)}</div>
+                                    </div>
+                                    <div className="rounded-xl bg-white/5 p-3">
                                         <div className="text-white/40 uppercase tracking-wider text-xs">Saved</div>
                                         <div className="text-white font-bold">{formatCollisionDate(selectedCollision.timestamp)}</div>
+                                    </div>
+                                    <div className="rounded-xl bg-white/5 p-3">
+                                        <div className="text-white/40 uppercase tracking-wider text-xs">Mode</div>
+                                        <div className="text-white font-bold">{selectedCollision.isDailyChallenge ? 'Daily Venn' : 'Session'}</div>
                                     </div>
                                 </div>
                                 {getDisplayJudgement(selectedCollision) && (

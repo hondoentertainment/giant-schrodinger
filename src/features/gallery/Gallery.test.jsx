@@ -149,7 +149,16 @@ describe('Gallery', () => {
 
   it('displays friend judgements on matching cards when backend returns them', async () => {
     mockCollisions = [
-      { id: 'abc', submission: 'Witty take', score: 9, timestamp: Date.now(), imageUrl: 'https://example.com/j.jpg' },
+      {
+        id: 'abc',
+        submission: 'Witty take',
+        score: 9,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/j.jpg',
+        assets: { left: { label: 'Comet' }, right: { label: 'Pancake' } },
+        judgeMode: 'ai',
+        isDailyChallenge: true,
+      },
     ];
     mockJudgementsResolve = () => ({
       abc: { judgeName: 'Alice', score: 10, commentary: 'Brilliant!' },
@@ -169,7 +178,16 @@ describe('Gallery', () => {
       value: { writeText },
     });
     mockCollisions = [
-      { id: 'abc', submission: 'Witty take', score: 9, timestamp: Date.now(), imageUrl: 'https://example.com/j.jpg' },
+      {
+        id: 'abc',
+        submission: 'Witty take',
+        score: 9,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/j.jpg',
+        assets: { left: { label: 'Comet' }, right: { label: 'Pancake' } },
+        judgeMode: 'ai',
+        isDailyChallenge: true,
+      },
     ];
     mockJudgementsResolve = () => ({
       abc: { judgeName: 'Alice', score: 10, commentary: 'Brilliant!' },
@@ -182,6 +200,9 @@ describe('Gallery', () => {
 
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Friend Judge: Alice gave it 10/10'));
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Brilliant!'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Prompt pair: Comet x Pancake'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('AI Judge result'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Daily Venn'));
   });
 
   it('changing sort select reorders collision items', async () => {

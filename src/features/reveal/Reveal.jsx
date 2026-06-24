@@ -35,6 +35,18 @@ export function Reveal({ submission, assets }) {
     const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
     const mod = currentModifier;
     const canShareForJudging = Boolean(fusionImage?.url && assets?.left && assets?.right);
+    const savedAssetPair = {
+        left: {
+            id: assets?.left?.id,
+            label: assets?.left?.label || assets?.left?.title || assets?.left?.name || 'Left prompt',
+            type: assets?.left?.type,
+        },
+        right: {
+            id: assets?.right?.id,
+            label: assets?.right?.label || assets?.right?.title || assets?.right?.name || 'Right prompt',
+            type: assets?.right?.type,
+        },
+    };
 
     useEffect(() => {
         let mounted = true;
@@ -90,6 +102,9 @@ export function Reveal({ submission, assets }) {
                             baseScore: scoreResult.score,
                             breakdown: scoreResult.breakdown,
                             commentary: scoreResult.commentary,
+                            assets: savedAssetPair,
+                            judgeMode: scoringMode,
+                            isDailyChallenge,
                             themeId: theme?.id,
                             scoringMode,
                             roundNumber,
@@ -230,6 +245,9 @@ export function Reveal({ submission, assets }) {
                 commentary: scoreResult.commentary,
                 themeId: theme?.id,
                 scoringMode,
+                assets: savedAssetPair,
+                judgeMode: scoringMode,
+                isDailyChallenge,
                 roundNumber,
                 totalRounds,
                 scoreMultiplier,
