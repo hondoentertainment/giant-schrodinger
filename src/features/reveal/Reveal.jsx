@@ -421,10 +421,10 @@ export function Reveal({ submission, assets }) {
                     onDismiss={() => setNewlyUnlocked([])}
                 />
             )}
-            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl">
-                <div className="glass-panel rounded-[22px] p-8 text-center max-w-2xl">
-                    <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-6 border border-white/10">
-                        YOUR SCORE
+            <div className="wordle-card">
+                <div className="p-5 sm:p-8 text-center max-w-2xl">
+                    <div className="inline-block px-4 py-1 text-xs font-bold tracking-[0.24em] text-white/60 mb-6 border border-[#3a3a3c] uppercase">
+                        Puzzle result
                     </div>
 
                     <div className="relative aspect-square w-full max-w-sm mx-auto rounded-2xl overflow-hidden mb-8 shadow-2xl ring-1 ring-white/20">
@@ -448,16 +448,16 @@ export function Reveal({ submission, assets }) {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-8">
-                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <div className={`text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br ${scoreBand?.color || 'from-yellow-300 to-amber-600'}`}>
+                    <div className="grid grid-cols-2 gap-3 mb-8">
+                        <div className={`wordle-tile min-h-[104px] flex-col ${displayScore >= 8 ? 'wordle-tile-correct' : displayScore >= 5 ? 'wordle-tile-present' : 'wordle-tile-filled'}`}>
+                            <div className="text-4xl font-black">
                                 {displayScore}/10
                             </div>
-                            <div className="text-white/40 text-xs uppercase tracking-widest mt-1">
+                            <div className="text-white/80 text-xs uppercase tracking-widest mt-1">
                                 {scoreBand?.label || 'Final Score'}
                             </div>
                         </div>
-                        <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                        <div className="wordle-tile wordle-tile-filled min-h-[104px] p-3">
                             <div className="text-lg font-bold text-white/90">
                                 {result.relevance}
                             </div>
@@ -466,11 +466,11 @@ export function Reveal({ submission, assets }) {
                     {result.breakdown && (
                         <>
                             <p className="text-white/50 text-xs mb-2">Your connection was scored on:</p>
-                            <div className="grid grid-cols-2 gap-3 mb-4 text-sm text-white/70">
-                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Wit: <span className="text-white">{result.breakdown.wit}/10</span></div>
-                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Logic: <span className="text-white">{result.breakdown.logic}/10</span></div>
-                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Originality: <span className="text-white">{result.breakdown.originality}/10</span></div>
-                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">Clarity: <span className="text-white">{result.breakdown.clarity}/10</span></div>
+                            <div className="grid grid-cols-2 gap-2 mb-4 text-sm text-white/80">
+                                <div className="wordle-tile min-h-[48px] p-2">Wit: <span className="text-white">{result.breakdown.wit}/10</span></div>
+                                <div className="wordle-tile min-h-[48px] p-2">Logic: <span className="text-white">{result.breakdown.logic}/10</span></div>
+                                <div className="wordle-tile min-h-[48px] p-2">Originality: <span className="text-white">{result.breakdown.originality}/10</span></div>
+                                <div className="wordle-tile min-h-[48px] p-2">Clarity: <span className="text-white">{result.breakdown.clarity}/10</span></div>
                             </div>
                         </>
                     )}

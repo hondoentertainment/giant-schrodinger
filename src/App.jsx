@@ -172,8 +172,11 @@ function GameContent() {
     };
 
     const headerEl = (
-        <div className="mb-8 text-center">
-            <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tight"><span className="text-gradient-vibrant">VENN</span> <span className="text-xl font-light tracking-widest text-white/60 uppercase">with Friends</span></h1>
+        <div className="wordle-topbar mb-6 flex justify-center py-3">
+            <h1 className="flex items-end gap-3 text-center font-display font-black tracking-[0.18em] text-white">
+                <span className="text-3xl sm:text-4xl leading-none">VENN</span>
+                <span className="pb-1 text-[0.65rem] sm:text-xs font-bold tracking-[0.28em] text-white/50 uppercase">with Friends</span>
+            </h1>
         </div>
     );
 

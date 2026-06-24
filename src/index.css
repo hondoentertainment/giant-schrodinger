@@ -13,8 +13,7 @@
 
 @layer base {
   body {
-    @apply bg-[#0f0e17] text-white overflow-x-hidden overflow-y-auto;
-    /* Deep dark blue-black background as base */
+    @apply bg-[#121213] text-white overflow-x-hidden overflow-y-auto;
   }
 }
 
@@ -24,18 +23,54 @@
   }
 
   .glass-panel {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-xl;
+    @apply bg-[#121213]/95 border border-[#3a3a3c];
   }
 
   .text-gradient-vibrant {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-[oklch(0.7_0.2_320)] via-[oklch(0.8_0.2_200)] to-[oklch(0.7_0.2_150)];
+    @apply text-white;
+  }
+
+  .wordle-shell {
+    @apply bg-[#121213] text-white;
+  }
+
+  .wordle-topbar {
+    @apply w-full border-b border-[#3a3a3c] bg-[#121213]/95;
+  }
+
+  .wordle-card {
+    @apply bg-[#121213] border border-[#3a3a3c] rounded-none;
+  }
+
+  .wordle-tile {
+    @apply flex items-center justify-center border-2 border-[#3a3a3c] bg-[#121213] text-white font-black uppercase tracking-wider;
+  }
+
+  .wordle-tile-filled {
+    @apply border-[#565758] bg-[#3a3a3c];
+  }
+
+  .wordle-tile-correct {
+    @apply border-[#538d4e] bg-[#538d4e];
+  }
+
+  .wordle-tile-present {
+    @apply border-[#b59f3b] bg-[#b59f3b];
+  }
+
+  .wordle-button {
+    @apply rounded-none border-2 border-[#565758] bg-[#818384] px-4 py-3 font-bold uppercase tracking-wide text-white transition-colors hover:bg-[#6f7173] disabled:opacity-50;
+  }
+
+  .wordle-primary {
+    @apply border-[#538d4e] bg-[#538d4e] hover:bg-[#47783f];
   }
 
   .skip-link {
     @apply absolute -left-[9999px] z-[100] px-4 py-2;
   }
   .skip-link:focus {
-    @apply left-4 top-4 bg-white text-black font-bold rounded-xl outline-none ring-4 ring-purple-500;
+    @apply left-4 top-4 bg-white text-black font-bold rounded-none outline-none ring-4 ring-[#538d4e];
   }
 }
 
@@ -70,7 +105,7 @@
 
 /* Visible focus indicators */
 :focus-visible {
-  outline: 2px solid #a855f7;
+  outline: 2px solid #538d4e;
   outline-offset: 2px;
 }
 

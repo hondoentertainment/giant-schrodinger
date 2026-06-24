@@ -144,13 +144,15 @@ describe('Round', () => {
 
     it('shows round info with round number', () => {
         render(<Round onSubmit={mockOnSubmit} />);
-        expect(screen.getByText(/ROUND 1 \/ 3/)).toBeInTheDocument();
+        expect(screen.getByText(/Round 1 of 3/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Round progress: 1 of 3/i)).toBeInTheDocument();
     });
 
     it('shows DAILY instead of ROUND when isDailyChallenge is true', () => {
         mockContextValue = { ...baselineContext, isDailyChallenge: true };
         render(<Round onSubmit={mockOnSubmit} />);
-        expect(screen.getByText(/DAILY 1 \/ 3/)).toBeInTheDocument();
+        expect(screen.getByText(/Daily puzzle/i)).toBeInTheDocument();
+        expect(screen.getByText(/Round 1 of 3/i)).toBeInTheDocument();
     });
 
     it('counts down the timer each second', () => {

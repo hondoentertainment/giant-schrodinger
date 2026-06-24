@@ -2,18 +2,11 @@ import React from 'react';
 
 export function Layout({ children }) {
     return (
-        <div className="relative min-h-screen w-full flex flex-col items-center overflow-x-hidden">
+        <div className="wordle-shell relative min-h-screen w-full flex flex-col items-center overflow-x-hidden">
             <a href="#main-content" className="skip-link">
                 Skip to main content
             </a>
-            {/* Dynamic Background */}
-            <div className="absolute inset-0 z-0">
-                <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[oklch(0.6_0.2_300)] opacity-20 blur-[120px] animate-pulse" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[oklch(0.6_0.2_200)] opacity-20 blur-[120px] animate-pulse delay-1000" />
-            </div>
-
-            {/* Main Container */}
-            <main id="main-content" className="relative z-10 w-full max-w-6xl px-4 py-8 flex flex-col items-center" tabIndex={-1}>
+            <main id="main-content" className="relative z-10 w-full max-w-5xl px-4 pb-8 flex flex-col items-center" tabIndex={-1}>
                 {children}
             </main>
         </div>

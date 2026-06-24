@@ -206,7 +206,7 @@ export function Lobby() {
                     <OnboardingModal onDismiss={onboardingDismissCallback} />
                 )}
                 {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
-            <div className="w-full max-w-md space-y-8 glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
+            <div className="w-full max-w-md space-y-6 wordle-card p-5 sm:p-6 animate-in fade-in zoom-in duration-500">
                 <div className="text-center">
                     {welcomeMessage && !welcomeDismissed && !isFirstSession && (
                         <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-left flex items-center gap-3">
@@ -235,7 +235,7 @@ export function Lobby() {
                             <Pencil className="w-4 h-4" />
                         </button>
                     </div>
-                    <h2 className="text-3xl font-display font-bold text-white mb-2">
+                    <h2 className="text-2xl font-display font-black uppercase tracking-[0.12em] text-white mb-2">
                         Hi, {user.name}!
                     </h2>
                     <p className="text-white/60 mb-4">
@@ -247,16 +247,25 @@ export function Lobby() {
                             : `Complete ${sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.`}
                     </p>
                     {!isFirstSession && <ServiceStatusCard className="mb-4" />}
-                    <div className="mb-4 flex flex-wrap gap-3 justify-center text-sm text-white/60">
-                        <span>Scoring: <span className="text-white font-semibold">{scoringMode === 'human' ? 'Manual Judge' : 'AI Judge'}</span></span>
-                        <span>Media: <span className="text-white font-semibold">
-                            {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? 'Images' :
-                             (user?.mediaType) === MEDIA_TYPES.VIDEO ? 'Videos' : 'Audio'}
-                        </span></span>
+                    <div className="mb-4 grid grid-cols-3 gap-2 text-xs uppercase tracking-wide text-white/70">
+                        <span className="wordle-tile min-h-[44px] flex-col px-2 text-[0.65rem]">
+                            <span>Judge</span>
+                            <span className="text-white/80">{scoringMode === 'human' ? 'Manual' : 'AI'}</span>
+                        </span>
+                        <span className="wordle-tile min-h-[44px] flex-col px-2 text-[0.65rem]">
+                            <span>Media</span>
+                            <span className="text-white/80">
+                                {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? 'Image' :
+                                 (user?.mediaType) === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
+                            </span>
+                        </span>
+                        <span className="wordle-tile min-h-[44px] flex-col px-2 text-[0.65rem]">
+                            <span>Rounds</span>
+                            <span className="text-white/80">{stats.totalRounds}</span>
+                        </span>
                         {stats.currentStreak > 0 && (
-                            <span className="text-amber-400 font-semibold">🔥 {stats.currentStreak} day streak</span>
+                            <span className="col-span-3 wordle-tile wordle-tile-present min-h-[36px] px-2 text-[0.65rem]">{stats.currentStreak} day streak</span>
                         )}
-                        <span>{stats.totalRounds} rounds played</span>
                     </div>
                     {!isFirstSession && (user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE && (
                         <div className="mb-4">
@@ -308,16 +317,16 @@ export function Lobby() {
                         <button
                             onClick={startDailyChallenge}
                             disabled={!!sessionId}
-                            className="w-full mb-4 p-4 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed group"
+                            className="w-full mb-4 p-4 wordle-card hover:border-[#b59f3b] transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed group"
                         >
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                                <div className="wordle-tile wordle-tile-present h-12 w-12 shrink-0">
                                     <CalendarDays className="w-6 h-6 text-amber-400" />
                                 </div>
                                 <div className="flex-1">
                                     <div className="text-white font-bold flex items-center gap-2">
                                         Daily Challenge
-                                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">NEW</span>
+                                        <span className="text-xs px-2 py-0.5 border border-[#b59f3b] bg-[#b59f3b] text-white">NEW</span>
                                     </div>
                                     <div className="text-white/50 text-sm">{dailyChallenge.prompt}</div>
                                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-amber-200/70">
@@ -382,7 +391,7 @@ export function Lobby() {
                                 <button
                                     onClick={startGame}
                                     disabled={sessionId && roundComplete && roundNumber >= totalRounds}
-                                    className="flex-1 py-4 bg-white text-black font-bold text-xl rounded-xl hover:scale-105 transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 min-h-[52px]"
+                                    className="wordle-button wordle-primary flex-1 min-h-[52px] text-base"
                                     aria-label={sessionId
                                         ? roundComplete && roundNumber === totalRounds
                                             ? 'Session complete'
@@ -399,7 +408,7 @@ export function Lobby() {
                                 </button>
                                 <button
                                     onClick={() => setGameState('GALLERY')}
-                                    className="px-5 py-4 bg-white/10 text-white font-bold text-xl rounded-xl hover:bg-white/20 transition-colors min-w-[52px] min-h-[52px] flex items-center justify-center"
+                                    className="wordle-button min-w-[52px] min-h-[52px] flex items-center justify-center text-xl"
                                     aria-label="View connection gallery"
                                     title="Connection Gallery"
                                 >
@@ -596,10 +605,10 @@ export function Lobby() {
     // Create Profile view
     // ============================================================
     return (
-        <div className="w-full max-w-md glass-panel p-8 rounded-3xl animate-in slide-in-from-bottom-8 duration-700">
+        <div className="w-full max-w-md wordle-card p-5 sm:p-6 animate-in slide-in-from-bottom-8 duration-700">
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
-            <h2 className="text-2xl font-display font-bold text-white mb-2 text-center">Create Profile</h2>
-            <p className="text-white/50 text-sm text-center mb-6">Customize your experience and unlock rewards by playing</p>
+            <h2 className="text-2xl font-display font-black uppercase tracking-[0.16em] text-white mb-2 text-center">Create Profile</h2>
+            <p className="text-white/50 text-sm text-center mb-6">Set up today&apos;s puzzle run and keep your streak moving.</p>
             <ServiceStatusCard className="mb-6" />
             <form onSubmit={handleSubmit} className="space-y-6">
                 <section aria-labelledby="profile-username">
@@ -609,7 +618,7 @@ export function Lobby() {
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value.trimStart())}
-                            className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-lg pr-14"
+                            className="w-full border-2 border-[#3a3a3c] bg-[#121213] px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#538d4e] text-lg pr-14"
                             placeholder="Enter your name..."
                             maxLength={12}
                             aria-describedby="name-char-count"
@@ -649,9 +658,9 @@ export function Lobby() {
                                     disabled={locked}
                                     aria-pressed={avatar === a}
                                     aria-label={locked ? `Locked. Unlock with milestones.` : `Select avatar ${a}`}
-                                    className={`aspect-square min-w-[44px] min-h-[44px] rounded-xl text-2xl flex items-center justify-center transition-all relative
+                                    className={`wordle-tile aspect-square min-w-[44px] min-h-[44px] text-2xl transition-all relative
                                         ${locked ? 'opacity-50 cursor-not-allowed grayscale' : ''}
-                                        ${avatar === a ? 'bg-white/20 shadow-inner scale-95 ring-2 ring-purple-500' : 'bg-white/5 hover:bg-white/10'}
+                                        ${avatar === a ? 'wordle-tile-correct scale-95' : 'hover:border-[#565758]'}
                                     `}
                                     title={locked ? 'Unlock with milestones' : a}
                                 >
@@ -720,9 +729,9 @@ export function Lobby() {
                             onClick={() => setScoringMode('human')}
                             aria-pressed={scoringMode === 'human'}
                             aria-label="Manual judge — you enter the score yourself after each round"
-                            className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all ${scoringMode === 'human'
-                                    ? 'bg-white text-black shadow-lg'
-                                    : 'bg-white/10 text-white hover:bg-white/20'
+                            className={`min-h-[44px] py-3 text-sm font-semibold transition-all border-2 ${scoringMode === 'human'
+                                    ? 'border-[#538d4e] bg-[#538d4e] text-white'
+                                    : 'border-[#3a3a3c] bg-[#121213] text-white hover:border-[#565758]'
                                 }`}
                         >
                             Manual Judge
@@ -732,9 +741,9 @@ export function Lobby() {
                             onClick={() => setScoringMode('ai')}
                             aria-pressed={scoringMode === 'ai'}
                             aria-label="AI judge — Gemini scores your connections automatically"
-                            className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all ${scoringMode === 'ai'
-                                    ? 'bg-white text-black shadow-lg'
-                                    : 'bg-white/10 text-white hover:bg-white/20'
+                            className={`min-h-[44px] py-3 text-sm font-semibold transition-all border-2 ${scoringMode === 'ai'
+                                    ? 'border-[#538d4e] bg-[#538d4e] text-white'
+                                    : 'border-[#3a3a3c] bg-[#121213] text-white hover:border-[#565758]'
                                 }`}
                         >
                             AI Judge
@@ -773,9 +782,9 @@ export function Lobby() {
                                 onClick={() => setMediaType(type)}
                                 aria-pressed={mediaType === type}
                                 aria-label={`${label} — ${desc}`}
-                                className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 ${mediaType === type
-                                        ? 'bg-white text-black shadow-lg'
-                                        : 'bg-white/10 text-white hover:bg-white/20'
+                                className={`min-h-[44px] py-3 text-sm font-semibold transition-all border-2 flex flex-col items-center gap-1 ${mediaType === type
+                                        ? 'border-[#538d4e] bg-[#538d4e] text-white'
+                                        : 'border-[#3a3a3c] bg-[#121213] text-white hover:border-[#565758]'
                                     }`}
                             >
                                 <Icon className="w-5 h-5" />
@@ -854,9 +863,9 @@ export function Lobby() {
                                 onClick={() => setSessionLength(rounds)}
                                 aria-pressed={sessionLength === rounds}
                                 aria-label={`${rounds} rounds per session`}
-                                className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all ${sessionLength === rounds
-                                        ? 'bg-white text-black shadow-lg'
-                                        : 'bg-white/10 text-white hover:bg-white/20'
+                                className={`min-h-[44px] py-3 text-sm font-semibold transition-all border-2 ${sessionLength === rounds
+                                        ? 'border-[#538d4e] bg-[#538d4e] text-white'
+                                        : 'border-[#3a3a3c] bg-[#121213] text-white hover:border-[#565758]'
                                     }`}
                             >
                                 {rounds} Rounds
@@ -868,7 +877,7 @@ export function Lobby() {
                 <button
                     type="submit"
                     disabled={!name.trim()}
-                    className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xl rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-lg mt-4"
+                    className="wordle-button wordle-primary w-full mt-4 text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Join Lobby
                 </button>

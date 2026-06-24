@@ -138,21 +138,43 @@ export function Round({ onSubmit }) {
                 </div>
             )}
 
-            <div className="w-full flex justify-between items-center px-8 mb-4">
-                <div className="flex items-center gap-3">
-                    <div className="text-2xl font-bold text-white/40">
-                        {isDailyChallenge ? 'DAILY' : 'ROUND'} {roundNumber} / {totalRounds}
+            <div className="w-full max-w-2xl flex flex-col gap-4 px-2 mb-5">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <div className="text-xs font-bold uppercase tracking-[0.24em] text-white/40">
+                            {isDailyChallenge ? 'Daily puzzle' : 'Puzzle run'}
+                        </div>
+                        <div className="text-xl font-black uppercase tracking-[0.18em] text-white">
+                            Round {roundNumber} of {totalRounds}
+                        </div>
                     </div>
+                    {showTimeUp ? (
+                        <div className="wordle-tile wordle-tile-present min-h-[56px] min-w-[92px] px-3 text-sm" role="status" aria-live="polite">
+                            Time&apos;s up
+                        </div>
+                    ) : (
+                        <div className={`wordle-tile min-h-[56px] min-w-[72px] px-3 text-xl ${timer < 10 ? 'wordle-tile-present animate-pulse' : ''}`}>
+                            {timer}s
+                        </div>
+                    )}
                 </div>
-                {showTimeUp ? (
-                    <div className="text-4xl font-black font-display text-amber-400 animate-in zoom-in-95 duration-300" role="status" aria-live="polite">
-                        Time&apos;s up!
-                    </div>
-                ) : (
-                    <div className={`text-4xl font-black font-display ${timer < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                        {timer}s
-                    </div>
-                )}
+                <div className="grid grid-cols-7 gap-1.5" aria-label={`Round progress: ${roundNumber} of ${totalRounds}`}>
+                    {Array.from({ length: totalRounds }).map((_, index) => (
+                        <div
+                            key={index}
+                            className={`wordle-tile aspect-square text-xs sm:text-sm ${
+                                index + 1 < roundNumber
+                                    ? 'wordle-tile-correct'
+                                    : index + 1 === roundNumber
+                                    ? 'wordle-tile-filled'
+                                    : ''
+                            }`}
+                            aria-label={`Round ${index + 1}${index + 1 === roundNumber ? ', current' : index + 1 < roundNumber ? ', completed' : ''}`}
+                        >
+                            {index + 1}
+                        </div>
+                    ))}
+                </div>
             </div>
             <div className="mb-6 flex flex-wrap items-center justify-center gap-3 text-sm text-white/60">
                 <div className="rounded-full bg-white/10 px-3 py-1">
@@ -199,7 +221,7 @@ export function Round({ onSubmit }) {
                             ? 'What connects these two clips?'
                             : 'What connects these two?'
                     }
-                    className="w-full bg-black/40 backdrop-blur-xl border-2 border-white/20 rounded-full px-8 py-6 text-2xl text-center text-white placeholder-white/20 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-2xl"
+                    className="w-full border-2 border-[#565758] bg-[#121213] px-5 py-5 text-2xl text-center font-bold uppercase tracking-wide text-white placeholder-white/25 focus:outline-none focus:border-[#538d4e] focus:ring-0 transition-colors"
                     autoFocus
                 />
                 <div className="mt-4 text-center text-white/40 text-sm space-y-1">
