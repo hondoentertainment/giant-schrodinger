@@ -60,12 +60,15 @@ function VennImage({ asset }) {
                 srcSet={buildSrcSet(src)}
                 sizes="(max-width: 640px) 400px, (max-width: 1024px) 640px, 1080px"
                 alt={asset.label}
-                className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`w-full h-full object-cover object-center transition-all duration-700 ease-out ${
+                    loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.03]'
+                }`}
                 referrerPolicy="no-referrer"
                 onError={handleError}
                 onLoad={() => setLoaded(true)}
                 loading="eager"
                 decoding="async"
+                draggable={false}
             />
         </div>
     );
@@ -318,6 +321,88 @@ function VennMedia({ asset }) {
     return <VennImage asset={asset} />;
 }
 
+// ── Concept title caption below each circle ──
+function ConceptCaption({ label, align = 'left', accentColor }) {
+    return (
+        <div
+            className={`flex flex-col gap-1 min-w-0 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm ${
+                align === 'right' ? 'items-end text-right' : 'items-start text-left'
+            }`}
+            style={{ maxWidth: '46%' }}
+        >
+            <span
+                className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.22em]"
+                style={{ color: accentColor ? `${accentColor}cc` : 'rgba(255,255,255,0.45)' }}
+            >
+                Concept
+            </span>
+            <h3 className="font-display text-sm sm:text-base md:text-lg font-bold text-white leading-snug line-clamp-3">
+                {label}
+            </h3>
+        </div>
+    );
+}
+
+// ── Single Venn circle ──
+function VennCircle({ asset, side, colorblindMode, colors, mediaType, isAudio }) {
+    const isLeft = side === 'left';
+    const accentColor = isLeft ? colors.left : colors.right;
+    const patternId = isLeft ? 'pattern-left' : 'pattern-right';
+
+    const sideTint = colorblindMode
+        ? `linear-gradient(to ${isLeft ? 'right' : 'left'}, ${accentColor}20, transparent 55%)`
+        : isAudio
+            ? `linear-gradient(to ${isLeft ? 'right' : 'left'}, ${isLeft ? 'rgba(168,85,247,0.12)' : 'rgba(236,72,153,0.12)'}, transparent 55%)`
+            : 'none';
+
+    return (
+        <div
+            className={`absolute ${isLeft ? 'left-0' : 'right-0'} w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-[1.02] duration-500 shadow-2xl group`}
+            style={{
+                border: `3px solid ${colorblindMode ? accentColor : 'rgba(255,255,255,0.2)'}`,
+                boxShadow: `0 20px 50px -12px ${accentColor}33, 0 0 0 1px rgba(255,255,255,0.05) inset`,
+            }}
+        >
+            <VennMedia asset={asset} />
+
+            {/* Subtle edge vignette — keeps images visible in the center */}
+            <div
+                className={`absolute inset-0 pointer-events-none rounded-full ${
+                    isAudio
+                        ? isLeft
+                            ? 'bg-gradient-to-t from-purple-900/50 via-transparent to-black/10'
+                            : 'bg-gradient-to-t from-fuchsia-900/50 via-transparent to-black/10'
+                        : 'bg-[radial-gradient(circle_at_center,transparent_55%,rgba(0,0,0,0.35)_100%)]'
+                }`}
+            />
+
+            {sideTint !== 'none' && (
+                <div className="absolute inset-0 pointer-events-none rounded-full" style={{ background: sideTint }} />
+            )}
+
+            {colorblindMode && (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none z-[2]" aria-hidden="true">
+                    <rect width="100%" height="100%" fill={`url(#${patternId})`} />
+                </svg>
+            )}
+
+            {/* Inner ring for polish */}
+            <div
+                className="absolute inset-[3px] rounded-full pointer-events-none z-[3]"
+                style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)' }}
+            />
+
+            {mediaType !== MEDIA_TYPES.IMAGE && (
+                <div className={`absolute top-2.5 ${isLeft ? 'left-2.5' : 'right-2.5'} z-20`}>
+                    <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[10px] font-bold text-white/80 uppercase tracking-wider border border-white/10">
+                        {mediaType === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Main Venn Diagram ──
 export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAsset }) {
     const mediaType = leftAsset?.type || MEDIA_TYPES.IMAGE;
@@ -325,12 +410,11 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
     const colorblindMode = localStorage.getItem('venn_colorblind') === 'true';
 
     const COLORS = colorblindMode
-        ? { left: '#0ea5e9', right: '#f97316', overlap: '#10b981' }  // Blue, Orange, Green
-        : { left: '#a855f7', right: '#6366f1', overlap: '#8b5cf6' }; // Purple, Indigo, Violet
+        ? { left: '#0ea5e9', right: '#f97316', overlap: '#10b981' }
+        : { left: '#a855f7', right: '#6366f1', overlap: '#8b5cf6' };
 
     return (
         <div className="relative w-full max-w-2xl mx-auto my-4 sm:my-8">
-            {/* SVG pattern definitions for colorblind mode */}
             {colorblindMode && (
                 <svg className="absolute w-0 h-0" aria-hidden="true">
                     <defs>
@@ -343,86 +427,44 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                     </defs>
                 </svg>
             )}
-            {/* Circles container */}
+
+            {/* Circles */}
             <div className="relative w-full aspect-[2/1.1] flex justify-center items-center">
-                {/* Left Circle */}
-                <div className="absolute left-0 w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-105 duration-500 shadow-2xl shadow-blue-500/10"
-                    style={{ border: `3px solid ${colorblindMode ? COLORS.left : 'rgba(255,255,255,0.15)'}` }}>
-                    <VennMedia asset={leftAsset} />
-                    {/* Gradient overlay for readability */}
-                    <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-t from-purple-900/70 via-transparent to-transparent' : 'bg-gradient-to-t from-black/60 via-black/10 to-transparent'}`} />
-                    <div className="absolute inset-0 pointer-events-none"
-                        style={{ background: colorblindMode
-                            ? `linear-gradient(to right, ${COLORS.left}26, transparent)`
-                            : isAudio ? 'linear-gradient(to right, rgba(168,85,247,0.15), transparent)' : 'linear-gradient(to right, rgba(59,130,246,0.15), transparent)'
-                        }} />
-                    {/* Colorblind pattern overlay */}
-                    {colorblindMode && (
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-[2]" aria-hidden="true">
-                            <rect width="100%" height="100%" fill="url(#pattern-left)" />
-                        </svg>
-                    )}
-                    {/* Label */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 z-10">
-                        <span className="text-sm sm:text-lg md:text-xl font-black text-white uppercase tracking-wider drop-shadow-lg"
-                            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)' }}>
-                            {leftAsset.label}
-                        </span>
-                    </div>
-                    {mediaType !== MEDIA_TYPES.IMAGE && (
-                        <div className="absolute top-2.5 left-2.5 z-20">
-                            <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[10px] font-bold text-white/80 uppercase tracking-wider border border-white/10">
-                                {mediaType === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
-                            </span>
-                        </div>
-                    )}
-                </div>
+                <VennCircle
+                    asset={leftAsset}
+                    side="left"
+                    colorblindMode={colorblindMode}
+                    colors={COLORS}
+                    mediaType={mediaType}
+                    isAudio={isAudio}
+                />
+                <VennCircle
+                    asset={rightAsset}
+                    side="right"
+                    colorblindMode={colorblindMode}
+                    colors={COLORS}
+                    mediaType={mediaType}
+                    isAudio={isAudio}
+                />
 
-                {/* Right Circle */}
-                <div className="absolute right-0 w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-105 duration-500 shadow-2xl shadow-pink-500/10"
-                    style={{ border: `3px solid ${colorblindMode ? COLORS.right : 'rgba(255,255,255,0.15)'}` }}>
-                    <VennMedia asset={rightAsset} />
-                    {/* Gradient overlay for readability */}
-                    <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-t from-fuchsia-900/70 via-transparent to-transparent' : 'bg-gradient-to-t from-black/60 via-black/10 to-transparent'}`} />
-                    <div className="absolute inset-0 pointer-events-none"
-                        style={{ background: colorblindMode
-                            ? `linear-gradient(to left, ${COLORS.right}26, transparent)`
-                            : isAudio ? 'linear-gradient(to left, rgba(236,72,153,0.15), transparent)' : 'linear-gradient(to left, rgba(236,72,153,0.15), transparent)'
-                        }} />
-                    {/* Colorblind pattern overlay */}
-                    {colorblindMode && (
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-[2]" aria-hidden="true">
-                            <rect width="100%" height="100%" fill="url(#pattern-right)" />
-                        </svg>
-                    )}
-                    {/* Label */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 z-10 text-right">
-                        <span className="text-sm sm:text-lg md:text-xl font-black text-white uppercase tracking-wider drop-shadow-lg"
-                            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)' }}>
-                            {rightAsset.label}
-                        </span>
-                    </div>
-                    {mediaType !== MEDIA_TYPES.IMAGE && (
-                        <div className="absolute top-2.5 right-2.5 z-20">
-                            <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[10px] font-bold text-white/80 uppercase tracking-wider border border-white/10">
-                                {mediaType === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Intersection Highlight - centered between circles */}
+                {/* Intersection highlight */}
                 <div className="absolute z-10 text-center pointer-events-none flex flex-col items-center">
-                    <div className="relative">
-                        <div className="absolute -inset-4 rounded-full bg-white/5 blur-2xl animate-pulse" />
-                        <span className="relative text-[10px] sm:text-xs font-medium text-white/70 tracking-[0.35em] uppercase"
-                            style={{ textShadow: '0 1px 12px rgba(0,0,0,0.9)' }}>
+                    <div className="relative px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+                        <span className="relative text-[10px] sm:text-xs font-semibold text-white/80 tracking-[0.28em] uppercase">
                             The Intersection
                         </span>
                     </div>
-                    <div className="w-8 h-8 sm:w-12 sm:h-12 mt-1 rounded-full blur-xl animate-pulse"
-                        style={{ backgroundColor: colorblindMode ? `${COLORS.overlap}33` : 'rgba(255,255,255,0.1)' }} />
+                    <div
+                        className="w-6 h-6 sm:w-8 sm:h-8 mt-2 rounded-full blur-lg animate-pulse"
+                        style={{ backgroundColor: colorblindMode ? `${COLORS.overlap}55` : 'rgba(139,92,246,0.35)' }}
+                    />
                 </div>
+            </div>
+
+            {/* Concept titles below circles */}
+            <div className="relative w-full flex justify-between items-start gap-4 mt-3 sm:mt-4 px-1">
+                <ConceptCaption label={leftAsset.label} align="left" accentColor={COLORS.left} />
+                <ConceptCaption label={rightAsset.label} align="right" accentColor={COLORS.right} />
             </div>
         </div>
     );
