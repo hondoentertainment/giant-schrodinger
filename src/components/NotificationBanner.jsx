@@ -49,7 +49,7 @@ export function NotificationBanner() {
             <div className="flex gap-3">
                 <button
                     onClick={handleEnable}
-                    className="flex-1 py-2.5 bg-white text-black font-bold text-sm rounded-xl hover:scale-[1.02] transition-transform"
+                    className="wordle-button wordle-primary flex-1 text-sm min-h-[44px]"
                 >
                     Enable
                 </button>

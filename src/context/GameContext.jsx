@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { MEDIA_TYPES } from '../data/themes';
 import { markDailyChallengeComplete } from '../services/dailyChallenge';
 import { trackDailyChallenge } from '../services/analytics';
+import { getAssetKey } from '../services/assetSelection';
+import { normalizeMediaType } from '../lib/mediaType';
 
 const GameContext = createContext();
 
@@ -67,7 +68,7 @@ export function GameProvider({ children }) {
         const saved = localStorage.getItem('vwf_user');
         if (saved) {
             const parsed = JSON.parse(saved);
-            if (!parsed.mediaType) parsed.mediaType = MEDIA_TYPES.IMAGE;
+            parsed.mediaType = normalizeMediaType(parsed.mediaType);
             if (parsed.useCustomImages === undefined) parsed.useCustomImages = false;
             return parsed;
         }
@@ -97,7 +98,10 @@ export function GameProvider({ children }) {
     }, [user]);
 
     const login = (profile) => {
-        setUser(profile);
+        setUser({
+            ...profile,
+            mediaType: normalizeMediaType(profile?.mediaType),
+        });
         setGameState('LOBBY');
     };
 
@@ -122,7 +126,7 @@ export function GameProvider({ children }) {
     };
 
     const trackUsedAssets = (assets) => {
-        setUsedAssetIds((prev) => [...prev, ...assets.map((a) => a.id).filter(Boolean)]);
+        setUsedAssetIds((prev) => [...prev, ...assets.map(getAssetKey).filter(Boolean)]);
     };
 
     const getUsedAssetIds = () => usedAssetIds;

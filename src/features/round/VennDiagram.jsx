@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MEDIA_TYPES } from '../../data/themes';
+import { getAssetMediaLabel } from '../../services/assetSelection';
+import { isGiphyUrl } from '../../services/memeResolve';
+import { getYoutubeEmbedUrl, getYoutubeVideoIdFromAsset } from '../../lib/youtube';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
 // ── Responsive srcset helper ──
@@ -8,8 +11,55 @@ function buildSrcSet(baseUrl) {
     const id = baseUrl.match(/photo-([^?]+)/)?.[1];
     if (!id) return undefined;
     return [400, 640, 1080].map(w =>
-        `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80 ${w}w`
+        `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${w}&crop=entropy&q=85 ${w}w`
     ).join(', ');
+}
+
+// ── Meme circle (GIFs/images with letterboxing) ──
+function VennMeme({ asset }) {
+    const [loaded, setLoaded] = useState(false);
+    const [useFallback, setUseFallback] = useState(false);
+    const src = useFallback && asset.fallbackUrl ? asset.fallbackUrl : asset.url;
+    const showGiphyAttribution = asset.memeSource === 'giphy' || isGiphyUrl(asset.url);
+
+    return (
+        <div className="relative overflow-hidden w-full h-full bg-black">
+            {!loaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/5 animate-pulse">
+                    <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+                </div>
+            )}
+            <img
+                src={src}
+                alt={asset.label}
+                className={`w-full h-full object-contain transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                referrerPolicy="no-referrer"
+                onLoad={() => setLoaded(true)}
+                onError={() => {
+                    if (!useFallback && asset.fallbackUrl && src !== asset.fallbackUrl) {
+                        setUseFallback(true);
+                        setLoaded(false);
+                        return;
+                    }
+                    setLoaded(true);
+                }}
+                loading="eager"
+                decoding="async"
+                draggable={false}
+            />
+            {showGiphyAttribution && (
+                <a
+                    href="https://giphy.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-2 right-2 z-20 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm text-[9px] font-medium text-white/70 hover:text-white border border-white/10"
+                    aria-label="Meme via Giphy"
+                >
+                    via Giphy
+                </a>
+            )}
+        </div>
+    );
 }
 
 // ── Image circle ──
@@ -74,8 +124,96 @@ function VennImage({ asset }) {
     );
 }
 
-// ── Video circle ──
-function VennVideo({ asset }) {
+// ── YouTube embed circle ──
+function VennYoutube({ asset, videoId }) {
+    const iframeRef = useRef(null);
+    const [loaded, setLoaded] = useState(false);
+    const [playing, setPlaying] = useState(true);
+    const [muted, setMuted] = useState(true);
+
+    const embedUrl = getYoutubeEmbedUrl(videoId, { autoplay: true, mute: true, loop: true });
+
+    const postPlayerCommand = useCallback((func) => {
+        const frame = iframeRef.current?.contentWindow;
+        if (!frame) return;
+        frame.postMessage(JSON.stringify({ event: 'command', func, args: '' }), '*');
+    }, []);
+
+    const togglePlay = useCallback((e) => {
+        e.stopPropagation();
+        if (playing) {
+            postPlayerCommand('pauseVideo');
+            setPlaying(false);
+        } else {
+            postPlayerCommand('playVideo');
+            setPlaying(true);
+        }
+    }, [playing, postPlayerCommand]);
+
+    const toggleMute = useCallback((e) => {
+        e.stopPropagation();
+        if (muted) {
+            postPlayerCommand('unMute');
+            setMuted(false);
+        } else {
+            postPlayerCommand('mute');
+            setMuted(true);
+        }
+    }, [muted, postPlayerCommand]);
+
+    return (
+        <>
+            {!loaded && (
+                <>
+                    {asset.posterUrl && (
+                        <img
+                            src={asset.posterUrl}
+                            alt=""
+                            aria-hidden="true"
+                            className="absolute inset-0 w-full h-full object-cover"
+                        />
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/5 animate-pulse z-10">
+                        <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+                    </div>
+                </>
+            )}
+            <iframe
+                ref={iframeRef}
+                src={embedUrl}
+                title={asset.label || 'YouTube video'}
+                className={`absolute inset-0 w-full h-full border-0 transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+                onLoad={() => setLoaded(true)}
+            />
+            {loaded && (
+                <div className="absolute top-3 right-3 flex gap-1.5 z-20">
+                    <button
+                        onClick={togglePlay}
+                        className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition-all min-w-[44px] min-h-[44px]"
+                        aria-label={playing ? 'Pause video' : 'Play video'}
+                        title={playing ? 'Pause' : 'Play'}
+                    >
+                        {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                        onClick={toggleMute}
+                        className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition-all min-w-[44px] min-h-[44px]"
+                        aria-label={muted ? 'Unmute video' : 'Mute video'}
+                        title={muted ? 'Unmute' : 'Mute'}
+                    >
+                        {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                    </button>
+                </div>
+            )}
+        </>
+    );
+}
+
+// ── Native file video circle ──
+function VennNativeVideo({ asset }) {
     const videoRef = useRef(null);
     const [loaded, setLoaded] = useState(false);
     const [playing, setPlaying] = useState(true);
@@ -155,6 +293,12 @@ function VennVideo({ asset }) {
             )}
         </>
     );
+}
+
+function VennVideo({ asset }) {
+    const youtubeId = getYoutubeVideoIdFromAsset(asset);
+    if (youtubeId) return <VennYoutube asset={asset} videoId={youtubeId} />;
+    return <VennNativeVideo asset={asset} />;
 }
 
 // ── Audio circle with waveform visualization ──
@@ -318,25 +462,31 @@ function VennMedia({ asset }) {
     const type = asset?.type || MEDIA_TYPES.IMAGE;
     if (type === MEDIA_TYPES.VIDEO) return <VennVideo asset={asset} />;
     if (type === MEDIA_TYPES.AUDIO) return <VennAudio asset={asset} />;
+    if (type === MEDIA_TYPES.MEME) return <VennMeme asset={asset} />;
     return <VennImage asset={asset} />;
 }
 
 // ── Concept title caption below each circle ──
-function ConceptCaption({ label, align = 'left', accentColor }) {
+function ConceptCaption({ label, align = 'left', accentColor, assetType }) {
+    const conceptLabel = getAssetMediaLabel(assetType);
     return (
         <div
-            className={`flex flex-col gap-1 min-w-0 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm ${
+            className={`flex flex-col gap-1 min-w-0 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 backdrop-blur-md ${
                 align === 'right' ? 'items-end text-right' : 'items-start text-left'
             }`}
-            style={{ maxWidth: '46%' }}
+            style={{
+                maxWidth: '46%',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.08)',
+            }}
         >
             <span
-                className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.22em]"
+                className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.12em]"
                 style={{ color: accentColor ? `${accentColor}cc` : 'rgba(255,255,255,0.45)' }}
             >
-                Concept
+                {conceptLabel}
             </span>
-            <h3 className="font-display text-sm sm:text-base md:text-lg font-bold text-white leading-snug line-clamp-3">
+            <h3 className="font-display text-sm sm:text-base md:text-lg font-semibold text-white leading-snug line-clamp-3">
                 {label}
             </h3>
         </div>
@@ -344,7 +494,10 @@ function ConceptCaption({ label, align = 'left', accentColor }) {
 }
 
 // ── Single Venn circle ──
-function VennCircle({ asset, side, colorblindMode, colors, mediaType, isAudio }) {
+function VennCircle({ asset, side, colorblindMode, colors }) {
+    const assetType = asset?.type || MEDIA_TYPES.IMAGE;
+    const isAudio = assetType === MEDIA_TYPES.AUDIO;
+    const isMeme = assetType === MEDIA_TYPES.MEME;
     const isLeft = side === 'left';
     const accentColor = isLeft ? colors.left : colors.right;
     const patternId = isLeft ? 'pattern-left' : 'pattern-right';
@@ -357,10 +510,10 @@ function VennCircle({ asset, side, colorblindMode, colors, mediaType, isAudio })
 
     return (
         <div
-            className={`absolute ${isLeft ? 'left-0' : 'right-0'} w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-[1.02] duration-500 shadow-2xl group`}
+            className={`absolute ${isLeft ? 'left-0' : 'right-0'} w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-[1.015] duration-500 shadow-2xl group`}
             style={{
-                border: `3px solid ${colorblindMode ? accentColor : 'rgba(255,255,255,0.2)'}`,
-                boxShadow: `0 20px 50px -12px ${accentColor}33, 0 0 0 1px rgba(255,255,255,0.05) inset`,
+                border: `2px solid ${colorblindMode ? accentColor : 'rgba(255,255,255,0.18)'}`,
+                boxShadow: `0 24px 56px -16px ${accentColor}44, 0 0 0 1px rgba(255,255,255,0.06) inset`,
             }}
         >
             <VennMedia asset={asset} />
@@ -372,6 +525,8 @@ function VennCircle({ asset, side, colorblindMode, colors, mediaType, isAudio })
                         ? isLeft
                             ? 'bg-gradient-to-t from-purple-900/50 via-transparent to-black/10'
                             : 'bg-gradient-to-t from-fuchsia-900/50 via-transparent to-black/10'
+                        : isMeme
+                            ? 'bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.5)_100%)]'
                         : 'bg-[radial-gradient(circle_at_center,transparent_55%,rgba(0,0,0,0.35)_100%)]'
                 }`}
             />
@@ -392,10 +547,10 @@ function VennCircle({ asset, side, colorblindMode, colors, mediaType, isAudio })
                 style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)' }}
             />
 
-            {mediaType !== MEDIA_TYPES.IMAGE && (
+            {assetType !== MEDIA_TYPES.IMAGE && (
                 <div className={`absolute top-2.5 ${isLeft ? 'left-2.5' : 'right-2.5'} z-20`}>
                     <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[10px] font-bold text-white/80 uppercase tracking-wider border border-white/10">
-                        {mediaType === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
+                        {getAssetMediaLabel(assetType)}
                     </span>
                 </div>
             )}
@@ -405,8 +560,6 @@ function VennCircle({ asset, side, colorblindMode, colors, mediaType, isAudio })
 
 // ── Main Venn Diagram ──
 export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAsset }) {
-    const mediaType = leftAsset?.type || MEDIA_TYPES.IMAGE;
-    const isAudio = mediaType === MEDIA_TYPES.AUDIO;
     const colorblindMode = localStorage.getItem('venn_colorblind') === 'true';
 
     const COLORS = colorblindMode
@@ -435,36 +588,33 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                     side="left"
                     colorblindMode={colorblindMode}
                     colors={COLORS}
-                    mediaType={mediaType}
-                    isAudio={isAudio}
                 />
                 <VennCircle
                     asset={rightAsset}
                     side="right"
                     colorblindMode={colorblindMode}
                     colors={COLORS}
-                    mediaType={mediaType}
-                    isAudio={isAudio}
                 />
 
                 {/* Intersection highlight */}
                 <div className="absolute z-10 text-center pointer-events-none flex flex-col items-center">
-                    <div className="relative px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
-                        <span className="relative text-[10px] sm:text-xs font-semibold text-white/80 tracking-[0.28em] uppercase">
+                    <div className="relative px-4 py-2 rounded-full backdrop-blur-xl border border-white/12"
+                        style={{ background: 'rgba(0,0,0,0.35)' }}>
+                        <span className="relative text-[10px] sm:text-xs font-semibold text-white/85 tracking-[0.08em]">
                             The Intersection
                         </span>
                     </div>
                     <div
-                        className="w-6 h-6 sm:w-8 sm:h-8 mt-2 rounded-full blur-lg animate-pulse"
-                        style={{ backgroundColor: colorblindMode ? `${COLORS.overlap}55` : 'rgba(139,92,246,0.35)' }}
+                        className="w-5 h-5 sm:w-7 sm:h-7 mt-2 rounded-full blur-md"
+                        style={{ backgroundColor: colorblindMode ? `${COLORS.overlap}66` : 'rgba(10,132,255,0.45)' }}
                     />
                 </div>
             </div>
 
             {/* Concept titles below circles */}
             <div className="relative w-full flex justify-between items-start gap-4 mt-3 sm:mt-4 px-1">
-                <ConceptCaption label={leftAsset.label} align="left" accentColor={COLORS.left} />
-                <ConceptCaption label={rightAsset.label} align="right" accentColor={COLORS.right} />
+                <ConceptCaption label={leftAsset.label} align="left" accentColor={COLORS.left} assetType={leftAsset?.type} />
+                <ConceptCaption label={rightAsset.label} align="right" accentColor={COLORS.right} assetType={rightAsset?.type} />
             </div>
         </div>
     );

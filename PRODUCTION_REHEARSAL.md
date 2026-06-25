@@ -16,14 +16,29 @@ Run this once before the first public launch and again before any major release.
 
 ## 2. Secrets and hosting
 
-1. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the target host.
-2. Set `VITE_GEMINI_API_KEY` if live AI judging is part of the launch.
-3. Deploy a fresh build from `main`.
+1. Copy `.env.example` to `.env.local` and fill in production values locally for preflight scripts.
+2. Run automated preflight:
+   ```bash
+   npm run rehearsal:preflight
+   ```
+   Or skip the long verify step during iteration:
+   ```bash
+   npm run rehearsal:preflight:fast
+   ```
+3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the target host.
+4. Set `VITE_GEMINI_API_KEY` if live AI judging is part of the launch.
+5. Deploy a fresh build from `main`.
+6. Smoke the deployed URL:
+   ```bash
+   npm run smoke:production
+   PRODUCTION_URL=https://your-site npm run test:e2e:rehearsal
+   ```
 
 ## 3. Core smoke test
 
 1. Run `npm run verify:release`
-2. Open the deployed site and confirm the runtime status card reflects the expected services.
+2. Run `npm run check:supabase-rpcs` (loads `.env.local`, probes launch-gate RPCs)
+3. Open the deployed site and confirm the runtime status card reflects the expected services.
 
 ## 4. Live product rehearsal
 
@@ -45,6 +60,11 @@ Run this once before the first public launch and again before any major release.
    - Finalize results and confirm both browsers show the same winner.
    - Refresh or join from a third browser during results and confirm it hydrates the current round instead of dropping into the lobby.
    - Advance to the next round and confirm room sync still works.
+5. Memes & videos:
+   - Select Memes & Videos in profile settings.
+   - Complete a round with stock meme/video assets.
+   - Optionally upload custom meme + video and enable "Use my memes & videos".
+   - Confirm gallery filter shows the saved memes/videos round.
 
 ## 5. Observability check
 

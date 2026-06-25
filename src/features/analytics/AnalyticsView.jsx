@@ -5,6 +5,7 @@ import { getSessionMetrics, getEventCount } from '../../services/analytics';
 import { getHighlightStats } from '../../services/highlights';
 import { getReferralCohorts } from '../../services/referrals';
 import { BarChart3 } from 'lucide-react';
+import { GameScreenShell } from '../../components/GameScreenShell';
 
 export function AnalyticsView({ onBack }) {
   const stats = useMemo(() => getStats(), []);
@@ -53,16 +54,7 @@ export function AnalyticsView({ onBack }) {
   const d7Count = cohortEntries.filter(([, c]) => c.d7).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-950 to-black text-white p-4 flex flex-col items-center">
-      <div className="w-full max-w-2xl">
-        <button onClick={onBack} className="mb-4 text-white/50 hover:text-white">
-          &larr; Back
-        </button>
-        <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <BarChart3 size={24} /> Analytics Dashboard
-        </h1>
-
-        {/* Key Metrics */}
+    <GameScreenShell onBack={onBack} title="Analytics Dashboard" icon={BarChart3} maxWidth="max-w-2xl" backLabel="Back to lobby">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <MetricCard label="Rounds Today" value={dau} />
           <MetricCard label="This Week" value={wau} />
@@ -85,11 +77,11 @@ export function AnalyticsView({ onBack }) {
             <div key={step.label} className="p-3 rounded-xl bg-white/5">
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-white/70">{step.label}</span>
-                <span className="text-purple-400 font-bold">{step.value}</span>
+                <span className="text-game-accent font-bold tabular-nums">{step.value}</span>
               </div>
               <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all"
+                  className="h-full rounded-full bg-game-accent transition-all"
                   style={{ width: `${(step.value / funnelMax) * 100}%` }}
                 />
               </div>
@@ -103,7 +95,7 @@ export function AnalyticsView({ onBack }) {
           {Object.entries(themeStats).map(([theme, data]) => (
             <div key={theme} className="flex justify-between p-3 rounded-xl bg-white/5">
               <span className="text-white/70 capitalize">{theme}</span>
-              <span className="text-purple-400">
+              <span className="text-game-accent tabular-nums">
                 {(data.totalScore / data.count).toFixed(1)} avg ({data.count} rounds)
               </span>
             </div>
@@ -151,7 +143,7 @@ export function AnalyticsView({ onBack }) {
               <div className="text-white/50 text-xs">D1 Retained</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-purple-400">{d7Count}</div>
+              <div className="text-2xl font-bold text-blue-300 tabular-nums">{d7Count}</div>
               <div className="text-white/50 text-xs">D7 Retained</div>
             </div>
           </div>
@@ -216,8 +208,7 @@ export function AnalyticsView({ onBack }) {
             </span>
           </div>
         </div>
-      </div>
-    </div>
+    </GameScreenShell>
   );
 }
 

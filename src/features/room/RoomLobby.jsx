@@ -49,26 +49,24 @@ export function RoomLobby() {
     };
 
     return (
-        <div className="w-full max-w-md glass-panel p-8 rounded-3xl animate-in fade-in zoom-in duration-500">
+        <div className="w-full max-w-md wordle-card p-6 sm:p-8 animate-spring-in">
             <ConnectionBanner />
             {isSpectator && (
-                <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center rounded-t-3xl -mt-8 -mx-8 mb-6" style={{ width: 'calc(100% + 4rem)' }}>
-                    Spectating -- watch and react!
+                <div className="w-full py-2.5 px-4 bg-amber-500/15 border border-amber-400/25 text-amber-200 text-sm font-semibold text-center rounded-2xl mb-6">
+                    Spectating — watch and react
                 </div>
             )}
-            {/* Room header */}
+
             <div className="text-center mb-8">
-                <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 border border-white/10">
-                    MULTIPLAYER ROOM
-                </div>
+                <div className="game-section-label mb-4">Multiplayer room</div>
 
                 <div className="flex items-center justify-center gap-3 mb-2">
-                    <span className="text-5xl font-black font-display tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                    <span className="text-4xl sm:text-5xl font-display font-bold tracking-[0.12em] text-gradient-vibrant">
                         {roomCode}
                     </span>
                     <button
                         onClick={copyCode}
-                        className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                        className="p-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] border border-white/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                         aria-label="Copy room code"
                         title="Copy room code"
                     >
@@ -76,91 +74,84 @@ export function RoomLobby() {
                     </button>
                 </div>
                 <p className="text-white/50 text-sm">Share this code with friends to join</p>
-                <div className="mt-4 p-3 rounded-xl bg-white/5 border border-white/10 text-left text-sm text-white/60">
+                <div className="mt-4 p-4 rounded-[22px] bg-white/[0.05] border border-white/[0.08] text-left text-sm text-white/55">
                     <div className="font-semibold text-white/80 mb-1">How to invite</div>
-                    <p>Friends join from the main lobby: click &quot;Play with Friends&quot; → enter this code → Join. Everyone sees the same concepts and plays simultaneously.</p>
+                    <p>Friends join from the main lobby: tap Play with Friends, enter this code, then Join. Everyone sees the same concepts and plays simultaneously.</p>
                 </div>
             </div>
 
-            {/* Room info */}
-            <div className="flex gap-3 mb-6 text-sm text-white/60">
-                <div className="flex-1 rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                    <div className="text-white font-semibold">{room?.total_rounds || 3}</div>
-                    <div className="text-xs">Rounds</div>
+            <div className="flex gap-3 mb-6 text-sm">
+                <div className="game-stat-tile">
+                    <div className="text-white font-semibold text-lg">{room?.total_rounds || 3}</div>
+                    <div className="text-white/45 text-xs mt-0.5">Rounds</div>
                 </div>
-                <div className="flex-1 rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                    <div className="text-white font-semibold">{room?.scoring_mode === 'human' ? 'Manual' : 'AI'}</div>
-                    <div className="text-xs">Judge</div>
+                <div className="game-stat-tile">
+                    <div className="text-white font-semibold text-lg">{room?.scoring_mode === 'human' ? 'Manual' : 'AI'}</div>
+                    <div className="text-white/45 text-xs mt-0.5">Judge</div>
                 </div>
-                <div className="flex-1 rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                    <div className="text-white font-semibold capitalize">{room?.theme_id || 'neon'}</div>
-                    <div className="text-xs">Theme</div>
+                <div className="game-stat-tile">
+                    <div className="text-white font-semibold text-lg capitalize">{room?.theme_id || 'neon'}</div>
+                    <div className="text-white/45 text-xs mt-0.5">Theme</div>
                 </div>
             </div>
 
-            {/* Players list */}
             <div className="mb-8">
-                <div className="flex items-center gap-2 mb-3 text-white/60 text-sm">
+                <div className="flex items-center gap-2 mb-3 text-white/55 text-sm">
                     <Users className="w-4 h-4" />
                     <span>Players ({players.length})</span>
                 </div>
                 <div className="space-y-2" role="list" aria-label="Players in room" aria-live="polite">
                     {players.map((p) => (
-                        <div
-                            key={p.id}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10"
-                        >
+                        <div key={p.id} className="game-player-row" role="listitem">
                             <span className="text-2xl">{p.avatar || '👽'}</span>
                             <span className="text-white font-semibold flex-1">{p.player_name}</span>
                             {p.is_host && (
-                                <Crown className="w-5 h-5 text-amber-400" />
+                                <Crown className="w-5 h-5 text-amber-300" aria-label="Host" />
                             )}
                         </div>
                     ))}
                     {players.length === 1 && (
-                        <div className="text-center py-4 text-white/30 text-sm animate-pulse">
+                        <div className="text-center py-4 text-white/35 text-sm animate-pulse">
                             Waiting for more players...
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Countdown overlay */}
             {countdown !== null && countdown > 0 && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="text-8xl font-black text-white animate-in zoom-in-95 duration-300" role="status" aria-live="polite">
+                <div className="game-modal-overlay animate-in fade-in duration-200">
+                    <div className="game-mp-countdown" role="status" aria-live="polite">
                         {countdown}
                     </div>
                 </div>
             )}
 
-            {/* Actions */}
             <div className="space-y-3">
                 {isHost && (
                     <button
                         onClick={handleStart}
                         disabled={starting || players.length < 2}
-                        className="w-full py-4 bg-white text-black font-bold text-xl rounded-xl hover:scale-105 transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                        className="wordle-button wordle-primary w-full text-lg flex items-center justify-center gap-2 disabled:hover:scale-100"
                     >
-                        <Play className="w-6 h-6" />
+                        <Play className="w-5 h-5" />
                         {starting && countdown === null ? 'Starting...' : countdown !== null && countdown > 0 ? `${countdown}...` : 'Start Game'}
                     </button>
                 )}
                 {!isHost && !isSpectator && (
-                    <div className="text-center py-4 px-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="text-center py-4 px-4 rounded-[22px] bg-white/[0.05] border border-white/[0.08]">
                         <p className="text-white/70 font-medium mb-1">Waiting for the host to start</p>
                         <p className="text-white/40 text-xs">The host can start once everyone has joined</p>
                     </div>
                 )}
                 {isSpectator && (
-                    <div className="text-center py-4 px-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                        <p className="text-amber-300 font-medium mb-1">You are spectating</p>
-                        <p className="text-white/40 text-xs">You can watch the game and react to submissions</p>
+                    <div className="text-center py-4 px-4 rounded-[22px] bg-amber-500/10 border border-amber-400/20">
+                        <p className="text-amber-200 font-medium mb-1">You are spectating</p>
+                        <p className="text-white/40 text-xs">Watch the game and react to submissions</p>
                     </div>
                 )}
                 <button
                     onClick={leaveCurrentRoom}
-                    className="w-full py-3 bg-white/10 text-white/70 font-semibold rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
+                    className="wordle-button w-full flex items-center justify-center gap-2 text-white/70"
                 >
                     <LogOut className="w-4 h-4" />
                     {isSpectator ? 'Stop Watching' : 'Leave Room'}

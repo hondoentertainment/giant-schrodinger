@@ -13,11 +13,14 @@ function ScoreBar({ label, value, max = 10 }) {
             <span className="text-white/50 w-20 text-right">{label}</span>
             <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden">
                 <div
-                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-700"
-                    style={{ width: `${pct}%` }}
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                        width: `${pct}%`,
+                        background: 'linear-gradient(90deg, #0a84ff, #64d2ff)',
+                    }}
                 />
             </div>
-            <span className="text-white font-semibold w-8">{value}</span>
+            <span className="text-white font-semibold w-8 tabular-nums">{value}</span>
         </div>
     );
 }
@@ -231,21 +234,21 @@ export function MultiplayerReveal() {
 
     if (revealPhase === REVEAL_PHASES.COUNTDOWN && !isResultsReady) {
         return withConnectionBanner(
-            <div className="w-full max-w-4xl flex flex-col items-center justify-center min-h-[50vh]">
-                <div className="text-center animate-in zoom-in-95 duration-500">
-                    <div className="text-white/40 text-lg uppercase tracking-widest mb-4">
-                        Round {room?.round_number} Answers
+            <div className="w-full max-w-4xl flex flex-col items-center justify-center min-h-[50vh] animate-spring-in">
+                <div className="text-center">
+                    <div className="game-section-label mb-4">
+                        Round {room?.round_number} answers
                     </div>
                     <div
-                        className="text-[120px] font-black font-display text-transparent bg-clip-text bg-gradient-to-br from-purple-400 via-pink-400 to-amber-400 animate-pulse leading-none"
+                        className="game-mp-countdown"
                         role="status"
                         aria-live="polite"
                         aria-label={countdownValue > 0 ? `Get ready, ${countdownValue}` : 'Here they are'}
                     >
                         {countdownValue || '!'}
                     </div>
-                    <div className="text-white/60 text-lg mt-4">
-                        {countdownValue > 0 ? 'Get ready...' : 'Here they are!'}
+                    <div className="text-white/55 text-lg mt-4">
+                        {countdownValue > 0 ? 'Get ready...' : 'Here they are'}
                     </div>
                 </div>
             </div>
@@ -254,32 +257,31 @@ export function MultiplayerReveal() {
 
     if (revealPhase === REVEAL_PHASES.REVEAL && !isResultsReady) {
         return withConnectionBanner(
-            <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
-                <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                    <div className="glass-panel rounded-[22px] p-8">
+            <div className="w-full max-w-4xl flex flex-col items-center animate-spring-in">
+                <div className="game-mp-shell p-6 sm:p-8 w-full">
                         <div className="text-center mb-8">
-                            <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 border border-white/10">
-                                ROUND {room?.round_number} ANSWERS
+                            <div className="game-section-label mb-3">
+                                Round {room?.round_number} answers
                             </div>
-                            <h2 className="text-2xl font-display font-bold text-white">
+                            <h2 className="text-2xl font-display font-bold tracking-tight text-white">
                                 And the connections are...
                             </h2>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {submissions.slice(0, revealedCount).map((entry) => {
                                 const player = players.find((p) => p.player_name === entry.player_name);
                                 return (
                                     <div
                                         key={entry.id}
-                                        className="rounded-2xl border bg-white/5 border-white/10 p-5 animate-in slide-in-from-bottom-8 zoom-in-95 duration-500"
+                                        className="game-player-row flex-col items-stretch p-5 animate-in slide-in-from-bottom-8 zoom-in-95 duration-500"
                                     >
                                         <div className="flex items-center gap-4">
                                             <span className="text-2xl">{player?.avatar || '👽'}</span>
-                                            <span className="text-white font-bold text-lg">{entry.player_name}</span>
+                                            <span className="text-white font-semibold text-lg">{entry.player_name}</span>
                                         </div>
                                         <div className="mt-3 pl-10">
-                                            <p className="text-white/80 italic text-xl">&ldquo;{entry.submission}&rdquo;</p>
+                                            <p className="text-white/75 italic text-xl">&ldquo;{entry.submission}&rdquo;</p>
                                         </div>
                                     </div>
                                 );
@@ -287,11 +289,10 @@ export function MultiplayerReveal() {
                         </div>
 
                         {revealedCount < submissions.length && (
-                            <div className="text-center mt-6 text-white/30 animate-pulse">
+                            <div className="text-center mt-6 text-white/35 animate-pulse text-sm">
                                 Revealing answers...
                             </div>
                         )}
-                    </div>
                 </div>
             </div>
         );
@@ -299,22 +300,21 @@ export function MultiplayerReveal() {
 
     if (revealPhase === REVEAL_PHASES.VOTING && !isResultsReady) {
         return withConnectionBanner(
-            <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
-                <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                    <div className="glass-panel rounded-[22px] p-8">
+            <div className="w-full max-w-4xl flex flex-col items-center animate-spring-in">
+                <div className="game-mp-shell p-6 sm:p-8 w-full">
                         <div className="text-center mb-8">
-                            <div className="inline-block px-4 py-1 rounded-full bg-purple-500/20 text-sm font-bold tracking-widest text-purple-300 mb-4 border border-purple-500/20">
-                                VOTE FOR THE BEST
+                            <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-blue-200 mb-3 border border-game-accent/30 bg-game-accent/10">
+                                Vote for the best
                             </div>
-                            <h2 className="text-2xl font-display font-bold text-white mb-2">
+                            <h2 className="text-2xl font-display font-bold tracking-tight text-white mb-2">
                                 Which connection wins this round?
                             </h2>
-                            <p className="text-white/40 text-sm">
+                            <p className="text-white/45 text-sm">
                                 {hasVoted
                                     ? 'Your vote is locked in. Waiting for the host to reveal results...'
                                     : 'Tap one connection to cast your vote. You cannot vote for yourself.'}
                             </p>
-                            <p className="text-white/30 text-xs mt-2">
+                            <p className="text-white/30 text-xs mt-2 tabular-nums">
                                 Votes locked in: {currentVoteCount}/{expectedVoteCount || submissions.length}
                             </p>
                         </div>
@@ -330,29 +330,29 @@ export function MultiplayerReveal() {
                                         key={entry.id}
                                         onClick={() => canVote && handleVote(entry.id)}
                                         disabled={!canVote}
-                                        className={`w-full text-left rounded-2xl border p-5 transition-all ${
+                                        className={`w-full text-left rounded-[22px] border p-5 transition-all ${
                                             canVote
-                                                ? 'hover:bg-white/10 hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.2)] cursor-pointer'
+                                                ? 'hover:bg-white/[0.08] hover:border-game-accent/40 cursor-pointer'
                                                 : isOwnSubmission
                                                 ? 'opacity-50 cursor-not-allowed'
                                                 : 'cursor-default'
                                         } ${
                                             isSelected
-                                                ? 'bg-purple-500/15 border-purple-400/50'
-                                                : 'bg-white/5 border-white/10'
+                                                ? 'bg-game-accent/12 border-game-accent/45'
+                                                : 'bg-white/[0.05] border-white/10'
                                         }`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <span className="text-2xl">{entry.avatar}</span>
                                             <div className="flex-1">
-                                                <span className="text-white font-bold">{entry.player_name}</span>
+                                                <span className="text-white font-semibold">{entry.player_name}</span>
                                                 {isOwnSubmission && <span className="text-white/30 text-xs ml-2">(you)</span>}
                                                 <p className="text-white/70 italic text-lg mt-1">&ldquo;{entry.submission}&rdquo;</p>
                                             </div>
                                             {isSelected && (
-                                                <div className="flex items-center gap-1 text-purple-300">
+                                                <div className="flex items-center gap-1 text-blue-200">
                                                     <ThumbsUp className="w-5 h-5" />
-                                                    <span className="font-bold">Voted</span>
+                                                    <span className="font-semibold">Voted</span>
                                                 </div>
                                             )}
                                         </div>
@@ -366,33 +366,31 @@ export function MultiplayerReveal() {
                                 <button
                                     onClick={handleFinishVoting}
                                     disabled={finishingVotes}
-                                    className="mt-6 w-full py-3 bg-white/10 text-white font-semibold rounded-full hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-60"
+                                    className="wordle-button w-full mt-6 disabled:opacity-60"
                                 >
                                     {finishingVotes ? 'Finalizing...' : `Show Results (${currentVoteCount}/${expectedVoteCount || submissions.length} votes)`}
                                 </button>
-                                <p className="mt-3 text-center text-xs text-white/30">
+                                <p className="mt-3 text-center text-xs text-white/35">
                                     {currentVoteCount >= expectedVoteCount && expectedVoteCount > 0
                                         ? 'All submitted players have voted.'
                                         : 'You can wait for the remaining submitted players or reveal results now.'}
                                 </p>
                             </>
                         )}
-                    </div>
                 </div>
             </div>
         );
     }
 
     return withConnectionBanner(
-        <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
-            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                <div className="glass-panel rounded-[22px] p-8">
+        <div className="w-full max-w-4xl flex flex-col items-center animate-spring-in">
+            <div className="game-mp-shell p-6 sm:p-8 w-full">
                     <div className="text-center mb-8">
-                        <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 border border-white/10">
-                            {isFinished ? 'FINAL STANDINGS' : `ROUND ${room?.round_number} RESULTS`}
+                        <div className="game-section-label mb-3">
+                            {isFinished ? 'Final standings' : `Round ${room?.round_number} results`}
                         </div>
-                        <h2 className="text-3xl font-display font-bold text-white">
-                            {isFinished ? 'Game Over!' : 'The results are in!'}
+                        <h2 className="text-3xl font-display font-bold tracking-tight text-white">
+                            {isFinished ? 'Game over' : 'The results are in'}
                         </h2>
                     </div>
 
@@ -405,10 +403,10 @@ export function MultiplayerReveal() {
                                 return (
                                     <div
                                         key={entry.id}
-                                        className={`rounded-2xl border p-5 transition-all animate-in slide-in-from-bottom-4 duration-500 ${
+                                        className={`rounded-[22px] border p-5 transition-all animate-in slide-in-from-bottom-4 duration-500 ${
                                             isWinner
-                                                ? 'bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/30 shadow-[0_0_30px_rgba(245,158,11,0.15)]'
-                                                : 'bg-white/5 border-white/10'
+                                                ? 'bg-gradient-to-r from-amber-500/12 to-yellow-500/8 border-amber-400/30 shadow-[0_0_30px_rgba(255,214,10,0.12)]'
+                                                : 'bg-white/[0.05] border-white/10'
                                         }`}
                                         style={{ animationDelay: `${index * 150}ms` }}
                                     >
@@ -503,7 +501,7 @@ export function MultiplayerReveal() {
 
                     {!isFinished && scored.length === 0 && (
                         <div className="text-center py-12 text-white/40">
-                            <div className="w-12 h-12 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mx-auto mb-4" />
+                            <div className="w-12 h-12 rounded-full border-2 border-t-game-accent border-white/10 animate-spin mx-auto mb-4" />
                             <p>Waiting for scores...</p>
                         </div>
                     )}
@@ -519,7 +517,7 @@ export function MultiplayerReveal() {
                             <button
                                 onClick={handleNext}
                                 disabled={advancing}
-                                className="px-8 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center gap-2 disabled:opacity-50"
+                                className="wordle-button wordle-primary px-8 text-lg flex items-center gap-2 disabled:opacity-50"
                             >
                                 <ArrowRight className="w-5 h-5" />
                                 {advancing ? 'Loading...' : `Next Round (${room.round_number + 1}/${room.total_rounds})`}
@@ -528,7 +526,7 @@ export function MultiplayerReveal() {
                         {(isFinished || (isHost && !hasNextRound)) && (
                             <button
                                 onClick={leaveCurrentRoom}
-                                className="px-8 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center gap-2"
+                                className="wordle-button wordle-primary px-8 text-lg flex items-center gap-2"
                             >
                                 <Home className="w-5 h-5" />
                                 Back to Lobby
@@ -540,7 +538,6 @@ export function MultiplayerReveal() {
                             </div>
                         )}
                     </div>
-                </div>
             </div>
         </div>
     );

@@ -1,23 +1,23 @@
 import { getSupplementalConcepts } from '../services/conceptGenerator';
+import { getCachedImageUrl } from '../services/imageResolve';
+import { buildPicsumFallback, IMG_WIDTH } from '../lib/imageUrls';
 
 const DEFAULT_KEYWORDS = ["abstract art", "texture", "colorful pattern", "surreal", "dreamscape"];
 
-const IMG_WIDTH = 1080;
+// Re-export for existing imports
+export { buildPicsumFallback } from '../lib/imageUrls';
 
 // ── Media type constants ──
 export const MEDIA_TYPES = {
     IMAGE: 'image',
     VIDEO: 'video',
     AUDIO: 'audio',
+    MEME: 'meme',
+    MEMES_VIDEOS: 'memes_videos',
 };
 
-export function buildUnsplashUrl(id, width = 1080) {
-    return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${width}&q=80`;
-}
-
-function buildPicsumFallback(labelOrKeyword) {
-    const slug = String(labelOrKeyword || 'placeholder').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    return `https://picsum.photos/seed/${slug || 'venn'}/${IMG_WIDTH}/${IMG_WIDTH}`;
+export function buildUnsplashUrl(id, width = IMG_WIDTH) {
+    return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${width}&h=${width}&crop=entropy&q=85`;
 }
 
 function createImage({ id, label, fallback, categories = [] }) {
@@ -28,6 +28,14 @@ function createImage({ id, label, fallback, categories = [] }) {
         url: buildUnsplashUrl(id),
         fallbackUrl: buildPicsumFallback(fallback || label),
         categories,
+    };
+}
+
+function createMeme({ id, label, fallback, categories = [] }) {
+    return {
+        ...createImage({ id, label, fallback, categories }),
+        type: MEDIA_TYPES.MEME,
+        searchQuery: fallback || label,
     };
 }
 
@@ -361,6 +369,42 @@ const VIDEO_ASSETS = {
     ],
 };
 
+// ── Meme assets (reaction-style images for memes & videos mode) ──
+const DEFAULT_MEMES = [
+    createMeme({ id: "1516450360452-9258136e97a1", label: "When It Actually Works", fallback: "surprised reaction", categories: ['human', 'emotion', 'humor'] }),
+    createMeme({ id: "1521412644187-c49fa049e84d", label: "Big Brain Moment", fallback: "thinking face", categories: ['human', 'emotion', 'humor'] }),
+    createMeme({ id: "1558618666-fcd25c85f1d7", label: "This Is Fine", fallback: "calm chaos", categories: ['nostalgia', 'humor', 'urban'] }),
+    createMeme({ id: "1531747118685-64e4e3893e04", label: "Wait, What?", fallback: "confused reaction", categories: ['human', 'emotion', 'humor'] }),
+];
+
+export const MEME_ASSETS = {
+    neon: [
+        createMeme({ id: "1516450360452-9258136e97a1", label: "POV: 3AM on the Dance Floor", fallback: "party reaction", categories: ['music', 'human', 'humor'] }),
+        createMeme({ id: "1558618666-fcd25c85f1d7", label: "Arcade Kid Energy", fallback: "arcade kid", categories: ['nostalgia', 'humor', 'urban'] }),
+        ...DEFAULT_MEMES,
+    ],
+    nature: [
+        createMeme({ id: "1551632811-561732d1e306", label: "Touch Grass (Literally)", fallback: "hiker meme", categories: ['nature', 'humor', 'adventure'] }),
+        createMeme({ id: "1509316975850-ff9c5deb0cd9", label: "Bear Witness", fallback: "bear reaction", categories: ['animal', 'humor', 'nature'] }),
+        ...DEFAULT_MEMES,
+    ],
+    "retro-tech": [
+        createMeme({ id: "1487058792275-0ad4aaf24ca7", label: "Press F to Pay Respects", fallback: "retro keyboard", categories: ['nostalgia', 'technology', 'humor'] }),
+        createMeme({ id: "1519389950473-47ba0277781c", label: "Loading… Loading…", fallback: "loading screen", categories: ['technology', 'humor', 'nostalgia'] }),
+        ...DEFAULT_MEMES,
+    ],
+    ocean: [
+        createMeme({ id: "1507525428034-b723cf961d3e", label: "Beach Please", fallback: "beach reaction", categories: ['water', 'humor', 'emotion'] }),
+        ...DEFAULT_MEMES,
+    ],
+    sunset: [
+        createMeme({ id: "1500530855697-b586d89ba3ee", label: "Golden Hour Hits Different", fallback: "sunset vibe", categories: ['emotion', 'humor', 'nature'] }),
+        ...DEFAULT_MEMES,
+    ],
+    mystery: DEFAULT_MEMES,
+    default: DEFAULT_MEMES,
+};
+
 // ── Audio assets (royalty-free Pixabay audio) ──
 const AUDIO_ASSETS = {
     neon: [
@@ -413,17 +457,151 @@ export function getThemeKeywords(theme) {
     return theme.keywords;
 }
 
-function shuffle(array) {
+function seededRandom(seed) {
+    let s = seed >>> 0;
+    return () => {
+        s = (s * 1103515245 + 12345) & 0x7fffffff;
+        return s / 0x7fffffff;
+    };
+}
+
+function shuffle(array, rng = Math.random) {
     const copy = [...array];
     for (let i = copy.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(rng() * (i + 1));
         [copy[i], copy[j]] = [copy[j], copy[i]];
     }
     return copy;
 }
 
-export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE) {
-    const seed = Date.now();
+function getAssetSelectionKey(asset) {
+    return asset?.id || `${asset?.label || 'asset'}::${asset?.url || ''}`;
+}
+
+function categoryOverlap(left, right) {
+    const leftCategories = new Set(left?.categories || []);
+    const rightCategories = new Set(right?.categories || []);
+    let overlap = 0;
+    for (const category of leftCategories) {
+        if (rightCategories.has(category)) overlap += 1;
+    }
+    return overlap;
+}
+
+function labelSimilarity(leftLabel, rightLabel) {
+    const leftWords = new Set(String(leftLabel || '').toLowerCase().split(/\W+/).filter((word) => word.length > 2));
+    const rightWords = new Set(String(rightLabel || '').toLowerCase().split(/\W+/).filter((word) => word.length > 2));
+    let overlap = 0;
+    for (const word of leftWords) {
+        if (rightWords.has(word)) overlap += 1;
+    }
+    return overlap;
+}
+
+function pairSimilarityScore(left, right) {
+    return categoryOverlap(left, right) * 3 + labelSimilarity(left?.label, right?.label);
+}
+
+function pickDiversePair(pool, rng) {
+    if (pool.length <= 2) return pool.slice(0, 2);
+
+    const candidates = shuffle(pool, rng).slice(0, Math.min(pool.length, 16));
+    let bestPair = [candidates[0], candidates[1]];
+    let bestScore = pairSimilarityScore(bestPair[0], bestPair[1]);
+
+    for (let i = 0; i < candidates.length; i += 1) {
+        for (let j = i + 1; j < candidates.length; j += 1) {
+            const score = pairSimilarityScore(candidates[i], candidates[j]);
+            if (score < bestScore) {
+                bestScore = score;
+                bestPair = [candidates[i], candidates[j]];
+            }
+        }
+    }
+
+    return bestPair;
+}
+
+function filterExcludedAssets(pool, excludeIds = []) {
+    if (!excludeIds.length) return pool;
+
+    const excludeSet = new Set(excludeIds);
+    const filtered = pool.filter((asset) => !excludeSet.has(getAssetSelectionKey(asset)));
+    return filtered.length >= 2 ? filtered : pool;
+}
+
+function dedupeAssetsByUrl(pool) {
+    const byUrl = new Map();
+    for (const asset of pool) {
+        if (!byUrl.has(asset.url)) byUrl.set(asset.url, asset);
+    }
+    return [...byUrl.values()];
+}
+
+export function buildMemesVideosAssets(theme, options = {}) {
+    const { excludeIds = [], seed = Date.now() } = options;
+    const rng = seededRandom(seed);
+    const themeId = theme?.id || 'default';
+
+    let memePool = dedupeAssetsByUrl([
+        ...(MEME_ASSETS[themeId] || []),
+        ...(MEME_ASSETS.default || []),
+    ]);
+    let videoPool = dedupeAssetsByUrl(VIDEO_ASSETS[themeId] || VIDEO_ASSETS.neon || []);
+
+    memePool = filterExcludedAssets(memePool, excludeIds);
+    videoPool = filterExcludedAssets(videoPool, excludeIds);
+
+    if (memePool.length === 0) {
+        memePool = dedupeAssetsByUrl(MEME_ASSETS.default || []);
+    }
+    if (videoPool.length === 0) {
+        videoPool = dedupeAssetsByUrl(VIDEO_ASSETS.neon || []);
+    }
+
+    const pickFromPool = (pool, type, side, avoidKey = null) => {
+        let available = pool;
+        if (avoidKey) {
+            available = pool.filter((asset) => getAssetSelectionKey(asset) !== avoidKey);
+            if (available.length === 0) available = pool;
+        }
+        const picked = shuffle(available, rng)[0];
+        return {
+            ...picked,
+            type,
+            id: picked.id || `${themeId}-mv-${seed}-${side}`,
+        };
+    };
+
+    const leftIsVideo = rng() > 0.5;
+    const rightIsVideo = rng() > 0.5;
+
+    const left = pickFromPool(
+        leftIsVideo ? videoPool : memePool,
+        leftIsVideo ? MEDIA_TYPES.VIDEO : MEDIA_TYPES.MEME,
+        'left',
+    );
+    const right = pickFromPool(
+        rightIsVideo ? videoPool : memePool,
+        rightIsVideo ? MEDIA_TYPES.VIDEO : MEDIA_TYPES.MEME,
+        'right',
+        getAssetSelectionKey(left),
+    );
+
+    return [left, right];
+}
+
+export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE, options = {}) {
+    const {
+        excludeIds = [],
+        seed = Date.now(),
+        preferDiverse = true,
+    } = options;
+    const rng = seededRandom(seed);
+
+    if (mediaType === MEDIA_TYPES.MEMES_VIDEOS) {
+        return buildMemesVideosAssets(theme, { excludeIds, seed });
+    }
 
     // Pick the right asset pool based on media type
     let pool;
@@ -440,16 +618,15 @@ export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE
         for (const a of pool) {
             if (!byUrl.has(a.url)) byUrl.set(a.url, a);
         }
-        const unique = [...byUrl.values()];
-        const shuffled = shuffle(unique);
+        let unique = [...byUrl.values()];
 
-        // If the static pool is getting thin, supplement with AI-generated concepts
-        if (unique.length - count < 4 && mediaType === MEDIA_TYPES.IMAGE) {
+        // Supplement with cached AI concepts when the pool is small or mostly excluded
+        if (mediaType === MEDIA_TYPES.IMAGE && unique.length - count < 6) {
             try {
-                const usedIds = new Set(unique.map(a => a.label));
-                const supplemental = getSupplementalConcepts(usedIds, theme);
+                const usedLabels = new Set(unique.map((asset) => asset.label));
+                const supplemental = getSupplementalConcepts(usedLabels, theme);
                 for (const concept of supplemental) {
-                    shuffled.push({
+                    unique.push({
                         id: `ai-${seed}-${concept.left.label}`,
                         label: concept.left.label,
                         type: MEDIA_TYPES.IMAGE,
@@ -457,7 +634,7 @@ export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE
                         fallbackUrl: buildPicsumFallback(concept.left.label),
                         categories: concept.left.categories,
                     });
-                    shuffled.push({
+                    unique.push({
                         id: `ai-${seed}-${concept.right.label}`,
                         label: concept.right.label,
                         type: MEDIA_TYPES.IMAGE,
@@ -471,7 +648,12 @@ export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE
             }
         }
 
-        const picked = shuffled.slice(0, count);
+        unique = filterExcludedAssets(unique, excludeIds);
+
+        const picked = preferDiverse && count === 2 && mediaType === MEDIA_TYPES.IMAGE
+            ? pickDiversePair(unique, rng)
+            : shuffle(unique, rng).slice(0, count);
+
         return picked.map((asset, index) => ({
             ...asset,
             id: asset.id || `${theme?.id || "theme"}-${seed}-${index}`,
@@ -479,15 +661,18 @@ export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE
     }
 
     // Fallback to image keywords
-    const keywords = shuffle(getThemeKeywords(theme));
+    const keywords = shuffle(getThemeKeywords(theme), rng);
     const chosen = keywords.slice(0, count);
-    return chosen.map((keyword, index) => ({
-        id: `${theme?.id || "theme"}-${seed}-${index}`,
-        label: keyword,
-        type: MEDIA_TYPES.IMAGE,
-        url: buildPicsumFallback(`${keyword}-${seed + index}`),
-        fallbackUrl: buildPicsumFallback(keyword),
-    }));
+    return chosen.map((keyword, index) => {
+        const cached = getCachedImageUrl(keyword);
+        return {
+            id: `${theme?.id || "theme"}-${seed}-${index}`,
+            label: keyword,
+            type: MEDIA_TYPES.IMAGE,
+            url: cached?.url || buildPicsumFallback(`${keyword}-${seed + index}`),
+            fallbackUrl: cached?.fallbackUrl || buildPicsumFallback(keyword),
+        };
+    });
 }
 
 export function getFusionImage(theme) {

@@ -1,3 +1,5 @@
+import { formatAssetForShare } from '../lib/mediaType';
+
 const TWITTER_BASE_URL = 'https://twitter.com/intent/tweet';
 const FACEBOOK_BASE_URL = 'https://www.facebook.com/sharer/sharer.php';
 const LINKEDIN_BASE_URL = 'https://www.linkedin.com/sharing/share-offsite';
@@ -41,8 +43,8 @@ function pickShareHook(score, scoreBand) {
 
 export function createShareText(shareData) {
   const { submission, score = 0, scoreBand, commentary, assets } = shareData;
-  const leftAsset = getAssetDisplayName(assets?.left);
-  const rightAsset = getAssetDisplayName(assets?.right);
+  const leftAsset = formatAssetForShare(assets?.left);
+  const rightAsset = formatAssetForShare(assets?.right);
   const hook = pickShareHook(score, scoreBand);
   const cleanSubmission = clampText(submission, 90);
   const cleanCommentary = clampText(commentary, 110);
@@ -60,8 +62,8 @@ export function createShareText(shareData) {
 }
 
 function buildCardSubtitle(shareData) {
-  const leftAsset = getAssetDisplayName(shareData.assets?.left);
-  const rightAsset = getAssetDisplayName(shareData.assets?.right);
+  const leftAsset = formatAssetForShare(shareData.assets?.left);
+  const rightAsset = formatAssetForShare(shareData.assets?.right);
   return `${leftAsset}  ×  ${rightAsset}`;
 }
 

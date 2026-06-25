@@ -1,23 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { startSoloRound } from './helpers';
 
 async function createProfile(page, name = 'TestPlayer') {
     await page.goto('/');
     await page.getByPlaceholder(/Enter your name/i).fill(name);
     await page.getByRole('button', { name: /Join Lobby/i }).click();
     await expect(page.getByText(new RegExp(`Hi, ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
-}
-
-async function startSoloRound(page) {
-    await page.getByRole('button', { name: /Solo Session/i }).click();
-
-    const onboardingButton = page.getByRole('button', { name: /Got it, let's play!/i });
-    if (await onboardingButton.count()) {
-        await onboardingButton.click();
-    }
-
-    const roundInput = page.getByPlaceholder(/What connects these two/i);
-    await expect(roundInput).toBeVisible({ timeout: 10000 });
-    return roundInput;
 }
 
 test.describe('Solo game flow', () => {
@@ -30,7 +18,7 @@ test.describe('Solo game flow', () => {
 
     test('can create profile and see lobby', async ({ page }) => {
         await createProfile(page);
-        await expect(page.getByRole('button', { name: /Solo Session|Start Round/i })).toBeVisible();
+        await expect(page.getByRole('button', { name: /Start First Round|Start solo session|Solo Session|Start Round/i })).toBeVisible();
     });
 
     test('can start solo game and see round screen', async ({ page }) => {

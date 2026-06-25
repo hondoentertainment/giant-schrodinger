@@ -25,23 +25,23 @@ export function MilestoneCelebration({ newlyUnlocked, onDismiss }) {
     if (unlocked.length === 0) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300" role="dialog" aria-modal="true" aria-labelledby="milestone-title">
-            <div ref={dialogRef} className="w-full max-w-md glass-panel rounded-3xl p-8 animate-in zoom-in-95 duration-300 border border-amber-500/30 shadow-[0_0_60px_rgba(245,158,11,0.2)]">
+        <div className="game-modal-overlay animate-in fade-in duration-300" role="dialog" aria-modal="true" aria-labelledby="milestone-title">
+            <div ref={dialogRef} className="game-modal-panel p-8 border-amber-400/25 shadow-[0_0_60px_rgba(255,214,10,0.15)]">
                 <div className="text-6xl text-center mb-4">🎉</div>
-                <h2 id="milestone-title" className="text-2xl font-display font-bold text-white mb-2 text-center">
-                    Milestone Unlocked!
+                <h2 id="milestone-title" className="text-2xl font-display font-bold tracking-tight text-white mb-2 text-center">
+                    Milestone unlocked
                 </h2>
                 <div className="space-y-3 mb-6">
                     {unlocked.map((m) => (
                         <div
                             key={m.id}
-                            className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 p-4"
+                            className="game-player-row"
                         >
                             <span className="text-3xl">{m.reward === 'avatar' ? m.rewardId : '🎨'}</span>
                             <div>
                                 <div className="font-semibold text-white">{m.label}</div>
                                 <div className="text-white/50 text-sm">
-                                    {m.reward === 'avatar' ? `New avatar: ${m.rewardId}` : `New theme unlocked!`}
+                                    {m.reward === 'avatar' ? `New avatar: ${m.rewardId}` : 'New theme unlocked'}
                                 </div>
                             </div>
                         </div>
@@ -49,9 +49,9 @@ export function MilestoneCelebration({ newlyUnlocked, onDismiss }) {
                 </div>
                 <button
                     onClick={handleDismiss}
-                    className="w-full py-3 bg-white text-black font-bold rounded-xl hover:scale-[1.02] transition-transform"
+                    className="wordle-button wordle-primary w-full"
                 >
-                    Awesome!
+                    Awesome
                 </button>
             </div>
         </div>

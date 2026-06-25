@@ -40,9 +40,9 @@ export function RankedPanel() {
       <h2 className="text-2xl font-display font-bold text-white mb-4">Ranked</h2>
 
       {seasonReset && (
-        <div className="w-full p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 mb-4 text-center">
+        <div className="w-full p-4 rounded-xl bg-game-accent/10 border border-game-accent/20 mb-4 text-center">
           <div className="text-2xl mb-2">🏆</div>
-          <div className="text-purple-300 font-bold">New Season!</div>
+          <div className="text-game-accent font-bold">New Season!</div>
           <div className="text-white/60 text-sm">
             Your rating was adjusted: {seasonReset.oldRating} → {seasonReset.newRating}
           </div>

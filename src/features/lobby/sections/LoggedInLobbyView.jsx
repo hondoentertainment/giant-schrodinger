@@ -86,13 +86,14 @@ export function LoggedInLobbyView(props) {
                         user={user}
                         login={login}
                     />
-                    {(showAll || lobbyTier >= 1) && (user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE && (
+                    {(showAll || lobbyTier >= 1) && ([MEDIA_TYPES.IMAGE, MEDIA_TYPES.MEMES_VIDEOS, MEDIA_TYPES.VIDEO].includes(user?.mediaType || MEDIA_TYPES.IMAGE)) && (
                         <div className="mb-4">
                             <CustomImagesManager
                                 customImages={customImages}
                                 onRefresh={refreshCustomImages}
                                 useCustomImages={useCustomImages}
                                 onUseCustomImagesChange={handleUseCustomImagesChange}
+                                mediaType={user?.mediaType || MEDIA_TYPES.IMAGE}
                             />
                         </div>
                     )}

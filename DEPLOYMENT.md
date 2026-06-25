@@ -41,6 +41,15 @@ Run these locally before pushing:
 ```bash
 npm run verify:release
 npm run preview
+npm run rehearsal:preflight:fast   # env + Supabase RPC probe (uses .env.local)
+```
+
+Before a production deploy with live services:
+
+```bash
+npm run rehearsal:preflight        # includes full verify:release
+npm run smoke:production
+PRODUCTION_URL=https://your-site npm run test:e2e:rehearsal
 ```
 
 Preview default URL:
@@ -89,6 +98,24 @@ Before you rely on Supabase in production, apply `supabase/schema.sql`. The curr
 - manual multiplayer scoring to persist votes and finalized results in backend state
 
 If the SQL migration has not been applied yet, the app can still fall back to older behavior, but that mode should be treated as compatibility-only rather than production-safe.
+
+### Supabase Edge Function secrets
+
+Set these in the Supabase dashboard (Project Settings → Edge Functions → Secrets) for live media lookup:
+
+- `PEXELS_API_KEY` — powers `resolve-image` for semantic stock photos
+- `GIPHY_API_KEY` — powers `resolve-meme` for GIF/meme lookup in Memes & Videos mode
+- `GEMINI_API_KEY` — powers `score-submission` for server-side AI scoring
+
+Deploy edge functions after adding secrets:
+
+```bash
+supabase functions deploy resolve-image
+supabase functions deploy resolve-meme
+supabase functions deploy score-submission
+```
+
+Without these keys, the app falls back to curated Unsplash/Picsum assets and mock scoring.
 
 ## Observability
 

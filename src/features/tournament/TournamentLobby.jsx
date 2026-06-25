@@ -14,6 +14,8 @@ import {
 } from '../../services/tournaments';
 import { trackEvent } from '../../services/analytics';
 import { Trophy, Users, ChevronRight, Plus, Crown } from 'lucide-react';
+import { GameScreenShell } from '../../components/GameScreenShell';
+import { EmptyState } from '../../components/EmptyState';
 
 export function TournamentLobby({ onBack }) {
     const { user } = useGame();
@@ -93,48 +95,57 @@ export function TournamentLobby({ onBack }) {
     // LIST VIEW
     if (view === 'list') {
         return (
-            <div className="w-full max-w-2xl mx-auto animate-in fade-in duration-500 px-4">
-                <div className="flex items-center justify-between mb-6">
-                    <button onClick={onBack} className="text-white/40 hover:text-white/70 text-sm">&larr; Back</button>
-                    <h2 className="text-2xl font-display font-bold text-white flex items-center gap-2"><Trophy size={24} /> Tournaments</h2>
-                    <div className="flex gap-2">
-                        <button onClick={() => setView('history')} className="text-white/40 hover:text-white/70 text-sm">History</button>
-                        <button onClick={() => setView('create')} className="p-2 bg-purple-600 rounded-lg hover:bg-purple-500 transition-colors"><Plus size={16} className="text-white" /></button>
+            <GameScreenShell
+                onBack={onBack}
+                title="Tournaments"
+                icon={Trophy}
+                backLabel="Back to lobby"
+                badge={(
+                    <div className="flex gap-2 shrink-0">
+                        <button type="button" onClick={() => setView('history')} className="wordle-button text-xs min-h-[40px] px-3">History</button>
+                        <button type="button" onClick={() => setView('create')} className="wordle-button wordle-primary text-xs min-h-[40px] px-3" aria-label="Create tournament">
+                            <Plus size={16} />
+                        </button>
                     </div>
-                </div>
-
+                )}
+            >
                 {isWeekend && (
-                    <button onClick={handleWeekendTournament} className="w-full mb-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 hover:from-amber-500/30 hover:to-orange-500/30 transition-all text-center">
+                    <button type="button" onClick={handleWeekendTournament} className="w-full mb-4 p-4 rounded-[22px] game-highlight-banner hover:bg-amber-500/15 transition-all text-center border-amber-500/25">
                         <div className="text-2xl mb-1">🏆</div>
-                        <div className="text-lg font-bold text-amber-300">Weekend Tournament Live!</div>
+                        <div className="text-lg font-bold text-amber-200">Weekend Tournament Live!</div>
                         <div className="text-white/60 text-sm">Join now and compete for exclusive rewards</div>
                     </button>
                 )}
 
                 {tournaments.length === 0 ? (
-                    <div className="text-center py-12">
-                        <div className="text-4xl mb-3">🏟️</div>
-                        <p className="text-white/60 mb-4">No active tournaments</p>
-                        <button onClick={() => setView('create')} className="px-6 py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-500 transition-colors">Create Tournament</button>
-                    </div>
+                    <EmptyState
+                        icon="🏟️"
+                        title="No active tournaments"
+                        description="Create one and invite friends to compete."
+                        action={(
+                            <button type="button" onClick={() => setView('create')} className="wordle-button wordle-primary">
+                                Create Tournament
+                            </button>
+                        )}
+                    />
                 ) : (
                     <div className="space-y-3">
                         {tournaments.map(t => (
-                            <button key={t.id} onClick={() => handleViewDetail(t.id)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center justify-between text-left">
-                                <div>
+                            <button key={t.id} type="button" onClick={() => handleViewDetail(t.id)} className="w-full game-list-row hover:bg-white/[0.08] text-left">
+                                <div className="flex-1 min-w-0">
                                     <div className="text-white font-bold">{t.name}</div>
-                                    <div className="text-white/50 text-sm flex items-center gap-3">
+                                    <div className="text-white/50 text-sm flex items-center gap-3 flex-wrap">
                                         <span className="flex items-center gap-1"><Users size={14} /> {t.players.length}/{t.maxPlayers}</span>
                                         <span className="capitalize">{t.format}</span>
-                                        <span className={`px-2 py-0.5 rounded-full text-xs ${t.status === 'upcoming' ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'}`}>{t.status}</span>
+                                        <span className={`px-2 py-0.5 rounded-full text-xs ${t.status === 'upcoming' ? 'bg-blue-500/20 text-blue-300' : 'bg-emerald-500/20 text-emerald-300'}`}>{t.status}</span>
                                     </div>
                                 </div>
-                                <ChevronRight size={20} className="text-white/30" />
+                                <ChevronRight size={20} className="text-white/30 shrink-0" />
                             </button>
                         ))}
                     </div>
                 )}
-            </div>
+            </GameScreenShell>
         );
     }
 
@@ -145,20 +156,17 @@ export function TournamentLobby({ onBack }) {
         const currentRound = t.rounds[t.rounds.length - 1];
 
         return (
-            <div className="w-full max-w-2xl mx-auto animate-in fade-in duration-500 px-4">
-                <button onClick={() => { setView('list'); refreshData(); }} className="text-white/40 hover:text-white/70 text-sm mb-4">&larr; Back to Tournaments</button>
-
+            <GameScreenShell onBack={() => { setView('list'); refreshData(); }} title={t.name} icon={Trophy} backLabel="Back to tournaments">
                 <div className="mb-6 text-center">
-                    <h2 className="text-2xl font-display font-bold text-white">{t.name}</h2>
-                    <div className="text-white/50 text-sm mt-1">{t.format} &middot; {t.players.length}/{t.maxPlayers} players &middot; {t.status}</div>
+                    <div className="text-white/50 text-sm">{t.format} · {t.players.length}/{t.maxPlayers} players · {t.status}</div>
                 </div>
 
                 {!isJoined && t.status === 'upcoming' && (
-                    <button onClick={() => handleJoin(t.id)} className="w-full mb-4 py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-500 transition-colors">Join Tournament</button>
+                    <button type="button" onClick={() => handleJoin(t.id)} className="w-full mb-4 wordle-button wordle-primary">Join Tournament</button>
                 )}
 
                 {t.status === 'upcoming' && t.players.length >= 2 && (
-                    <button onClick={() => handleAdvance(t.id)} className="w-full mb-4 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 transition-colors">Start Tournament</button>
+                    <button type="button" onClick={() => handleAdvance(t.id)} className="w-full mb-4 wordle-button border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10">Start Tournament</button>
                 )}
 
                 {t.status === 'active' && currentRound && (
@@ -199,47 +207,45 @@ export function TournamentLobby({ onBack }) {
                 </div>
 
                 {t.status === 'completed' && (
-                    <div className="text-center p-6 rounded-2xl bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30">
+                    <div className="text-center p-6 rounded-[22px] game-highlight-banner border-amber-500/25">
                         <Crown size={32} className="mx-auto text-amber-400 mb-2" />
-                        <div className="text-xl font-bold text-amber-300">Tournament Complete!</div>
+                        <div className="text-xl font-bold text-amber-200">Tournament Complete!</div>
                         <div className="text-white/60 text-sm mt-1">
                             Winner: {standings[0]?.name || standings[0]?.player || 'TBD'}
                         </div>
                     </div>
                 )}
-            </div>
+            </GameScreenShell>
         );
     }
 
     // CREATE VIEW
     if (view === 'create') {
         return (
-            <div className="w-full max-w-md mx-auto animate-in fade-in duration-500 px-4">
-                <button onClick={() => setView('list')} className="text-white/40 hover:text-white/70 text-sm mb-4">&larr; Back</button>
-                <h2 className="text-2xl font-display font-bold text-white mb-6 text-center">Create Tournament</h2>
+            <GameScreenShell onBack={() => setView('list')} title="Create Tournament" icon={Plus} maxWidth="max-w-md" backLabel="Back to tournaments">
                 <form onSubmit={handleCreate} className="space-y-4">
                     <div>
                         <label className="block text-sm text-white/60 mb-2">Tournament Name</label>
-                        <input type="text" value={createForm.name} onChange={(e) => setCreateForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50" placeholder="Weekend Showdown" required />
+                        <input type="text" value={createForm.name} onChange={(e) => setCreateForm(f => ({ ...f, name: e.target.value }))} className="game-input" placeholder="Weekend Showdown" required />
                     </div>
                     <div>
                         <label className="block text-sm text-white/60 mb-2">Format</label>
-                        <select value={createForm.format} onChange={(e) => setCreateForm(f => ({ ...f, format: e.target.value }))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50">
+                        <select value={createForm.format} onChange={(e) => setCreateForm(f => ({ ...f, format: e.target.value }))} className="game-input">
                             <option value="bracket">Bracket (Single Elimination)</option>
                             <option value="swiss">Swiss (5 Rounds)</option>
                         </select>
                     </div>
                     <div>
                         <label className="block text-sm text-white/60 mb-2">Max Players</label>
-                        <select value={createForm.maxPlayers} onChange={(e) => setCreateForm(f => ({ ...f, maxPlayers: Number(e.target.value) }))} className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50">
+                        <select value={createForm.maxPlayers} onChange={(e) => setCreateForm(f => ({ ...f, maxPlayers: Number(e.target.value) }))} className="game-input">
                             <option value={8}>8 Players</option>
                             <option value={16}>16 Players</option>
                             <option value={32}>32 Players</option>
                         </select>
                     </div>
-                    <button type="submit" className="w-full py-4 bg-purple-600 text-white font-bold text-lg rounded-full hover:bg-purple-500 transition-colors">Create Tournament</button>
+                    <button type="submit" className="w-full wordle-button wordle-primary text-lg">Create Tournament</button>
                 </form>
-            </div>
+            </GameScreenShell>
         );
     }
 
@@ -247,22 +253,23 @@ export function TournamentLobby({ onBack }) {
     if (view === 'history') {
         const history = getTournamentHistory();
         return (
-            <div className="w-full max-w-2xl mx-auto animate-in fade-in duration-500 px-4">
-                <button onClick={() => setView('list')} className="text-white/40 hover:text-white/70 text-sm mb-4">&larr; Back</button>
-                <h2 className="text-2xl font-display font-bold text-white mb-6 text-center">Tournament History</h2>
+            <GameScreenShell onBack={() => setView('list')} title="Tournament History" icon={Trophy} backLabel="Back to tournaments">
                 {history.length === 0 ? (
-                    <p className="text-center text-white/60">No completed tournaments yet.</p>
+                    <EmptyState icon="📜" title="No history yet" description="Completed tournaments will appear here." />
                 ) : (
                     <div className="space-y-3">
                         {history.map(t => (
-                            <button key={t.id} onClick={() => handleViewDetail(t.id)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-left">
-                                <div className="text-white font-bold">{t.name}</div>
-                                <div className="text-white/50 text-sm">{t.players.length} players &middot; {t.format} &middot; Completed</div>
+                            <button key={t.id} type="button" onClick={() => handleViewDetail(t.id)} className="w-full game-list-row hover:bg-white/[0.08] text-left">
+                                <div>
+                                    <div className="text-white font-bold">{t.name}</div>
+                                    <div className="text-white/50 text-sm">{t.players.length} players · {t.format} · Completed</div>
+                                </div>
+                                <ChevronRight size={20} className="text-white/30 shrink-0" />
                             </button>
                         ))}
                     </div>
                 )}
-            </div>
+            </GameScreenShell>
         );
     }
 

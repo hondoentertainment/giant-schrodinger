@@ -18,9 +18,9 @@ import {
     advanceRoom,
     subscribeToRoom,
 } from '../services/multiplayer';
-import { buildThemeAssets, getThemeById, MEDIA_TYPES } from '../data/themes';
+import { getThemeById, MEDIA_TYPES } from '../data/themes';
+import { selectRoundAssets, getAssetKey, resolveSelectedAssets } from '../services/assetSelection';
 import { scoreSubmission } from '../services/gemini';
-import { getCustomImages } from '../services/customImages';
 import { useGame } from './GameContext';
 import { reportAppError, reportAppEvent } from '../lib/telemetry';
 import { buildE2EMockRoom, isE2EMockRoomEnabled, subscribeToE2EMockRoom } from '../lib/e2eMockRoom';
@@ -61,6 +61,7 @@ export function RoomProvider({ children }) {
     const hydrateRequestRef = useRef(0);
     const reconnectToastShownRef = useRef(false);
     const scoringRoundRef = useRef(null);
+    const usedAssetIdsRef = useRef([]);
 
     const isMultiplayer = !!room;
     const roomCode = room?.code || null;
@@ -80,6 +81,7 @@ export function RoomProvider({ children }) {
         setRoomSession(null);
         setRoomPhase('none');
         setConnectionState('connected');
+        usedAssetIdsRef.current = [];
     }, []);
 
     useEffect(() => {
@@ -371,25 +373,18 @@ export function RoomProvider({ children }) {
 
         const theme = getThemeById(room.theme_id);
         const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
-        const customPool = getCustomImages();
-        const useCustom = mediaType === MEDIA_TYPES.IMAGE && user?.useCustomImages && customPool.length >= 2;
 
-        let left;
-        let right;
-        if (useCustom) {
-            const shuffled = [...customPool].sort(() => Math.random() - 0.5);
-            [left, right] = shuffled.slice(0, 2).map((img) => ({
-                id: img.id,
-                label: img.label,
-                type: MEDIA_TYPES.IMAGE,
-                url: img.url,
-                fallbackUrl: img.url,
-            }));
-        } else {
-            [left, right] = buildThemeAssets(theme, 2, mediaType);
-        }
+        const [left, right] = selectRoundAssets({
+            theme,
+            mediaType,
+            excludeIds: usedAssetIdsRef.current,
+            roundNumber: room.round_number,
+            useCustomImages: user?.useCustomImages,
+        });
+        usedAssetIdsRef.current = [...usedAssetIdsRef.current, getAssetKey(left), getAssetKey(right)].filter(Boolean);
 
-        const success = await startRoundApi(room.id, room.round_number, { left, right }, roomSession);
+        const resolved = await resolveSelectedAssets([left, right]);
+        const success = await startRoundApi(room.id, room.round_number, { left: resolved[0], right: resolved[1] }, roomSession);
         if (!success) {
             toast.error('Failed to start round');
             return false;

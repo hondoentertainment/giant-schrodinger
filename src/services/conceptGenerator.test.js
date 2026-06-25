@@ -5,6 +5,20 @@ vi.mock('@google/genai', () => ({
     GoogleGenAI: vi.fn(),
 }));
 
+vi.mock('./imageResolve', () => ({
+    resolveImageUrls: vi.fn(async (labels) => {
+        const results = {};
+        for (const label of labels) {
+            results[label] = {
+                url: `https://images.pexels.com/mock/${label.replace(/\s+/g, '-').toLowerCase()}.jpg`,
+                fallbackUrl: `https://picsum.photos/seed/${label}/800/800`,
+                source: 'pexels',
+            };
+        }
+        return results;
+    }),
+}));
+
 import { GoogleGenAI } from '@google/genai';
 import { getCachedConcepts, generateConceptPairs, getSupplementalConcepts } from './conceptGenerator';
 
@@ -88,6 +102,7 @@ describe('conceptGenerator service', () => {
             const result = await generateConceptPairs('weird', 2);
             expect(result).toHaveLength(2);
             expect(result[0].left.label).toBe('Rubber Duck');
+            expect(result[0].left.url).toContain('pexels.com');
             expect(result[0].right.categories).toEqual(['ai-generated']);
             // cached
             const cached = JSON.parse(localStorage.getItem('venn_generated_concepts'));

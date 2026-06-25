@@ -60,13 +60,14 @@ export function GameSettings({
                     }
                 </p>
             </div>
-            {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE && (
+            {([MEDIA_TYPES.IMAGE, MEDIA_TYPES.MEMES_VIDEOS, MEDIA_TYPES.VIDEO].includes(user?.mediaType || MEDIA_TYPES.IMAGE)) && (
                 <div className="mb-4">
                     <CustomImagesManager
                         customImages={customImages}
                         onRefresh={refreshCustomImages}
                         useCustomImages={useCustomImages}
                         onUseCustomImagesChange={onUseCustomImagesChange}
+                        mediaType={user?.mediaType || MEDIA_TYPES.IMAGE}
                     />
                 </div>
             )}

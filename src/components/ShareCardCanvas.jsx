@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-export function ShareCardCanvas({ submission, score, leftLabel, rightLabel, playerName }) {
+export function ShareCardCanvas({ submission, score, leftLabel, rightLabel, leftType, rightType, playerName }) {
     const canvasRef = useRef(null);
     const [dataUrl, setDataUrl] = useState(null);
 
@@ -42,9 +42,9 @@ export function ShareCardCanvas({ submission, score, leftLabel, rightLabel, play
         // Concept labels
         ctx.font = '28px system-ui, -apple-system, sans-serif';
         ctx.fillStyle = '#c084fc';
-        ctx.fillText(leftLabel || 'Concept A', W * 0.3, H * 0.38);
+        ctx.fillText(leftType ? `${leftLabel || 'Concept A'} (${leftType})` : (leftLabel || 'Concept A'), W * 0.3, H * 0.38);
         ctx.fillStyle = '#f472b6';
-        ctx.fillText(rightLabel || 'Concept B', W * 0.7, H * 0.38);
+        ctx.fillText(rightType ? `${rightLabel || 'Concept B'} (${rightType})` : (rightLabel || 'Concept B'), W * 0.7, H * 0.38);
 
         // Connection (submission)
         ctx.fillStyle = '#ffffff';
@@ -72,7 +72,7 @@ export function ShareCardCanvas({ submission, score, leftLabel, rightLabel, play
         }
 
         setDataUrl(canvas.toDataURL('image/png'));
-    }, [submission, score, leftLabel, rightLabel, playerName]);
+    }, [submission, score, leftLabel, rightLabel, leftType, rightType, playerName]);
 
     const handleDownload = () => {
         if (!dataUrl) return;

@@ -25,6 +25,20 @@ describe('socialShare', () => {
         expect(text).toContain('#');
     });
 
+    it('includes meme and video labels in share text', () => {
+        const text = createShareText({
+            submission: 'internet chaos',
+            score: 7,
+            assets: {
+                left: { label: 'Distracted Boyfriend', type: 'meme' },
+                right: { label: 'Cat Video', type: 'video' },
+            },
+        });
+
+        expect(text).toContain('Distracted Boyfriend (Meme)');
+        expect(text).toContain('Cat Video (Video)');
+    });
+
     it('includes judge and daily challenge context when provided', () => {
         const text = createShareText({
             submission: 'cosmic breakfast club',

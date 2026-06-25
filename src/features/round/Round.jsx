@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { VennDiagram } from './VennDiagram';
 import { useGame } from '../../context/GameContext';
-import { THEMES, buildThemeAssets, getThemeById, MEDIA_TYPES } from '../../data/themes';
-import { getCustomImages } from '../../services/customImages';
+import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
+import { selectRoundAssets, preloadRoundAssets, resolveSelectedAssets } from '../../services/assetSelection';
+import { getDailyChallenge } from '../../services/dailyChallenge';
+import { getEffectiveRoundMediaType, normalizeMediaType } from '../../lib/mediaType';
 import { getStats, isThemeUnlocked } from '../../services/stats';
 import { haptic } from '../../lib/haptics';
 import { trackEvent } from '../../services/analytics';
 
 export function Round({ onSubmit }) {
-    const { setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge } = useGame();
+    const { setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge, trackUsedAssets, getUsedAssetIds } = useGame();
     const [assets, setAssets] = useState({ left: null, right: null });
     const [submission, setSubmission] = useState('');
     const [timer, setTimer] = useState(60);
@@ -22,49 +24,58 @@ export function Round({ onSubmit }) {
     const baseTimeLimit = theme?.modifier?.timeLimit || 60;
     const timeLimit = Math.round(baseTimeLimit * (currentModifier?.timeFactor || 1));
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
-    const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
+    const mediaType = normalizeMediaType(user?.mediaType);
     const mod = currentModifier;
     const showFirstRoundCoaching = stats.totalRounds === 0 && roundNumber === 1;
+    const dailyChallenge = isDailyChallenge ? getDailyChallenge() : null;
+    const roundMediaType = getEffectiveRoundMediaType({
+        userMediaType: mediaType,
+        isDailyChallenge,
+        dailyChallenge,
+    });
 
     useEffect(() => {
         submittedRef.current = false;
-        let left, right;
-        const customPool = getCustomImages();
-        const useCustom = mediaType === MEDIA_TYPES.IMAGE && user?.useCustomImages && customPool.length >= 2;
-        if (useCustom) {
-            const shuffled = [...customPool].sort(() => Math.random() - 0.5);
-            [left, right] = shuffled.slice(0, 2).map((img) => ({
-                id: img.id,
-                label: img.label,
-                type: MEDIA_TYPES.IMAGE,
-                url: img.url,
-                fallbackUrl: img.url,
-            }));
-        } else {
-            [left, right] = buildThemeAssets(theme, 2, mediaType);
-        }
-        [left, right].forEach((a) => {
-            if (!a?.url) return;
-            if (mediaType === MEDIA_TYPES.IMAGE) {
-                const img = new Image();
-                img.src = a.url;
-            } else if (mediaType === MEDIA_TYPES.VIDEO) {
-                const link = document.createElement('link');
-                link.rel = 'preload';
-                link.as = 'video';
-                link.href = a.url;
-                document.head.appendChild(link);
-            } else if (mediaType === MEDIA_TYPES.AUDIO) {
-                const link = document.createElement('link');
-                link.rel = 'preload';
-                link.as = 'audio';
-                link.href = a.url;
-                document.head.appendChild(link);
+        let cancelled = false;
+
+        async function loadAssets() {
+            const daily = isDailyChallenge ? getDailyChallenge() : null;
+            const effectiveMediaType = getEffectiveRoundMediaType({
+                userMediaType: mediaType,
+                isDailyChallenge,
+                dailyChallenge: daily,
+            });
+            const [left, right] = selectRoundAssets({
+                theme,
+                mediaType: effectiveMediaType,
+                excludeIds: getUsedAssetIds(),
+                seed: daily?.seed,
+                roundNumber,
+                useCustomImages: user?.useCustomImages,
+                isDailyChallenge,
+            });
+
+            trackUsedAssets([left, right]);
+            preloadRoundAssets([left, right]);
+            if (!cancelled) {
+                setAssets({ left, right });
+                setTimer(timeLimit);
             }
-        });
-        setAssets({ left, right });
-        setTimer(timeLimit);
-    }, [user?.themeId, user?.useCustomImages, timeLimit, mediaType, roundNumber]);
+
+            const resolved = await resolveSelectedAssets([left, right]);
+            if (cancelled) return;
+
+            trackUsedAssets(resolved);
+            preloadRoundAssets(resolved);
+            setAssets({ left: resolved[0], right: resolved[1] });
+        }
+
+        loadAssets();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [user?.themeId, user?.useCustomImages, timeLimit, mediaType, roundNumber, isDailyChallenge, theme?.id]);
 
     const handleSubmit = useCallback((e) => {
         if (e) e.preventDefault();
@@ -141,52 +152,50 @@ export function Round({ onSubmit }) {
             <div className="w-full max-w-2xl flex flex-col gap-4 px-2 mb-5">
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <div className="text-xs font-bold uppercase tracking-[0.24em] text-white/40">
+                        <div className="game-section-label">
                             {isDailyChallenge ? 'Daily puzzle' : 'Puzzle run'}
                         </div>
-                        <div className="text-xl font-black uppercase tracking-[0.18em] text-white">
+                        <div className="text-xl font-bold tracking-tight text-white">
                             Round {roundNumber} of {totalRounds}
                         </div>
                     </div>
                     {showTimeUp ? (
-                        <div className="wordle-tile wordle-tile-present min-h-[56px] min-w-[92px] px-3 text-sm" role="status" aria-live="polite">
+                        <div className="game-timer game-timer--urgent min-w-[92px] text-sm" role="status" aria-live="polite">
                             Time&apos;s up
                         </div>
                     ) : (
-                        <div className={`wordle-tile min-h-[56px] min-w-[72px] px-3 text-xl ${timer < 10 ? 'wordle-tile-present animate-pulse' : ''}`}>
+                        <div className={`game-timer ${timer < 10 ? 'game-timer--urgent' : ''}`}>
                             {timer}s
                         </div>
                     )}
                 </div>
-                <div className="grid grid-cols-7 gap-1.5" aria-label={`Round progress: ${roundNumber} of ${totalRounds}`}>
+                <div className="flex gap-2" aria-label={`Round progress: ${roundNumber} of ${totalRounds}`}>
                     {Array.from({ length: totalRounds }).map((_, index) => (
                         <div
                             key={index}
-                            className={`wordle-tile aspect-square text-xs sm:text-sm ${
+                            className={`game-progress-dot ${
                                 index + 1 < roundNumber
-                                    ? 'wordle-tile-correct'
+                                    ? 'game-progress-dot--done'
                                     : index + 1 === roundNumber
-                                    ? 'wordle-tile-filled'
+                                    ? 'game-progress-dot--current'
                                     : ''
                             }`}
                             aria-label={`Round ${index + 1}${index + 1 === roundNumber ? ', current' : index + 1 < roundNumber ? ', completed' : ''}`}
-                        >
-                            {index + 1}
-                        </div>
+                        />
                     ))}
                 </div>
             </div>
-            <div className="mb-6 flex flex-wrap items-center justify-center gap-3 text-sm text-white/60">
-                <div className="rounded-full bg-white/10 px-3 py-1">
-                    Time: <span className="text-white">{timeLimit}s</span>
-                    {mod?.timeFactor !== 1 && <span className="text-cyan-400 ml-1">({mod.timeFactor}x)</span>}
+            <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-sm">
+                <div className="game-hud-chip">
+                    Time: <span className="text-white font-medium">{timeLimit}s</span>
+                    {mod?.timeFactor !== 1 && <span className="text-cyan-300 ml-1">({mod.timeFactor}x)</span>}
                 </div>
-                <div className="rounded-full bg-white/10 px-3 py-1">
-                    Points: <span className="text-white">x{(scoreMultiplier * (mod?.scoreFactor || 1)).toFixed(1)}</span>
-                    {mod?.scoreFactor > 1 && <span className="text-amber-400 ml-1">({mod.scoreFactor}x bonus)</span>}
+                <div className="game-hud-chip">
+                    Points: <span className="text-white font-medium">x{(scoreMultiplier * (mod?.scoreFactor || 1)).toFixed(1)}</span>
+                    {mod?.scoreFactor > 1 && <span className="text-amber-300 ml-1">({mod.scoreFactor}x bonus)</span>}
                 </div>
                 {theme?.modifier?.hint && (
-                    <div className="rounded-full bg-white/10 px-3 py-1">
+                    <div className="game-hud-chip">
                         {theme.modifier.hint}
                     </div>
                 )}
@@ -196,18 +205,22 @@ export function Round({ onSubmit }) {
 
             <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 relative z-20">
                 {showFirstRoundCoaching && (
-                    <div className="mb-4 rounded-2xl border border-purple-400/30 bg-purple-500/10 p-4 text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="mb-4 rounded-[22px] border border-white/10 bg-white/[0.06] p-4 text-center backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <p className="text-white font-semibold">First round tip</p>
-                        <p className="text-white/60 text-sm">
-                            Aim for a phrase that works for both prompts and has a little surprise. Specific beats generic.
+                        <p className="text-white/55 text-sm mt-1">
+                            {roundMediaType === MEDIA_TYPES.MEMES_VIDEOS
+                                ? 'Connect the vibe, not just the visuals — a meme and a clip can share energy even when they look unrelated.'
+                                : 'Aim for a phrase that works for both prompts and has a little surprise. Specific beats generic.'}
                         </p>
                     </div>
                 )}
-                <p className="text-center text-white/60 text-sm mb-3">
-                    {mediaType === MEDIA_TYPES.AUDIO
+                <p className="text-center text-white/50 text-sm mb-3">
+                    {roundMediaType === MEDIA_TYPES.AUDIO
                         ? 'One witty phrase that connects both sounds'
-                        : mediaType === MEDIA_TYPES.VIDEO
+                        : roundMediaType === MEDIA_TYPES.VIDEO
                         ? 'One witty phrase that connects both clips'
+                        : roundMediaType === MEDIA_TYPES.MEMES_VIDEOS
+                        ? 'One witty phrase that connects the meme and the video'
                         : 'One witty phrase that connects both concepts'}
                 </p>
                 <input
@@ -215,17 +228,19 @@ export function Round({ onSubmit }) {
                     value={submission}
                     onChange={(e) => setSubmission(e.target.value)}
                     placeholder={
-                        mediaType === MEDIA_TYPES.AUDIO
+                        roundMediaType === MEDIA_TYPES.AUDIO
                             ? 'What connects these two sounds?'
-                            : mediaType === MEDIA_TYPES.VIDEO
+                            : roundMediaType === MEDIA_TYPES.VIDEO
                             ? 'What connects these two clips?'
+                            : roundMediaType === MEDIA_TYPES.MEMES_VIDEOS
+                            ? 'What connects this meme and video?'
                             : 'What connects these two?'
                     }
-                    className="w-full border-2 border-[#565758] bg-[#121213] px-5 py-5 text-2xl text-center font-bold uppercase tracking-wide text-white placeholder-white/25 focus:outline-none focus:border-[#538d4e] focus:ring-0 transition-colors"
+                    className="game-input-hero w-full"
                     autoFocus
                 />
                 <div className="mt-4 text-center text-white/40 text-sm space-y-1">
-                    <div>Press <span className="font-bold text-white">Enter</span> to submit</div>
+                    <div>Press <span className="font-semibold text-white/80">Return</span> to submit</div>
                     <div className="text-white/30 text-xs">
                         Scored on Wit · Logic · Originality · Clarity
                     </div>

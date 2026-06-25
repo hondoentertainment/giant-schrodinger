@@ -41,7 +41,21 @@ import { initPWAInstall } from './lib/pwaInstall'
 function LoadingFallback() {
     return (
         <div className="flex items-center justify-center min-h-[200px]">
-            <div className="text-purple-400 text-lg animate-pulse">Loading...</div>
+            <div className="flex flex-col items-center gap-3">
+                <div className="h-8 w-8 rounded-full border-2 border-white/15 border-t-game-accent animate-spin" />
+                <p className="text-sm font-medium text-white/50">Loading...</p>
+            </div>
+        </div>
+    );
+}
+
+function GameLogoMark() {
+    return (
+        <div className="game-logo-mark" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <circle cx="8" cy="11" r="6.5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" fill="rgba(10,132,255,0.35)" />
+                <circle cx="14" cy="11" r="6.5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" fill="rgba(191,90,242,0.35)" />
+            </svg>
         </div>
     );
 }
@@ -172,10 +186,13 @@ function GameContent() {
     };
 
     const headerEl = (
-        <div className="wordle-topbar sticky top-0 z-30 mb-4 flex w-full justify-center py-2">
-            <h1 className="flex items-end gap-3 text-center font-display font-black tracking-[0.18em] text-white">
-                <span className="text-2xl sm:text-4xl leading-none">VENN</span>
-                <span className="pb-1 text-[0.65rem] sm:text-xs font-bold tracking-[0.28em] text-white/50 uppercase">with Friends</span>
+        <div className="wordle-topbar sticky top-0 z-30 mb-3 flex w-full justify-center">
+            <h1 className="flex items-center gap-3 text-center">
+                <GameLogoMark />
+                <span className="flex flex-col items-start leading-none">
+                    <span className="font-display text-xl sm:text-2xl font-bold tracking-tight text-white">Venn</span>
+                    <span className="text-[0.7rem] sm:text-xs font-medium text-white/45">with Friends</span>
+                </span>
             </h1>
         </div>
     );

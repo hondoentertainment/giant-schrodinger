@@ -59,6 +59,19 @@ If you already added tables to `supabase_realtime`, these statements in `supabas
 
 If that happens, skip those lines and run the rest of the schema.
 
+6. Apply `supabase/migrations/20260412000014_media_storage.sql` to create the public `media` bucket used for custom uploads and fusion images.
+
+7. Deploy edge functions and set secrets:
+
+```bash
+supabase functions deploy resolve-image
+supabase functions deploy score-submission
+supabase secrets set PEXELS_API_KEY=your-pexels-api-key
+supabase secrets set GEMINI_API_KEY=your-gemini-api-key
+```
+
+The `resolve-image` function powers semantic stock photo lookup for AI-generated concepts and keyword fallbacks. Without it, the app falls back to Picsum placeholders.
+
 ## 3. Gemini setup
 
 Gemini powers:
@@ -78,7 +91,21 @@ Current runtime behavior:
 - image generation uses `imagen-3.0-generate-002`
 - if Gemini is unavailable, the app falls back gracefully instead of blocking play
 
-## 4. Local validation
+## 4. Pexels setup (optional, recommended)
+
+Pexels powers semantic image lookup through the `resolve-image` Supabase Edge Function.
+
+1. Create a free API key at [pexels.com/api](https://www.pexels.com/api/)
+2. Set `PEXELS_API_KEY` as a Supabase function secret (see section 2)
+3. Optionally refresh theme catalogs locally:
+
+```bash
+PEXELS_API_KEY=your-key npm run refresh:theme-images -- --theme neon --out scripts/output/neon-assets.json
+```
+
+When Pexels is unavailable, the app falls back to Picsum placeholders.
+
+## 5. Local validation
 
 Run before shipping changes:
 
@@ -88,7 +115,7 @@ npm run build
 npm run test:e2e:desktop
 ```
 
-## 5. Production secrets
+## 6. Production secrets
 
 For GitHub Pages deployment, add these repository secrets if you want live services in production:
 
@@ -98,7 +125,7 @@ For GitHub Pages deployment, add these repository secrets if you want live servi
 
 The workflow at `.github/workflows/deploy.yml` already reads those secrets during test and build steps.
 
-## 6. Current limitation note
+## 7. Current limitation note
 
 Realtime multiplayer requires Supabase today.
 Non-AI multiplayer scoring UI exists, but authoritative backend scoring/voting still needs follow-on product hardening.

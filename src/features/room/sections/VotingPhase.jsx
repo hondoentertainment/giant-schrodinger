@@ -16,10 +16,9 @@ export function VotingPhase({
         <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-500">
             <ConnectionBanner />
             <LeaveRoomBar onLeave={onLeave} />
-            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                <div className="glass-panel rounded-[22px] p-8">
+            <div className="wordle-card w-full p-8">
                     <div className="text-center mb-8">
-                        <div className="inline-block px-4 py-1 rounded-full bg-purple-500/20 text-sm font-bold tracking-widest text-purple-300 mb-4 border border-purple-500/20">
+                        <div className="inline-block px-4 py-1 rounded-full bg-game-accent/15 text-sm font-bold tracking-widest text-game-accent mb-4 border border-game-accent/20">
                             VOTE FOR THE BEST
                         </div>
                         <h2 className="text-2xl font-display font-bold text-white mb-2">
@@ -41,13 +40,13 @@ export function VotingPhase({
                                     disabled={!canVote}
                                     className={`w-full text-left rounded-2xl border p-5 transition-all ${
                                         canVote
-                                            ? 'hover:bg-white/10 hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.2)] cursor-pointer'
+                                            ? 'hover:bg-white/10 hover:border-game-accent/40 cursor-pointer'
                                             : isOwnSubmission
                                             ? 'opacity-50 cursor-not-allowed'
                                             : 'cursor-default'
                                     } ${
                                         entry.voteCount > 0
-                                            ? 'bg-purple-500/10 border-purple-500/30'
+                                            ? 'bg-game-accent/10 border-game-accent/30'
                                             : 'bg-white/5 border-white/10'
                                     }`}
                                 >
@@ -59,7 +58,7 @@ export function VotingPhase({
                                             <p className="text-white/70 italic text-lg mt-1">&ldquo;{entry.submission}&rdquo;</p>
                                         </div>
                                         {entry.voteCount > 0 && (
-                                            <div className="flex items-center gap-1 text-purple-400">
+                                            <div className="flex items-center gap-1 text-game-accent">
                                                 <ThumbsUp className="w-5 h-5" />
                                                 <span className="font-bold">{entry.voteCount}</span>
                                             </div>
@@ -72,13 +71,13 @@ export function VotingPhase({
 
                     {isHost && (
                         <button
+                            type="button"
                             onClick={onFinishVoting}
-                            className="mt-6 w-full py-3 bg-white/10 text-white font-semibold rounded-full hover:bg-white/20 transition-colors border border-white/20"
+                            className="mt-6 w-full wordle-button wordle-primary"
                         >
                             End Voting &amp; Show Results
                         </button>
                     )}
-                </div>
             </div>
         </div>
     );

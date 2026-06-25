@@ -1,12 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;700;900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: 'Inter', system-ui, sans-serif;
-  line-height: 1.5;
+  --game-bg: #07070a;
+  --game-bg-elevated: #12121a;
+  --game-surface: rgba(255, 255, 255, 0.06);
+  --game-surface-hover: rgba(255, 255, 255, 0.1);
+  --game-border: rgba(255, 255, 255, 0.12);
+  --game-border-strong: rgba(255, 255, 255, 0.2);
+  --game-accent: #0a84ff;
+  --game-accent-hover: #409cff;
+  --game-success: #30d158;
+  --game-success-dim: rgba(48, 209, 88, 0.18);
+  --game-warning: #ffd60a;
+  --game-warning-dim: rgba(255, 214, 10, 0.16);
+  --game-orange: #ff9f0a;
+  --game-pink: #bf5af2;
+  --game-text: rgba(255, 255, 255, 0.92);
+  --game-text-secondary: rgba(255, 255, 255, 0.56);
+  --game-text-tertiary: rgba(255, 255, 255, 0.36);
+  --game-blur: 40px;
+  --game-radius-sm: 12px;
+  --game-radius-md: 16px;
+  --game-radius-lg: 22px;
+  --game-radius-xl: 28px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
+  line-height: 1.47;
   font-weight: 400;
   color-scheme: dark;
 }
@@ -19,10 +39,11 @@
   }
 
   body {
-    @apply bg-[#121213] text-white overflow-hidden;
-    /* Lock the document to the viewport so the app shell owns its own
-       scroll regions instead of the whole page scrolling. */
+    @apply text-white overflow-hidden antialiased;
+    background: var(--game-bg);
     height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   #root {
@@ -31,63 +52,390 @@
     flex-direction: column;
     min-height: 0;
   }
+
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
 }
 
-@layer utilities {
-  .font-outfit {
-    font-family: 'Outfit', sans-serif;
+@layer components {
+  .game-ambient {
+    @apply pointer-events-none absolute inset-0 overflow-hidden;
   }
 
-  .glass-panel {
-    @apply bg-[#121213]/95 border border-[#3a3a3c];
+  .game-ambient-orb {
+    @apply absolute rounded-full blur-3xl opacity-40 animate-ambient-drift;
   }
 
-  .text-gradient-vibrant {
-    @apply text-white;
+  .game-ambient-orb--blue {
+    width: min(52vw, 420px);
+    height: min(52vw, 420px);
+    top: -12%;
+    left: -10%;
+    background: radial-gradient(circle, rgba(10, 132, 255, 0.55) 0%, transparent 70%);
+  }
+
+  .game-ambient-orb--purple {
+    width: min(44vw, 360px);
+    height: min(44vw, 360px);
+    top: 18%;
+    right: -12%;
+    background: radial-gradient(circle, rgba(191, 90, 242, 0.4) 0%, transparent 70%);
+    animation-delay: -6s;
+  }
+
+  .game-ambient-orb--teal {
+    width: min(38vw, 300px);
+    height: min(38vw, 300px);
+    bottom: -8%;
+    left: 28%;
+    background: radial-gradient(circle, rgba(100, 210, 255, 0.28) 0%, transparent 70%);
+    animation-delay: -12s;
   }
 
   .wordle-shell {
-    @apply bg-[#121213] text-white;
+    @apply relative flex h-[100dvh] min-h-0 w-full flex-col items-center overflow-hidden;
+    background:
+      radial-gradient(ellipse 120% 80% at 50% -20%, rgba(10, 132, 255, 0.12), transparent 55%),
+      radial-gradient(ellipse 80% 50% at 100% 50%, rgba(191, 90, 242, 0.08), transparent 50%),
+      var(--game-bg);
   }
 
   .wordle-topbar {
-    @apply w-full border-b border-[#3a3a3c] bg-[#121213]/95;
+    @apply sticky top-0 z-30 mb-2 flex w-full items-center justify-center;
+    padding: max(0.65rem, env(safe-area-inset-top)) 1rem 0.75rem;
+    background: rgba(7, 7, 10, 0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .game-logo-mark {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl;
+    background: linear-gradient(145deg, rgba(10, 132, 255, 0.35), rgba(191, 90, 242, 0.35));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 8px 24px -8px rgba(10, 132, 255, 0.5);
+  }
+
+  .glass-panel {
+    @apply overflow-hidden border backdrop-blur-xl;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border-color: var(--game-border);
+    border-radius: var(--game-radius-xl);
+    box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .game-tab-row {
+    @apply flex gap-2;
+  }
+
+  .game-tab {
+    @apply flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl font-semibold text-sm transition-all min-h-[44px];
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  .game-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .game-tab-active {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #fff;
+  }
+
+  .game-highlight-banner {
+    @apply p-4 rounded-[22px] text-center;
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.12) 0%, rgba(191, 90, 242, 0.1) 100%);
+    border: 1px solid rgba(10, 132, 255, 0.22);
+  }
+
+  .game-list-row {
+    @apply flex items-center gap-3 p-3 rounded-2xl border transition-all;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
   }
 
   .wordle-card {
-    @apply bg-[#121213] border border-[#3a3a3c] rounded-none;
+    @apply overflow-hidden border backdrop-blur-xl;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border-color: var(--game-border);
+    border-radius: var(--game-radius-xl);
+    box-shadow: var(--game-card-shadow, 0 24px 48px -24px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08));
+  }
+
+  .game-hero-card {
+    @apply wordle-card p-4 text-left transition-all duration-300;
+    background: linear-gradient(135deg, rgba(255, 214, 10, 0.12) 0%, rgba(255, 159, 10, 0.08) 100%);
+    border-color: rgba(255, 214, 10, 0.22);
+  }
+
+  .game-hero-card:hover:not(:disabled) {
+    border-color: rgba(255, 214, 10, 0.38);
+    transform: translateY(-1px);
+    box-shadow: 0 20px 40px -20px rgba(255, 159, 10, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .wordle-tile {
-    @apply flex items-center justify-center border-2 border-[#3a3a3c] bg-[#121213] text-white font-black uppercase tracking-wider;
+    @apply flex items-center justify-center font-semibold;
+    background: var(--game-surface);
+    border: 1px solid var(--game-border);
+    border-radius: var(--game-radius-sm);
+    color: var(--game-text);
+    letter-spacing: 0.01em;
   }
 
   .wordle-tile-filled {
-    @apply border-[#565758] bg-[#3a3a3c];
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--game-border-strong);
   }
 
   .wordle-tile-correct {
-    @apply border-[#538d4e] bg-[#538d4e];
+    background: linear-gradient(180deg, rgba(48, 209, 88, 0.95), rgba(48, 209, 88, 0.78));
+    border-color: rgba(48, 209, 88, 0.6);
+    color: #fff;
+    box-shadow: 0 8px 24px -8px rgba(48, 209, 88, 0.55);
   }
 
   .wordle-tile-present {
-    @apply border-[#b59f3b] bg-[#b59f3b];
+    background: linear-gradient(180deg, rgba(255, 214, 10, 0.95), rgba(255, 159, 10, 0.85));
+    border-color: rgba(255, 214, 10, 0.5);
+    color: #1a1200;
+    box-shadow: 0 8px 24px -8px rgba(255, 159, 10, 0.45);
   }
 
   .wordle-button {
-    @apply rounded-none border-2 border-[#565758] bg-[#818384] px-4 py-3 font-bold uppercase tracking-wide text-white transition-colors hover:bg-[#6f7173] disabled:opacity-50;
+    @apply inline-flex items-center justify-center px-5 py-3 font-semibold transition-all duration-200;
+    min-height: 52px;
+    border-radius: var(--game-radius-pill, 9999px);
+    background: var(--game-surface);
+    border: 1px solid var(--game-border);
+    color: var(--game-text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .wordle-button:hover:not(:disabled) {
+    background: var(--game-surface-hover);
+    transform: scale(1.02);
+  }
+
+  .wordle-button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .wordle-button:disabled {
+    @apply opacity-45 cursor-not-allowed;
   }
 
   .wordle-primary {
-    @apply border-[#538d4e] bg-[#538d4e] hover:bg-[#47783f];
+    border-color: rgba(10, 132, 255, 0.5);
+    background: linear-gradient(180deg, #409cff 0%, #0a84ff 100%);
+    color: #fff;
+    box-shadow: 0 12px 32px -8px rgba(10, 132, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  .wordle-primary:hover:not(:disabled) {
+    background: linear-gradient(180deg, #5cadff 0%, #2490ff 100%);
+    box-shadow: 0 16px 36px -8px rgba(10, 132, 255, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .game-input {
+    @apply w-full px-5 py-4 text-lg font-medium transition-all duration-200;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--game-border);
+    border-radius: var(--game-radius-lg);
+    color: var(--game-text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .game-input::placeholder {
+    color: var(--game-text-tertiary);
+  }
+
+  .game-input:focus {
+    outline: none;
+    border-color: rgba(10, 132, 255, 0.65);
+    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .game-input-hero {
+    @apply game-input text-center text-2xl font-semibold;
+    border-radius: var(--game-radius-pill, 9999px);
+    padding-top: 1.15rem;
+    padding-bottom: 1.15rem;
+  }
+
+  .game-choice {
+    @apply min-h-[44px] py-3 text-sm font-semibold transition-all duration-200;
+    background: var(--game-surface);
+    border: 1px solid var(--game-border);
+    border-radius: var(--game-radius-md);
+    color: var(--game-text);
+  }
+
+  .game-choice:hover:not(:disabled) {
+    background: var(--game-surface-hover);
+  }
+
+  .game-choice-selected {
+    border-color: rgba(10, 132, 255, 0.55);
+    background: linear-gradient(180deg, rgba(64, 156, 255, 0.35), rgba(10, 132, 255, 0.22));
+    box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .game-segment {
+    @apply min-w-[52px] min-h-[44px] rounded-full px-4 py-2.5 text-sm font-semibold transition-all duration-200;
+    background: var(--game-surface);
+    border: 1px solid var(--game-border);
+    color: var(--game-text-secondary);
+  }
+
+  .game-segment-selected {
+    background: #fff;
+    color: #000;
+    border-color: transparent;
+    box-shadow: 0 8px 24px -8px rgba(255, 255, 255, 0.35);
+  }
+
+  .game-hud-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--game-text-secondary);
+  }
+
+  .game-progress-dot {
+    @apply h-2.5 flex-1 rounded-full transition-all duration-300;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .game-progress-dot--done {
+    background: linear-gradient(90deg, var(--game-success), #34c759);
+    box-shadow: 0 0 12px rgba(48, 209, 88, 0.45);
+  }
+
+  .game-progress-dot--current {
+    background: linear-gradient(90deg, var(--game-accent), #64d2ff);
+    box-shadow: 0 0 14px rgba(10, 132, 255, 0.5);
+  }
+
+  .game-timer {
+    @apply flex min-h-[56px] min-w-[72px] items-center justify-center rounded-2xl px-4 text-xl font-bold tabular-nums;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+  }
+
+  .game-timer--urgent {
+    background: linear-gradient(180deg, rgba(255, 214, 10, 0.25), rgba(255, 159, 10, 0.15));
+    border-color: rgba(255, 214, 10, 0.35);
+    color: var(--game-warning);
+    animation: timerPulse 1s ease-in-out infinite;
+  }
+
+  .game-section-label {
+    @apply text-xs font-semibold uppercase tracking-[0.14em];
+    color: var(--game-text-tertiary);
+  }
+
+  .game-mp-shell {
+    @apply w-full overflow-hidden border backdrop-blur-xl;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border-color: var(--game-border);
+    border-radius: var(--game-radius-xl);
+    box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .game-mp-countdown {
+    @apply font-display font-bold leading-none tabular-nums;
+    font-size: clamp(5rem, 22vw, 7.5rem);
+    background: linear-gradient(135deg, #64d2ff 0%, #0a84ff 45%, #bf5af2 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .game-player-row {
+    @apply flex items-center gap-3 rounded-2xl px-4 py-3 transition-colors;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .game-stat-tile {
+    @apply flex-1 rounded-2xl p-3 text-center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .game-modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .game-modal-panel {
+    @apply w-full max-w-lg overflow-hidden border backdrop-blur-xl animate-spring-in;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border-color: var(--game-border);
+    border-radius: var(--game-radius-xl);
+    box-shadow: 0 32px 64px -24px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .game-example-good {
+    @apply rounded-[22px] p-5 mb-3;
+    background: rgba(48, 209, 88, 0.1);
+    border: 1px solid rgba(48, 209, 88, 0.22);
+  }
+
+  .game-example-bad {
+    @apply rounded-[22px] p-5 mb-6;
+    background: rgba(255, 69, 58, 0.1);
+    border: 1px solid rgba(255, 69, 58, 0.22);
+  }
+
+  .game-concept-chip {
+    @apply px-3 py-1 rounded-full text-sm font-semibold;
+    background: rgba(10, 132, 255, 0.18);
+    color: rgba(191, 219, 254, 0.95);
+    border: 1px solid rgba(10, 132, 255, 0.25);
+  }
+
+  .game-concept-chip--alt {
+    background: rgba(191, 90, 242, 0.18);
+    color: rgba(233, 213, 255, 0.95);
+    border-color: rgba(191, 90, 242, 0.25);
   }
 
   .skip-link {
     @apply absolute -left-[9999px] z-[100] px-4 py-2;
   }
+
   .skip-link:focus {
-    @apply left-4 top-4 bg-white text-black font-bold rounded-none outline-none ring-4 ring-[#538d4e];
+    @apply left-4 top-4 font-semibold outline-none;
+    background: #fff;
+    color: #000;
+    border-radius: var(--game-radius-sm);
+    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.35);
   }
+}
+
+@layer utilities {
+  .font-outfit {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  }
+
+  .text-gradient-vibrant {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.72) 100%);
+  }
+}
+
+@keyframes timerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
 }
 
 @keyframes screenShake {
@@ -106,7 +454,6 @@
   animation: screenShake 0.4s ease-out;
 }
 
-/* Screen-reader only utility */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -119,13 +466,25 @@
   border-width: 0;
 }
 
-/* Visible focus indicators */
 :focus-visible {
-  outline: 2px solid #538d4e;
+  outline: 2px solid var(--game-accent);
   outline-offset: 2px;
 }
 
-/* Reduced motion support */
+@keyframes scorePop {
+  0% { transform: scale(0.92); opacity: 0.6; }
+  70% { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.score-reveal {
+  animation: scorePop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.score-reveal--done {
+  text-shadow: 0 0 24px rgba(10, 132, 255, 0.35);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -133,18 +492,26 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  .score-reveal {
+    animation: none;
+  }
+
+  .animate-spring-in,
+  .animate-ambient-drift {
+    animation: none !important;
+  }
 }
 
-/* Phase transition animations */
 .phase-enter {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(10px) scale(0.98);
 }
 
 .phase-enter-active {
   opacity: 1;
-  transform: translateY(0);
-  transition: opacity 200ms ease-out, transform 200ms ease-out;
+  transform: translateY(0) scale(1);
+  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1), transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .phase-exit {
@@ -153,7 +520,7 @@
 
 .phase-exit-active {
   opacity: 0;
-  transition: opacity 150ms ease-in;
+  transition: opacity 180ms ease-in;
 }
 
 @keyframes shake {

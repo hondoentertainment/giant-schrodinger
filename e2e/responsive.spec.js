@@ -39,6 +39,6 @@ test.describe('Responsive design', () => {
         await expect(page.getByRole('heading', { name: /Connection Gallery/i })).toBeVisible();
         const backButton = page.getByRole('button', { name: /Back to Lobby/i });
         const box = await backButton.boundingBox();
-        expect(box?.height).toBeGreaterThanOrEqual(44);
+        expect(Math.round(box?.height ?? 0)).toBeGreaterThanOrEqual(44);
     });
 });

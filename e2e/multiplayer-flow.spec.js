@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { startSoloRound } from './helpers';
 
 const APP_URL = '/giant-schrodinger/';
 
@@ -26,17 +27,8 @@ async function unlockAdvancedLobby(page) {
   });
 }
 
-async function startSoloRound(page) {
-  await page.getByRole('button', { name: /Solo Session|Start Round/i }).first().click();
-
-  const onboardingButton = page.getByRole('button', { name: /Got it, let's play!/i });
-  if (await onboardingButton.count()) {
-    await onboardingButton.click();
-  }
-
-  const roundInput = page.getByPlaceholder(/What connects these two/i);
-  await expect(roundInput).toBeVisible({ timeout: 10000 });
-  return roundInput;
+async function startSoloRoundFromLobby(page) {
+  return startSoloRound(page);
 }
 
 test.describe('Multiplayer Flow', () => {
@@ -48,7 +40,7 @@ test.describe('Multiplayer Flow', () => {
 
   test('solo round flow completes', async ({ page }) => {
     await createProfile(page);
-    const input = await startSoloRound(page);
+    const input = await startSoloRoundFromLobby(page);
     await input.fill('Both are creative expressions');
     await input.press('Enter');
     await expect(page.getByText(/YOUR SCORE|HUMAN JUDGE|Preparing|Dreaming up the fusion|\d+\/10/i)).toBeVisible({ timeout: 15000 });

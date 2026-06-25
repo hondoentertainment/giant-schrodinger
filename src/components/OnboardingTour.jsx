@@ -48,24 +48,17 @@ export function OnboardingTour({ onComplete }) {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-900/90 backdrop-blur-sm animate-in fade-in duration-300"
+            className="game-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-300"
             role="dialog"
             aria-modal="true"
             aria-labelledby="onboarding-tour-title"
         >
-            <div className="w-full max-w-md rounded-3xl bg-black/60 border border-white/10 p-8 shadow-2xl animate-in zoom-in-95 duration-300">
-                {/* Step indicator dots */}
+            <div className="w-full max-w-md wordle-card p-8 animate-spring-in">
                 <div className="flex justify-center gap-2 mb-6">
                     {STEPS.map((_, i) => (
                         <div
                             key={i}
-                            className={`w-2.5 h-2.5 rounded-full transition-all ${
-                                i === currentStep
-                                    ? 'bg-white scale-125'
-                                    : i < currentStep
-                                      ? 'bg-white/50'
-                                      : 'bg-white/20'
-                            }`}
+                            className={`game-progress-dot ${i === currentStep ? 'game-progress-dot--current' : i < currentStep ? 'game-progress-dot--done' : ''}`}
                             aria-hidden="true"
                         />
                     ))}
@@ -85,8 +78,9 @@ export function OnboardingTour({ onComplete }) {
                 {/* Action buttons */}
                 <div className="flex flex-col items-center gap-3">
                     <button
+                        type="button"
                         onClick={handleNext}
-                        className="w-full py-4 bg-white text-black font-bold text-xl rounded-xl hover:scale-[1.02] transition-transform shadow-[0_0_30px_rgba(255,255,255,0.3)]"
+                        className="w-full wordle-button wordle-primary text-lg"
                     >
                         {isLastStep ? 'Start Playing' : 'Next'}
                     </button>

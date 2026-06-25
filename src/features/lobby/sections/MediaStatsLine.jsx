@@ -7,7 +7,8 @@ export function MediaStatsLine({ user, stats }) {
     return (
         <div className="mb-4 flex flex-wrap gap-3 justify-center text-sm text-white/60">
             <span>Media: <span className="text-white font-semibold">
-                {(user?.mediaType || MEDIA_TYPES.IMAGE) === 'mixed' ? t('lobby.mixed') || 'Mixed' :
+                {(user?.mediaType || MEDIA_TYPES.IMAGE) === 'mixed' ? t('lobby.mixed') :
+                 (user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.MEMES_VIDEOS ? t('lobby.memesVideos') :
                  (user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? t('lobby.images') :
                  (user?.mediaType) === MEDIA_TYPES.VIDEO ? t('lobby.videos') : t('lobby.audio')}
             </span></span>

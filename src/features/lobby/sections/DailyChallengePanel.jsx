@@ -1,5 +1,6 @@
 import React from 'react';
 import { CalendarDays, Zap } from 'lucide-react';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 export function DailyChallengePanel({
     show,
@@ -9,6 +10,7 @@ export function DailyChallengePanel({
     sessionId,
     onStart,
 }) {
+    const { t } = useTranslation();
     if (!show) return null;
     if (!dailyPlayed) {
         return (
@@ -22,9 +24,12 @@ export function DailyChallengePanel({
                         <CalendarDays className="w-6 h-6 text-amber-400" />
                     </div>
                     <div className="flex-1">
-                        <div className="text-white font-bold flex items-center gap-2">
+                        <div className="text-white font-bold flex items-center gap-2 flex-wrap">
                             Daily Challenge
                             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">NEW</span>
+                            {dailyChallenge?.isMemesVideosDay && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">{t('lobby.memesVideos')}</span>
+                            )}
                         </div>
                         <div className="text-white/50 text-sm">{dailyChallenge.prompt}</div>
                     </div>

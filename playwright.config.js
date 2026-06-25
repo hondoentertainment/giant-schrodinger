@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const previewPort = process.env.PLAYWRIGHT_PORT || '4174';
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${previewPort}`;
+const deployedUrl = process.env.PRODUCTION_URL;
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || deployedUrl || `http://localhost:${previewPort}`;
+const useLocalServer = !process.env.PLAYWRIGHT_BASE_URL && !deployedUrl;
 
 export default defineConfig({
     testDir: './e2e',
@@ -23,12 +25,12 @@ export default defineConfig({
         { name: 'Desktop Firefox', use: { ...devices['Desktop Firefox'] } },
         { name: 'Mobile Safari', use: { ...devices['iPhone 14'] } },
     ],
-    webServer: process.env.PLAYWRIGHT_BASE_URL
-        ? undefined
-        : {
+    webServer: useLocalServer
+        ? {
               command: `npm run build:e2e && npm run preview -- --port ${previewPort} --strictPort`,
               url: baseURL,
               reuseExistingServer: false,
               timeout: 120000,
-          },
+          }
+        : undefined,
 });

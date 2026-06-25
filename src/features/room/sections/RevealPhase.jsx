@@ -17,8 +17,7 @@ export function RevealPhase({
             <ConnectionBanner />
             {isSpectator && <SpectatorBanner />}
             <LeaveRoomBar onLeave={onLeave} />
-            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                <div className="glass-panel rounded-[22px] p-8">
+            <div className="wordle-card w-full p-8">
                     <div className="text-center mb-8">
                         <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 border border-white/10">
                             ROUND {room?.round_number} ANSWERS
@@ -61,7 +60,6 @@ export function RevealPhase({
                             Revealing answers...
                         </div>
                     )}
-                </div>
             </div>
         </div>
     );

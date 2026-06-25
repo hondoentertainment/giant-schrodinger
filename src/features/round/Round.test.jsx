@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Round } from './Round';
+import { getStats } from '../../services/stats';
 
 // ── Mock GameContext ──
 const mockSetGameState = vi.fn();
@@ -13,6 +14,8 @@ let mockContextValue = {
     totalRounds: 3,
     currentModifier: { id: 'normal', label: 'Standard Round', timeFactor: 1.0, scoreFactor: 1.0, icon: '🎯' },
     isDailyChallenge: false,
+    trackUsedAssets: vi.fn(),
+    getUsedAssetIds: () => [],
 };
 
 vi.mock('../../context/GameContext', () => ({
@@ -20,22 +23,47 @@ vi.mock('../../context/GameContext', () => ({
 }));
 
 // ── Mock theme/services ──
-vi.mock('../../data/themes', () => ({
-    THEMES: [{ id: 'classic', label: 'Classic', gradient: 'from-purple-500 to-pink-500', modifier: { timeLimit: 60, scoreMultiplier: 1.0 } }],
-    getThemeById: () => ({ id: 'classic', label: 'Classic', gradient: 'from-purple-500 to-pink-500', modifier: { timeLimit: 60, scoreMultiplier: 1.0 } }),
-    buildThemeAssets: () => [
+vi.mock('../../data/themes', () => {
+    const theme = { id: 'classic', label: 'Classic', gradient: 'from-purple-500 to-pink-500', modifier: { timeLimit: 60, scoreMultiplier: 1.0 } };
+    return {
+        THEMES: [theme],
+        getThemeById: () => theme,
+        MEDIA_TYPES: { IMAGE: 'image', VIDEO: 'video', AUDIO: 'audio', MEME: 'meme', MEMES_VIDEOS: 'memes_videos' },
+    };
+});
+
+vi.mock('./VennDiagram', () => ({
+    VennDiagram: ({ leftAsset, rightAsset }) => (
+        <div data-testid="venn-diagram">
+            <img alt={leftAsset?.label} src={leftAsset?.url} />
+            <img alt={rightAsset?.label} src={rightAsset?.url} />
+            <span>{leftAsset?.label}</span>
+            <span>{rightAsset?.label}</span>
+        </div>
+    ),
+}));
+
+vi.mock('../../services/assetSelection', () => ({
+    selectRoundAssets: () => [
         { id: 'cat', label: 'Cat', type: 'image', url: 'https://example.com/cat.jpg', fallbackUrl: 'https://example.com/cat-fallback.jpg' },
         { id: 'dog', label: 'Dog', type: 'image', url: 'https://example.com/dog.jpg', fallbackUrl: 'https://example.com/dog-fallback.jpg' },
     ],
-    MEDIA_TYPES: { IMAGE: 'image', VIDEO: 'video', AUDIO: 'audio' },
+    resolveSelectedAssets: async (assets) => assets,
+    preloadRoundAssets: vi.fn(),
+    getAssetMediaLabel: (type) => {
+        if (type === 'video') return 'Video';
+        if (type === 'meme') return 'Meme';
+        if (type === 'audio') return 'Audio';
+        return 'Concept';
+    },
 }));
 
-vi.mock('../../services/customImages', () => ({
-    getCustomImages: () => [],
+vi.mock('../../services/dailyChallenge', () => ({
+    getDailyChallenge: () => ({ seed: 12345 }),
 }));
 
 vi.mock('../../services/stats', () => ({
-    getStats: () => ({ totalRounds: 5, currentStreak: 0, maxStreak: 0, milestonesUnlocked: [] }),
+    getStats: vi.fn(() => ({ totalRounds: 5, currentStreak: 0, maxStreak: 0, milestonesUnlocked: [] })),
     isThemeUnlocked: () => true,
 }));
 
@@ -56,6 +84,8 @@ const baselineContext = {
     totalRounds: 3,
     currentModifier: { id: 'normal', label: 'Standard Round', timeFactor: 1.0, scoreFactor: 1.0, icon: '🎯' },
     isDailyChallenge: false,
+    trackUsedAssets: vi.fn(),
+    getUsedAssetIds: () => [],
 };
 
 describe('Round', () => {
@@ -63,6 +93,7 @@ describe('Round', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        getStats.mockReturnValue({ totalRounds: 5, currentStreak: 0, maxStreak: 0, milestonesUnlocked: [] });
         // Reset context to baseline for each test
         mockContextValue = { ...baselineContext, setGameState: mockSetGameState };
         vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -179,5 +210,16 @@ describe('Round', () => {
         render(<Round onSubmit={mockOnSubmit} />);
         expect(screen.getByText('Speed Round')).toBeInTheDocument();
         expect(screen.getByText(/Half time, 1.5x points/)).toBeInTheDocument();
+    });
+
+    it('shows memes & videos coaching and placeholder when media type is memes_videos', () => {
+        getStats.mockReturnValue({ totalRounds: 0, currentStreak: 0, maxStreak: 0, milestonesUnlocked: [] });
+        mockContextValue = {
+            ...baselineContext,
+            user: { ...baselineContext.user, mediaType: 'memes_videos' },
+        };
+        render(<Round onSubmit={mockOnSubmit} />);
+        expect(screen.getByPlaceholderText(/What connects this meme and video/i)).toBeInTheDocument();
+        expect(screen.getByText(/Connect the vibe, not just the visuals/i)).toBeInTheDocument();
     });
 });

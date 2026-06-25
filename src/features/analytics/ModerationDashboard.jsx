@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getFlags, removeFlag } from '../../services/moderation';
+import { GameScreenShell } from '../../components/GameScreenShell';
+import { EmptyState } from '../../components/EmptyState';
+import { Shield } from 'lucide-react';
 
 export function ModerationDashboard({ onBack }) {
     const [flags, setFlags] = useState([]);
@@ -38,35 +41,25 @@ export function ModerationDashboard({ onBack }) {
     };
 
     return (
-        <div className="w-full max-w-2xl mx-auto animate-in fade-in duration-500 px-4">
-            <div className="flex items-center justify-between mb-6">
-                <button onClick={onBack} className="text-white/40 hover:text-white/70 text-sm">{'\u2190'} Back</button>
-                <h2 className="text-2xl font-display font-bold text-white">Content Moderation</h2>
-                <div />
-            </div>
-
-            {/* Summary Stats */}
+        <GameScreenShell onBack={onBack} title="Content Moderation" icon={Shield} backLabel="Back to lobby">
             <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/20">
-                    <div className="text-white/60 text-xs uppercase tracking-wider mb-1">Total Flags</div>
-                    <div className="text-2xl font-bold text-white">{totalFlags}</div>
+                <div className="game-stat-tile border-red-500/20">
+                    <div className="game-section-label">Total Flags</div>
+                    <div className="text-2xl font-bold text-white mt-1 tabular-nums">{totalFlags}</div>
                 </div>
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/20">
-                    <div className="text-white/60 text-xs uppercase tracking-wider mb-1">Flagged Today</div>
-                    <div className="text-2xl font-bold text-white">{flaggedToday}</div>
+                <div className="game-stat-tile border-amber-500/20">
+                    <div className="game-section-label">Flagged Today</div>
+                    <div className="text-2xl font-bold text-white mt-1 tabular-nums">{flaggedToday}</div>
                 </div>
             </div>
 
-            {/* Flagged Items */}
             {items.length === 0 ? (
-                <div className="text-center py-12 bg-white/5 rounded-2xl">
-                    <p className="text-white/40 text-lg">No flagged content. All clear!</p>
-                </div>
+                <EmptyState icon="✅" title="All clear" description="No flagged content right now." />
             ) : (
                 <div className="space-y-3">
                     {items.map(item => (
-                        <div key={item.contentId} className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                            <div className="flex items-start justify-between gap-3">
+                        <div key={item.contentId} className="game-list-row flex-col items-stretch !py-4">
+                            <div className="flex items-start justify-between gap-3 w-full">
                                 <div className="flex-1 min-w-0">
                                     <div className="text-white font-bold text-sm truncate">
                                         Submission: {item.contentId}
@@ -85,14 +78,16 @@ export function ModerationDashboard({ onBack }) {
                                 </div>
                                 <div className="flex gap-2 shrink-0">
                                     <button
+                                        type="button"
                                         onClick={() => handleApprove(item.contentId)}
-                                        className="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 text-xs font-bold transition-colors"
+                                        className="wordle-button text-xs text-emerald-300 border border-emerald-500/30 min-h-[36px] px-3"
                                     >
                                         Approve
                                     </button>
                                     <button
+                                        type="button"
                                         onClick={() => handleRemove(item.contentId)}
-                                        className="px-3 py-1.5 rounded-lg bg-red-600/30 hover:bg-red-600/50 text-red-300 text-xs font-bold transition-colors"
+                                        className="wordle-button text-xs text-red-300 border border-red-500/30 min-h-[36px] px-3"
                                     >
                                         Remove
                                     </button>
@@ -102,6 +97,6 @@ export function ModerationDashboard({ onBack }) {
                     ))}
                 </div>
             )}
-        </div>
+        </GameScreenShell>
     );
 }

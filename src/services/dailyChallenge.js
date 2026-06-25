@@ -1,4 +1,4 @@
-import { THEMES } from '../data/themes';
+import { THEMES, MEDIA_TYPES } from '../data/themes';
 
 const DAILY_STORAGE_KEY = 'vwf_daily';
 
@@ -66,6 +66,7 @@ export function getDailyChallenge() {
 
     const promptIndex = Math.floor(rng() * DAILY_PROMPTS.length);
     const prompt = DAILY_PROMPTS[promptIndex];
+    const mediaType = rng() >= 0.65 ? MEDIA_TYPES.MEMES_VIDEOS : MEDIA_TYPES.IMAGE;
 
     return {
         seed,
@@ -73,6 +74,8 @@ export function getDailyChallenge() {
         theme,
         prompt,
         date: getTodayKey(),
+        mediaType,
+        isMemesVideosDay: mediaType === MEDIA_TYPES.MEMES_VIDEOS,
     };
 }
 

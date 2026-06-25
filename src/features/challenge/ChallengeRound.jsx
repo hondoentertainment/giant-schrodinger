@@ -27,7 +27,7 @@ export function ChallengeRound({ payload, onDone }) {
                 <p className="text-white/60 mb-6">This challenge link is broken or expired.</p>
                 <button
                     onClick={onDone}
-                    className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform"
+                    className="wordle-button wordle-primary"
                 >
                     Play Venn
                 </button>
@@ -88,7 +88,7 @@ export function ChallengeRound({ payload, onDone }) {
     if (phase === 'scoring') {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-in fade-in duration-500">
-                <div className="w-20 h-20 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mb-6" />
+                <div className="h-20 w-20 rounded-full border-2 border-t-game-accent border-white/10 animate-spin mb-6" />
                 <h2 className="text-2xl font-display font-bold text-white mb-2 animate-pulse">Scoring your connection...</h2>
                 <p className="text-white/40 italic">&ldquo;{submission}&rdquo;</p>
             </div>
@@ -99,12 +99,11 @@ export function ChallengeRound({ payload, onDone }) {
         const myBand = getScoreBand(result.myScore);
         const theirBand = getScoreBand(result.challengerScore);
         return (
-            <div className="w-full max-w-xl flex flex-col items-center animate-in zoom-in-95 duration-700">
+            <div className="w-full max-w-xl flex flex-col items-center animate-spring-in mx-auto">
                 <Confetti active={showConfetti} duration={4000} particleCount={60} />
-                <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                    <div className="glass-panel rounded-[22px] p-8 text-center">
-                        <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-6 border border-white/10">
-                            CHALLENGE RESULT
+                <div className="wordle-card p-6 sm:p-8 w-full text-center">
+                        <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white/55 mb-6 border border-white/10 bg-white/[0.06]">
+                            Challenge result
                         </div>
 
                         <div className="text-5xl mb-4">
@@ -140,11 +139,10 @@ export function ChallengeRound({ payload, onDone }) {
 
                         <button
                             onClick={onDone}
-                            className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_rgba(168,85,247,0.4)]"
+                            className="wordle-button wordle-primary w-full text-lg"
                         >
                             Play Venn with Friends!
                         </button>
-                    </div>
                 </div>
             </div>
         );
@@ -152,10 +150,10 @@ export function ChallengeRound({ payload, onDone }) {
 
     // Play phase
     return (
-        <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-700">
+        <div className="w-full max-w-4xl flex flex-col items-center animate-spring-in">
             <div className="mb-6 text-center">
-                <div className="inline-block px-4 py-1 rounded-full bg-amber-500/10 text-sm font-bold tracking-widest text-amber-400 mb-3 border border-amber-500/20">
-                    CHALLENGE
+                <div className="inline-block px-3 py-1 rounded-full bg-amber-500/10 text-xs font-semibold text-amber-200 mb-3 border border-amber-400/25">
+                    Challenge
                 </div>
                 <h2 className="text-2xl font-display font-bold text-white mb-1">
                     {challenger.playerName || 'A friend'} scored {challenger.score}/10
@@ -173,7 +171,7 @@ export function ChallengeRound({ payload, onDone }) {
                         type="text"
                         value={submission}
                         onChange={(e) => setSubmission(e.target.value)}
-                        className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-4 text-white text-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                        className="game-input text-lg"
                         placeholder="Write one witty phrase that connects both concepts..."
                         maxLength={200}
                         autoFocus
@@ -183,7 +181,7 @@ export function ChallengeRound({ payload, onDone }) {
                 <button
                     type="submit"
                     disabled={!submission.trim()}
-                    className="w-full py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-[1.02] transition-transform shadow-[0_0_30px_rgba(255,255,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="wordle-button wordle-primary w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Submit & Compare!
                 </button>

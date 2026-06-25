@@ -22,6 +22,8 @@ describe('dailyChallenge service', () => {
             expect(typeof a.prompt).toBe('string');
             expect(a.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
             expect(typeof a.seed).toBe('number');
+            expect(a.mediaType).toBeDefined();
+            expect(typeof a.isMemesVideosDay).toBe('boolean');
         });
     });
 

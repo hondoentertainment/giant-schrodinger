@@ -3,7 +3,11 @@ import { useGame } from '../../context/GameContext';
 import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgementForCollision } from '../../services/judgements';
+import { getCollisionMediaMode, getMediaModeLabel } from '../../lib/mediaType';
 import { getHighlights } from '../../services/highlights';
+import { MEDIA_TYPES } from '../../data/themes';
+import { EmptyState } from '../../components/EmptyState';
+
 const SORT_OPTIONS = [
     { id: 'newest', label: 'Newest', fn: (a, b) => new Date(b.timestamp) - new Date(a.timestamp) },
     { id: 'oldest', label: 'Oldest', fn: (a, b) => new Date(a.timestamp) - new Date(b.timestamp) },
@@ -69,13 +73,13 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
             className="contents"
         >
         <article
-            className="group relative aspect-square rounded-2xl overflow-hidden glass-panel transition-transform hover:scale-[1.02] focus-within:scale-[1.02] focus-within:ring-2 focus-within:ring-purple-500 focus-within:outline-none"
+            className="group relative aspect-square rounded-[22px] overflow-hidden border border-white/10 bg-white/[0.04] backdrop-blur-sm transition-transform hover:scale-[1.02] focus-within:scale-[1.02] focus-within:ring-2 focus-within:ring-game-accent focus-within:outline-none shadow-game-card"
             tabIndex={0}
             aria-label={`Connection: "${collision.submission}". Score ${collision.score} out of 10. ${displayDate}.${fj ? ` Judged by ${fj.judgeName || fj.judge_name || 'a friend'}: ${fj.score}/10.` : ''}`}
         >
             {imageStatus === 'loading' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/5 z-10">
-                    <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-purple-500 animate-spin" aria-hidden="true" />
+                    <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-game-accent animate-spin" aria-hidden="true" />
                 </div>
             )}
             {imageStatus === 'error' && (
@@ -115,14 +119,14 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
                     <button
                         type="button"
                         onClick={() => onSelect(collision)}
-                        className="flex-1 rounded-xl bg-white text-black px-3 py-2 text-sm font-bold"
+                        className="wordle-button wordle-primary flex-1 min-h-[44px] py-2 text-sm"
                     >
                         Details
                     </button>
                     <button
                         type="button"
                         onClick={() => onCopyShare(collision)}
-                        className="flex-1 rounded-xl bg-white/10 text-white px-3 py-2 text-sm font-bold border border-white/20"
+                        className="wordle-button flex-1 min-h-[44px] py-2 text-sm"
                     >
                         Copy share
                     </button>
@@ -147,6 +151,7 @@ export function Gallery() {
     const [loadingJudgements, setLoadingJudgements] = useState(true);
     const [sortBy, setSortBy] = useState('newest');
     const [feedbackFilter, setFeedbackFilter] = useState('all');
+    const [mediaFilter, setMediaFilter] = useState('all');
     const [selectedCollision, setSelectedCollision] = useState(null);
     const [shareCopiedId, setShareCopiedId] = useState(null);
 
@@ -175,8 +180,9 @@ export function Gallery() {
         ? collisions.reduce((sum, collision) => sum + (collision.score || 0), 0) / collisions.length
         : 0;
     const filtered = collisions.filter((collision) => {
-        if (feedbackFilter === 'judged') return Boolean(getDisplayJudgement(collision));
-        if (feedbackFilter === 'highlights') return highlightIds.has(collision.id) || (collision.score || 0) >= 8;
+        if (feedbackFilter === 'judged' && !getDisplayJudgement(collision)) return false;
+        if (feedbackFilter === 'highlights' && !(highlightIds.has(collision.id) || (collision.score || 0) >= 8)) return false;
+        if (mediaFilter !== 'all' && getCollisionMediaMode(collision) !== mediaFilter) return false;
         return true;
     });
     const sorted = [...filtered].sort(sortOpt.fn);
@@ -191,7 +197,8 @@ export function Gallery() {
             ? ` Friend Judge: ${judgement.judgeName || judgement.judge_name || 'A friend'} gave it ${judgement.score}/10${judgement.commentary ? ` — "${judgement.commentary}"` : ''}.`
             : '';
         const highlightLine = (collision.score || 0) >= 8 ? ' Highlight-worthy.' : '';
-        const text = `My Venn connection: "${collision.submission}" scored ${collision.score}/10.${promptLine}${judgeLine}${dailyLine}${friendLine}${highlightLine} Play Venn with Friends: ${window.location.origin}${window.location.pathname}`;
+        const mediaLine = ` ${getMediaModeLabel(getCollisionMediaMode(collision))} round.`;
+        const text = `My Venn connection: "${collision.submission}" scored ${collision.score}/10.${promptLine}${mediaLine}${judgeLine}${dailyLine}${friendLine}${highlightLine} Play Venn with Friends: ${window.location.origin}${window.location.pathname}`;
         if (navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(text);
             setShareCopiedId(collision.id);
@@ -200,9 +207,12 @@ export function Gallery() {
     };
 
     return (
-        <div className="w-full max-w-6xl animate-in fade-in duration-700">
+        <div className="w-full max-w-6xl animate-spring-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <h2 className="text-4xl font-display font-bold text-white">Connection Gallery</h2>
+                <div>
+                    <div className="game-section-label mb-1">Your archive</div>
+                    <h2 className="text-3xl sm:text-4xl font-display font-bold tracking-tight text-white">Connection Gallery</h2>
+                </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2">
                         <label htmlFor="gallery-sort" className="text-white/50 text-sm sr-only">
@@ -212,7 +222,7 @@ export function Gallery() {
                             id="gallery-sort"
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="bg-black/30 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                            className="game-input py-2.5 text-sm min-h-[44px]"
                             aria-label="Sort gallery"
                         >
                             {SORT_OPTIONS.map((opt) => (
@@ -224,7 +234,7 @@ export function Gallery() {
                     </div>
                     <button
                         onClick={() => setGameState('LOBBY')}
-                        className="px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all min-h-[44px]"
+                        className="wordle-button min-h-[44px]"
                         aria-label="Back to Lobby"
                     >
                         Back to Lobby
@@ -233,28 +243,30 @@ export function Gallery() {
             </div>
 
             {collisions.length === 0 ? (
-                <div className="text-center py-20 bg-white/5 rounded-3xl">
-                    <p className="text-white/40 text-xl">No connections yet. Play a game!</p>
-                </div>
+                <EmptyState
+                    icon="🖼️"
+                    title="No connections yet"
+                    description="Play a round and your best fusions will show up here."
+                />
             ) : (
                 <>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-                            <div className="text-white/40 text-xs uppercase tracking-wider">Saved</div>
-                            <div className="text-2xl font-black text-white">{collisions.length}</div>
+                        <div className="game-stat-tile text-left sm:text-center">
+                            <div className="game-section-label">Saved</div>
+                            <div className="text-2xl font-bold text-white mt-1">{collisions.length}</div>
                         </div>
-                        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-                            <div className="text-white/40 text-xs uppercase tracking-wider">Average</div>
-                            <div className="text-2xl font-black text-white">{averageScore.toFixed(1)}/10</div>
+                        <div className="game-stat-tile text-left sm:text-center">
+                            <div className="game-section-label">Average</div>
+                            <div className="text-2xl font-bold text-white mt-1">{averageScore.toFixed(1)}/10</div>
                         </div>
-                        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-                            <div className="text-white/40 text-xs uppercase tracking-wider">Friend Feedback</div>
-                            <div className="text-2xl font-black text-white">{judgedCount}</div>
+                        <div className="game-stat-tile text-left sm:text-center">
+                            <div className="game-section-label">Friend feedback</div>
+                            <div className="text-2xl font-bold text-white mt-1">{judgedCount}</div>
                         </div>
-                        <div className="rounded-2xl bg-white/5 border border-white/10 p-4 sm:col-span-3">
-                            <div className="text-white/40 text-xs uppercase tracking-wider">Highlights</div>
-                            <div className="text-2xl font-black text-white">{highlightCount}</div>
-                            <div className="text-white/40 text-xs mt-1">Scores 8+ are treated as reshare-worthy highlights.</div>
+                        <div className="game-stat-tile sm:col-span-3 text-left">
+                            <div className="game-section-label">Highlights</div>
+                            <div className="text-2xl font-bold text-white mt-1">{highlightCount}</div>
+                            <div className="text-white/45 text-xs mt-1">Scores 8+ are treated as reshare-worthy highlights.</div>
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2 mb-4">
@@ -268,10 +280,28 @@ export function Gallery() {
                                 type="button"
                                 onClick={() => setFeedbackFilter(option.id)}
                                 aria-pressed={feedbackFilter === option.id}
-                                className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
-                                    feedbackFilter === option.id
-                                        ? 'bg-white text-black'
-                                        : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                className={`game-segment ${feedbackFilter === option.id ? 'game-segment-selected' : ''}`}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        {[
+                            { id: 'all', label: 'All media' },
+                            { id: MEDIA_TYPES.IMAGE, label: 'Images' },
+                            { id: MEDIA_TYPES.MEMES_VIDEOS, label: 'Memes & Videos' },
+                            { id: MEDIA_TYPES.VIDEO, label: 'Videos' },
+                        ].map((option) => (
+                            <button
+                                key={option.id}
+                                type="button"
+                                onClick={() => setMediaFilter(option.id)}
+                                aria-pressed={mediaFilter === option.id}
+                                className={`game-segment ${
+                                    mediaFilter === option.id
+                                        ? 'game-segment-selected ring-1 ring-game-accent/40'
+                                        : ''
                                 }`}
                             >
                                 {option.label}
@@ -289,6 +319,8 @@ export function Gallery() {
                                 ? 'No friend feedback yet. Share a round for judging to fill this view.'
                                 : feedbackFilter === 'highlights'
                                 ? 'No highlights yet. Score 8+ to build your best-of archive.'
+                                : mediaFilter !== 'all'
+                                ? `No ${getMediaModeLabel(mediaFilter).toLowerCase()} connections saved yet.`
                                 : 'No saved connections match this filter yet.'}
                         </p>
                     )}
@@ -314,36 +346,39 @@ export function Gallery() {
                         </p>
                     )}
                     {selectedCollision && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="gallery-detail-title">
-                            <div className="glass-panel w-full max-w-lg rounded-3xl border border-white/10 p-6">
-                                <h3 id="gallery-detail-title" className="text-2xl font-display font-bold text-white mb-2">Saved Connection</h3>
+                        <div className="game-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="gallery-detail-title">
+                            <div className="game-modal-panel p-6 sm:p-7">
+                                <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white/55 mb-4 border border-white/10 bg-white/[0.06]">
+                                    Saved connection
+                                </div>
+                                <h3 id="gallery-detail-title" className="text-2xl font-display font-bold tracking-tight text-white mb-2">Connection details</h3>
                                 <p className="text-white/80 text-xl italic mb-4">&ldquo;{selectedCollision.submission}&rdquo;</p>
                                 {getPromptPairLabel(selectedCollision) && (
-                                    <div className="mb-4 wordle-tile wordle-tile-filled min-h-[44px] px-3 text-sm">
+                                    <div className="mb-4 wordle-tile wordle-tile-filled min-h-[44px] px-3 text-sm justify-start">
                                         {getPromptPairLabel(selectedCollision)}
                                     </div>
                                 )}
                                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                                    <div className="rounded-xl bg-white/5 p-3">
-                                        <div className="text-white/40 uppercase tracking-wider text-xs">Score</div>
-                                        <div className="text-white font-bold">{selectedCollision.score}/10</div>
+                                    <div className="game-stat-tile text-left">
+                                        <div className="game-section-label">Score</div>
+                                        <div className="text-white font-bold text-lg mt-1">{selectedCollision.score}/10</div>
                                     </div>
-                                    <div className="rounded-xl bg-white/5 p-3">
-                                        <div className="text-white/40 uppercase tracking-wider text-xs">Judge</div>
-                                        <div className="text-white font-bold">{getJudgeModeLabel(selectedCollision)}</div>
+                                    <div className="game-stat-tile text-left">
+                                        <div className="game-section-label">Judge</div>
+                                        <div className="text-white font-bold text-lg mt-1">{getJudgeModeLabel(selectedCollision)}</div>
                                     </div>
-                                    <div className="rounded-xl bg-white/5 p-3">
-                                        <div className="text-white/40 uppercase tracking-wider text-xs">Saved</div>
-                                        <div className="text-white font-bold">{formatCollisionDate(selectedCollision.timestamp)}</div>
+                                    <div className="game-stat-tile text-left">
+                                        <div className="game-section-label">Saved</div>
+                                        <div className="text-white font-bold text-lg mt-1">{formatCollisionDate(selectedCollision.timestamp)}</div>
                                     </div>
-                                    <div className="rounded-xl bg-white/5 p-3">
-                                        <div className="text-white/40 uppercase tracking-wider text-xs">Mode</div>
-                                        <div className="text-white font-bold">{selectedCollision.isDailyChallenge ? 'Daily Venn' : 'Session'}</div>
+                                    <div className="game-stat-tile text-left">
+                                        <div className="game-section-label">Mode</div>
+                                        <div className="text-white font-bold text-lg mt-1">{selectedCollision.isDailyChallenge ? 'Daily Venn' : 'Session'}</div>
                                     </div>
                                 </div>
                                 {getDisplayJudgement(selectedCollision) && (
-                                    <div className="rounded-xl bg-white/5 p-3 text-sm text-white/70 mb-4">
-                                        <div className="text-white font-semibold">Friend Judge Result</div>
+                                    <div className="rounded-[22px] bg-white/[0.05] border border-white/[0.08] p-4 text-sm text-white/70 mb-4">
+                                        <div className="text-white font-semibold">Friend judge result</div>
                                         <div className="mt-1">
                                             {getDisplayJudgement(selectedCollision).judgeName || 'A friend'} gave it {getDisplayJudgement(selectedCollision).score}/10.
                                         </div>
@@ -358,14 +393,14 @@ export function Gallery() {
                                     <button
                                         type="button"
                                         onClick={() => handleCopyShare(selectedCollision)}
-                                        className="flex-1 rounded-xl bg-white text-black py-3 font-bold"
+                                        className="wordle-button wordle-primary flex-1"
                                     >
                                         Copy Share Text
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setSelectedCollision(null)}
-                                        className="flex-1 rounded-xl bg-white/10 text-white py-3 font-bold border border-white/20"
+                                        className="wordle-button flex-1"
                                     >
                                         Close
                                     </button>

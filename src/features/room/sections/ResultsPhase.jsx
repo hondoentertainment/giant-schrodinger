@@ -10,7 +10,7 @@ function ScoreBar({ label, value, max = 10 }) {
             <span className="text-white/50 w-20 text-right">{label}</span>
             <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden">
                 <div
-                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-700"
+                    className="h-full bg-game-accent rounded-full transition-all duration-700"
                     style={{ width: `${pct}%` }}
                 />
             </div>
@@ -41,8 +41,7 @@ export function ResultsPhase({
             <ConnectionBanner />
             {isSpectator && <SpectatorBanner />}
             <LeaveRoomBar onLeave={onLeave} />
-            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                <div className="glass-panel rounded-[22px] p-8">
+            <div className="wordle-card w-full p-8">
                     {/* Header */}
                     <div className="text-center mb-8">
                         <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-4 border border-white/10">
@@ -80,7 +79,7 @@ export function ResultsPhase({
                                             <span className="text-white font-bold text-lg flex-1">{entry.player_name}</span>
                                             <div className="flex items-center gap-3">
                                                 {entry.voteCount > 0 && (
-                                                    <div className="flex items-center gap-1 text-purple-400 text-sm">
+                                                    <div className="flex items-center gap-1 text-game-accent text-sm">
                                                         <ThumbsUp className="w-4 h-4" />
                                                         <span>{entry.voteCount}</span>
                                                     </div>
@@ -170,7 +169,7 @@ export function ResultsPhase({
                     {/* No scores yet */}
                     {!isFinished && scored.length === 0 && (
                         <div className="text-center py-12 text-white/40">
-                            <div className="w-12 h-12 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mx-auto mb-4" />
+                            <div className="w-12 h-12 rounded-full border-4 border-t-game-accent border-white/10 animate-spin mx-auto mb-4" />
                             <p>Waiting for scores...</p>
                         </div>
                     )}
@@ -186,9 +185,10 @@ export function ResultsPhase({
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         {!isFinished && isHost && hasNextRound && (
                             <button
+                                type="button"
                                 onClick={onNext}
                                 disabled={advancing}
-                                className="px-8 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center gap-2 disabled:opacity-50"
+                                className="wordle-button wordle-primary text-xl flex items-center gap-2 disabled:opacity-50"
                             >
                                 <ArrowRight className="w-5 h-5" />
                                 {advancing ? 'Loading...' : `Next Round (${room.round_number + 1}/${room.total_rounds})`}
@@ -198,16 +198,18 @@ export function ResultsPhase({
                             <>
                                 {isHost && (
                                     <button
+                                        type="button"
                                         onClick={onRematch}
-                                        className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_rgba(168,85,247,0.4)] flex items-center gap-2"
+                                        className="wordle-button wordle-primary text-xl flex items-center gap-2"
                                     >
                                         <ArrowRight className="w-5 h-5" />
                                         Rematch!
                                     </button>
                                 )}
                                 <button
+                                    type="button"
                                     onClick={onLeave}
-                                    className="px-8 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center gap-2"
+                                    className="wordle-button text-xl flex items-center gap-2"
                                 >
                                     <Home className="w-5 h-5" />
                                     Back to Lobby
@@ -220,7 +222,6 @@ export function ResultsPhase({
                             </div>
                         )}
                     </div>
-                </div>
             </div>
         </div>
     );

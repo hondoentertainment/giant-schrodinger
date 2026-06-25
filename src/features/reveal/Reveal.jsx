@@ -5,10 +5,13 @@ import { scoreSubmission, generateFusionImage } from '../../services/gemini';
 import { saveCollision } from '../../services/storage';
 import { getMilestones, getStats, recordPlay } from '../../services/stats';
 import { createJudgeShareUrl } from '../../services/share';
-import { getThemeById, MEDIA_TYPES } from '../../data/themes';
+import { getThemeById } from '../../data/themes';
+import { normalizeMediaType, getCollisionMediaMode, getEffectiveRoundMediaType } from '../../lib/mediaType';
+import { getDailyChallenge } from '../../services/dailyChallenge';
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import { AchievementProgress } from '../../components/AchievementProgress';
+import { ScoreReveal } from '../../components/ScoreReveal';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { haptic } from '../../lib/haptics';
 import { reportAppError, reportAppEvent } from '../../lib/telemetry';
@@ -32,9 +35,20 @@ export function Reveal({ submission, assets }) {
     const scoringMode = user?.scoringMode || 'human';
     const theme = getThemeById(user?.themeId);
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
-    const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
+    const mediaType = normalizeMediaType(user?.mediaType);
     const mod = currentModifier;
     const canShareForJudging = Boolean(fusionImage?.url && assets?.left && assets?.right);
+    const savedMediaType = getCollisionMediaMode({
+        mediaType: getEffectiveRoundMediaType({
+            userMediaType: mediaType,
+            isDailyChallenge,
+            dailyChallenge: isDailyChallenge ? getDailyChallenge() : null,
+        }),
+        assets: {
+            left: assets?.left,
+            right: assets?.right,
+        },
+    });
     const savedAssetPair = {
         left: {
             id: assets?.left?.id,
@@ -110,6 +124,7 @@ export function Reveal({ submission, assets }) {
                             roundNumber,
                             totalRounds,
                             scoreMultiplier,
+                            mediaType: savedMediaType,
                         });
                         setSavedCollision(collision);
                         const { stats: updatedStats = getStats(), newlyUnlocked: unlocked } = recordPlay(finalScore, {
@@ -251,6 +266,7 @@ export function Reveal({ submission, assets }) {
                 roundNumber,
                 totalRounds,
                 scoreMultiplier,
+                mediaType: savedMediaType,
             });
             setSavedCollision(collision);
             const { stats: updatedStats = getStats(), newlyUnlocked: unlocked } = recordPlay(finalScore, {
@@ -286,7 +302,7 @@ export function Reveal({ submission, assets }) {
                         savedRef.current = false;
                         setRetryTrigger((t) => t + 1);
                     }}
-                    className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform"
+                    className="wordle-button wordle-primary"
                 >
                     Try Again
                 </button>
@@ -297,7 +313,7 @@ export function Reveal({ submission, assets }) {
     if (!fusionImage) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-in fade-in duration-500">
-                <div className="w-24 h-24 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mb-8" aria-hidden="true" />
+                <div className="h-24 w-24 rounded-full border-2 border-t-game-accent border-white/10 animate-spin mb-8" aria-hidden="true" />
                 <h2 id="reveal-status" className="text-3xl font-display font-bold text-white mb-2 animate-pulse" role="status" aria-live="polite">
                     {status}
                 </h2>
@@ -308,11 +324,10 @@ export function Reveal({ submission, assets }) {
 
     if (scoringMode === 'human' && !result) {
         return (
-            <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
-                <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl">
-                    <div className="glass-panel rounded-[22px] p-8 text-center max-w-2xl">
-                        <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-bold tracking-widest text-white/80 mb-6 border border-white/10">
-                            HUMAN JUDGE
+            <div className="w-full max-w-4xl flex flex-col items-center animate-spring-in">
+                <div className="wordle-card p-6 sm:p-8 text-center max-w-2xl w-full">
+                        <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white/55 mb-6 border border-white/10 bg-white/[0.06]">
+                            Human judge
                         </div>
                         <p className="text-white/60 text-sm mb-6">
                             Score it yourself now, or copy a link and let a friend be the judge.
@@ -347,7 +362,7 @@ export function Reveal({ submission, assets }) {
                                     max="10"
                                     value={humanScore}
                                     onChange={(e) => setHumanScore(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                                    className="game-input"
                                     placeholder="10"
                                     required
                                 />
@@ -357,7 +372,7 @@ export function Reveal({ submission, assets }) {
                                 <select
                                     value={humanRelevance}
                                     onChange={(e) => setHumanRelevance(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                                    className="game-input"
                                 >
                                     <option value="Highly Logical">Highly Logical</option>
                                     <option value="Absurdly Creative">Absurdly Creative</option>
@@ -370,18 +385,18 @@ export function Reveal({ submission, assets }) {
                                     value={humanCommentary}
                                     onChange={(e) => setHumanCommentary(e.target.value)}
                                     rows="3"
-                                    className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                                    className="game-input"
                                     placeholder="Share your verdict..."
                                 />
                             </div>
                             <button
                                 type="submit"
-                                className="w-full py-4 bg-white text-black font-bold text-lg rounded-full hover:scale-[1.01] transition-transform shadow-[0_0_30px_rgba(255,255,255,0.3)]"
+                                className="wordle-button wordle-primary w-full text-lg"
                             >
                                 Submit Score
                             </button>
                         </form>
-                        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left">
+                        <div className="mt-4 rounded-[22px] border border-white/10 bg-white/[0.05] p-4 text-left">
                             <p className="text-white font-semibold">Want a real reaction?</p>
                             <p className="text-white/50 text-sm mt-1">
                                 Send this round to a friend. Their score can come back as feedback when backend persistence is available.
@@ -390,12 +405,11 @@ export function Reveal({ submission, assets }) {
                                 type="button"
                                 onClick={handleShareForJudging}
                                 disabled={!canShareForJudging}
-                                className="mt-3 w-full py-3 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-50"
+                                className="wordle-button w-full mt-3 disabled:opacity-50"
                             >
                                 {shareCopied ? 'Friend judge link copied!' : 'Ask a friend to judge'}
                             </button>
                         </div>
-                    </div>
                 </div>
             </div>
         );
@@ -432,20 +446,20 @@ export function Reveal({ submission, assets }) {
         };
 
     return (
-        <div className="w-full max-w-4xl flex flex-col items-center animate-in zoom-in-95 duration-700">
+        <div className="w-full max-w-4xl flex flex-col items-center animate-spring-in">
             {newlyUnlocked.length > 0 && (
                 <MilestoneCelebration
                     newlyUnlocked={newlyUnlocked}
                     onDismiss={() => setNewlyUnlocked([])}
                 />
             )}
-            <div className="wordle-card">
+            <div className="wordle-card animate-spring-in">
                 <div className="p-5 sm:p-8 text-center max-w-2xl">
-                    <div className="inline-block px-4 py-1 text-xs font-bold tracking-[0.24em] text-white/60 mb-6 border border-[#3a3a3c] uppercase">
+                    <div className="inline-block px-4 py-1.5 text-xs font-semibold tracking-wide text-white/55 mb-6 rounded-full border border-white/10 bg-white/[0.06]">
                         Puzzle result
                     </div>
 
-                    <div className="relative aspect-square w-full max-w-sm mx-auto rounded-2xl overflow-hidden mb-8 shadow-2xl ring-1 ring-white/20">
+                    <div className="relative aspect-square w-full max-w-sm mx-auto rounded-[28px] overflow-hidden mb-8 shadow-game-card ring-1 ring-white/15">
                         <img
                             src={fusionImage.url}
                             alt="Fusion"
@@ -468,12 +482,7 @@ export function Reveal({ submission, assets }) {
 
                     <div className="grid grid-cols-2 gap-3 mb-8">
                         <div className={`wordle-tile min-h-[104px] flex-col ${displayScore >= 8 ? 'wordle-tile-correct' : displayScore >= 5 ? 'wordle-tile-present' : 'wordle-tile-filled'}`}>
-                            <div className="text-4xl font-black">
-                                {displayScore}/10
-                            </div>
-                            <div className="text-white/80 text-xs uppercase tracking-widest mt-1">
-                                {scoreBand?.label || 'Final Score'}
-                            </div>
+                            <ScoreReveal score={displayScore} label={scoreBand?.label || 'Final Score'} />
                         </div>
                         <div className="wordle-tile wordle-tile-filled min-h-[104px] p-3">
                             <div className="text-lg font-bold text-white/90">
@@ -498,7 +507,7 @@ export function Reveal({ submission, assets }) {
                         </div>
                     )}
 
-                    <blockquote className="text-xl italic text-white/80 font-serif mb-8 border-l-4 border-purple-500 pl-4 py-2 bg-white/5 rounded-r-xl">
+                    <blockquote className="text-xl italic text-white/80 font-serif mb-8 border-l-4 border-game-accent pl-4 py-2 bg-white/[0.04] rounded-r-2xl">
                         &ldquo;{result.commentary}&rdquo;
                         <footer className="text-xs text-white/40 not-italic mt-2">
                             — {scoringMode === 'human' ? 'Human Judge' : 'Gemini AI Host'}
@@ -553,11 +562,11 @@ export function Reveal({ submission, assets }) {
                         className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-left"
                         aria-labelledby="reveal-workflow-title"
                     >
-                        <div id="reveal-workflow-title" className="text-xs font-bold uppercase tracking-[0.2em] text-white/40 mb-3">
+                        <div id="reveal-workflow-title" className="game-section-label mb-3">
                             What&apos;s next
                         </div>
-                        <div className="mb-4 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3">
-                            <div className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-amber-200/70 mb-1">
+                        <div className="mb-4 rounded-[22px] border border-amber-400/20 bg-amber-400/10 p-3">
+                            <div className="game-section-label text-amber-200/70 mb-1 normal-case tracking-normal text-[10px]">
                                 Recommended next move
                             </div>
                             <div className="text-white font-semibold">{recommendedNextAction.label}</div>
@@ -605,7 +614,7 @@ export function Reveal({ submission, assets }) {
                             <button
                                 onClick={handleShareForJudging}
                                 disabled={!canShareForJudging}
-                                className="px-8 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-50"
+                                className="wordle-button px-8 disabled:opacity-50"
                                 title="Send this link to a friend — they'll score your connection. Press S for shortcut."
                             >
                                 {shareCopied ? 'Link copied! Send to a friend' : 'Share for friend to judge'}
@@ -614,7 +623,7 @@ export function Reveal({ submission, assets }) {
                         </div>
                         <button
                             onClick={handleNext}
-                            className="px-12 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)]"
+                            className="wordle-button wordle-primary px-12 text-lg"
                         >
                             {isFinalRound ? 'See Results' : 'Next Round →'}
                         </button>

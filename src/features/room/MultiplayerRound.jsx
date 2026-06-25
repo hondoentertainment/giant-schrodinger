@@ -31,7 +31,6 @@ export function MultiplayerRound() {
     const [timer, setTimer] = useState(timeLimit);
     const assets = room?.assets;
 
-    // Timer
     useEffect(() => {
         setTimer(timeLimit);
         setSubmission('');
@@ -48,7 +47,6 @@ export function MultiplayerRound() {
         await submitMultiplayerAnswer(answer);
     }, [submission, submitted, submitMultiplayerAnswer]);
 
-    // Toast when another player submits (while we're waiting)
     useEffect(() => {
         if (!submitted || scoring) return;
         const prev = prevSubmissionCountRef.current;
@@ -72,7 +70,6 @@ export function MultiplayerRound() {
         return undefined;
     }, [timer, submitted, handleSubmit]);
 
-    // Auto-trigger scoring when all submitted (host only)
     useEffect(() => {
         if (isHost && submissions.length >= players.length && players.length > 0 && !scoring) {
             setScoring(true);
@@ -90,72 +87,85 @@ export function MultiplayerRound() {
     if (!assets?.left || !assets?.right) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-in fade-in duration-500">
-                <div className="w-16 h-16 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mb-4" />
-                <p className="text-white/60">Loading round...</p>
+                <div className="h-12 w-12 rounded-full border-2 border-white/15 border-t-game-accent animate-spin mb-4" />
+                <p className="text-white/55">Loading round...</p>
             </div>
         );
     }
 
     return (
-        <div className="w-full max-w-6xl flex flex-col items-center animate-in fade-in duration-700">
+        <div className="w-full max-w-6xl flex flex-col items-center animate-spring-in">
             <ConnectionBanner />
             {isSpectator && (
-                <div className="w-full py-2 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-sm font-semibold text-center mb-4">
-                    Spectating -- watch and react!
+                <div className="w-full py-2.5 px-4 bg-amber-500/15 border border-amber-400/25 text-amber-200 text-sm font-semibold text-center rounded-2xl mb-4">
+                    Spectating — watch and react
                 </div>
             )}
-            {/* Header */}
-            <div className="w-full flex justify-between items-center px-8 mb-4">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={leaveCurrentRoom}
-                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition text-sm font-semibold"
-                    >
-                        Leave Room
-                    </button>
-                    <div className="text-2xl font-bold text-white/40">
-                        ROUND {room.round_number} / {room.total_rounds}
+
+            <div className="w-full max-w-2xl flex flex-col gap-4 px-2 mb-5">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button
+                            onClick={leaveCurrentRoom}
+                            className="shrink-0 px-3 py-2 rounded-full bg-white/[0.08] border border-white/10 text-white/70 hover:bg-white/[0.12] transition text-sm font-semibold"
+                        >
+                            Leave
+                        </button>
+                        <div>
+                            <div className="game-section-label">Live room</div>
+                            <div className="text-xl font-bold tracking-tight text-white">
+                                Round {room.round_number} of {room.total_rounds}
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-white/50 text-sm">
-                        <Users className="w-4 h-4" />
-                        <span>{submissions.length}/{players.length} submitted</span>
-                    </div>
-                    <div className={`text-4xl font-black font-display ${timer < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                    <div className={`game-timer ${timer < 10 ? 'game-timer--urgent' : ''}`}>
                         {timer}s
                     </div>
                 </div>
+                <div className="flex flex-wrap gap-2">
+                    <div className="game-hud-chip">
+                        <Users className="w-3.5 h-3.5" />
+                        <span>{submissions.length}/{players.length} submitted</span>
+                    </div>
+                    <div className="game-hud-chip">
+                        Room: <span className="text-white font-medium">{room.code}</span>
+                    </div>
+                    <div className="game-hud-chip">
+                        x{(theme?.modifier?.scoreMultiplier || 1).toFixed(2)}
+                    </div>
+                    <div className="game-hud-chip">
+                        {room?.scoring_mode === 'human' ? 'Manual' : 'AI'} Judge
+                    </div>
+                </div>
+                <div className="flex gap-2" aria-label={`Round progress: ${room.round_number} of ${room.total_rounds}`}>
+                    {Array.from({ length: room.total_rounds }).map((_, index) => (
+                        <div
+                            key={index}
+                            className={`game-progress-dot ${
+                                index + 1 < room.round_number
+                                    ? 'game-progress-dot--done'
+                                    : index + 1 === room.round_number
+                                    ? 'game-progress-dot--current'
+                                    : ''
+                            }`}
+                        />
+                    ))}
+                </div>
             </div>
 
-            {/* Theme info */}
-            <div className="mb-6 flex flex-wrap items-center justify-center gap-3 text-sm text-white/60">
-                <div className="rounded-full bg-white/10 px-3 py-1">
-                    Room: <span className="text-white font-semibold">{room.code}</span>
-                </div>
-                <div className="rounded-full bg-white/10 px-3 py-1">
-                    x{(theme?.modifier?.scoreMultiplier || 1).toFixed(2)}
-                </div>
-                <div className="rounded-full bg-white/10 px-3 py-1">
-                    {room?.scoring_mode === 'human' ? 'Manual' : 'AI'} Judge
-                </div>
-            </div>
-
-            {/* Venn Diagram */}
             <VennDiagram leftAsset={assets.left} rightAsset={assets.right} />
 
-            {/* Input or waiting state */}
             {isSpectator ? (
                 <div className="w-full max-w-xl mt-8 text-center animate-in fade-in duration-500">
-                    <div className="glass-panel rounded-2xl p-6 mb-4">
-                        <Users className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+                    <div className="wordle-card p-6 mb-4">
+                        <Users className="w-8 h-8 text-amber-300 mx-auto mb-2" />
                         <p className="text-white font-semibold text-lg mb-1">Watching the round...</p>
                         <p className="text-white/50 text-sm">{submissions.length}/{players.length} players have submitted</p>
                     </div>
                 </div>
             ) : !submitted ? (
                 <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 relative z-20">
-                    <p className="text-center text-white/60 text-sm mb-3">
+                    <p className="text-center text-white/50 text-sm mb-3">
                         One witty phrase that connects both concepts
                     </p>
                     <input
@@ -163,11 +173,11 @@ export function MultiplayerRound() {
                         value={submission}
                         onChange={(e) => setSubmission(e.target.value)}
                         placeholder="What connects these two?"
-                        className="w-full bg-black/40 backdrop-blur-xl border-2 border-white/20 rounded-full px-8 py-6 text-2xl text-center text-white placeholder-white/20 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-2xl"
+                        className="game-input-hero w-full"
                         autoFocus
                     />
                     <div className="mt-4 text-center text-white/40 text-sm space-y-1">
-                        <div>Press <span className="font-bold text-white">Enter</span> to submit</div>
+                        <div>Press <span className="font-semibold text-white/80">Return</span> to submit</div>
                         <div className="text-white/30 text-xs">
                             {room?.scoring_mode === 'human'
                                 ? 'Your friends will judge your connection'
@@ -178,13 +188,12 @@ export function MultiplayerRound() {
                 </form>
             ) : (
                 <div className="w-full max-w-xl mt-8 text-center animate-in fade-in duration-500">
-                    <div className="glass-panel rounded-2xl p-6 mb-4">
+                    <div className="wordle-card p-6 mb-4">
                         <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-                        <p className="text-white font-semibold text-lg mb-1">Answer submitted!</p>
-                        <p className="text-white/50 italic">&ldquo;{submission || '(no answer)'}&rdquo;</p>
+                        <p className="text-white font-semibold text-lg mb-1">Answer submitted</p>
+                        <p className="text-white/55 italic">&ldquo;{submission || '(no answer)'}&rdquo;</p>
                     </div>
 
-                    {/* Waiting status */}
                     {waitingPlayers.length > 0 && (
                         <div className="space-y-2">
                             <p className="text-white/40 text-sm flex items-center justify-center gap-2">
@@ -195,7 +204,7 @@ export function MultiplayerRound() {
                                 {waitingPlayers.map((p) => (
                                     <span
                                         key={p.id}
-                                        className="px-3 py-1 rounded-full bg-white/5 text-white/40 text-sm border border-white/10"
+                                        className="game-hud-chip"
                                     >
                                         {p.avatar || '👽'} {p.player_name}
                                     </span>
@@ -206,12 +215,12 @@ export function MultiplayerRound() {
 
                     {scoring && (
                         <div
-                            className="mt-6 flex items-center justify-center gap-2 text-purple-400 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20"
+                            className="mt-6 flex items-center justify-center gap-2 p-4 rounded-[22px] bg-game-accent/10 border border-game-accent/25 text-blue-200"
                             role="status"
                             aria-live="polite"
                             aria-label="Scoring submissions, please wait"
                         >
-                            <div className="w-5 h-5 rounded-full border-2 border-t-purple-500 border-white/10 animate-spin" aria-hidden="true" />
+                            <div className="w-5 h-5 rounded-full border-2 border-t-game-accent border-white/10 animate-spin" aria-hidden="true" />
                             <span className="text-sm font-medium">Scoring submissions...</span>
                         </div>
                     )}

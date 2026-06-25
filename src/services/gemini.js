@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { getFusionImage } from '../data/themes';
 import { scoreViaServer } from './serverScoring';
+import { uploadDataUrl } from './mediaStorage';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
@@ -8,8 +9,8 @@ const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 const SCORING_PROMPT = `You are a witty judge for a game where players connect two concepts using a creative phrase.
 
 Given:
-- Left concept ({{mediaType}}): {{left}}
-- Right concept ({{mediaType}}): {{right}}
+- Left concept ({{leftMedia}}): {{left}}
+- Right concept ({{rightMedia}}): {{right}}
 - Player's connecting phrase: "{{submission}}"
 
 Score the connection from 1-10 on four criteria (each 1-10):
@@ -84,6 +85,14 @@ function mockScore(submission, asset1, asset2) {
     };
 }
 
+function getMediaDescriptor(asset, mediaType = 'image') {
+    const type = asset?.type || mediaType;
+    if (type === 'video') return 'video clip';
+    if (type === 'meme') return 'meme';
+    if (type === 'audio') return 'audio clip';
+    return 'image';
+}
+
 export async function scoreSubmission(submission, asset1, asset2, mediaType = 'image') {
     const fallbackReason = getFallbackReason(submission, asset1, asset2);
 
@@ -103,7 +112,8 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
         return { ...mockScore(submission, asset1, asset2), isMock: true, errorReason: fallbackReason };
     }
 
-    const mediaLabel = mediaType === 'video' ? 'video clip' : mediaType === 'audio' ? 'audio clip' : 'image';
+    const leftMedia = getMediaDescriptor(asset1, mediaType);
+    const rightMedia = getMediaDescriptor(asset2, mediaType);
     const leftLabel = getAssetLabel(asset1, 'left concept');
     const rightLabel = getAssetLabel(asset2, 'right concept');
 
@@ -111,7 +121,8 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
         const prompt = SCORING_PROMPT.replace(/\{\{left\}\}/g, leftLabel)
             .replace(/\{\{right\}\}/g, rightLabel)
             .replace(/\{\{submission\}\}/g, submission.replace(/"/g, '\\"'))
-            .replace(/\{\{mediaType\}\}/g, mediaLabel);
+            .replace(/\{\{leftMedia\}\}/g, leftMedia)
+            .replace(/\{\{rightMedia\}\}/g, rightMedia);
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.0-flash',
@@ -168,10 +179,17 @@ export async function generateFusionImage(theme, submission, asset1 = null, asse
         const mime = image?.image?.mimeType || 'image/png';
 
         if (base64) {
+            const dataUrl = `data:${mime};base64,${base64}`;
+            const uploaded = await uploadDataUrl(dataUrl, {
+                folder: 'fusion',
+                filename: `fusion-${Date.now()}.png`,
+            });
+
             return {
                 id: `fusion-${Date.now()}`,
                 label: 'AI Fusion',
-                url: `data:${mime};base64,${base64}`,
+                url: uploaded?.url || dataUrl,
+                storagePath: uploaded?.storagePath || null,
                 fallbackUrl: getFusionImage(theme)?.url,
                 isFallback: false,
             };

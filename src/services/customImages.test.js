@@ -2,8 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
     getCustomImages,
     addCustomImage,
+    addCustomMeme,
+    addCustomVideo,
+    addCustomYoutubeVideo,
     removeCustomImage,
     updateCustomImageLabel,
+    getStorageUsage,
 } from './customImages';
 
 describe('customImages service', () => {
@@ -57,7 +61,7 @@ describe('customImages service', () => {
                     }))
                 )
             );
-            await expect(addCustomImage(file)).rejects.toThrow(/Maximum 24 images/);
+            await expect(addCustomImage(file)).rejects.toThrow(/Maximum 24 items/);
         });
 
         it('rejects non-image file types', async () => {
@@ -72,6 +76,57 @@ describe('customImages service', () => {
                 { type: 'image/png' }
             );
             await expect(addCustomImage(huge)).rejects.toThrow(/too large|max/i);
+        });
+    });
+
+    describe('addCustomMeme', () => {
+        it('adds meme with type meme', async () => {
+            const result = await addCustomMeme(mockFile, 'Funny Cat');
+            expect(result.type).toBe('meme');
+            expect(result.label).toBe('Funny Cat');
+        });
+    });
+
+    describe('addCustomVideo', () => {
+        it('adds video with type video', async () => {
+            const videoFile = new File(['video-bytes'], 'clip.mp4', { type: 'video/mp4' });
+            const result = await addCustomVideo(videoFile, 'My Clip');
+            expect(result.type).toBe('video');
+            expect(result.label).toBe('My Clip');
+        });
+
+        it('rejects non-video file types', async () => {
+            await expect(addCustomVideo(mockFile)).rejects.toThrow(/video/i);
+        });
+    });
+
+    describe('addCustomYoutubeVideo', () => {
+        it('adds YouTube video with provider metadata', async () => {
+            const result = await addCustomYoutubeVideo('https://youtu.be/dQw4w9WgXcQ', 'Rick Roll');
+            expect(result.type).toBe('video');
+            expect(result.provider).toBe('youtube');
+            expect(result.youtubeId).toBe('dQw4w9WgXcQ');
+            expect(result.label).toBe('Rick Roll');
+            expect(result.posterUrl).toContain('img.youtube.com');
+        });
+
+        it('rejects invalid YouTube URLs', async () => {
+            await expect(addCustomYoutubeVideo('https://example.com/not-youtube')).rejects.toThrow(/valid YouTube/i);
+        });
+
+        it('rejects duplicate YouTube videos', async () => {
+            await addCustomYoutubeVideo('dQw4w9WgXcQ');
+            await expect(addCustomYoutubeVideo('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).rejects.toThrow(/already/i);
+        });
+    });
+
+    describe('getStorageUsage', () => {
+        it('reports usage after uploads', async () => {
+            await addCustomImage(mockFile);
+            const usage = getStorageUsage();
+            expect(usage.used).toBeGreaterThan(0);
+            expect(usage.percentage).toBeGreaterThanOrEqual(0);
+            expect(usage.maxMB).toBeDefined();
         });
     });
 

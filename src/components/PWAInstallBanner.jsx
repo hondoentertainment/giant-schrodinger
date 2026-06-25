@@ -1,28 +1,67 @@
-import React, { useState, useEffect } from 'react';
-import { installPWA } from '../lib/pwaInstall';
+import React, { useEffect, useState } from 'react';
+import { canInstallPWA, installPWA } from '../lib/pwaInstall';
+import { haptic } from '../lib/haptics';
 
-export function PWAInstallBanner() {
-  const [installable, setInstallable] = useState(false);
-  const [dismissed, setDismissed] = useState(() => localStorage.getItem('venn_pwa_dismissed') === 'true');
+export function PWAInstallBanner({ className = '' }) {
+    const [visible, setVisible] = useState(false);
+    const [installing, setInstalling] = useState(false);
 
-  useEffect(() => {
-    const handler = () => setInstallable(true);
-    window.addEventListener('pwa-installable', handler);
-    return () => window.removeEventListener('pwa-installable', handler);
-  }, []);
+    useEffect(() => {
+        const check = () => {
+            const dismissed = localStorage.getItem('vwf_pwa_dismissed') === 'true';
+            setVisible(canInstallPWA() && !dismissed);
+        };
+        check();
+        window.addEventListener('pwa-installable', check);
+        return () => window.removeEventListener('pwa-installable', check);
+    }, []);
 
-  if (!installable || dismissed) return null;
+    if (!visible) return null;
 
-  return (
-    <div className="w-full max-w-md mb-4 p-4 rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 flex items-center justify-between">
-      <div>
-        <div className="text-green-300 text-sm font-bold">Install Venn as App</div>
-        <div className="text-white/60 text-xs">Faster loading, offline play</div>
-      </div>
-      <div className="flex gap-2">
-        <button onClick={() => { setDismissed(true); localStorage.setItem('venn_pwa_dismissed', 'true'); }} className="px-3 py-1.5 text-white/40 text-xs">Later</button>
-        <button onClick={async () => { await installPWA(); setInstallable(false); }} className="px-4 py-1.5 rounded-lg bg-green-500 text-white text-sm font-semibold">Install</button>
-      </div>
-    </div>
-  );
+    const handleInstall = async () => {
+        setInstalling(true);
+        haptic('medium');
+        const ok = await installPWA();
+        setInstalling(false);
+        if (ok) {
+            haptic('success');
+            setVisible(false);
+        }
+    };
+
+    const handleDismiss = () => {
+        localStorage.setItem('vwf_pwa_dismissed', 'true');
+        setVisible(false);
+    };
+
+    return (
+        <div className={`rounded-[22px] border border-game-accent/25 bg-game-accent/10 p-4 text-left ${className}`.trim()}>
+            <div className="flex items-start gap-3">
+                <div className="game-logo-mark shrink-0 scale-90" aria-hidden="true">
+                    <span className="text-lg">📲</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-white font-semibold text-sm">Add Venn to your home screen</p>
+                    <p className="text-white/50 text-xs mt-1">Launch like a native game — faster loads and full-screen play.</p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                        <button
+                            type="button"
+                            onClick={handleInstall}
+                            disabled={installing}
+                            className="wordle-button wordle-primary text-sm min-h-[40px] px-4 py-2"
+                        >
+                            {installing ? 'Installing…' : 'Install'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleDismiss}
+                            className="wordle-button text-sm min-h-[40px] px-4 py-2 text-white/60"
+                        >
+                            Not now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }

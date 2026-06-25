@@ -1,5 +1,5 @@
 import React from 'react';
-import { Unlock, Image, Film, Music } from 'lucide-react';
+import { Unlock, Image, Film, Music, Laugh } from 'lucide-react';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../../data/themes';
 import { isAvatarUnlocked, isThemeUnlocked } from '../../../services/stats';
 import { UnlockModal } from '../../../components/UnlockModal';
@@ -185,24 +185,26 @@ export function CreateProfileView({
                     </p>
                 </section>
 
-                {mediaType === MEDIA_TYPES.IMAGE && mediaType !== 'mixed' && (
+                {([MEDIA_TYPES.IMAGE, MEDIA_TYPES.MEMES_VIDEOS, MEDIA_TYPES.VIDEO].includes(mediaType)) && (
                     <section aria-labelledby="profile-custom-images">
                         <CustomImagesManager
                             customImages={customImages}
                             onRefresh={refreshCustomImages}
                             useCustomImages={useCustomImages}
                             onUseCustomImagesChange={setUseCustomImages}
+                            mediaType={mediaType}
                         />
                     </section>
                 )}
 
                 <section aria-labelledby="profile-media">
                     <label id="profile-media" className="block text-sm font-medium text-white/60 mb-2">{t('lobby.mediaType')}</label>
-                    <div className="grid grid-cols-4 gap-3" role="group">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" role="group">
                         {[
-                            { type: MEDIA_TYPES.IMAGE, label: 'Images', Icon: Image, desc: 'Classic visual Venn' },
-                            { type: MEDIA_TYPES.VIDEO, label: 'Videos', Icon: Film, desc: 'Looping video clips' },
-                            { type: MEDIA_TYPES.AUDIO, label: 'Audio', Icon: Music, desc: 'Sound-based connections' },
+                            { type: MEDIA_TYPES.IMAGE, label: t('lobby.images'), Icon: Image, desc: t('lobby.imagesDesc') },
+                            { type: MEDIA_TYPES.MEMES_VIDEOS, label: t('lobby.memesVideos'), Icon: Laugh, desc: t('lobby.memesVideosDesc') },
+                            { type: MEDIA_TYPES.VIDEO, label: t('lobby.videos'), Icon: Film, desc: t('lobby.videosDesc') },
+                            { type: MEDIA_TYPES.AUDIO, label: t('lobby.audio'), Icon: Music, desc: t('lobby.audioDesc') },
                         ].map(({ type, label, Icon, desc }) => (
                             <button
                                 key={type}
@@ -219,25 +221,13 @@ export function CreateProfileView({
                                 {label}
                             </button>
                         ))}
-                        <button
-                            type="button"
-                            onClick={() => setMediaType('mixed')}
-                            aria-pressed={mediaType === 'mixed'}
-                            aria-label="Mixed — random media type each round"
-                            className={`min-h-[44px] py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 ${mediaType === 'mixed'
-                                    ? 'bg-white text-black shadow-lg'
-                                    : 'bg-white/10 text-white hover:bg-white/20'
-                                }`}
-                        >
-                            <span className="text-lg">🎲</span>
-                            Mixed
-                        </button>
                     </div>
                     <p className="mt-2 text-center text-white/50 text-xs">
                         {mediaType === MEDIA_TYPES.IMAGE && t('lobby.imagesDesc')}
+                        {mediaType === MEDIA_TYPES.MEMES_VIDEOS && t('lobby.memesVideosDesc')}
                         {mediaType === MEDIA_TYPES.VIDEO && t('lobby.videosDesc')}
                         {mediaType === MEDIA_TYPES.AUDIO && t('lobby.audioDesc')}
-                        {mediaType === 'mixed' && 'Mixed mode — random media type each round.'}
+                        {mediaType === 'mixed' && t('lobby.memesVideosDesc')}
                     </p>
                 </section>
 

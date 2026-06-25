@@ -5,20 +5,23 @@ import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked } from '../../services/stats';
 import { getDailyChallenge, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, CalendarDays, Zap, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
+import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, Laugh, CalendarDays, Zap, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { UnlockModal } from '../../components/UnlockModal';
 import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
 import { ServiceStatusCard } from '../../components/ServiceStatusCard';
+import { PWAInstallBanner } from '../../components/PWAInstallBanner';
 import { isE2EMockRoomEnabled } from '../../lib/e2eMockRoom';
 import { trackEvent } from '../../services/analytics';
 import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
 export function Lobby() {
+    const { t: tr } = useTranslation();
     const {
         user,
         login,
@@ -206,10 +209,10 @@ export function Lobby() {
                     <OnboardingModal onDismiss={onboardingDismissCallback} />
                 )}
                 {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
-            <div className="w-full max-w-md space-y-6 wordle-card p-5 sm:p-6 animate-in fade-in zoom-in duration-500">
+            <div className="w-full max-w-md space-y-6 wordle-card p-5 sm:p-7 animate-spring-in">
                 <div className="text-center">
                     {welcomeMessage && !welcomeDismissed && !isFirstSession && (
-                        <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-left flex items-center gap-3">
+                        <div className="mb-4 rounded-[22px] border border-emerald-400/20 bg-emerald-500/10 p-3 text-left flex items-center gap-3 backdrop-blur-xl">
                             <p className="text-emerald-200 text-sm flex-1">{welcomeMessage}</p>
                             <button
                                 type="button"
@@ -235,10 +238,10 @@ export function Lobby() {
                             <Pencil className="w-4 h-4" />
                         </button>
                     </div>
-                    <h2 className="text-2xl font-display font-black uppercase tracking-[0.12em] text-white mb-2">
-                        Hi, {user.name}!
+                    <h2 className="text-2xl font-display font-bold tracking-tight text-white mb-2">
+                        Hi, {user.name}
                     </h2>
-                    <p className="text-white/60 mb-4">
+                    <p className="text-white/55 mb-4">
                         {isFirstSession ? 'Your first run is a guided 3-round warmup.' : 'Ready to make some connections?'}
                     </p>
                     <p className="text-white/40 text-sm mb-4">
@@ -247,6 +250,7 @@ export function Lobby() {
                             : `Complete ${sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.`}
                     </p>
                     {!isFirstSession && <ServiceStatusCard className="mb-4" />}
+                    {!isFirstSession && <PWAInstallBanner className="mb-4" />}
                     <div className="mb-4 grid grid-cols-3 gap-2 text-xs uppercase tracking-wide text-white/70">
                         <span className="wordle-tile min-h-[44px] flex-col px-2 text-[0.65rem]">
                             <span>Judge</span>
@@ -255,8 +259,9 @@ export function Lobby() {
                         <span className="wordle-tile min-h-[44px] flex-col px-2 text-[0.65rem]">
                             <span>Media</span>
                             <span className="text-white/80">
-                                {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? 'Image' :
-                                 (user?.mediaType) === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
+                                {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? tr('lobby.images') :
+                                 (user?.mediaType) === MEDIA_TYPES.VIDEO ? tr('lobby.videos') :
+                                 (user?.mediaType) === MEDIA_TYPES.MEMES_VIDEOS ? tr('lobby.memesVideos') : tr('lobby.audio')}
                             </span>
                         </span>
                         <span className="wordle-tile min-h-[44px] flex-col px-2 text-[0.65rem]">
@@ -267,13 +272,14 @@ export function Lobby() {
                             <span className="col-span-3 wordle-tile wordle-tile-present min-h-[36px] px-2 text-[0.65rem]">{stats.currentStreak} day streak</span>
                         )}
                     </div>
-                    {!isFirstSession && (user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE && (
+                    {!isFirstSession && ([MEDIA_TYPES.IMAGE, MEDIA_TYPES.MEMES_VIDEOS, MEDIA_TYPES.VIDEO].includes(user?.mediaType || MEDIA_TYPES.IMAGE)) && (
                         <div className="mb-4">
                             <CustomImagesManager
                                 customImages={customImages}
                                 onRefresh={refreshCustomImages}
                                 useCustomImages={useCustomImages}
                                 onUseCustomImagesChange={handleUseCustomImagesChange}
+                                mediaType={user?.mediaType || MEDIA_TYPES.IMAGE}
                             />
                         </div>
                     )}
@@ -314,8 +320,8 @@ export function Lobby() {
 
                     {!showMultiplayer && !sessionId && (
                         <div className="mb-3 text-center">
-                            <div className="text-xs font-bold uppercase tracking-[0.24em] text-white/40">Start here</div>
-                            <p className="text-white/60 text-sm">Play today&apos;s puzzle first, then practice or invite friends.</p>
+                            <div className="game-section-label">Start here</div>
+                            <p className="text-white/55 text-sm mt-1">Play today&apos;s puzzle first, then practice or invite friends.</p>
                         </div>
                     )}
 
@@ -325,16 +331,16 @@ export function Lobby() {
                             onClick={startDailyChallenge}
                             disabled={!!sessionId}
                             aria-label="Start today's Venn daily puzzle"
-                            className="w-full mb-4 p-4 wordle-card hover:border-[#b59f3b] transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed group"
+                            className="game-hero-card w-full mb-4 disabled:opacity-50 disabled:cursor-not-allowed group"
                         >
                             <div className="flex items-center gap-3">
-                                <div className="wordle-tile wordle-tile-present h-12 w-12 shrink-0">
-                                    <CalendarDays className="w-6 h-6 text-amber-400" />
+                                <div className="wordle-tile wordle-tile-present h-12 w-12 shrink-0 rounded-2xl">
+                                    <CalendarDays className="w-6 h-6 text-amber-950" />
                                 </div>
                                 <div className="flex-1">
-                                    <div className="text-white font-bold flex items-center gap-2">
+                                    <div className="text-white font-semibold flex items-center gap-2">
                                         Today&apos;s Venn
-                                        <span className="text-xs px-2 py-0.5 border border-[#b59f3b] bg-[#b59f3b] text-white">Daily Challenge</span>
+                                        <span className="text-[10px] px-2.5 py-0.5 rounded-full border border-amber-300/40 bg-amber-300/20 text-amber-100 font-semibold">Daily Challenge</span>
                                     </div>
                                     <div className="text-white/50 text-sm">{dailyChallenge.prompt}</div>
                                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-amber-200/70">
@@ -373,7 +379,7 @@ export function Lobby() {
                             {/* Session length (only when not in active session) */}
                             {!sessionId && !isFirstSession && (
                                 <div className="mb-4">
-                                    <label className="block text-xs font-medium text-white/50 uppercase tracking-wider mb-2 text-center">Session length</label>
+                                    <label className="game-section-label block mb-2 text-center">Session length</label>
                                     <div className="flex gap-2 justify-center">
                                         {[3, 5, 7].map((rounds) => (
                                             <button
@@ -382,17 +388,13 @@ export function Lobby() {
                                                 onClick={() => setSessionLength(rounds)}
                                                 aria-pressed={sessionLength === rounds}
                                                 aria-label={`${rounds} rounds`}
-                                                className={`min-w-[52px] min-h-[44px] py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${
-                                                    sessionLength === rounds
-                                                        ? 'bg-white text-black shadow-lg ring-2 ring-white/50'
-                                                        : 'bg-white/10 text-white hover:bg-white/20'
-                                                }`}
+                                                className={`game-segment ${sessionLength === rounds ? 'game-segment-selected' : ''}`}
                                             >
                                                 {rounds}
                                             </button>
                                         ))}
                                     </div>
-                                    <p className="text-center text-white/40 text-xs mt-1">{sessionLength} rounds · beat your average</p>
+                                    <p className="text-center text-white/40 text-xs mt-2">{sessionLength} rounds · beat your average</p>
                                 </div>
                             )}
                             <div className="flex gap-4 w-full">
@@ -439,28 +441,28 @@ export function Lobby() {
                                 <div className="mt-4 grid grid-cols-2 gap-2">
                                     <button
                                         onClick={() => setGameState('LEADERBOARD')}
-                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
                                     >
                                         <Trophy className="w-4 h-4" />
                                         Leaderboard
                                     </button>
                                     <button
                                         onClick={() => setGameState('ACHIEVEMENTS')}
-                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
                                     >
                                         <Award className="w-4 h-4" />
                                         Achievements
                                     </button>
                                     <button
                                         onClick={() => setGameState('THEME_BUILDER')}
-                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
                                     >
                                         <Palette className="w-4 h-4" />
                                         Creator
                                     </button>
                                     <button
                                         onClick={() => setGameState('SHOP')}
-                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
                                     >
                                         <ShoppingBag className="w-4 h-4" />
                                         Shop
@@ -489,28 +491,28 @@ export function Lobby() {
                                     </button>
                                     <button
                                         onClick={() => setGameState('TOURNAMENT')}
-                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
                                     >
                                         <Trophy className="w-4 h-4" />
                                         Tournament
                                     </button>
                                     <button
                                         onClick={() => setGameState('ASYNC_CHAINS')}
-                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
                                     >
                                         <Link className="w-4 h-4" />
                                         Challenge Links
                                     </button>
                                     <button
                                         onClick={() => setGameState('AI_SETTINGS')}
-                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
                                     >
                                         <Brain className="w-4 h-4" />
                                         AI Settings
                                     </button>
                                     <button
                                         onClick={() => setGameState('ANALYTICS')}
-                                        className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
                                     >
                                         <BarChart3 className="w-4 h-4" />
                                         Stats
@@ -553,7 +555,7 @@ export function Lobby() {
                                 <button
                                     onClick={handleCreateRoom}
                                     disabled={mpLoading || !backendReady}
-                                    className="w-full py-4 bg-white text-black font-bold text-xl rounded-xl hover:scale-105 transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                    className="wordle-button wordle-primary w-full text-lg disabled:hover:scale-100"
                                 >
                                     {mpLoading && mpLoadingAction === 'create' ? 'Creating...' : 'Create Room'}
                                 </button>
@@ -565,7 +567,7 @@ export function Lobby() {
                                         onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                                         placeholder="Room code"
                                         maxLength={6}
-                                        className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-lg text-center tracking-widest font-bold uppercase"
+                                        className="game-input flex-1 text-lg text-center tracking-widest font-bold uppercase"
                                     />
                                     <button
                                         onClick={handleJoinRoom}
@@ -619,9 +621,9 @@ export function Lobby() {
     // Create Profile view
     // ============================================================
     return (
-        <div className="w-full max-w-md wordle-card p-5 sm:p-6 animate-in slide-in-from-bottom-8 duration-700">
+        <div className="w-full max-w-md wordle-card p-5 sm:p-7 animate-spring-in">
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
-            <h2 className="text-2xl font-display font-black uppercase tracking-[0.16em] text-white mb-2 text-center">Create Profile</h2>
+            <h2 className="text-2xl font-display font-bold tracking-tight text-white mb-2 text-center">Create Profile</h2>
             <p className="text-white/50 text-sm text-center mb-6">Set up today&apos;s puzzle run and keep your streak moving.</p>
             <ServiceStatusCard className="mb-6" />
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -632,7 +634,7 @@ export function Lobby() {
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value.trimStart())}
-                            className="w-full border-2 border-[#3a3a3c] bg-[#121213] px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#538d4e] text-lg pr-14"
+                            className="game-input text-lg pr-14"
                             placeholder="Enter your name..."
                             maxLength={12}
                             aria-describedby="name-char-count"
@@ -743,9 +745,9 @@ export function Lobby() {
                             onClick={() => setScoringMode('human')}
                             aria-pressed={scoringMode === 'human'}
                             aria-label="Manual judge — you enter the score yourself after each round"
-                            className={`min-h-[44px] py-3 text-sm font-semibold transition-all border-2 ${scoringMode === 'human'
-                                    ? 'border-[#538d4e] bg-[#538d4e] text-white'
-                                    : 'border-[#3a3a3c] bg-[#121213] text-white hover:border-[#565758]'
+                            className={`game-choice min-h-[44px] py-3 text-sm font-semibold transition-all ${scoringMode === 'human'
+                                    ? 'game-choice-selected'
+                                    : ''
                                 }`}
                         >
                             Manual Judge
@@ -755,9 +757,9 @@ export function Lobby() {
                             onClick={() => setScoringMode('ai')}
                             aria-pressed={scoringMode === 'ai'}
                             aria-label="AI judge — Gemini scores your connections automatically"
-                            className={`min-h-[44px] py-3 text-sm font-semibold transition-all border-2 ${scoringMode === 'ai'
-                                    ? 'border-[#538d4e] bg-[#538d4e] text-white'
-                                    : 'border-[#3a3a3c] bg-[#121213] text-white hover:border-[#565758]'
+                            className={`game-choice min-h-[44px] py-3 text-sm font-semibold transition-all ${scoringMode === 'ai'
+                                    ? 'game-choice-selected'
+                                    : ''
                                 }`}
                         >
                             AI Judge
@@ -771,24 +773,26 @@ export function Lobby() {
                     </p>
                 </section>
 
-                {mediaType === MEDIA_TYPES.IMAGE && (
+                {([MEDIA_TYPES.IMAGE, MEDIA_TYPES.MEMES_VIDEOS, MEDIA_TYPES.VIDEO].includes(mediaType)) && (
                     <section aria-labelledby="profile-custom-images">
                         <CustomImagesManager
                             customImages={customImages}
                             onRefresh={refreshCustomImages}
                             useCustomImages={useCustomImages}
                             onUseCustomImagesChange={setUseCustomImages}
+                            mediaType={mediaType}
                         />
                     </section>
                 )}
 
                 <section aria-labelledby="profile-media">
                     <label id="profile-media" className="block text-sm font-medium text-white/60 mb-2">Media Type</label>
-                    <div className="grid grid-cols-3 gap-3" role="group">
+                    <div className="grid grid-cols-2 gap-3" role="group">
                         {[
-                            { type: MEDIA_TYPES.IMAGE, label: 'Images', Icon: Image, desc: 'Classic visual Venn' },
-                            { type: MEDIA_TYPES.VIDEO, label: 'Videos', Icon: Film, desc: 'Looping video clips' },
-                            { type: MEDIA_TYPES.AUDIO, label: 'Audio', Icon: Music, desc: 'Sound-based connections' },
+                            { type: MEDIA_TYPES.IMAGE, label: tr('lobby.images'), Icon: Image, desc: tr('lobby.imagesDesc') },
+                            { type: MEDIA_TYPES.MEMES_VIDEOS, label: tr('lobby.memesVideos'), Icon: Laugh, desc: tr('lobby.memesVideosDesc') },
+                            { type: MEDIA_TYPES.VIDEO, label: tr('lobby.videos'), Icon: Film, desc: tr('lobby.videosDesc') },
+                            { type: MEDIA_TYPES.AUDIO, label: tr('lobby.audio'), Icon: Music, desc: tr('lobby.audioDesc') },
                         ].map(({ type, label, Icon, desc }) => (
                             <button
                                 key={type}
@@ -796,9 +800,9 @@ export function Lobby() {
                                 onClick={() => setMediaType(type)}
                                 aria-pressed={mediaType === type}
                                 aria-label={`${label} — ${desc}`}
-                                className={`min-h-[44px] py-3 text-sm font-semibold transition-all border-2 flex flex-col items-center gap-1 ${mediaType === type
-                                        ? 'border-[#538d4e] bg-[#538d4e] text-white'
-                                        : 'border-[#3a3a3c] bg-[#121213] text-white hover:border-[#565758]'
+                                className={`game-choice min-h-[44px] py-3 text-sm font-semibold flex flex-col items-center gap-1 ${mediaType === type
+                                        ? 'game-choice-selected'
+                                        : ''
                                     }`}
                             >
                                 <Icon className="w-5 h-5" />
@@ -807,9 +811,10 @@ export function Lobby() {
                         ))}
                     </div>
                     <p className="mt-2 text-center text-white/50 text-xs">
-                        {mediaType === MEDIA_TYPES.IMAGE && 'Classic mode — connect two images with a phrase.'}
-                        {mediaType === MEDIA_TYPES.VIDEO && 'Video mode — connect two video clips with a phrase.'}
-                        {mediaType === MEDIA_TYPES.AUDIO && 'Audio mode — connect two sounds with a phrase.'}
+                        {mediaType === MEDIA_TYPES.IMAGE && tr('lobby.imagesDesc')}
+                        {mediaType === MEDIA_TYPES.MEMES_VIDEOS && tr('lobby.memesVideosDesc')}
+                        {mediaType === MEDIA_TYPES.VIDEO && tr('lobby.videosDesc')}
+                        {mediaType === MEDIA_TYPES.AUDIO && tr('lobby.audioDesc')}
                     </p>
                 </section>
 
@@ -877,10 +882,7 @@ export function Lobby() {
                                 onClick={() => setSessionLength(rounds)}
                                 aria-pressed={sessionLength === rounds}
                                 aria-label={`${rounds} rounds per session`}
-                                className={`min-h-[44px] py-3 text-sm font-semibold transition-all border-2 ${sessionLength === rounds
-                                        ? 'border-[#538d4e] bg-[#538d4e] text-white'
-                                        : 'border-[#3a3a3c] bg-[#121213] text-white hover:border-[#565758]'
-                                    }`}
+                                className={`game-segment w-full ${sessionLength === rounds ? 'game-segment-selected' : ''}`}
                             >
                                 {rounds} Rounds
                             </button>

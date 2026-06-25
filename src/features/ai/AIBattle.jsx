@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useGame } from '../../context/GameContext';
-import { THEMES, buildThemeAssets, getThemeById, MEDIA_TYPES } from '../../data/themes';
+import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
+import { selectRoundAssets, preloadRoundAssets, getAssetKey, resolveSelectedAssets } from '../../services/assetSelection';
 import { getStats, isThemeUnlocked } from '../../services/stats';
 import { scoreSubmission } from '../../services/gemini';
 import { generateAIConnection, getAIOpponentResult, getAIDifficulty, getConnectionExplanation } from '../../services/aiFeatures';
@@ -12,6 +13,7 @@ import { TIMINGS } from '../../lib/timings';
 import { VennDiagram } from '../round/VennDiagram';
 import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
 import Confetti from '../../components/Confetti';
+import { ScoreReveal } from '../../components/ScoreReveal';
 
 const TOTAL_AI_ROUNDS = 5;
 
@@ -35,6 +37,7 @@ export function AIBattle({ onDone }) {
     const [aiWins, setAiWins] = useState(0);
     const [matchComplete, setMatchComplete] = useState(false);
     const [matchHistory, setMatchHistory] = useState([]);
+    const usedAssetIdsRef = useRef([]);
 
     const stats = getStats();
     const rawTheme = getThemeById(user?.themeId);
@@ -49,17 +52,43 @@ export function AIBattle({ onDone }) {
     // Load assets when round changes
     useEffect(() => {
         submittedRef.current = false;
-        const [left, right] = buildThemeAssets(theme, 2, mediaType);
-        setAssets({ left, right });
-        setTimer(timeLimit);
-        setSubmission('');
-        setShowTimeUp(false);
-        setShakeInput(false);
-        setPlayerResult(null);
-        setAiResult(null);
-        setWinner(null);
-        setShowConfetti(false);
-        setPhase('playing');
+        let cancelled = false;
+
+        async function loadAssets() {
+            const [left, right] = selectRoundAssets({
+                theme,
+                mediaType,
+                excludeIds: usedAssetIdsRef.current,
+                roundNumber: aiRound,
+            });
+
+            usedAssetIdsRef.current = [...usedAssetIdsRef.current, getAssetKey(left), getAssetKey(right)].filter(Boolean);
+            preloadRoundAssets([left, right]);
+            if (!cancelled) {
+                setAssets({ left, right });
+                setTimer(timeLimit);
+                setSubmission('');
+                setShowTimeUp(false);
+                setShakeInput(false);
+                setPlayerResult(null);
+                setAiResult(null);
+                setWinner(null);
+                setShowConfetti(false);
+                setPhase('playing');
+            }
+
+            const resolved = await resolveSelectedAssets([left, right]);
+            if (cancelled) return;
+
+            preloadRoundAssets(resolved);
+            setAssets({ left: resolved[0], right: resolved[1] });
+        }
+
+        loadAssets();
+
+        return () => {
+            cancelled = true;
+        };
     }, [theme?.id, timeLimit, mediaType, aiRound]);
 
     // Timer
@@ -335,7 +364,7 @@ export function AIBattle({ onDone }) {
                         <div className="text-white font-bold">{user?.name || 'You'}</div>
                     </div>
                     <div className="text-center mb-3">
-                        <div className="text-4xl font-black text-white">{playerResult?.score}/10</div>
+                        <ScoreReveal score={playerResult?.score || 0} />
                     </div>
                     <p className="text-white/70 text-sm italic text-center mb-3">&quot;{playerResult?.submission}&quot;</p>
                     {playerResult?.breakdown && (
@@ -355,7 +384,7 @@ export function AIBattle({ onDone }) {
                         <div className="text-white font-bold">AI ({difficulty})</div>
                     </div>
                     <div className="text-center mb-3">
-                        <div className="text-4xl font-black text-white">{aiResult?.score}/10</div>
+                        <ScoreReveal score={aiResult?.score || 0} />
                     </div>
                     <p className="text-white/70 text-sm italic text-center mb-3">&quot;{aiResult?.submission}&quot;</p>
                     <div className="text-center text-white/40 text-xs">
@@ -376,8 +405,9 @@ export function AIBattle({ onDone }) {
 
             {!matchComplete && (
                 <button
+                    type="button"
                     onClick={() => setAiRound(r => r + 1)}
-                    className="px-12 py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)]"
+                    className="wordle-button wordle-primary px-12 text-xl"
                 >
                     Next Round {'\u2192'}
                 </button>

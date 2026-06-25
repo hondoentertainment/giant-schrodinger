@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { startSoloRound as beginRound } from './helpers';
 
 /**
  * T5 — Error paths that the golden-path specs skip.
@@ -91,12 +92,7 @@ test.describe('error paths — multiplayer join', () => {
 test.describe('error paths — solo round submission', () => {
     async function startSoloRound(page) {
         await openLobbyAsLoggedInUser(page, 'RoundTester');
-        await page.getByRole('button', { name: /Solo Session|Start Round/i }).first().click();
-        const input = page.getByPlaceholder(/What connects|connect|write|type/i).or(
-            page.locator('#submission-input')
-        );
-        await input.waitFor({ state: 'visible', timeout: 10000 });
-        return input;
+        return beginRound(page);
     }
 
     test('empty submission submits on Enter and reaches reveal', async ({ page }) => {

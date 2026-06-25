@@ -52,7 +52,7 @@ export function JudgeRound({ payload, onDone }) {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                <div className="w-16 h-16 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mb-4" />
+                <div className="w-16 h-16 rounded-full border-4 border-t-game-accent border-white/10 animate-spin mb-4" />
                 <p className="text-white/60">Loading round...</p>
             </div>
         );
@@ -72,7 +72,7 @@ export function JudgeRound({ payload, onDone }) {
                 <p className="text-white/60 mb-6">{errorMessage}</p>
                 <button
                     onClick={() => { clearJudgeFromUrl(); onDone?.(); }}
-                    className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform"
+                    className="wordle-button wordle-primary"
                 >
                     Play Venn
                 </button>
@@ -130,8 +130,8 @@ export function JudgeRound({ payload, onDone }) {
     }
 
     return (
-        <div ref={formRef} className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-700">
-            <div className="mb-6 text-center">
+        <div ref={formRef} className="w-full max-w-4xl flex flex-col items-center animate-spring-in">
+            <div className="wordle-card p-6 sm:p-8 w-full max-w-xl mb-6 text-center">
                 <h2 className="text-2xl font-display font-bold text-white mb-1">Judge a Friend&apos;s Connection</h2>
                 <p className="text-white/60 text-sm">
                     {effectivePayload.shareFrom || 'A friend'} made a Venn connection. Score the answer for wit, logic, originality, and clarity.
@@ -144,7 +144,7 @@ export function JudgeRound({ payload, onDone }) {
             <VennDiagram leftAsset={effectivePayload.assets.left} rightAsset={effectivePayload.assets.right} />
 
             {effectivePayload.imageUrl && (
-                <div className="w-full max-w-xl mt-6 rounded-2xl overflow-hidden border border-white/10 bg-white/5 shadow-2xl">
+                <div className="w-full max-w-xl mt-6 rounded-[22px] overflow-hidden border border-white/10 wordle-card !p-0">
                     <img
                         src={effectivePayload.imageUrl}
                         alt="Fusion created from this connection"
@@ -154,19 +154,19 @@ export function JudgeRound({ payload, onDone }) {
                 </div>
             )}
 
-            <div className="w-full max-w-xl mt-8 mb-6 p-6 rounded-2xl bg-white/5 border border-white/10">
-                <div className="text-white/50 text-sm uppercase tracking-wider mb-2">Their answer</div>
+            <div className="w-full max-w-xl mt-8 mb-6 wordle-card p-6">
+                <div className="game-section-label mb-2">Their answer</div>
                 <p className="text-2xl font-bold text-white">&ldquo;{effectivePayload.submission}&rdquo;</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="w-full max-w-xl space-y-4">
+            <form onSubmit={handleSubmit} className="w-full max-w-xl wordle-card p-6 space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-white/60 mb-2">Your name (optional)</label>
                     <input
                         type="text"
                         value={judgeName}
                         onChange={(e) => setJudgeName(e.target.value)}
-                        className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                        className="game-input"
                         placeholder="A friend"
                         maxLength={20}
                     />
@@ -179,7 +179,7 @@ export function JudgeRound({ payload, onDone }) {
                         max="10"
                         value={score}
                         onChange={(e) => setScore(e.target.value)}
-                        className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                        className="game-input"
                         placeholder="10"
                         required
                     />
@@ -189,7 +189,7 @@ export function JudgeRound({ payload, onDone }) {
                     <select
                         value={relevance}
                         onChange={(e) => setRelevance(e.target.value)}
-                        className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                        className="game-input"
                     >
                         <option value="Highly Logical">Highly Logical</option>
                         <option value="Absurdly Creative">Absurdly Creative</option>
@@ -202,13 +202,13 @@ export function JudgeRound({ payload, onDone }) {
                         value={commentary}
                         onChange={(e) => setCommentary(e.target.value)}
                         rows="3"
-                        className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                        className="game-input resize-none min-h-[96px]"
                         placeholder="Share your verdict..."
                     />
                 </div>
                 <button
                     type="submit"
-                    className="w-full py-4 bg-white text-black font-bold text-lg rounded-full hover:scale-[1.01] transition-transform"
+                    className="wordle-button wordle-primary w-full text-lg"
                 >
                     Submit Judgement
                 </button>

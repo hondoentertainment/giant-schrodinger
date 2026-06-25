@@ -9,6 +9,7 @@ import { getJudgementForCollision } from '../../services/judgements';
 import { getStats } from '../../services/stats';
 import { getDailyChallengeHistory } from '../../services/dailyChallenge';
 import { AchievementProgress } from '../../components/AchievementProgress';
+import { PWAInstallBanner } from '../../components/PWAInstallBanner';
 
 function RoundCard({ result, index, feedback }) {
     const mod = result.modifier;
@@ -18,7 +19,7 @@ function RoundCard({ result, index, feedback }) {
 
     return (
         <div
-            className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 animate-in slide-in-from-bottom-4 duration-500"
+            className="game-list-row animate-in slide-in-from-bottom-4 duration-500"
             style={{ animationDelay: `${index * 100}ms` }}
         >
             <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 font-bold shrink-0">
@@ -44,7 +45,7 @@ function RoundCard({ result, index, feedback }) {
                     </div>
                 )}
             </div>
-            <div className={`text-2xl font-black text-transparent bg-clip-text bg-gradient-to-br ${band?.color || 'from-slate-400 to-slate-500'}`}>
+            <div className={`text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-br ${band?.color || 'from-slate-400 to-slate-500'}`}>
                 {score}
             </div>
         </div>
@@ -114,9 +115,9 @@ export function SessionSummary() {
 
     if (!sessionResults.length) {
         return (
-            <div className="text-center text-white/40 py-12">
+            <div className="text-center text-white/45 py-12">
                 <p>No results to show.</p>
-                <button onClick={handleBackToLobby} className="mt-4 text-white underline">
+                <button onClick={handleBackToLobby} className="mt-4 text-white/70 underline">
                     Back to Lobby
                 </button>
             </div>
@@ -124,130 +125,131 @@ export function SessionSummary() {
     }
 
     return (
-        <div className="w-full max-w-xl flex flex-col items-center animate-in zoom-in-95 duration-700">
-            <div className="bg-gradient-to-br from-amber-900/30 via-purple-900/40 to-pink-900/30 p-1 rounded-3xl backdrop-blur-3xl shadow-2xl w-full">
-                <div className="glass-panel rounded-[22px] p-8">
-                    <div className="text-center mb-8">
-                        <div className="inline-block px-4 py-1 rounded-full bg-amber-500/10 text-sm font-bold tracking-widest text-amber-400 mb-4 border border-amber-500/20">
-                            {isDailyChallenge ? 'DAILY CHALLENGE COMPLETE' : 'SESSION COMPLETE'}
-                        </div>
-                        <div className="text-4xl mb-3 font-black tracking-widest text-white/70">
-                            {stats.avg >= 9 ? 'A+' : stats.avg >= 7 ? 'A' : stats.avg >= 5 ? 'B' : 'NEXT'}
-                        </div>
-                        <div className={`text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br ${overallBand?.color || 'from-yellow-300 to-amber-600'} mb-2`}>
-                            {sessionScore}
-                        </div>
-                        <div className="text-white/50 text-sm uppercase tracking-widest">Total Points</div>
+        <div className="w-full max-w-xl flex flex-col items-center animate-spring-in mx-auto">
+            <div className="wordle-card p-6 sm:p-8 w-full">
+                <div className="text-center mb-8">
+                    <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-amber-200 mb-4 border border-amber-400/25 bg-amber-500/10">
+                        {isDailyChallenge ? 'Daily challenge complete' : 'Session complete'}
                     </div>
-
-                    <div className="grid grid-cols-3 gap-3 mb-8">
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                            <div className="text-2xl font-bold text-white">{stats.avg.toFixed(1)}</div>
-                            <div className="text-white/40 text-xs uppercase tracking-wider">Avg Score</div>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                            <div className="text-2xl font-bold text-emerald-400">{stats.best}</div>
-                            <div className="text-white/40 text-xs uppercase tracking-wider">Best</div>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                            <div className="text-2xl font-bold text-white/60">{totalRounds}</div>
-                            <div className="text-white/40 text-xs uppercase tracking-wider">Rounds</div>
-                        </div>
+                    <div className="text-4xl mb-3 font-bold tracking-tight text-white/70">
+                        {stats.avg >= 9 ? 'A+' : stats.avg >= 7 ? 'A' : stats.avg >= 5 ? 'B' : 'Keep going'}
                     </div>
+                    <div className={`text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br ${overallBand?.color || 'from-yellow-300 to-amber-600'} mb-2 tabular-nums`}>
+                        {sessionScore}
+                    </div>
+                    <div className="game-section-label normal-case tracking-normal">Total points</div>
+                </div>
 
-                    <div className="mb-8 p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
-                        <div className="text-lg font-bold text-white mb-1">{overallBand?.label}</div>
-                        <div className="text-white/50 text-sm">
-                            {stats.avg >= 9
-                                ? 'Absolute genius-level connections. You see what others miss.'
-                                : stats.avg >= 7
-                                ? 'Sharp mind, clever connections. You\'ve got the gift.'
-                                : stats.avg >= 5
-                                ? 'Solid effort! Your connections are getting stronger.'
-                                : 'Keep playing - every round sharpens your creative instincts.'}
+                <div className="grid grid-cols-3 gap-3 mb-8">
+                    <div className="game-stat-tile">
+                        <div className="text-2xl font-bold text-white tabular-nums">{stats.avg.toFixed(1)}</div>
+                        <div className="game-section-label mt-1 normal-case tracking-normal text-[10px]">Avg score</div>
+                    </div>
+                    <div className="game-stat-tile">
+                        <div className="text-2xl font-bold text-emerald-300 tabular-nums">{stats.best}</div>
+                        <div className="game-section-label mt-1 normal-case tracking-normal text-[10px]">Best</div>
+                    </div>
+                    <div className="game-stat-tile">
+                        <div className="text-2xl font-bold text-white/70 tabular-nums">{totalRounds}</div>
+                        <div className="game-section-label mt-1 normal-case tracking-normal text-[10px]">Rounds</div>
+                    </div>
+                </div>
+
+                <div className="mb-8 p-4 rounded-[22px] bg-white/[0.05] border border-white/[0.08] text-center">
+                    <div className="text-lg font-semibold text-white mb-1">{overallBand?.label}</div>
+                    <div className="text-white/50 text-sm">
+                        {stats.avg >= 9
+                            ? 'Absolute genius-level connections. You see what others miss.'
+                            : stats.avg >= 7
+                            ? 'Sharp mind, clever connections. You\'ve got the gift.'
+                            : stats.avg >= 5
+                            ? 'Solid effort! Your connections are getting stronger.'
+                            : 'Keep playing — every round sharpens your creative instincts.'}
+                    </div>
+                    {feedbackCount > 0 && (
+                        <div className="mt-3 text-xs text-white/45">
+                            Friend feedback is attached to {feedbackCount} round{feedbackCount === 1 ? '' : 's'} in this session.
                         </div>
-                        {feedbackCount > 0 && (
-                            <div className="mt-3 text-xs text-white/45">
-                                Friend feedback is now attached to {feedbackCount} round{feedbackCount === 1 ? '' : 's'} in this session.
-                            </div>
+                    )}
+                </div>
+
+                <div className="mb-8 rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
+                    <div className="game-section-label mb-3">Keep the run going</div>
+                    <div className="space-y-3 text-sm text-white/65">
+                        {playerStats.currentStreak > 0 ? (
+                            <p>
+                                Day <span className="text-amber-300 font-bold">{playerStats.currentStreak}</span> streak is alive. Come back tomorrow to keep it.
+                            </p>
+                        ) : (
+                            <p>Play again tomorrow to start a streak and unlock richer rewards.</p>
                         )}
+                        {isDailyChallenge && dailyHistory.length > 0 && (
+                            <p>
+                                Daily challenge history: {dailyHistory.length} completion{dailyHistory.length === 1 ? '' : 's'} saved locally.
+                            </p>
+                        )}
+                        <AchievementProgress score={Math.round(stats.avg)} stats={playerStats} />
                     </div>
+                </div>
 
-                    <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Keep the run going</div>
-                        <div className="space-y-3 text-sm text-white/65">
-                            {playerStats.currentStreak > 0 ? (
-                                <p>
-                                    Day <span className="text-amber-300 font-bold">{playerStats.currentStreak}</span> streak is alive. Come back tomorrow to keep it.
-                                </p>
-                            ) : (
-                                <p>Play again tomorrow to start a streak and unlock richer rewards.</p>
-                            )}
-                            {isDailyChallenge && dailyHistory.length > 0 && (
-                                <p>
-                                    Daily challenge history: {dailyHistory.length} completion{dailyHistory.length === 1 ? '' : 's'} saved locally.
-                                </p>
-                            )}
-                            <AchievementProgress score={Math.round(stats.avg)} stats={playerStats} />
-                        </div>
+                <div className="mb-8">
+                    <div className="game-section-label mb-3">Round breakdown</div>
+                    <div className="space-y-2">
+                        {sessionResults.map((result, idx) => (
+                            <RoundCard
+                                key={idx}
+                                result={result}
+                                index={idx}
+                                feedback={result.collisionId ? feedbackByCollision[result.collisionId] : null}
+                            />
+                        ))}
                     </div>
+                </div>
 
-                    <div className="mb-8">
-                        <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Round Breakdown</div>
-                        <div className="space-y-2">
-                            {sessionResults.map((result, idx) => (
-                                <RoundCard
-                                    key={idx}
-                                    result={result}
-                                    index={idx}
-                                    feedback={result.collisionId ? feedbackByCollision[result.collisionId] : null}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                <div className="mb-8">
+                    <SocialShareButtons
+                        shareData={{
+                            submission: `I scored ${sessionScore} points across ${totalRounds} rounds!`,
+                            score: Math.round(stats.avg),
+                            scoreBand: overallBand?.label,
+                            commentary: `Average: ${stats.avg.toFixed(1)}/10 | Best: ${stats.best}/10`,
+                            judgeMode: sessionResults.some((result) => result.judgeMode === 'ai') ? 'ai' : 'human',
+                            isDailyChallenge,
+                        }}
+                        onToast={(type, msg) => toast[type]?.(msg)}
+                    />
+                </div>
 
-                    <div className="mb-8">
-                        <SocialShareButtons
-                            shareData={{
-                                submission: `I scored ${sessionScore} points across ${totalRounds} rounds!`,
-                                score: Math.round(stats.avg),
-                                scoreBand: overallBand?.label,
-                                commentary: `Average: ${stats.avg.toFixed(1)}/10 | Best: ${stats.best}/10`,
-                                judgeMode: sessionResults.some((result) => result.judgeMode === 'ai') ? 'ai' : 'human',
-                                isDailyChallenge,
-                            }}
-                            onToast={(type, msg) => toast[type]?.(msg)}
-                        />
-                    </div>
+                <div className="mb-8">
+                    <PWAInstallBanner />
+                </div>
 
-                    <div className="flex flex-col gap-3">
-                        <button
-                            onClick={handlePlayAgain}
-                            className="w-full py-4 bg-white text-black font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center justify-center gap-2"
-                        >
-                            <ArrowRight className="w-5 h-5" />
-                            Play Again
-                        </button>
-                        <button
-                            onClick={handleBackToLobby}
-                            className="w-full py-3 bg-white/10 text-white/70 font-semibold rounded-full hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Home className="w-5 h-5" />
-                            Back to Lobby
-                        </button>
-                        <button
-                            onClick={() => {
-                                endSession();
-                                setGameState('GALLERY');
-                            }}
-                            className="w-full py-3 bg-white/10 text-white/70 font-semibold rounded-full hover:bg-white/20 transition-colors"
-                        >
-                            View Saved Gallery
-                        </button>
-                    </div>
+                <div className="flex flex-col gap-3">
+                    <button
+                        onClick={handlePlayAgain}
+                        className="wordle-button wordle-primary w-full text-lg flex items-center justify-center gap-2"
+                    >
+                        <ArrowRight className="w-5 h-5" />
+                        Play Again
+                    </button>
+                    <button
+                        onClick={handleBackToLobby}
+                        className="wordle-button w-full flex items-center justify-center gap-2 text-white/75"
+                    >
+                        <Home className="w-5 h-5" />
+                        Back to Lobby
+                    </button>
+                    <button
+                        onClick={() => {
+                            endSession();
+                            setGameState('GALLERY');
+                        }}
+                        className="wordle-button w-full text-white/75"
+                    >
+                        View Saved Gallery
+                    </button>
                 </div>
             </div>
         </div>
     );
 }
-

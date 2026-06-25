@@ -118,7 +118,7 @@ describe('Gallery', () => {
     mockCollisions = [];
     render(<Gallery />);
     await waitFor(() => {
-      expect(screen.getByText(/No connections yet\. Play a game!/i)).toBeInTheDocument();
+      expect(screen.getByText(/No connections yet/i)).toBeInTheDocument();
     });
   });
 
@@ -237,5 +237,38 @@ describe('Gallery', () => {
     expect(card).toHaveAttribute('aria-label', expect.stringContaining('Lazy thing'));
     const img = await within(card).findByAltText('Lazy thing');
     expect(img).toHaveAttribute('src', 'https://example.com/lazy.jpg');
+  });
+
+  it('filters gallery by media type', async () => {
+    const user = userEvent.setup();
+    mockCollisions = [
+      {
+        id: 'img1',
+        submission: 'Image round',
+        score: 7,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/img.jpg',
+        mediaType: 'image',
+        assets: { left: { label: 'A', type: 'image' }, right: { label: 'B', type: 'image' } },
+      },
+      {
+        id: 'mv1',
+        submission: 'Meme video round',
+        score: 9,
+        timestamp: Date.now() - 5000,
+        imageUrl: 'https://example.com/mv.jpg',
+        mediaType: 'memes_videos',
+        assets: { left: { label: 'Meme', type: 'meme' }, right: { label: 'Clip', type: 'video' } },
+      },
+    ];
+    render(<Gallery />);
+    const list = await screen.findByRole('list', { name: /your connection gallery/i });
+    expect(within(list).getAllByRole('article')).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: /Memes & Videos/i }));
+    await waitFor(() => {
+      expect(within(list).getAllByRole('article')).toHaveLength(1);
+    });
+    expect(within(list).getByRole('article').getAttribute('aria-label')).toMatch(/Meme video round/);
   });
 });
