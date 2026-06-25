@@ -28,8 +28,8 @@ test.describe('Visual smoke', () => {
     // eslint-disable-next-line no-empty-pattern
     test.beforeEach(({ }, testInfo) => {
         test.skip(
-            testInfo.project.name !== 'Desktop Chrome',
-            'Visual baselines are maintained on Desktop Chrome only'
+            !!process.env.CI || testInfo.project.name !== 'Desktop Chrome',
+            'Visual baselines run locally on Desktop Chrome only'
         );
     });
 
