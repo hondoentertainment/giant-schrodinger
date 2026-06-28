@@ -17,7 +17,10 @@ Run this once before the first public launch and again before any major release.
 ## 2. Secrets and hosting
 
 1. Copy `.env.example` to `.env.local` and fill in production values locally for preflight scripts.
-2. Run automated preflight:
+2. Deploy Supabase edge functions (`npm run deploy:edge-functions` prints commands):
+   - `resolve-image`, `resolve-meme`, `score-submission`, `og-tags`
+   - Set secrets: `PEXELS_API_KEY`, `GIPHY_API_KEY`, `GEMINI_API_KEY`, `APP_URL`
+3. Run automated preflight:
    ```bash
    npm run rehearsal:preflight
    ```
@@ -25,10 +28,10 @@ Run this once before the first public launch and again before any major release.
    ```bash
    npm run rehearsal:preflight:fast
    ```
-3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the target host.
-4. Set `VITE_GEMINI_API_KEY` if live AI judging is part of the launch.
-5. Deploy a fresh build from `main`.
-6. Smoke the deployed URL:
+4. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the target host.
+5. Set `VITE_GEMINI_API_KEY` if live AI judging is part of the launch.
+6. Deploy a fresh build from `main`.
+7. Smoke the deployed URL:
    ```bash
    npm run smoke:production
    PRODUCTION_URL=https://your-site npm run test:e2e:rehearsal
@@ -67,6 +70,8 @@ Run this once before the first public launch and again before any major release.
    - Confirm gallery filter shows the saved memes/videos round.
 
 ## 5. Observability check
+
+Run `npm run rehearsal:telemetry` for the full browser validation script.
 
 1. Add a temporary sink in the browser console:
    ```js

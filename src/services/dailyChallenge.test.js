@@ -5,6 +5,7 @@ import {
     markDailyChallengeComplete,
     getDailyChallengeHistory,
     getDailyChallengeSummary,
+    getWeeklyDailyLeaderboard,
 } from './dailyChallenge';
 
 describe('dailyChallenge service', () => {
@@ -133,6 +134,22 @@ describe('dailyChallenge service', () => {
             expect(summary.bestScore).toBe(9);
             expect(summary.averageScore).toBe(7.5);
             expect(summary.shareLine).toContain('Daily Venn complete');
+        });
+
+        it('includes weekly stats in summary', () => {
+            markDailyChallengeComplete(8);
+            const summary = getDailyChallengeSummary();
+            expect(summary.weeklyCompletions).toBeGreaterThan(0);
+            expect(summary.weeklyBest).toBe(8);
+        });
+    });
+
+    describe('getWeeklyDailyLeaderboard', () => {
+        it('returns week-scoped completion stats', () => {
+            markDailyChallengeComplete(7);
+            const weekly = getWeeklyDailyLeaderboard();
+            expect(weekly.completions).toBe(1);
+            expect(weekly.bestScore).toBe(7);
         });
     });
 });

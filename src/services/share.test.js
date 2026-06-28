@@ -1,8 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
     createJudgeShareUrl,
+    createJudgeShareLinks,
+    extractShareTokenFromUrl,
     parseJudgeShareUrl,
     clearJudgeFromUrl,
+    getOgShareUrl,
 } from './share';
 
 // Mock backend imports so createJudgeShareUrl falls through to hash encoding
@@ -108,6 +111,37 @@ describe('share service', () => {
             } finally {
                 window.history.replaceState = orig;
             }
+        });
+    });
+
+    describe('createJudgeShareLinks', () => {
+        it('returns share and preview URLs for hash-encoded fallback', async () => {
+            const payload = { assets: { left: { label: 'A' }, right: { label: 'B' } }, submission: 'test' };
+            const links = await createJudgeShareLinks(payload);
+            expect(links.shareUrl).toContain('#judge_');
+            expect(links.previewUrl).toBe(links.shareUrl);
+        });
+    });
+
+    describe('extractShareTokenFromUrl', () => {
+        it('extracts judge token from query URL', () => {
+            expect(extractShareTokenFromUrl('https://app.example/?judge=abc123')).toBe('abc123');
+        });
+
+        it('returns null for hash-encoded links', () => {
+            expect(extractShareTokenFromUrl('https://app.example/#judge_payload')).toBeNull();
+        });
+    });
+
+    describe('getOgShareUrl', () => {
+        it('builds og-tags function URL when supabase URL is provided', () => {
+            const url = getOgShareUrl('abc123', { supabaseUrl: 'https://proj.supabase.co' });
+            expect(url).toBe('https://proj.supabase.co/functions/v1/og-tags?roundId=abc123');
+        });
+
+        it('falls back to direct judge link without supabase', () => {
+            const url = getOgShareUrl('abc123');
+            expect(url).toContain('?judge=abc123');
         });
     });
 });

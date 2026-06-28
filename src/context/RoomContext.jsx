@@ -19,11 +19,12 @@ import {
     subscribeToRoom,
 } from '../services/multiplayer';
 import { getThemeById, MEDIA_TYPES } from '../data/themes';
-import { selectRoundAssets, getAssetKey, resolveSelectedAssets } from '../services/assetSelection';
+import { selectRoundAssets, getAssetKey, loadSelectedAssets } from '../services/assetSelection';
 import { scoreSubmission } from '../services/gemini';
 import { useGame } from './GameContext';
 import { reportAppError, reportAppEvent } from '../lib/telemetry';
 import { buildE2EMockRoom, isE2EMockRoomEnabled, subscribeToE2EMockRoom } from '../lib/e2eMockRoom';
+import { t } from '../lib/i18n';
 
 const RoomContext = createContext();
 
@@ -56,8 +57,11 @@ export function RoomProvider({ children }) {
     const [roomSession, setRoomSession] = useState(null);
     const [roomPhase, setRoomPhase] = useState('none');
     const [connectionState, setConnectionState] = useState('connected');
+    const [roomSyncState, setRoomSyncState] = useState('idle');
+    const [roomClosureReason, setRoomClosureReason] = useState(null);
 
     const unsubRef = useRef(null);
+    const isHostRef = useRef(false);
     const hydrateRequestRef = useRef(0);
     const reconnectToastShownRef = useRef(false);
     const scoringRoundRef = useRef(null);
@@ -66,6 +70,10 @@ export function RoomProvider({ children }) {
     const isMultiplayer = !!room;
     const roomCode = room?.code || null;
     const allSubmitted = players.length > 0 && submissions.length >= players.length;
+
+    useEffect(() => {
+        isHostRef.current = isHost;
+    }, [isHost]);
 
     const cleanup = useCallback(() => {
         if (unsubRef.current) {
@@ -81,6 +89,8 @@ export function RoomProvider({ children }) {
         setRoomSession(null);
         setRoomPhase('none');
         setConnectionState('connected');
+        setRoomSyncState('idle');
+        setRoomClosureReason(null);
         usedAssetIdsRef.current = [];
     }, []);
 
@@ -125,14 +135,24 @@ export function RoomProvider({ children }) {
     const resyncRoomSnapshot = useCallback(async (currentRoom = room) => {
         if (!currentRoom?.id) return;
 
-        const snapshotRoom = await getRoomById(currentRoom.id);
-        const nextRoom = snapshotRoom || currentRoom;
-        const roomPlayers = await getRoomPlayers(nextRoom.id);
+        setRoomSyncState('syncing');
+        try {
+            const snapshotRoom = await getRoomById(currentRoom.id);
+            const nextRoom = snapshotRoom || currentRoom;
+            const roomPlayers = await getRoomPlayers(nextRoom.id);
 
-        setRoom(nextRoom);
-        setRoomPhase(getRoomPhaseFromStatus(nextRoom.status));
-        setPlayers(roomPlayers);
-        await hydrateRoomState(nextRoom);
+            setRoom(nextRoom);
+            setRoomPhase(getRoomPhaseFromStatus(nextRoom.status));
+            setPlayers(roomPlayers);
+            await hydrateRoomState(nextRoom);
+            setRoomSyncState((prev) => (prev === 'syncing' ? 'recovered' : prev));
+            window.setTimeout(() => {
+                setRoomSyncState((current) => (current === 'recovered' ? 'idle' : current));
+            }, 4000);
+        } catch (err) {
+            setRoomSyncState('idle');
+            reportAppError('multiplayer_resync_snapshot', err, { roomId: currentRoom.id });
+        }
     }, [hydrateRoomState, room]);
 
     const setupSubscriptions = useCallback((roomId) => {
@@ -153,8 +173,13 @@ export function RoomProvider({ children }) {
             },
             onPlayerLeave: (player) => {
                 setPlayers((prev) => prev.filter((entry) => entry.id !== player.id));
-                if (player.player_name) {
-                    toast.info(`${player.player_name} left the room`);
+                if (player.is_host) {
+                    setRoomClosureReason('host_left');
+                    if (!isHostRef.current) {
+                        toast.warn(t('room.hostLeftToast', { name: player.player_name || 'The host' }));
+                    }
+                } else if (player.player_name) {
+                    toast.info(t('room.playerLeftToast', { name: player.player_name }));
                 }
             },
             onSubmission: (submission) => {
@@ -353,9 +378,13 @@ export function RoomProvider({ children }) {
         setupSubscriptions(result.room.id);
 
         toast.success(`Joined room ${result.room.code}!`);
+        if (['playing', 'revealing', 'results'].includes(result.room.status)) {
+            toast.info(t('room.joinedMidRound'));
+        }
         reportAppEvent('multiplayer_room_joined', {
             secureMode: result.session?.secureMode !== false,
             roomCode: result.room.code,
+            joinedMidRound: ['playing', 'revealing', 'results'].includes(result.room.status),
         });
         return result.room;
     }, [setupSubscriptions, toast, user?.scoringMode, user?.themeId]);
@@ -383,7 +412,7 @@ export function RoomProvider({ children }) {
         });
         usedAssetIdsRef.current = [...usedAssetIdsRef.current, getAssetKey(left), getAssetKey(right)].filter(Boolean);
 
-        const resolved = await resolveSelectedAssets([left, right]);
+        const resolved = await loadSelectedAssets([left, right]);
         const success = await startRoundApi(room.id, room.round_number, { left: resolved[0], right: resolved[1] }, roomSession);
         if (!success) {
             toast.error('Failed to start round');
@@ -479,8 +508,10 @@ export function RoomProvider({ children }) {
     const finalizeMultiplayerVoting = useCallback(async () => {
         if (!room || !isHost) return false;
 
+        setRoomSyncState('finalizing');
         const result = await finalizeRoomVoting(room.id, room.round_number, roomSession);
         if (!result.ok) {
+            setRoomSyncState('idle');
             toast.error(result.error || 'Failed to finalize votes');
             reportAppError('multiplayer_finalize_votes', new Error(result.error || 'Failed to finalize votes'), {
                 roomId: room.id,
@@ -489,6 +520,7 @@ export function RoomProvider({ children }) {
             return false;
         }
 
+        setRoomSyncState('idle');
         toast.success('Votes finalized!');
         reportAppEvent('multiplayer_votes_finalized', {
             roomId: room.id,
@@ -536,6 +568,8 @@ export function RoomProvider({ children }) {
         playerName,
         roomPhase,
         connectionState,
+        roomSyncState,
+        roomClosureReason,
         allSubmitted,
         hostRoom,
         joinRoomByCode,

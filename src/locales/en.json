@@ -109,7 +109,30 @@
     "classicVisualVenn": "Classic visual Venn",
     "loopingVideoClips": "Looping video clips",
     "soundBasedConnections": "Sound-based connections",
-    "playRound7Days": "Play 1 round per day for 7 days to unlock"
+    "playRound7Days": "Play 1 round per day for 7 days to unlock",
+    "localPreview": "Local preview",
+    "localPreviewTitle": "This mode saves progress on this device only. Cloud sync is not yet available.",
+    "yourProgress": "Your progress",
+    "bestScore": "Best score",
+    "streakLabel": "Streak",
+    "startToday": "Start today",
+    "favoriteTheme": "Favorite theme",
+    "nextUnlock": "Next unlock",
+    "allUnlocked": "All unlocked",
+    "weeklyDaily": "This week: {{count}} daily challenge{{plural}}",
+    "weeklyDailyBest": "best {{score}}/10",
+    "submitConnection": "Submit connection"
+  },
+  "gallery": {
+    "archive": "Your archive",
+    "title": "Connection Gallery",
+    "bestOfWeek": "Best of week",
+    "withFriendFeedback": "With friend feedback",
+    "highlights": "Highlights",
+    "allSaved": "All saved",
+    "downloadShareCard": "Download share card",
+    "buildingCard": "Building card…",
+    "emptyWeek": "Nothing saved this week yet. Play a round to start your weekly archive."
   },
   "round": {
     "timeLeft": "{{seconds}}s",
@@ -128,7 +151,9 @@
     "pressEnter": "Press Enter to submit",
     "scoredOn": "Scored on Wit \u00B7 Logic \u00B7 Originality \u00B7 Clarity",
     "time": "Time",
-    "points": "Points"
+    "points": "Points",
+    "sharpeningMedia": "Sharpening media…",
+    "loadingRound": "Loading round…"
   },
   "reveal": {
     "yourScore": "YOUR SCORE",
@@ -190,6 +215,21 @@
     "solid": "Solid",
     "meh": "Meh",
     "submitJudgement": "Submit Judgement"
+  },
+  "room": {
+    "hostLeft": "The host left — this room has ended.",
+    "hostLeftToast": "{{name}} left and ended the room.",
+    "playerLeftToast": "{{name}} left the room.",
+    "returnToLobby": "Return to lobby",
+    "joinedMidRound": "Joined mid-round — you're synced with the group's current phase.",
+    "syncing": "Syncing room state with the server…",
+    "finalizing": "Finalizing votes — standings will update for everyone shortly.",
+    "recovered": "Room state recovered. You are back in sync with the group.",
+    "waitingVotes": "Waiting for all players to vote before results can finalize.",
+    "reconnecting": "Connection lost. Reconnecting…",
+    "disconnected": "Disconnected from the room.",
+    "retry": "Retry",
+    "leaveRoom": "Leave room"
   },
   "common": {
     "close": "Close",

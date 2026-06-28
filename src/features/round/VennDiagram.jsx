@@ -3,38 +3,39 @@ import { MEDIA_TYPES } from '../../data/themes';
 import { getAssetMediaLabel } from '../../services/assetSelection';
 import { isGiphyUrl } from '../../services/memeResolve';
 import { getYoutubeEmbedUrl, getYoutubeVideoIdFromAsset } from '../../lib/youtube';
+import { buildResponsiveSrcSet, getGiphyPreviewUrl, buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
+import { MediaLoadingShell } from '../../components/MediaLoadingShell';
+import { useTranslation } from '../../hooks/useTranslation';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
-
-// ── Responsive srcset helper ──
-function buildSrcSet(baseUrl) {
-    if (!baseUrl?.includes('unsplash.com')) return undefined;
-    const id = baseUrl.match(/photo-([^?]+)/)?.[1];
-    if (!id) return undefined;
-    return [400, 640, 1080].map(w =>
-        `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${w}&crop=entropy&q=85 ${w}w`
-    ).join(', ');
-}
 
 // ── Meme circle (GIFs/images with letterboxing) ──
 function VennMeme({ asset }) {
     const [loaded, setLoaded] = useState(false);
     const [useFallback, setUseFallback] = useState(false);
-    const src = useFallback && asset.fallbackUrl ? asset.fallbackUrl : asset.url;
+    const [useFullRes, setUseFullRes] = useState(!getGiphyPreviewUrl(asset.url));
+    const previewUrl = asset.previewUrl || getGiphyPreviewUrl(asset.url);
+    const primaryUrl = useFullRes ? asset.url : (previewUrl || asset.url);
+    const src = useFallback && asset.fallbackUrl ? asset.fallbackUrl : primaryUrl;
+    const blurUrl = asset.blurUrl || (useFallback ? null : buildBlurPlaceholderUrl(asset.fallbackUrl));
     const showGiphyAttribution = asset.memeSource === 'giphy' || isGiphyUrl(asset.url);
+
+    const handleLoad = () => {
+        setLoaded(true);
+        if (!useFullRes && previewUrl && asset.url && previewUrl !== asset.url) {
+            setUseFullRes(true);
+            setLoaded(false);
+        }
+    };
 
     return (
         <div className="relative overflow-hidden w-full h-full bg-black">
-            {!loaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/5 animate-pulse">
-                    <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
-                </div>
-            )}
+            <MediaLoadingShell blurUrl={blurUrl} loaded={loaded} label={asset.label} />
             <img
                 src={src}
                 alt={asset.label}
                 className={`w-full h-full object-contain transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
                 referrerPolicy="no-referrer"
-                onLoad={() => setLoaded(true)}
+                onLoad={handleLoad}
                 onError={() => {
                     if (!useFallback && asset.fallbackUrl && src !== asset.fallbackUrl) {
                         setUseFallback(true);
@@ -69,19 +70,16 @@ function VennImage({ asset }) {
     // 0 = primary, 1 = fallback URL, 2 = gradient card
 
     const src = fallbackLevel === 0 ? asset.url : asset.fallbackUrl;
+    const blurUrl = asset.blurUrl || buildBlurPlaceholderUrl(src);
 
     const handleError = () => {
         if (fallbackLevel === 0 && asset.fallbackUrl) {
             setFallbackLevel(1);
+            setLoaded(false);
         } else {
             setFallbackLevel(2);
         }
     };
-
-    // Build tiny blur URL for Unsplash images
-    const blurUrl = src?.includes('unsplash.com')
-        ? src.replace(/w=\d+/, 'w=20') + '&blur=10'
-        : null;
 
     if (fallbackLevel >= 2) {
         return (
@@ -93,21 +91,10 @@ function VennImage({ asset }) {
 
     return (
         <div className="relative overflow-hidden w-full h-full">
-            {/* Blur placeholder */}
-            {blurUrl && !loaded && (
-                <img src={blurUrl} alt="" aria-hidden="true"
-                    className="absolute inset-0 w-full h-full object-cover scale-110 blur-sm" />
-            )}
-            {/* Loading spinner when no blur available */}
-            {!blurUrl && !loaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/5 animate-pulse">
-                    <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
-                </div>
-            )}
-            {/* Full image */}
+            <MediaLoadingShell blurUrl={blurUrl} loaded={loaded} label={asset.label} />
             <img
                 src={src}
-                srcSet={buildSrcSet(src)}
+                srcSet={buildResponsiveSrcSet(src)}
                 sizes="(max-width: 640px) 400px, (max-width: 1024px) 640px, 1080px"
                 alt={asset.label}
                 className={`w-full h-full object-cover object-center transition-all duration-700 ease-out ${
@@ -126,12 +113,45 @@ function VennImage({ asset }) {
 
 // ── YouTube embed circle ──
 function VennYoutube({ asset, videoId }) {
+    const containerRef = useRef(null);
     const iframeRef = useRef(null);
     const [loaded, setLoaded] = useState(false);
+    const [shouldLoadIframe, setShouldLoadIframe] = useState(false);
     const [playing, setPlaying] = useState(true);
     const [muted, setMuted] = useState(true);
 
     const embedUrl = getYoutubeEmbedUrl(videoId, { autoplay: true, mute: true, loop: true });
+    const posterUrl = asset.posterUrl || asset.blurUrl;
+
+    useEffect(() => {
+        const node = containerRef.current;
+        if (!node) return undefined;
+
+        if (typeof IntersectionObserver === 'undefined') {
+            setShouldLoadIframe(true);
+            return undefined;
+        }
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setShouldLoadIframe(true);
+                    observer.disconnect();
+                }
+            },
+            { rootMargin: '80px', threshold: 0.01 },
+        );
+        observer.observe(node);
+
+        // Eager load when already visible (e.g. round screen mounts in view).
+        const rect = node.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+            setShouldLoadIframe(true);
+            observer.disconnect();
+        }
+
+        return () => observer.disconnect();
+    }, []);
 
     const postPlayerCommand = useCallback((func) => {
         const frame = iframeRef.current?.contentWindow;
@@ -162,32 +182,21 @@ function VennYoutube({ asset, videoId }) {
     }, [muted, postPlayerCommand]);
 
     return (
-        <>
-            {!loaded && (
-                <>
-                    {asset.posterUrl && (
-                        <img
-                            src={asset.posterUrl}
-                            alt=""
-                            aria-hidden="true"
-                            className="absolute inset-0 w-full h-full object-cover"
-                        />
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/5 animate-pulse z-10">
-                        <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
-                    </div>
-                </>
+        <div ref={containerRef} className="relative w-full h-full">
+            <MediaLoadingShell blurUrl={posterUrl} loaded={loaded} label={asset.label} />
+            {shouldLoadIframe && (
+                <iframe
+                    ref={iframeRef}
+                    src={embedUrl}
+                    title={asset.label || 'YouTube video'}
+                    className={`absolute inset-0 w-full h-full border-0 transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                    loading="lazy"
+                    onLoad={() => setLoaded(true)}
+                />
             )}
-            <iframe
-                ref={iframeRef}
-                src={embedUrl}
-                title={asset.label || 'YouTube video'}
-                className={`absolute inset-0 w-full h-full border-0 transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-                onLoad={() => setLoaded(true)}
-            />
             {loaded && (
                 <div className="absolute top-3 right-3 flex gap-1.5 z-20">
                     <button
@@ -208,7 +217,7 @@ function VennYoutube({ asset, videoId }) {
                     </button>
                 </div>
             )}
-        </>
+        </div>
     );
 }
 
@@ -255,11 +264,11 @@ function VennNativeVideo({ asset }) {
 
     return (
         <>
-            {!loaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/5 animate-pulse z-10">
-                    <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
-                </div>
-            )}
+            <MediaLoadingShell
+                blurUrl={asset.posterUrl || asset.blurUrl}
+                loaded={loaded}
+                label={asset.label}
+            />
             <video
                 ref={videoRef}
                 src={asset.url}
@@ -268,6 +277,8 @@ function VennNativeVideo({ asset }) {
                 loop
                 muted={muted}
                 playsInline
+                preload="metadata"
+                onLoadedData={() => setLoaded(true)}
                 onCanPlay={() => setLoaded(true)}
                 onError={handleError}
             />
@@ -559,7 +570,8 @@ function VennCircle({ asset, side, colorblindMode, colors }) {
 }
 
 // ── Main Venn Diagram ──
-export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAsset }) {
+export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAsset, mediaLoading = false }) {
+    const { t } = useTranslation();
     const colorblindMode = localStorage.getItem('venn_colorblind') === 'true';
 
     const COLORS = colorblindMode
@@ -568,6 +580,15 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
 
     return (
         <div className="relative w-full max-w-2xl mx-auto my-4 sm:my-8">
+            {mediaLoading && (
+                <div
+                    className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[10px] font-semibold uppercase tracking-wider text-white/70"
+                    role="status"
+                    aria-live="polite"
+                >
+                    {t('round.sharpeningMedia')}
+                </div>
+            )}
             {colorblindMode && (
                 <svg className="absolute w-0 h-0" aria-hidden="true">
                     <defs>

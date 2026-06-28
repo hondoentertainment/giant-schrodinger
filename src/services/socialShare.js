@@ -89,6 +89,10 @@ function buildShareContext(shareData) {
   return pieces.join(' · ');
 }
 
+export function resolveSharePageUrl(shareData = {}) {
+  return shareData.previewUrl || shareData.pageUrl || (typeof window !== 'undefined' ? window.location.href : '');
+}
+
 function loadImage(imageUrl) {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -241,7 +245,8 @@ export async function createShareCard(imageUrl, shareData) {
     ctx.stroke();
     ctx.fillStyle = '#8ee9ff';
     ctx.font = '700 24px Arial';
-    ctx.fillText(shareData.scoreBand || 'Creative Chaos', 146, 1163);
+    const judgeLabel = getJudgeLabel(shareData.judgeMode);
+    ctx.fillText(judgeLabel ? `${shareData.scoreBand || 'Creative Chaos'} · ${judgeLabel}` : (shareData.scoreBand || 'Creative Chaos'), 146, 1163);
 
     ctx.fillStyle = 'rgba(255,255,255,0.42)';
     ctx.font = '600 24px Arial';
@@ -279,7 +284,7 @@ export function shareToTwitter(shareData) {
 }
 
 export function shareToFacebook(shareData) {
-  const { pageUrl = window.location.href } = shareData;
+  const pageUrl = resolveSharePageUrl(shareData);
   const quote = createShareText(shareData);
   const params = new URLSearchParams({
     u: pageUrl,
@@ -291,7 +296,7 @@ export function shareToFacebook(shareData) {
 }
 
 export function shareToLinkedIn(shareData) {
-  const { pageUrl = window.location.href } = shareData;
+  const pageUrl = resolveSharePageUrl(shareData);
   const summary = createShareText(shareData);
   const params = new URLSearchParams({
     url: pageUrl,
@@ -302,7 +307,8 @@ export function shareToLinkedIn(shareData) {
 }
 
 export async function copyShareLink(shareData) {
-  const shareText = `${createShareText(shareData)} Try it: ${window.location.href}`;
+  const pageUrl = resolveSharePageUrl(shareData);
+  const shareText = `${createShareText(shareData)} Try it: ${pageUrl}`;
 
   try {
     await navigator.clipboard.writeText(shareText);
@@ -334,7 +340,7 @@ export async function shareViaWebShare(shareData) {
   const shareDataObj = {
     title: 'Venn with Friends',
     text: shareText,
-    url: window.location.href,
+    url: resolveSharePageUrl(shareData),
   };
 
   if (imageUrl && navigator.canShare && navigator.canShare({ files: [new File([], 'image.png')] })) {

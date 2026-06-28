@@ -5,7 +5,7 @@ Run automated tests first, then use this checklist for a quick manual pass.
 ## Prerequisites
 
 ```bash
-npm run test              # 179 unit/integration tests should pass
+npm run test              # 680+ unit/integration tests should pass
 npm run test:e2e:desktop  # 5 Playwright E2E specs should pass
 npm run build             # Production build should succeed (149 KB gzipped main)
 ```
@@ -13,7 +13,8 @@ npm run build             # Production build should succeed (149 KB gzipped main
 ## URLs
 
 - **Local**: http://localhost:5173/giant-schrodinger/
-- **Production**: https://hondoentertainment.github.io/giant-schrodinger
+- **Production**: https://giant-schrodinger.vercel.app
+- **GitHub Pages**: https://hondoentertainment.github.io/giant-schrodinger
 
 ---
 

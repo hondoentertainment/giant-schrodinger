@@ -16,6 +16,7 @@ const REQUIRED_RPCS = [
     'create_room_session',
     'join_room_session',
     'create_shared_round',
+    'get_shared_round_by_token',
     'submit_round_judgement',
     'cast_room_vote',
     'finalize_room_votes',
@@ -31,6 +32,9 @@ const PROBES = {
     create_shared_round: {
         p_assets: {},
         p_submission: '',
+    },
+    get_shared_round_by_token: {
+        p_public_token: 'invalid-token',
     },
     submit_round_judgement: {
         p_public_token: 'invalid-token',

@@ -52,10 +52,17 @@ vi.mock('../../data/themes', () => ({
 // Attach to globalThis so linter does not prune the variable
 globalThis.__testStreakValue = 0;
 vi.mock('../../services/stats', () => ({
-    getStats: () => ({ totalRounds: 20, currentStreak: globalThis.__testStreakValue, maxStreak: 3, milestonesUnlocked: [] }),
+    getStats: () => ({ totalRounds: 20, currentStreak: globalThis.__testStreakValue, maxStreak: 3, milestonesUnlocked: [], scores: [8, 9], themesPlayed: ['neon'] }),
     getMilestones: () => [],
     isAvatarUnlocked: () => true,
     isThemeUnlocked: () => true,
+    getProfileSummary: () => ({
+        bestScore: 9,
+        favoriteThemeId: 'neon',
+        currentStreak: globalThis.__testStreakValue || 0,
+        totalRounds: 20,
+        nextMilestone: { label: 'Test milestone', remaining: 2 },
+    }),
 }));
 
 vi.mock('../../services/dailyChallenge', () => ({
@@ -66,6 +73,8 @@ vi.mock('../../services/dailyChallenge', () => ({
         latestScore: 7,
         averageScore: 8,
         shareLine: 'Daily Venn complete: 7/10 today, best 9/10 across 2 days.',
+        weeklyBest: 9,
+        weeklyCompletions: 2,
     }),
     hasDailyChallengeBeenPlayed: () => false,
 }));

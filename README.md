@@ -99,6 +99,16 @@ npm run verify:release
 For release readiness, use [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 For a launch rehearsal, use [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md).
 
+## Known Live Limitations
+
+- **Multiplayer and friend judging** need Supabase env vars and `supabase/schema.sql` applied before they work cross-browser.
+- **AI scoring** needs `VITE_GEMINI_API_KEY`; otherwise mock scoring and curated fusion images are used.
+- **Ranked, shop, and tournaments** are local-preview modes (device-only progress) until cloud sync is scoped.
+- **Production telemetry** optional via `VITE_SENTRY_DSN` and `VITE_POSTHOG_KEY` — events also emit on `vwf:telemetry` and `window.__VWF_TELEMETRY__`.
+- **Hosted rehearsal CI** runs via `.github/workflows/hosted-rehearsal.yml` when `PRODUCTION_URL` and Supabase secrets are configured.
+
+Judge mode decisions: [JUDGE_MODEL.md](JUDGE_MODEL.md).
+
 ## Project Structure
 
 ```text

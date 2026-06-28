@@ -1,11 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
+import { useTranslation } from '../../hooks/useTranslation';
 import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgementForCollision } from '../../services/judgements';
 import { getCollisionMediaMode, getMediaModeLabel } from '../../lib/mediaType';
 import { getHighlights } from '../../services/highlights';
+import { downloadFusionImage } from '../../services/socialShare';
+import { buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
 import { MEDIA_TYPES } from '../../data/themes';
+import { getJudgeModeFromCollision } from '../../lib/judgeMode';
 import { EmptyState } from '../../components/EmptyState';
 
 const SORT_OPTIONS = [
@@ -29,9 +33,15 @@ function getPromptPairLabel(collision) {
 }
 
 function getJudgeModeLabel(collision) {
-    if (collision.judgeMode === 'ai' || collision.scoringMode === 'ai') return 'AI Judge';
-    if (collision.judgeMode === 'friend') return 'Friend Judge';
-    return 'Manual Judge';
+    return getJudgeModeFromCollision(collision);
+}
+
+function isWithinLastWeek(timestamp) {
+    if (!timestamp) return false;
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return false;
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return date.getTime() >= weekAgo;
 }
 
 function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyShare }) {
@@ -39,6 +49,7 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
     const [isVisible, setIsVisible] = useState(false);
     const ref = useRef(null);
     const fallbackUrl = collision.fallbackImageUrl || 'https://picsum.photos/seed/venn-fallback/800/800';
+    const blurUrl = buildBlurPlaceholderUrl(collision.imageUrl) || buildBlurPlaceholderUrl(fallbackUrl);
 
     useEffect(() => {
         const el = ref.current;
@@ -78,8 +89,19 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
             aria-label={`Connection: "${collision.submission}". Score ${collision.score} out of 10. ${displayDate}.${fj ? ` Judged by ${fj.judgeName || fj.judge_name || 'a friend'}: ${fj.score}/10.` : ''}`}
         >
             {imageStatus === 'loading' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/5 z-10">
-                    <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-game-accent animate-spin" aria-hidden="true" />
+                <div className="absolute inset-0 z-10">
+                    {blurUrl && isVisible && (
+                        <img
+                            src={blurUrl}
+                            alt=""
+                            aria-hidden="true"
+                            className="absolute inset-0 w-full h-full object-cover scale-110 blur-md"
+                            referrerPolicy="no-referrer"
+                        />
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/5">
+                        <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-game-accent animate-spin" aria-hidden="true" />
+                    </div>
                 </div>
             )}
             {imageStatus === 'error' && (
@@ -146,6 +168,7 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
 
 export function Gallery() {
     const { setGameState } = useGame();
+    const { t } = useTranslation();
     const [collisions, setCollisions] = useState([]);
     const [friendJudgements, setFriendJudgements] = useState({});
     const [loadingJudgements, setLoadingJudgements] = useState(true);
@@ -154,6 +177,7 @@ export function Gallery() {
     const [mediaFilter, setMediaFilter] = useState('all');
     const [selectedCollision, setSelectedCollision] = useState(null);
     const [shareCopiedId, setShareCopiedId] = useState(null);
+    const [shareCardLoadingId, setShareCardLoadingId] = useState(null);
 
     useEffect(() => {
         const list = getCollisions();
@@ -182,6 +206,7 @@ export function Gallery() {
     const filtered = collisions.filter((collision) => {
         if (feedbackFilter === 'judged' && !getDisplayJudgement(collision)) return false;
         if (feedbackFilter === 'highlights' && !(highlightIds.has(collision.id) || (collision.score || 0) >= 8)) return false;
+        if (feedbackFilter === 'week' && !isWithinLastWeek(collision.timestamp)) return false;
         if (mediaFilter !== 'all' && getCollisionMediaMode(collision) !== mediaFilter) return false;
         return true;
     });
@@ -203,6 +228,20 @@ export function Gallery() {
             await navigator.clipboard.writeText(text);
             setShareCopiedId(collision.id);
             setTimeout(() => setShareCopiedId(null), 2000);
+        }
+    };
+
+    const handleDownloadShareCard = async (collision) => {
+        setShareCardLoadingId(collision.id);
+        try {
+            await downloadFusionImage(collision.imageUrl, {
+                submission: collision.submission,
+                score: collision.score,
+                judgeMode: collision.judgeMode,
+                assets: collision.assets,
+            });
+        } finally {
+            setShareCardLoadingId(null);
         }
     };
 
@@ -271,9 +310,10 @@ export function Gallery() {
                     </div>
                     <div className="flex flex-wrap gap-2 mb-4">
                         {[
-                            { id: 'all', label: 'All saved' },
-                            { id: 'judged', label: 'With friend feedback' },
-                            { id: 'highlights', label: 'Highlights' },
+                            { id: 'all', label: t('gallery.allSaved') },
+                            { id: 'week', label: t('gallery.bestOfWeek') },
+                            { id: 'judged', label: t('gallery.withFriendFeedback') },
+                            { id: 'highlights', label: t('gallery.highlights') },
                         ].map((option) => (
                             <button
                                 key={option.id}
@@ -319,6 +359,8 @@ export function Gallery() {
                                 ? 'No friend feedback yet. Share a round for judging to fill this view.'
                                 : feedbackFilter === 'highlights'
                                 ? 'No highlights yet. Score 8+ to build your best-of archive.'
+                                : feedbackFilter === 'week'
+                                ? t('gallery.emptyWeek')
                                 : mediaFilter !== 'all'
                                 ? `No ${getMediaModeLabel(mediaFilter).toLowerCase()} connections saved yet.`
                                 : 'No saved connections match this filter yet.'}
@@ -389,18 +431,26 @@ export function Gallery() {
                                         )}
                                     </div>
                                 )}
-                                <div className="flex gap-3">
+                                <div className="flex flex-col sm:flex-row gap-3">
                                     <button
                                         type="button"
                                         onClick={() => handleCopyShare(selectedCollision)}
-                                        className="wordle-button wordle-primary flex-1"
+                                        className="wordle-button wordle-primary flex-1 min-h-[44px]"
                                     >
                                         Copy Share Text
                                     </button>
                                     <button
                                         type="button"
+                                        onClick={() => handleDownloadShareCard(selectedCollision)}
+                                        disabled={shareCardLoadingId === selectedCollision.id}
+                                        className="wordle-button flex-1 min-h-[44px] disabled:opacity-50"
+                                    >
+                                        {shareCardLoadingId === selectedCollision.id ? t('gallery.buildingCard') : t('gallery.downloadShareCard')}
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={() => setSelectedCollision(null)}
-                                        className="wordle-button flex-1"
+                                        className="wordle-button flex-1 min-h-[44px]"
                                     >
                                         Close
                                     </button>

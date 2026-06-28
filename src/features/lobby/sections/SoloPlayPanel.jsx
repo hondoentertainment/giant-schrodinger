@@ -1,5 +1,6 @@
 import React from 'react';
 import { Users, WifiOff, Trophy, Award, Palette, ShoppingBag, Brain, Link, BarChart3, Shield } from 'lucide-react';
+import { LocalPreviewBadge } from '../../../components/LocalPreviewBadge';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { getBuiltInPacks, getCustomPacks } from '../../../services/promptPacks';
 import { getCurrentSeason } from '../../../services/leaderboard';
@@ -139,6 +140,7 @@ export function SoloPlayPanel({
                     title={t('lobby.shop')}
                 >
                     <ShoppingBag className="w-4 h-4" /> {t('lobby.shop')}
+                    <LocalPreviewBadge />
                 </button>
                 <button
                     onClick={() => setGameState('AI_SETTINGS')}
@@ -153,10 +155,11 @@ export function SoloPlayPanel({
             {(showAll || lobbyTier >= 3) && <div className="flex gap-2 mt-3">
                 <button
                     onClick={() => { playClick(); haptic('light'); trackEvent('nav_tournament'); setGameState('TOURNAMENT'); }}
-                    className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5 flex-wrap"
                     title={t('lobby.tournaments')}
                 >
                     <Trophy className="w-4 h-4" /> {t('lobby.tournaments')}
+                    <LocalPreviewBadge />
                 </button>
                 <button
                     onClick={() => { playClick(); haptic('light'); trackEvent('nav_async_chains'); setGameState('ASYNC_CHAINS'); }}
@@ -177,10 +180,11 @@ export function SoloPlayPanel({
             {/* Ranked button (Tier 3+) */}
             {(showAll || lobbyTier >= 3) && <button
                 onClick={() => { playClick(); haptic('light'); trackEvent('nav_ranked'); setGameState('RANKED'); }}
-                className="mt-3 w-full py-3 bg-gradient-to-r from-indigo-600/80 to-purple-600/80 text-white font-bold rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2"
+                className="mt-3 w-full py-3 bg-gradient-to-r from-indigo-600/80 to-purple-600/80 text-white font-bold rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2 flex-wrap"
             >
                 <Shield className="w-5 h-5" />
                 Ranked Mode
+                <LocalPreviewBadge />
             </button>}
 
             {/* Multiplayer button (Tier 3+) */}

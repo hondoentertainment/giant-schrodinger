@@ -128,3 +128,40 @@ export function isThemeUnlocked(themeId, stats = null) {
     if (!milestone) return true;
     return s.milestonesUnlocked.includes(milestone.id);
 }
+
+export function getBestScore(stats = null) {
+    const s = stats || getStats();
+    if (!s.scores?.length) return null;
+    return Math.max(...s.scores.filter((score) => Number.isFinite(score)));
+}
+
+export function getFavoriteThemeId(stats = null) {
+    const s = stats || getStats();
+    if (!s.themesPlayed?.length) return null;
+    const counts = s.themesPlayed.reduce((acc, themeId) => {
+        acc[themeId] = (acc[themeId] || 0) + 1;
+        return acc;
+    }, {});
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+}
+
+export function getProfileSummary(stats = null) {
+    const s = stats || getStats();
+    const bestScore = getBestScore(s);
+    const favoriteThemeId = getFavoriteThemeId(s);
+    const nextMilestone = MILESTONES
+        .filter((m) => !s.milestonesUnlocked.includes(m.id))
+        .map((m) => {
+            const value = m.type === 'rounds' ? s.totalRounds : s.currentStreak;
+            return { ...m, remaining: Math.max(0, m.threshold - value) };
+        })
+        .sort((a, b) => a.remaining - b.remaining)[0] || null;
+
+    return {
+        bestScore,
+        favoriteThemeId,
+        currentStreak: s.currentStreak,
+        totalRounds: s.totalRounds,
+        nextMilestone,
+    };
+}

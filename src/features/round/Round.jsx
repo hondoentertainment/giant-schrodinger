@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { VennDiagram } from './VennDiagram';
 import { useGame } from '../../context/GameContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
-import { selectRoundAssets, preloadRoundAssets, resolveSelectedAssets } from '../../services/assetSelection';
+import { selectRoundAssets, loadSelectedAssets } from '../../services/assetSelection';
 import { getDailyChallenge } from '../../services/dailyChallenge';
 import { getEffectiveRoundMediaType, normalizeMediaType } from '../../lib/mediaType';
 import { getStats, isThemeUnlocked } from '../../services/stats';
@@ -12,6 +12,7 @@ import { trackEvent } from '../../services/analytics';
 export function Round({ onSubmit }) {
     const { setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge, trackUsedAssets, getUsedAssetIds } = useGame();
     const [assets, setAssets] = useState({ left: null, right: null });
+    const [mediaLoading, setMediaLoading] = useState(true);
     const [submission, setSubmission] = useState('');
     const [timer, setTimer] = useState(60);
     const [showTimeUp, setShowTimeUp] = useState(false);
@@ -39,12 +40,14 @@ export function Round({ onSubmit }) {
         let cancelled = false;
 
         async function loadAssets() {
+            setMediaLoading(true);
             const daily = isDailyChallenge ? getDailyChallenge() : null;
             const effectiveMediaType = getEffectiveRoundMediaType({
                 userMediaType: mediaType,
                 isDailyChallenge,
                 dailyChallenge: daily,
             });
+
             const [left, right] = selectRoundAssets({
                 theme,
                 mediaType: effectiveMediaType,
@@ -56,18 +59,17 @@ export function Round({ onSubmit }) {
             });
 
             trackUsedAssets([left, right]);
-            preloadRoundAssets([left, right]);
             if (!cancelled) {
                 setAssets({ left, right });
                 setTimer(timeLimit);
             }
 
-            const resolved = await resolveSelectedAssets([left, right]);
+            const resolved = await loadSelectedAssets([left, right]);
             if (cancelled) return;
 
             trackUsedAssets(resolved);
-            preloadRoundAssets(resolved);
             setAssets({ left: resolved[0], right: resolved[1] });
+            setMediaLoading(false);
         }
 
         loadAssets();
@@ -201,7 +203,7 @@ export function Round({ onSubmit }) {
                 )}
             </div>
 
-            <VennDiagram leftAsset={assets.left} rightAsset={assets.right} />
+            <VennDiagram leftAsset={assets.left} rightAsset={assets.right} mediaLoading={mediaLoading} />
 
             <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 relative z-20">
                 {showFirstRoundCoaching && (
@@ -239,7 +241,15 @@ export function Round({ onSubmit }) {
                     className="game-input-hero w-full"
                     autoFocus
                 />
-                <div className="mt-4 text-center text-white/40 text-sm space-y-1">
+                <div className="mt-4 text-center text-white/40 text-sm space-y-3">
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={!submission.trim()}
+                        className="wordle-button wordle-primary w-full min-h-[52px] text-lg disabled:opacity-50 sm:hidden"
+                    >
+                        Submit connection
+                    </button>
                     <div>Press <span className="font-semibold text-white/80">Return</span> to submit</div>
                     <div className="text-white/30 text-xs">
                         Scored on Wit · Logic · Originality · Clarity

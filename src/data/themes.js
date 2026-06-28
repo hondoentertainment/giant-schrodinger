@@ -289,6 +289,64 @@ export const THEMES = [
         ],
     },
     {
+        id: "cosmic",
+        label: "Cosmic Drift",
+        gradient: "from-indigo-600 to-violet-700",
+        modifier: {
+            timeLimit: 52,
+            scoreMultiplier: 1.15,
+            hint: "Think vast, strange, and starlit. Scale up your connections.",
+        },
+        keywords: ["galaxy", "nebula", "astronaut", "telescope", "aurora space"],
+        assets: [
+            createImage({ id: "1446776811778-41c0a76bedc3", label: "Galaxy With a Grudge", fallback: "galaxy", categories: ['space', 'abstract', 'science'] }),
+            createImage({ id: "1462336644104-8d3737fb0d3c", label: "Nebula in a Mood", fallback: "nebula", categories: ['space', 'abstract', 'emotion'] }),
+            createImage({ id: "1454789549734-a5c23323a65f", label: "Astronaut's Grocery List", fallback: "astronaut", categories: ['space', 'human', 'humor'] }),
+            createImage({ id: "1419247407881-8216423ec66c", label: "Telescope Therapy Session", fallback: "telescope", categories: ['science', 'human', 'emotion'] }),
+            createImage({ id: "1502136016296-17fced4ed978", label: "Satellite Side-Eye", fallback: "satellite", categories: ['technology', 'space', 'humor'] }),
+            createImage({ id: "1519681393784-d120267933ba", label: "Constellation With Commitment Issues", fallback: "stars", categories: ['space', 'abstract', 'emotion'] }),
+            createImage({ id: "1506318137871-a17e788c139f", label: "Moon Landing, Mood Landing", fallback: "moon surface", categories: ['space', 'adventure', 'nostalgia'] }),
+            createImage({ id: "145118758369c8849c9c7413", label: "Earth From a Dramatic Angle", fallback: "earth from space", categories: ['space', 'science', 'emotion'] }),
+            createImage({ id: "1502136016296-17fced4ed978", label: "Rocket Launch, Emotional Launch", fallback: "rocket launch", categories: ['space', 'adventure', 'emotion'] }),
+            createImage({ id: "1464800576530-6232a3a1471e", label: "Black Hole of Procrastination", fallback: "black hole", categories: ['space', 'abstract', 'humor'] }),
+            createImage({ id: "1507406088333-417ec670b2be", label: "Meteor Shower of Hot Takes", fallback: "meteor shower", categories: ['space', 'abstract', 'humor'] }),
+            createImage({ id: "1516331375628-f684d7e942b8", label: "Alien Contact, Wrong Number", fallback: "ufo", categories: ['space', 'humor', 'science'] }),
+        ],
+        fusionImages: [
+            createImage({ id: "1462336644104-8d3737fb0d3c", label: "Stellar Merge", fallback: "cosmic abstract" }),
+            createImage({ id: "1446776811778-41c0a76bedc3", label: "Deep Field", fallback: "galaxy swirl" }),
+        ],
+    },
+    {
+        id: "kitchen",
+        label: "Kitchen Chaos",
+        gradient: "from-orange-400 to-red-500",
+        modifier: {
+            timeLimit: 50,
+            scoreMultiplier: 1.05,
+            hint: "Messy, delicious, and domestic. Find the flavor link.",
+        },
+        keywords: ["kitchen", "cooking", "food prep", "spices", "comfort meal"],
+        assets: [
+            createImage({ id: "1556910103-1c02745aae4d", label: "Chef's Existential Crisis", fallback: "chef cooking", categories: ['human', 'food', 'humor'] }),
+            createImage({ id: "1504674900144-e7df3728b18d", label: "Pasta With Main Character Energy", fallback: "pasta", categories: ['food', 'emotion', 'humor'] }),
+            createImage({ id: "1546069901-5ecac631a87f", label: "Avocado Toast Apology Tour", fallback: "avocado toast", categories: ['food', 'urban', 'humor'] }),
+            createImage({ id: "1565299624946-b28f40a0ae38", label: "Pizza Slice of Truth", fallback: "pizza", categories: ['food', 'nostalgia', 'emotion'] }),
+            createImage({ id: "1512621776951-a57141f2eefd", label: "Salad That Judged Me", fallback: "salad bowl", categories: ['food', 'health', 'humor'] }),
+            createImage({ id: "1482049018334-71148e963b66", label: "Midnight Snack Committee", fallback: "snack kitchen", categories: ['food', 'human', 'nostalgia'] }),
+            createImage({ id: "1504674900144-e7df3728b18d", label: "Spice Rack of Regret", fallback: "spices", categories: ['food', 'abstract', 'humor'] }),
+            createImage({ id: "1556911220-e1b08125d4a1", label: "Burnt Toast, Burnt Dreams", fallback: "toast", categories: ['food', 'emotion', 'humor'] }),
+            createImage({ id: "1512058567362-07e8f6241626", label: "Farmer's Market Plot Twist", fallback: "farmers market", categories: ['food', 'nature', 'human'] }),
+            createImage({ id: "1547592166-23ac45744acd", label: "Soup Season Spirituality", fallback: "soup", categories: ['food', 'emotion', 'nostalgia'] }),
+            createImage({ id: "1567620905732-2d4ec1fab1bc", label: "Dessert With No Witnesses", fallback: "dessert", categories: ['food', 'humor', 'emotion'] }),
+            createImage({ id: "1504754525036-673b8c4b5c7e", label: "Coffee Before Personality", fallback: "coffee cup", categories: ['food', 'human', 'emotion'] }),
+        ],
+        fusionImages: [
+            createImage({ id: "1565299624946-b28f40a0ae38", label: "Comfort Fusion", fallback: "food abstract" }),
+            createImage({ id: "1504674900144-e7df3728b18d", label: "Simmer Down", fallback: "kitchen warm" }),
+        ],
+    },
+    {
         id: "mystery",
         label: "Mystery Box",
         gradient: "from-violet-500 to-fuchsia-500",
@@ -361,6 +419,14 @@ const VIDEO_ASSETS = {
         createVideo({ id: "sunset-v3", label: "Amber Haze", url: "https://videos.pexels.com/video-files/2098989/2098989-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/videos/2098989/free-video-2098989.jpg?w=800" }),
         createVideo({ id: "sunset-v4", label: "Warm Horizon", url: "https://videos.pexels.com/video-files/856947/856947-hd_1920_1080_25fps.mp4", posterUrl: "https://images.pexels.com/videos/856947/free-video-856947.jpg?w=800" }),
     ],
+    cosmic: [
+        createVideo({ id: "cosmic-v1", label: "Star Drift", url: "https://videos.pexels.com/video-files/3129671/3129671-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/videos/3129671/free-video-3129671.jpg?w=800" }),
+        createVideo({ id: "cosmic-v2", label: "Nebula Flow", url: "https://videos.pexels.com/video-files/856974/856974-hd_1920_1080_30fps.mp4", posterUrl: "https://images.pexels.com/videos/856974/free-video-856974.jpg?w=800" }),
+    ],
+    kitchen: [
+        createVideo({ id: "kitchen-v1", label: "Sizzling Pan", url: "https://videos.pexels.com/video-files/6981411/6981411-uhd_2560_1440_25fps.mp4", posterUrl: "https://images.pexels.com/videos/6981411/free-video-6981411.jpg?w=800" }),
+        createVideo({ id: "kitchen-v2", label: "Steam Rise", url: "https://videos.pexels.com/video-files/5377700/5377700-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/videos/5377700/free-video-5377700.jpg?w=800" }),
+    ],
     mystery: [
         createVideo({ id: "mystery-v1", label: "???", url: "https://videos.pexels.com/video-files/3141210/3141210-uhd_2560_1440_25fps.mp4", posterUrl: "https://images.pexels.com/videos/3141210/free-video-3141210.jpg?w=800" }),
         createVideo({ id: "mystery-v2", label: "???", url: "https://videos.pexels.com/video-files/4812203/4812203-uhd_2560_1440_25fps.mp4", posterUrl: "https://images.pexels.com/videos/4812203/free-video-4812203.jpg?w=800" }),
@@ -401,6 +467,14 @@ export const MEME_ASSETS = {
         createMeme({ id: "1500530855697-b586d89ba3ee", label: "Golden Hour Hits Different", fallback: "sunset vibe", categories: ['emotion', 'humor', 'nature'] }),
         ...DEFAULT_MEMES,
     ],
+    cosmic: [
+        createMeme({ id: "1516331375628-f684d7e942b8", label: "Aliens Wouldn't Get It", fallback: "ufo meme", categories: ['space', 'humor', 'abstract'] }),
+        ...DEFAULT_MEMES,
+    ],
+    kitchen: [
+        createMeme({ id: "1556910103-1c02745aae4d", label: "When the Recipe Lies", fallback: "chef fail", categories: ['food', 'humor', 'human'] }),
+        ...DEFAULT_MEMES,
+    ],
     mystery: DEFAULT_MEMES,
     default: DEFAULT_MEMES,
 };
@@ -436,6 +510,14 @@ const AUDIO_ASSETS = {
         createAudio({ id: "sunset-a2", label: "Dusk Piano", url: "https://cdn.pixabay.com/audio/2023/09/04/audio_5546f7cbb7.mp3", coverUrl: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("piano") }),
         createAudio({ id: "sunset-a3", label: "Amber Hum", url: "https://cdn.pixabay.com/audio/2022/11/21/audio_c2c0d49e31.mp3", coverUrl: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("amber") }),
         createAudio({ id: "sunset-a4", label: "Twilight Chimes", url: "https://cdn.pixabay.com/audio/2022/05/13/audio_257112240f.mp3", coverUrl: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("chimes") }),
+    ],
+    cosmic: [
+        createAudio({ id: "cosmic-a1", label: "Orbital Hum", url: "https://cdn.pixabay.com/audio/2023/10/07/audio_7605c31ee4.mp3", coverUrl: "https://images.unsplash.com/photo-1446776811778-41c0a76bedc3?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("orbital") }),
+        createAudio({ id: "cosmic-a2", label: "Deep Space Drone", url: "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3", coverUrl: "https://images.unsplash.com/photo-1462336644104-8d3737fb0d3c?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("space") }),
+    ],
+    kitchen: [
+        createAudio({ id: "kitchen-a1", label: "Sizzle Loop", url: "https://cdn.pixabay.com/audio/2022/03/10/audio_a2f4a71ed3.mp3", coverUrl: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("sizzle") }),
+        createAudio({ id: "kitchen-a2", label: "Kettle Whistle", url: "https://cdn.pixabay.com/audio/2022/05/13/audio_257112240f.mp3", coverUrl: "https://images.unsplash.com/photo-1504754525036-673b8c4b5c7e?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("kettle") }),
     ],
     mystery: [
         createAudio({ id: "mystery-a1", label: "???", url: "https://cdn.pixabay.com/audio/2023/03/27/audio_24cba72520.mp3", coverUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("mystery1") }),

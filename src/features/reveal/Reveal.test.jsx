@@ -64,7 +64,10 @@ vi.mock('../../services/offlineQueue', () => ({
 }));
 
 vi.mock('../../services/share', () => ({
-    createJudgeShareUrl: vi.fn(() => Promise.resolve('https://example.com/judge/123')),
+    createJudgeShareLinks: vi.fn(() => Promise.resolve({
+        shareUrl: 'https://example.com/judge/123',
+        previewUrl: 'https://example.com/judge/123',
+    })),
 }));
 
 vi.mock('../../services/challenges', () => ({
@@ -188,21 +191,21 @@ describe('Reveal', () => {
 
     it('share button exists after scoring', async () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
-        const shareBtn = await screen.findByRole('button', { name: /share for friend to judge/i }, { timeout: 3000 });
+        const shareBtn = await screen.findByRole('button', { name: /ask a friend to judge|share for friend to judge/i }, { timeout: 3000 });
         expect(shareBtn).toBeInTheDocument();
     });
 
     it('lets manual scoring users ask a friend to judge before self-scoring', async () => {
         mockScoringMode = 'human';
         const user = userEvent.setup();
-        const { createJudgeShareUrl } = await import('../../services/share');
+        const { createJudgeShareLinks } = await import('../../services/share');
 
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
 
         const friendJudgeButton = await screen.findByRole('button', { name: /ask a friend to judge/i }, { timeout: 3000 });
         await user.click(friendJudgeButton);
 
-        expect(createJudgeShareUrl).toHaveBeenCalledWith(expect.objectContaining({
+        expect(createJudgeShareLinks).toHaveBeenCalledWith(expect.objectContaining({
             submission: mockSubmission,
             collisionId: null,
             judgeMode: 'friend',

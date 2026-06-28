@@ -3,6 +3,27 @@ function getTelemetryTarget() {
     return globalThis;
 }
 
+function bridgeToAnalytics(entry) {
+    if (typeof window === 'undefined') return;
+
+    import('../services/analytics.js').then(({ trackEvent }) => {
+        if (entry.type === 'event' && entry.name) {
+            trackEvent(entry.name, {
+                ...entry.payload,
+                telemetryLevel: entry.level,
+            });
+        } else if (entry.type === 'error') {
+            trackEvent('app_error', {
+                scope: entry.scope,
+                message: entry.message,
+                ...entry.payload,
+            });
+        }
+    }).catch(() => {
+        // Analytics bridge must never break gameplay.
+    });
+}
+
 function emitTelemetry(entry) {
     const target = getTelemetryTarget();
     const sink = target.__VWF_TELEMETRY__;
@@ -20,6 +41,8 @@ function emitTelemetry(entry) {
     if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent !== 'undefined') {
         window.dispatchEvent(new CustomEvent('vwf:telemetry', { detail: entry }));
     }
+
+    bridgeToAnalytics(entry);
 
     return entry;
 }

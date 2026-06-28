@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LocalPreviewBadge } from '../../components/LocalPreviewBadge';
 import {
   getPlayerRating,
   getRankTier,
@@ -37,7 +38,10 @@ export function RankedPanel() {
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center px-4">
-      <h2 className="text-2xl font-display font-bold text-white mb-4">Ranked</h2>
+      <div className="flex items-center gap-2 mb-4">
+        <h2 className="text-2xl font-display font-bold text-white">Ranked</h2>
+        <LocalPreviewBadge />
+      </div>
 
       {seasonReset && (
         <div className="w-full p-4 rounded-xl bg-game-accent/10 border border-game-accent/20 mb-4 text-center">

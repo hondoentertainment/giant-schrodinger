@@ -29,6 +29,10 @@ vi.mock('../../hooks/useFocusTrap', () => ({
     useFocusTrap: vi.fn(),
 }));
 
+vi.mock('../../services/assetSelection', () => ({
+    loadSelectedAssets: async (assets) => assets,
+}));
+
 // Mock VennDiagram to simplify rendering
 vi.mock('../round/VennDiagram', () => ({
     VennDiagram: ({ leftAsset, rightAsset }) => (

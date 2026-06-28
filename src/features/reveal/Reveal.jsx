@@ -4,7 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { scoreSubmission, generateFusionImage } from '../../services/gemini';
 import { saveCollision } from '../../services/storage';
 import { getMilestones, getStats, recordPlay } from '../../services/stats';
-import { createJudgeShareUrl } from '../../services/share';
+import { createJudgeShareLinks } from '../../services/share';
 import { getThemeById } from '../../data/themes';
 import { normalizeMediaType, getCollisionMediaMode, getEffectiveRoundMediaType } from '../../lib/mediaType';
 import { getDailyChallenge } from '../../services/dailyChallenge';
@@ -214,11 +214,13 @@ export function Reveal({ submission, assets }) {
             collisionId: savedCollision?.id || null,
             judgeMode: 'friend',
         };
-        const url = await createJudgeShareUrl(roundPayload);
+        const links = await createJudgeShareLinks(roundPayload);
+        const url = links?.shareUrl;
         reportAppEvent('friend_judge_share_created', {
             hasSavedCollision: Boolean(savedCollision?.id),
             scoringMode,
             roundNumber,
+            hasOgPreview: Boolean(links?.previewUrl && links.previewUrl !== url),
         });
         if (url?.includes('#judge_')) {
             toast.warn('Backend unavailable — sharing via link encoding');
@@ -610,23 +612,44 @@ export function Reveal({ submission, assets }) {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        <div>
-                            <button
-                                onClick={handleShareForJudging}
-                                disabled={!canShareForJudging}
-                                className="wordle-button px-8 disabled:opacity-50"
-                                title="Send this link to a friend — they'll score your connection. Press S for shortcut."
-                            >
-                                {shareCopied ? 'Link copied! Send to a friend' : 'Share for friend to judge'}
-                            </button>
-                            <p className="text-white/30 text-xs mt-1.5">Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-white/50">S</kbd> to copy link</p>
-                        </div>
-                        <button
-                            onClick={handleNext}
-                            className="wordle-button wordle-primary px-12 text-lg"
-                        >
-                            {isFinalRound ? 'See Results' : 'Next Round →'}
-                        </button>
+                        {displayScore >= 8 ? (
+                            <>
+                                <button
+                                    onClick={handleShareForJudging}
+                                    disabled={!canShareForJudging}
+                                    className="wordle-button wordle-primary px-12 text-lg disabled:opacity-50"
+                                    title="High-scoring rounds make the best friend-judge invites. Press S for shortcut."
+                                >
+                                    {shareCopied ? 'Link copied! Send to a friend' : 'Ask a friend to judge'}
+                                </button>
+                                <button
+                                    onClick={handleNext}
+                                    className="wordle-button px-8"
+                                >
+                                    {isFinalRound ? 'See Results' : 'Next Round →'}
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={handleNext}
+                                    className="wordle-button wordle-primary px-12 text-lg"
+                                >
+                                    {isFinalRound ? 'See Results' : 'Next Round →'}
+                                </button>
+                                <div>
+                                    <button
+                                        onClick={handleShareForJudging}
+                                        disabled={!canShareForJudging}
+                                        className="wordle-button px-8 disabled:opacity-50"
+                                        title="Send this link to a friend — they'll score your connection. Press S for shortcut."
+                                    >
+                                        {shareCopied ? 'Link copied! Send to a friend' : 'Share for friend to judge'}
+                                    </button>
+                                    <p className="text-white/30 text-xs mt-1.5">Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-white/50">S</kbd> to copy link</p>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

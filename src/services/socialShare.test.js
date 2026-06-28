@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createShareText, getAssetDisplayName } from './socialShare';
+import { createShareText, getAssetDisplayName, resolveSharePageUrl } from './socialShare';
 
 describe('socialShare', () => {
     it('prefers label when building asset display names', () => {
@@ -55,5 +55,12 @@ describe('socialShare', () => {
         expect(text).toContain('Friend Judge');
         expect(text).toContain('Daily Challenge');
         expect(text).toContain('Friend score 9/10');
+    });
+
+    it('prefers previewUrl for social link targets', () => {
+        expect(resolveSharePageUrl({
+            previewUrl: 'https://proj.supabase.co/functions/v1/og-tags?roundId=abc',
+            pageUrl: 'https://app.example/?judge=abc',
+        })).toBe('https://proj.supabase.co/functions/v1/og-tags?roundId=abc');
     });
 });

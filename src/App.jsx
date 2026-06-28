@@ -34,6 +34,8 @@ import { parseThemeFromUrl, clearThemeFromUrl, importThemeFromLink, saveSharedTh
 import { initAudio } from './services/sounds'
 import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider, SupabaseAnalyticsProvider, teardownAnalytics } from './services/analytics'
 import { initErrorMonitoring } from './services/errorMonitoring'
+import { initTelemetry } from './lib/initTelemetry'
+import { initMediaHints } from './lib/initMediaHints'
 import { processOfflineQueue, getQueueCount } from './services/offlineQueue'
 import { scoreSubmission } from './services/gemini'
 import { initPWAInstall } from './lib/pwaInstall'
@@ -63,6 +65,8 @@ function GameLogoMark() {
 // Module-level analytics init (safe to run once)
 registerAnalyticsProvider(ConsoleAnalyticsProvider);
 registerAnalyticsProvider(SupabaseAnalyticsProvider);
+initTelemetry();
+initMediaHints();
 trackRetention();
 initPWAInstall();
 

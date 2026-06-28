@@ -109,7 +109,30 @@
     "classicVisualVenn": "Venn visual cl\u00e1sico",
     "loopingVideoClips": "Videoclips en bucle",
     "soundBasedConnections": "Conexiones basadas en sonido",
-    "playRound7Days": "Juega 1 ronda por d\u00eda durante 7 d\u00edas para desbloquear"
+    "playRound7Days": "Juega 1 ronda por d\u00eda durante 7 d\u00edas para desbloquear",
+    "localPreview": "Vista previa local",
+    "localPreviewTitle": "Este modo guarda el progreso solo en este dispositivo. La sincronizaci\u00f3n en la nube a\u00fan no est\u00e1 disponible.",
+    "yourProgress": "Tu progreso",
+    "bestScore": "Mejor puntuaci\u00f3n",
+    "streakLabel": "Racha",
+    "startToday": "Empieza hoy",
+    "favoriteTheme": "Tema favorito",
+    "nextUnlock": "Pr\u00f3ximo desbloqueo",
+    "allUnlocked": "Todo desbloqueado",
+    "weeklyDaily": "Esta semana: {{count}} desaf\u00edo diario{{plural}}",
+    "weeklyDailyBest": "mejor {{score}}/10",
+    "submitConnection": "Enviar conexi\u00f3n"
+  },
+  "gallery": {
+    "archive": "Tu archivo",
+    "title": "Galer\u00eda de conexiones",
+    "bestOfWeek": "Lo mejor de la semana",
+    "withFriendFeedback": "Con feedback de amigos",
+    "highlights": "Destacados",
+    "allSaved": "Todo guardado",
+    "downloadShareCard": "Descargar tarjeta",
+    "buildingCard": "Creando tarjeta…",
+    "emptyWeek": "Nada guardado esta semana. Juega una ronda para empezar tu archivo semanal."
   },
   "round": {
     "timeLeft": "{{seconds}}s",
@@ -128,7 +151,9 @@
     "pressEnter": "Pulsa Enter para enviar",
     "scoredOn": "Puntuado en Ingenio \u00b7 L\u00f3gica \u00b7 Originalidad \u00b7 Claridad",
     "time": "Tiempo",
-    "points": "Puntos"
+    "points": "Puntos",
+    "sharpeningMedia": "Mejorando medios…",
+    "loadingRound": "Cargando ronda…"
   },
   "reveal": {
     "yourScore": "TU PUNTUACI\u00d3N",
@@ -190,6 +215,21 @@
     "solid": "S\u00f3lido",
     "meh": "Meh",
     "submitJudgement": "Enviar juicio"
+  },
+  "room": {
+    "hostLeft": "El anfitrión se fue — esta sala ha terminado.",
+    "hostLeftToast": "{{name}} se fue y cerró la sala.",
+    "playerLeftToast": "{{name}} salió de la sala.",
+    "returnToLobby": "Volver al lobby",
+    "joinedMidRound": "Te uniste a mitad de ronda — estás sincronizado con la fase actual del grupo.",
+    "syncing": "Sincronizando el estado de la sala con el servidor…",
+    "finalizing": "Finalizando votos — las posiciones se actualizarán para todos en breve.",
+    "recovered": "Estado de la sala recuperado. Vuelves a estar sincronizado con el grupo.",
+    "waitingVotes": "Esperando a que todos voten antes de finalizar los resultados.",
+    "reconnecting": "Conexión perdida. Reconectando…",
+    "disconnected": "Desconectado de la sala.",
+    "retry": "Reintentar",
+    "leaveRoom": "Salir de la sala"
   },
   "common": {
     "close": "Cerrar",

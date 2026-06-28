@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useGame } from '../../context/GameContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
-import { selectRoundAssets, preloadRoundAssets, getAssetKey, resolveSelectedAssets } from '../../services/assetSelection';
+import { selectRoundAssets, loadSelectedAssets, getAssetKey } from '../../services/assetSelection';
 import { getStats, isThemeUnlocked } from '../../services/stats';
 import { scoreSubmission } from '../../services/gemini';
 import { generateAIConnection, getAIOpponentResult, getAIDifficulty, getConnectionExplanation } from '../../services/aiFeatures';
@@ -63,7 +63,6 @@ export function AIBattle({ onDone }) {
             });
 
             usedAssetIdsRef.current = [...usedAssetIdsRef.current, getAssetKey(left), getAssetKey(right)].filter(Boolean);
-            preloadRoundAssets([left, right]);
             if (!cancelled) {
                 setAssets({ left, right });
                 setTimer(timeLimit);
@@ -77,10 +76,9 @@ export function AIBattle({ onDone }) {
                 setPhase('playing');
             }
 
-            const resolved = await resolveSelectedAssets([left, right]);
+            const resolved = await loadSelectedAssets([left, right]);
             if (cancelled) return;
 
-            preloadRoundAssets(resolved);
             setAssets({ left: resolved[0], right: resolved[1] });
         }
 

@@ -48,7 +48,7 @@ vi.mock('../../services/assetSelection', () => ({
         { id: 'cat', label: 'Cat', type: 'image', url: 'https://example.com/cat.jpg', fallbackUrl: 'https://example.com/cat-fallback.jpg' },
         { id: 'dog', label: 'Dog', type: 'image', url: 'https://example.com/dog.jpg', fallbackUrl: 'https://example.com/dog-fallback.jpg' },
     ],
-    resolveSelectedAssets: async (assets) => assets,
+    loadSelectedAssets: async (assets) => assets,
     preloadRoundAssets: vi.fn(),
     getAssetMediaLabel: (type) => {
         if (type === 'video') return 'Video';
@@ -131,9 +131,9 @@ describe('Round', () => {
         expect(input).toHaveValue('They both have fur');
     });
 
-    it('does not render a separate submit button', () => {
+    it('renders a mobile submit button for touch users', () => {
         render(<Round onSubmit={mockOnSubmit} />);
-        expect(screen.queryByRole('button', { name: /^submit$/i })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /submit connection/i })).toBeInTheDocument();
     });
 
     it('submits on Enter even when input is empty', async () => {

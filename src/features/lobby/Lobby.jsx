@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useRoom } from '../../context/RoomContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
-import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked } from '../../services/stats';
+import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked, getProfileSummary } from '../../services/stats';
 import { getDailyChallenge, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { isBackendEnabled } from '../../lib/supabase';
 import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, Laugh, CalendarDays, Zap, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
@@ -73,6 +73,7 @@ export function Lobby() {
 
     const theme = getThemeById(themeId);
     const stats = getStats();
+    const profileSummary = useMemo(() => getProfileSummary(stats), [stats]);
     const milestones = getMilestones();
     const backendReady = isBackendEnabled() || isE2EMockRoomEnabled();
     const lobbyTier = stats.totalRounds >= 5 ? 3 : stats.totalRounds >= 3 ? 2 : stats.totalRounds >= 1 ? 1 : 0;
@@ -250,6 +251,40 @@ export function Lobby() {
                             : `Complete ${sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.`}
                     </p>
                     {!isFirstSession && <ServiceStatusCard className="mb-4" />}
+                    {!isFirstSession && stats.totalRounds > 0 && (
+                        <div className="mb-4 rounded-[22px] border border-white/10 bg-white/[0.05] p-4 text-left">
+                            <div className="game-section-label mb-2">{tr('lobby.yourProgress')}</div>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <div className="text-white/50 text-xs">{tr('lobby.bestScore')}</div>
+                                    <div className="text-white font-bold">{profileSummary.bestScore != null ? `${profileSummary.bestScore}/10` : '—'}</div>
+                                </div>
+                                <div>
+                                    <div className="text-white/50 text-xs">{tr('lobby.streakLabel')}</div>
+                                    <div className="text-emerald-300 font-bold">{profileSummary.currentStreak > 0 ? `${profileSummary.currentStreak} days` : tr('lobby.startToday')}</div>
+                                </div>
+                                <div>
+                                    <div className="text-white/50 text-xs">{tr('lobby.favoriteTheme')}</div>
+                                    <div className="text-white font-bold">{profileSummary.favoriteThemeId ? getThemeById(profileSummary.favoriteThemeId).label : '—'}</div>
+                                </div>
+                                <div>
+                                    <div className="text-white/50 text-xs">{tr('lobby.nextUnlock')}</div>
+                                    <div className="text-white font-bold">{profileSummary.nextMilestone ? profileSummary.nextMilestone.label : tr('lobby.allUnlocked')}</div>
+                                </div>
+                            </div>
+                            {dailySummary.weeklyCompletions > 0 && (
+                                <p className="text-white/45 text-xs mt-3">
+                                    {tr('lobby.weeklyDaily', {
+                                        count: dailySummary.weeklyCompletions,
+                                        plural: dailySummary.weeklyCompletions === 1 ? '' : 's',
+                                    })}
+                                    {dailySummary.weeklyBest != null
+                                        ? ` · ${tr('lobby.weeklyDailyBest', { score: dailySummary.weeklyBest })}`
+                                        : ''}.
+                                </p>
+                            )}
+                        </div>
+                    )}
                     {!isFirstSession && <PWAInstallBanner className="mb-4" />}
                     <div className="mb-4 grid grid-cols-3 gap-2 text-xs uppercase tracking-wide text-white/70">
                         <span className="wordle-tile min-h-[44px] flex-col px-2 text-[0.65rem]">

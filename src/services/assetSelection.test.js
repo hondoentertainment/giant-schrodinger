@@ -6,6 +6,7 @@ import {
     getRecentAssetKeys,
     trackRecentAssets,
     resolveSelectedAssets,
+    loadSelectedAssets,
 } from './assetSelection';
 
 describe('assetSelection', () => {
@@ -162,6 +163,31 @@ describe('assetSelection', () => {
 
             expect(resolved[0].url).toBe(memeAsset.url);
             expect(resolved[1].url).toBe('https://videos.pexels.com/a.mp4');
+        });
+
+        it('enriches assets with blur metadata when no api resolve is needed', async () => {
+            const assets = [{
+                type: MEDIA_TYPES.IMAGE,
+                label: 'Forest',
+                url: 'https://images.unsplash.com/photo-abc?w=1080&h=1080',
+                fallbackUrl: 'https://images.unsplash.com/photo-abc?w=1080&h=1080',
+            }];
+
+            const resolved = await resolveSelectedAssets(assets);
+            expect(resolved[0].blurUrl).toContain('blur=10');
+        });
+    });
+
+    describe('loadSelectedAssets', () => {
+        it('returns resolved assets after preload pipeline', async () => {
+            const selected = [
+                { id: 'a', label: 'A', type: MEDIA_TYPES.IMAGE, url: 'https://example.com/a.jpg' },
+                { id: 'b', label: 'B', type: MEDIA_TYPES.IMAGE, url: 'https://example.com/b.jpg' },
+            ];
+
+            const loaded = await loadSelectedAssets(selected);
+            expect(loaded).toHaveLength(2);
+            expect(loaded[0].url).toBe('https://example.com/a.jpg');
         });
     });
 });

@@ -126,6 +126,8 @@ export function getDailyChallengeSummary() {
             latestScore: null,
             averageScore: null,
             shareLine: 'Today is open. Complete the daily challenge to start your streak ritual.',
+            weeklyBest: null,
+            weeklyCompletions: 0,
         };
     }
 
@@ -133,6 +135,7 @@ export function getDailyChallengeSummary() {
     const bestScore = Math.max(...scores);
     const latestScore = scores[0];
     const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    const weekly = getWeeklyDailyLeaderboard();
 
     return {
         completions: history.length,
@@ -140,5 +143,30 @@ export function getDailyChallengeSummary() {
         latestScore,
         averageScore,
         shareLine: `Daily Venn complete: ${latestScore}/10 today, best ${bestScore}/10 across ${history.length} day${history.length === 1 ? '' : 's'}.`,
+        weeklyBest: weekly.bestScore,
+        weeklyCompletions: weekly.completions,
+    };
+}
+
+function getWeekStartKey(date = new Date()) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function getWeeklyDailyLeaderboard() {
+    const weekStart = getWeekStartKey();
+    const history = getDailyChallengeHistory().filter((entry) => entry.date >= weekStart);
+    if (history.length === 0) {
+        return { completions: 0, bestScore: null, averageScore: null, weekStart };
+    }
+    const scores = history.map((entry) => Number(entry.score) || 0);
+    return {
+        completions: history.length,
+        bestScore: Math.max(...scores),
+        averageScore: scores.reduce((sum, score) => sum + score, 0) / scores.length,
+        weekStart,
     };
 }

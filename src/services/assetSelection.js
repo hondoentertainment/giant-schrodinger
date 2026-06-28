@@ -1,6 +1,10 @@
-import { getYoutubeVideoIdFromAsset } from '../lib/youtube';
 import { buildThemeAssets, MEDIA_TYPES } from '../data/themes';
 import { normalizeMediaType } from '../lib/mediaType';
+import {
+    enrichAssetForDisplay,
+    preloadMediaAsset,
+    preloadRoundAssetsAsync,
+} from '../lib/mediaLoad';
 import { getCustomImages } from './customImages';
 import { resolveAssetsImages, isPicsumUrl } from './imageResolve';
 import { resolveAssetsMemes, needsMemeApiResolve } from './memeResolve';
@@ -174,53 +178,74 @@ export function selectRoundAssets({
     return picked;
 }
 
+function mergeResolvedAsset(original, imageResult, memeResult) {
+    const imageAsset = imageResult || original;
+    const memeAsset = memeResult || original;
+
+    return enrichAssetForDisplay({
+        ...original,
+        url: memeAsset.url !== original.url ? memeAsset.url : (imageAsset.url || original.url),
+        fallbackUrl: imageAsset.fallbackUrl || memeAsset.fallbackUrl || original.fallbackUrl,
+        imageSource: imageAsset.imageSource || original.imageSource,
+        memeSource: memeAsset.memeSource || original.memeSource,
+        memeAttribution: memeAsset.memeAttribution || original.memeAttribution,
+    });
+}
+
 export async function resolveSelectedAssets(assets) {
     if (!Array.isArray(assets) || assets.length === 0) return assets;
 
-    let resolved = assets;
+    const needsImageResolve = assets.some((asset) => asset?.label && isPicsumUrl(asset?.url));
+    const needsMemeResolve = assets.some(needsMemeApiResolve);
 
-    const needsImageResolve = resolved.some((asset) => asset?.label && isPicsumUrl(asset?.url));
-    if (needsImageResolve) {
-        resolved = await resolveAssetsImages(resolved);
+    if (!needsImageResolve && !needsMemeResolve) {
+        return assets.map(enrichAssetForDisplay);
     }
 
-    const needsMemeResolve = resolved.some(needsMemeApiResolve);
-    if (needsMemeResolve) {
-        resolved = await resolveAssetsMemes(resolved);
-    }
+    const imageCopy = assets.map((asset) => ({ ...asset }));
+    const memeCopy = assets.map((asset) => ({ ...asset }));
 
+    const [imageResolved, memeResolved] = await Promise.all([
+        needsImageResolve ? resolveAssetsImages(imageCopy) : Promise.resolve(null),
+        needsMemeResolve ? resolveAssetsMemes(memeCopy) : Promise.resolve(null),
+    ]);
+
+    return assets.map((asset, index) => mergeResolvedAsset(
+        asset,
+        imageResolved?.[index],
+        memeResolved?.[index],
+    ));
+}
+
+/**
+ * Select, resolve API-backed media, and warm the browser cache.
+ */
+export async function loadRoundAssets(options) {
+    const selected = selectRoundAssets(options);
+    return loadSelectedAssets(selected);
+}
+
+/**
+ * Resolve and preload a pre-selected asset pair (avoids re-selection).
+ */
+export async function loadSelectedAssets(selected) {
+    if (!Array.isArray(selected) || selected.length === 0) return selected;
+
+    preloadRoundAssets(selected);
+    const resolved = await resolveSelectedAssets(selected);
+    await preloadRoundAssetsAsync(resolved, { priority: true });
     return resolved;
 }
 
 export function preloadRoundAssets(assets) {
-    assets.forEach((asset) => {
-        if (!asset?.url) return;
+    if (!Array.isArray(assets)) return;
 
-        if (asset.type === MEDIA_TYPES.VIDEO) {
-            if (getYoutubeVideoIdFromAsset(asset)) {
-                if (asset.posterUrl) {
-                    const img = new Image();
-                    img.src = asset.posterUrl;
-                }
-                return;
-            }
-            const link = document.createElement('link');
-            link.rel = 'preload';
-            link.as = 'video';
-            link.href = asset.url;
-            document.head.appendChild(link);
-        } else if (asset.type === MEDIA_TYPES.AUDIO) {
-            const link = document.createElement('link');
-            link.rel = 'preload';
-            link.as = 'audio';
-            link.href = asset.url;
-            document.head.appendChild(link);
-        } else {
-            const img = new Image();
-            img.src = asset.url;
-        }
+    assets.forEach((asset) => {
+        preloadMediaAsset(enrichAssetForDisplay(asset), { priority: true }).catch(() => {});
     });
 }
+
+export { preloadRoundAssetsAsync };
 
 export function getAssetMediaLabel(type) {
     if (type === MEDIA_TYPES.VIDEO) return 'Video';

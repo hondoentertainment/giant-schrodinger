@@ -92,7 +92,7 @@ describe('MultiplayerReveal', () => {
         mocks.roomState.connectionState = 'disconnected';
         render(<MultiplayerReveal />);
 
-        expect(screen.getByText(/Disconnected\./i)).toBeInTheDocument();
+        expect(screen.getByText(/Disconnected from the room/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
     });
 });

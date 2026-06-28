@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { canInstallPWA, installPWA } from '../lib/pwaInstall';
 import { haptic } from '../lib/haptics';
+import { getStats } from '../services/stats';
+
+const MIN_ROUNDS_BEFORE_PROMPT = 1;
 
 export function PWAInstallBanner({ className = '' }) {
     const [visible, setVisible] = useState(false);
@@ -9,11 +12,16 @@ export function PWAInstallBanner({ className = '' }) {
     useEffect(() => {
         const check = () => {
             const dismissed = localStorage.getItem('vwf_pwa_dismissed') === 'true';
-            setVisible(canInstallPWA() && !dismissed);
+            const hasPlayed = getStats().totalRounds >= MIN_ROUNDS_BEFORE_PROMPT;
+            setVisible(canInstallPWA() && !dismissed && hasPlayed);
         };
         check();
         window.addEventListener('pwa-installable', check);
-        return () => window.removeEventListener('pwa-installable', check);
+        window.addEventListener('storage', check);
+        return () => {
+            window.removeEventListener('pwa-installable', check);
+            window.removeEventListener('storage', check);
+        };
     }, []);
 
     if (!visible) return null;
@@ -48,14 +56,14 @@ export function PWAInstallBanner({ className = '' }) {
                             type="button"
                             onClick={handleInstall}
                             disabled={installing}
-                            className="wordle-button wordle-primary text-sm min-h-[40px] px-4 py-2"
+                            className="wordle-button wordle-primary text-sm min-h-[44px] px-4 py-2"
                         >
                             {installing ? 'Installing…' : 'Install'}
                         </button>
                         <button
                             type="button"
                             onClick={handleDismiss}
-                            className="wordle-button text-sm min-h-[40px] px-4 py-2 text-white/60"
+                            className="wordle-button text-sm min-h-[44px] px-4 py-2 text-white/60"
                         >
                             Not now
                         </button>

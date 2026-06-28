@@ -1,3 +1,5 @@
+import { JUDGE_MODES } from '../lib/judgeMode';
+
 const STORAGE_KEY = 'vwf_judgements';
 
 function readStore() {
@@ -32,7 +34,7 @@ function buildRecord(identifiers, judgement) {
         roundId: identifiers.roundId || null,
         collisionId: identifiers.collisionId || null,
         backendId: identifiers.backendId || null,
-        judgeMode: identifiers.judgeMode || 'friend',
+        judgeMode: identifiers.judgeMode || JUDGE_MODES.FRIEND,
         timestamp: new Date().toISOString(),
     };
 }

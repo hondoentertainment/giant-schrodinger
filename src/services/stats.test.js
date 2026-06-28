@@ -5,6 +5,8 @@ import {
     getMilestones,
     isAvatarUnlocked,
     isThemeUnlocked,
+    getProfileSummary,
+    getBestScore,
 } from './stats';
 
 describe('stats service', () => {
@@ -103,6 +105,18 @@ describe('stats service', () => {
 
         it('returns false for mystery theme before 7-day streak', () => {
             expect(isThemeUnlocked('mystery', { milestonesUnlocked: [] })).toBe(false);
+        });
+    });
+
+    describe('getProfileSummary', () => {
+        it('returns best score and next milestone from stats', () => {
+            recordPlay(9, { themeId: 'neon' });
+            recordPlay(7, { themeId: 'neon' });
+            const summary = getProfileSummary();
+            expect(getBestScore()).toBe(9);
+            expect(summary.bestScore).toBe(9);
+            expect(summary.favoriteThemeId).toBe('neon');
+            expect(summary.nextMilestone).toBeTruthy();
         });
     });
 });

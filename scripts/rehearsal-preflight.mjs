@@ -30,6 +30,7 @@ console.log('Venn with Friends — hosted rehearsal preflight\n');
 
 run('Environment variables', 'scripts/check-hosted-env.mjs');
 run('Supabase RPCs', 'scripts/check-supabase-rpcs.mjs', [], { optional: true });
+run('Edge functions', 'scripts/check-edge-functions.mjs', [], { optional: true });
 
 if (!skipVerify) {
     const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';

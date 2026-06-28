@@ -5,6 +5,7 @@ import { saveJudgement } from '../../services/judgements';
 import { saveJudgementToBackend, getSharedRound } from '../../services/backend';
 import { clearJudgeFromUrl } from '../../services/share';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useResolvedRoundAssets } from '../../hooks/useResolvedRoundAssets';
 
 export function JudgeRound({ payload, onDone }) {
     const { toast } = useToast();
@@ -20,6 +21,9 @@ export function JudgeRound({ payload, onDone }) {
     const formRef = useRef(null);
     const effectivePayload = resolvedPayload || payload;
     const hasValidPayload = effectivePayload?.assets?.left && effectivePayload?.assets?.right && effectivePayload?.submission;
+    const { assets: displayAssets, mediaLoading } = useResolvedRoundAssets(
+        hasValidPayload ? effectivePayload.assets : null,
+    );
     useFocusTrap(!loading && !error && hasValidPayload && !submitted, formRef);
 
     useEffect(() => {
@@ -141,15 +145,21 @@ export function JudgeRound({ payload, onDone }) {
                 </p>
             </div>
 
-            <VennDiagram leftAsset={effectivePayload.assets.left} rightAsset={effectivePayload.assets.right} />
+            <VennDiagram
+                leftAsset={displayAssets?.left || effectivePayload.assets.left}
+                rightAsset={displayAssets?.right || effectivePayload.assets.right}
+                mediaLoading={mediaLoading}
+            />
 
             {effectivePayload.imageUrl && (
-                <div className="w-full max-w-xl mt-6 rounded-[22px] overflow-hidden border border-white/10 wordle-card !p-0">
+                <div className="w-full max-w-xl mt-6 rounded-[22px] overflow-hidden border border-white/10 wordle-card !p-0 relative">
                     <img
                         src={effectivePayload.imageUrl}
                         alt="Fusion created from this connection"
                         className="w-full max-h-80 object-cover"
                         referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
                     />
                 </div>
             )}

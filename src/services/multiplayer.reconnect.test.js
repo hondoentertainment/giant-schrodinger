@@ -15,7 +15,13 @@ function makeFakeChannel() {
             }
             return channel;
         },
-        subscribe: vi.fn(() => channel),
+        subscribe: vi.fn((cb) => {
+            channel.__statusCallback = cb;
+            return channel;
+        }),
+        __fireStatus(status) {
+            channel.__statusCallback?.(status);
+        },
         __handlers: handlers,
         __fireSystem(event) {
             handlers.system.forEach((h) => h.cb({ event }));
@@ -135,5 +141,16 @@ describe('multiplayer subscribeToRoom / disconnect recovery', () => {
 
         findHandler('UPDATE', 'room_submissions')({ new: { id: 's1', score: 7 } });
         expect(onSubmissionUpdate).toHaveBeenCalledWith({ id: 's1', score: 7 });
+    });
+
+    it('forwards connection status callbacks when wired', () => {
+        const channel = makeFakeChannel();
+        channelFactory.mockReturnValue(channel);
+        const onConnectionStatus = vi.fn();
+
+        subscribeToRoom('room-1', { onConnectionStatus });
+        channel.__fireStatus('SUBSCRIBED');
+
+        expect(onConnectionStatus).toHaveBeenCalledWith('SUBSCRIBED');
     });
 });

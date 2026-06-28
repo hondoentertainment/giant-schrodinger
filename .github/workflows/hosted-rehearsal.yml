@@ -1,0 +1,43 @@
+name: Hosted Rehearsal
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'supabase/**'
+      - 'e2e/deployed-rehearsal.spec.js'
+      - 'scripts/rehearsal-preflight.mjs'
+      - 'scripts/check-supabase-rpcs.mjs'
+      - '.github/workflows/hosted-rehearsal.yml'
+
+jobs:
+  rehearsal:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.VITE_SUPABASE_URL != '' && secrets.PRODUCTION_URL != '' }}
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+      PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Hosted preflight (env + RPC probe)
+        run: npm run rehearsal:preflight:fast
+
+      - name: Deployed E2E rehearsal
+        run: npm run test:e2e:rehearsal

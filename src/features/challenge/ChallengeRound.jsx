@@ -7,6 +7,7 @@ import { trackEvent } from '../../services/analytics';
 import { playScoreReveal, playConfetti } from '../../services/sounds';
 import Confetti from '../../components/Confetti';
 import { getScoreBand } from '../../lib/scoreBands';
+import { useResolvedRoundAssets } from '../../hooks/useResolvedRoundAssets';
 
 export function ChallengeRound({ payload, onDone }) {
     const { toast } = useToast();
@@ -18,6 +19,9 @@ export function ChallengeRound({ payload, onDone }) {
 
     const challenger = payload;
     const hasValidPayload = challenger?.assets?.left && challenger?.assets?.right;
+    const { assets: displayAssets, mediaLoading } = useResolvedRoundAssets(
+        hasValidPayload ? challenger.assets : null,
+    );
 
     if (!hasValidPayload) {
         return (
@@ -161,7 +165,11 @@ export function ChallengeRound({ payload, onDone }) {
                 <p className="text-white/60 text-sm">Can you beat their connection?</p>
             </div>
 
-            <VennDiagram leftAsset={challenger.assets.left} rightAsset={challenger.assets.right} />
+            <VennDiagram
+                leftAsset={displayAssets?.left || challenger.assets.left}
+                rightAsset={displayAssets?.right || challenger.assets.right}
+                mediaLoading={mediaLoading}
+            />
 
             <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 space-y-4">
                 <div>

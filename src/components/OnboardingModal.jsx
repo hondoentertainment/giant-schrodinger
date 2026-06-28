@@ -84,9 +84,10 @@ export function OnboardingModal({ onDismiss }) {
                 <div className="rounded-[22px] bg-white/[0.05] border border-white/[0.08] p-4 mb-3">
                     <p className="text-white text-sm font-semibold mb-2">Pick how the round gets judged</p>
                     <ul className="space-y-1.5 text-white/55 text-xs leading-relaxed">
-                        <li><span className="text-white">AI Judge:</span> Gemini scores automatically when configured; mock scoring keeps the round playable without a key.</li>
-                        <li><span className="text-white">Manual Judge:</span> you enter the score yourself after seeing the fusion.</li>
-                        <li><span className="text-white">Friend Judge:</span> copy a judge link so someone else can score the same round.</li>
+                        <li><span className="text-white">AI Judge:</span> Gemini scores automatically when configured; mock scoring keeps solo playable without a key.</li>
+                        <li><span className="text-white">Manual Judge:</span> you score the reveal yourself after seeing the fusion.</li>
+                        <li><span className="text-white">Friend Judge:</span> copy a judge link so someone else can score the same round asynchronously.</li>
+                        <li><span className="text-white">Multiplayer:</span> live rooms use room voting (manual mode) and require Supabase.</li>
                     </ul>
                 </div>
 

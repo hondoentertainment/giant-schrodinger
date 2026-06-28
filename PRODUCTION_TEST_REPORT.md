@@ -20,7 +20,7 @@ Latest smoke-passed app commit: `2499e7c fix(deploy): support Vercel root produc
 ## Automated Verification
 
 - `npm run verify:release`: passed before production deploy
-- Unit/component tests: 51 files, 595 tests passed
+- Unit/component tests: 64 files, 671+ tests passed (run `npm run test` for current count)
 - Desktop E2E: 26 passed, 1 intentionally skipped
 - Production build: passed
 - Lint: passed
@@ -46,6 +46,21 @@ These checks require live service credentials and cannot be fully completed from
 - Verify friend judging persistence with a second browser.
 - Verify multiplayer room create/join/vote/finalize across two browsers.
 - Confirm telemetry events through `window.__VWF_TELEMETRY__` or the `vwf:telemetry` event.
+
+## Known Live Limitations
+
+Document findings from credential-backed rehearsal here:
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Supabase schema + RPCs | Requires manual apply | Run `supabase/schema.sql` and `npm run check:supabase-rpcs` |
+| Friend judging persistence | Requires live Supabase | Cross-browser judgement feedback needs backend env vars |
+| Multiplayer vote authority | Requires live Supabase | Two-browser vote finalize rehearsal is the launch gate |
+| Gemini AI scoring | Optional | Without `VITE_GEMINI_API_KEY`, mock scoring and curated fusion art are used |
+| Ranked / shop / tournaments | Local preview only | Progress is device-local until cloud sync ships |
+| OG link previews | Requires `og-tags` edge function | Set `APP_URL`, `SUPABASE_URL`, and `SUPABASE_ANON_KEY` secrets |
+
+Use `npm run rehearsal:preflight` locally, `npm run rehearsal:run` for the full pipeline, and the optional `Hosted Rehearsal` GitHub Actions workflow (requires `PRODUCTION_URL` secret) for automated checks.
 
 ## Current Launch Gate
 

@@ -6,8 +6,11 @@ import { getThemeById } from '../../data/themes';
 import { CheckCircle, Clock, Users } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { ConnectionBanner } from './ConnectionBanner';
+import { useResolvedRoundAssets } from '../../hooks/useResolvedRoundAssets';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export function MultiplayerRound() {
+    const { t } = useTranslation();
     const {
         room,
         players,
@@ -29,7 +32,9 @@ export function MultiplayerRound() {
     const theme = getThemeById(room?.theme_id);
     const timeLimit = theme?.modifier?.timeLimit || 60;
     const [timer, setTimer] = useState(timeLimit);
-    const assets = room?.assets;
+    const roomAssets = room?.assets;
+    const { assets: displayAssets, mediaLoading } = useResolvedRoundAssets(roomAssets);
+    const assets = displayAssets || roomAssets;
 
     useEffect(() => {
         setTimer(timeLimit);
@@ -88,7 +93,7 @@ export function MultiplayerRound() {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-in fade-in duration-500">
                 <div className="h-12 w-12 rounded-full border-2 border-white/15 border-t-game-accent animate-spin mb-4" />
-                <p className="text-white/55">Loading round...</p>
+                <p className="text-white/55">{t('round.loadingRound')}</p>
             </div>
         );
     }
@@ -153,7 +158,7 @@ export function MultiplayerRound() {
                 </div>
             </div>
 
-            <VennDiagram leftAsset={assets.left} rightAsset={assets.right} />
+            <VennDiagram leftAsset={assets.left} rightAsset={assets.right} mediaLoading={mediaLoading} />
 
             {isSpectator ? (
                 <div className="w-full max-w-xl mt-8 text-center animate-in fade-in duration-500">

@@ -70,7 +70,7 @@ vi.mock('../services/multiplayer', () => ({
 import { RoomProvider, useRoom } from './RoomContext';
 
 function RoomProbe() {
-    const { joinRoomByCode, roomPhase, submissions, votes, players } = useRoom();
+    const { joinRoomByCode, roomPhase, submissions, votes, players, roomClosureReason } = useRoom();
 
     return (
         <div>
@@ -81,6 +81,7 @@ function RoomProbe() {
             <div data-testid="players">{players.length}</div>
             <div data-testid="submissions">{submissions.length}</div>
             <div data-testid="votes">{votes.length}</div>
+            <div data-testid="closure">{roomClosureReason || 'none'}</div>
         </div>
     );
 }
@@ -209,5 +210,38 @@ describe('RoomProvider', () => {
         expect(mocks.multiplayer.getRoomById).toHaveBeenCalledWith('room-1');
         expect(mocks.multiplayer.getRoundSubmissions).toHaveBeenLastCalledWith('room-1', 2);
         expect(mocks.multiplayer.getRoundVotes).toHaveBeenLastCalledWith('room-1', 2);
+    });
+
+    it('marks roomClosureReason when the host leaves', async () => {
+        mocks.multiplayer.joinRoom.mockResolvedValue({
+            room: {
+                id: 'room-1',
+                code: 'ABCD12',
+                status: 'playing',
+                scoring_mode: 'human',
+                round_number: 1,
+                total_rounds: 3,
+            },
+            session: {
+                playerName: 'Ava',
+                secureMode: true,
+            },
+        });
+
+        render(
+            <RoomProvider>
+                <RoomProbe />
+            </RoomProvider>
+        );
+
+        await userEvent.click(screen.getByRole('button', { name: 'Join' }));
+
+        const callbacks = mocks.multiplayer.subscribeToRoom.mock.calls.at(-1)[1];
+        await act(async () => {
+            callbacks.onPlayerLeave({ id: 'host', player_name: 'Host', is_host: true });
+        });
+
+        expect(screen.getByTestId('closure')).toHaveTextContent('host_left');
+        expect(mocks.toast.warn).toHaveBeenCalled();
     });
 });

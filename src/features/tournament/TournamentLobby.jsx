@@ -14,6 +14,7 @@ import {
 } from '../../services/tournaments';
 import { trackEvent } from '../../services/analytics';
 import { Trophy, Users, ChevronRight, Plus, Crown } from 'lucide-react';
+import { LocalPreviewBadge } from '../../components/LocalPreviewBadge';
 import { GameScreenShell } from '../../components/GameScreenShell';
 import { EmptyState } from '../../components/EmptyState';
 
@@ -101,7 +102,8 @@ export function TournamentLobby({ onBack }) {
                 icon={Trophy}
                 backLabel="Back to lobby"
                 badge={(
-                    <div className="flex gap-2 shrink-0">
+                    <div className="flex gap-2 shrink-0 items-center flex-wrap justify-end">
+                        <LocalPreviewBadge />
                         <button type="button" onClick={() => setView('history')} className="wordle-button text-xs min-h-[40px] px-3">History</button>
                         <button type="button" onClick={() => setView('create')} className="wordle-button wordle-primary text-xs min-h-[40px] px-3" aria-label="Create tournament">
                             <Plus size={16} />
