@@ -4,12 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths:
-      - 'supabase/**'
-      - 'e2e/deployed-rehearsal.spec.js'
-      - 'scripts/rehearsal-preflight.mjs'
-      - 'scripts/check-supabase-rpcs.mjs'
-      - '.github/workflows/hosted-rehearsal.yml'
+  schedule:
+    - cron: '0 15 * * *'
 
 jobs:
   rehearsal:

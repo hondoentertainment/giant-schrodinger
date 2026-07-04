@@ -1,67 +1,62 @@
 # Production Test Report
 
-Report date: June 22, 2026
+Report date: July 4, 2026
 
 Repository: https://github.com/hondoentertainment/giant-schrodinger
 
 Production URL: https://giant-schrodinger.vercel.app
 
-Latest smoke-passed app commit: `2499e7c fix(deploy): support Vercel root production smoke`
+Latest smoke-passed app commit: `446a30e feat(prod): harden security, moderation, PWA, and server-only AI scoring`
 
 ## Deployment Status
 
-- Vercel deployment: `dpl_7Z3XDYjLFSerCj2Ueck8tGaukudp`
-- Deployment target: production
-- Deployment status: Ready
+- Vercel deployment: production alias live
 - Production alias: https://giant-schrodinger.vercel.app
-- Deployment URL: https://giant-schrodinger-qlkff21ie-hondo4185-5820s-projects.vercel.app
-- Inspect URL: https://vercel.com/hondo4185-5820s-projects/giant-schrodinger/7Z3XDYjLFSerCj2Ueck8tGaukudp
+- GitHub `main`: synced at `446a30e`
 
-## Automated Verification
+## Automated Verification (July 4, 2026)
 
-- `npm run verify:release`: passed before production deploy
-- Unit/component tests: 64 files, 671+ tests passed (run `npm run test` for current count)
-- Desktop E2E: 26 passed, 1 intentionally skipped
-- Production build: passed
-- Lint: passed
+- `npm run verify:release`: passed (688 unit tests, 32 E2E, build)
 - `npm run smoke:production`: passed against https://giant-schrodinger.vercel.app
+- `PRODUCTION_URL=https://giant-schrodinger.vercel.app npm run test:e2e:rehearsal`: 3/3 passed
+- Production build on Vercel: passed (CSP/security headers active via `vercel.json`)
 
-## Post-Deploy Fix
+## Shipped in 446a30e
 
-The first live smoke attempt against the Vercel root URL exposed a host-specific base-path issue. GitHub Pages needs `/giant-schrodinger/`, while Vercel production serves from `/`.
+- Server-only Gemini scoring gate when Supabase is configured
+- Vercel CSP + security headers; hidden source maps
+- Edge function CORS allowlists + input sanitization
+- Content moderation RPCs + gallery report button
+- PWA manifest per-host build; SW v2 + offline page
+- Privacy/Terms pages; production-smoke CI workflow
 
-Fix applied:
+## Remaining Hosted Rehearsal (requires your credentials)
 
-- `vite.config.js` now uses `/` when `process.env.VERCEL` is set.
-- GitHub Pages keeps `/giant-schrodinger/`.
-- `npm run smoke:production` verifies that the Vercel root URL loads the app shell.
+Run `npm run launch:gate` for all automated checks, then complete manual steps:
 
-## Remaining Hosted Rehearsal
-
-These checks require live service credentials and cannot be fully completed from local/mock mode alone:
-
-- Apply `supabase/schema.sql` to the target Supabase project.
-- Configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel.
-- Configure `VITE_GEMINI_API_KEY` if live AI judging is part of launch.
-- Verify friend judging persistence with a second browser.
-- Verify multiplayer room create/join/vote/finalize across two browsers.
-- Confirm telemetry events through `window.__VWF_TELEMETRY__` or the `vwf:telemetry` event.
+1. Apply `supabase/schema.sql` (includes `content_reports` + moderation RPCs).
+2. Set Vercel env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+3. Deploy edge functions + secrets — see `.github/SECRETS.template.md`.
+4. Optional: `VITE_SENTRY_DSN`, `VITE_POSTHOG_KEY` after telemetry validation.
+5. Two-browser checks — `PRODUCTION_REHEARSAL.md` §4–6:
+   - Friend judging link → second browser → gallery feedback
+   - Multiplayer manual vote → same winner on both browsers
+   - Disconnect/reconnect + late join during results
 
 ## Known Live Limitations
 
-Document findings from credential-backed rehearsal here:
-
 | Area | Status | Notes |
 |------|--------|-------|
-| Supabase schema + RPCs | Requires manual apply | Run `supabase/schema.sql` and `npm run check:supabase-rpcs` |
-| Friend judging persistence | Requires live Supabase | Cross-browser judgement feedback needs backend env vars |
-| Multiplayer vote authority | Requires live Supabase | Two-browser vote finalize rehearsal is the launch gate |
-| Gemini AI scoring | Optional | Without `VITE_GEMINI_API_KEY`, mock scoring and curated fusion art are used |
-| Ranked / shop / tournaments | Local preview only | Progress is device-local until cloud sync ships |
-| OG link previews | Requires `og-tags` edge function | Set `APP_URL`, `SUPABASE_URL`, and `SUPABASE_ANON_KEY` secrets |
+| Supabase schema + RPCs | **Blocked — no local creds** | `rehearsal:status` shows missing `VITE_SUPABASE_*` |
+| Friend judging persistence | Requires live Supabase | Cross-browser judgement needs backend env vars |
+| Multiplayer vote authority | Requires live Supabase | Two-browser finalize is the launch gate |
+| Server AI scoring | Requires edge function | `score-submission` + `GEMINI_API_KEY` secret |
+| OG link previews | Requires `og-tags` + secrets | `APP_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` |
+| Ranked / shop / tournaments | Local preview only | Device-local until cloud sync |
+| Observability | Optional | Sentry/PostHog env vars not configured locally |
 
-Use `npm run rehearsal:preflight` locally, `npm run rehearsal:run` for the full pipeline, and the optional `Hosted Rehearsal` GitHub Actions workflow (requires `PRODUCTION_URL` secret) for automated checks.
+Configure GitHub secrets per `.github/SECRETS.template.md` to enable `production-smoke.yml` and `hosted-rehearsal.yml` on every `main` push.
 
 ## Current Launch Gate
 
-Code, local release verification, GitHub sync, and Vercel deployment are complete. The remaining launch gate is the credential-backed live rehearsal for Supabase and optional Gemini behavior.
+Frontend code, CI, GitHub sync, and Vercel production deploy are **complete**. The remaining gate is **credential-backed Supabase setup + manual two-browser rehearsal**.

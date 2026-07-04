@@ -25,6 +25,7 @@
     "check:edge-functions": "node scripts/check-edge-functions.mjs",
     "rehearsal:run": "node scripts/run-hosted-rehearsal.mjs",
     "rehearsal:status": "node scripts/rehearsal-status.mjs",
+    "launch:gate": "node scripts/launch-gate.mjs",
     "refresh:theme-images": "node scripts/refresh-theme-images.mjs",
     "test:e2e:rehearsal": "playwright test e2e/deployed-rehearsal.spec.js --project=\"Desktop Chrome\"",
     "verify:release": "npm run lint && npm run test && npm run test:e2e:desktop && npm run build",

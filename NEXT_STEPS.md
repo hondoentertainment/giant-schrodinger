@@ -63,6 +63,7 @@ Scripts (load `.env.local` automatically):
 | `npm run check:edge-functions` | Probe deployed Supabase edge functions |
 | `npm run rehearsal:run` | Full pipeline: preflight + smoke + deployed E2E |
 | `npm run rehearsal:status` | Local env readiness summary (no network) |
+| `npm run launch:gate` | Automated launch gate (status, RPC/edge probes, smoke, deployed E2E) |
 | `PRODUCTION_URL=… npm run test:e2e:rehearsal` | Deployed memes/videos + status E2E |
 
 See [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) for the manual launch gate.
