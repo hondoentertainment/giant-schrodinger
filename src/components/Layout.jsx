@@ -1,6 +1,7 @@
 import React from 'react';
+import { LegalFooter } from './LegalFooter';
 
-export function Layout({ children }) {
+export function Layout({ children, onPrivacy, onTerms }) {
     return (
         <div className="wordle-shell relative flex h-[100dvh] min-h-0 w-full flex-col items-center overflow-hidden">
             <div className="game-ambient" aria-hidden="true">
@@ -17,6 +18,9 @@ export function Layout({ children }) {
                 tabIndex={-1}
             >
                 {children}
+                {onPrivacy && onTerms ? (
+                    <LegalFooter onPrivacy={onPrivacy} onTerms={onTerms} />
+                ) : null}
             </main>
         </div>
     );

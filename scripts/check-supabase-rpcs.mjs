@@ -20,6 +20,8 @@ const REQUIRED_RPCS = [
     'submit_round_judgement',
     'cast_room_vote',
     'finalize_room_votes',
+    'report_content',
+    'list_content_reports',
 ];
 
 /**
@@ -53,6 +55,13 @@ const PROBES = {
         p_room_id: '00000000-0000-0000-0000-000000000000',
         p_round_number: 1,
         p_host_token: 'invalid',
+    },
+    report_content: {
+        p_content_id: '',
+        p_reason: '',
+    },
+    list_content_reports: {
+        p_limit: 1,
     },
 };
 

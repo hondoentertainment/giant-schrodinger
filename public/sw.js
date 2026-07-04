@@ -1,13 +1,21 @@
-const CACHE_NAME = 'venn-v1';
+const CACHE_NAME = 'venn-v2';
+const OFFLINE_URL = 'offline.html';
 
-const SHELL_FILES = ['/', '/index.html'];
-
-// Only cache same-origin static assets matching these extensions
 const CACHEABLE_EXT = /\.(js|css|woff2?|ttf|png|jpg|jpeg|svg|ico|webp|json)(\?|$)/;
+const SKIP_CACHE_PREFIXES = [
+  '/functions/v1/',
+  '/rest/v1/',
+  '/realtime/v1/',
+];
+
+function shouldSkipCache(url) {
+  if (url.origin !== self.location.origin) return true;
+  return SKIP_CACHE_PREFIXES.some((prefix) => url.pathname.includes(prefix));
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_FILES))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(['/', OFFLINE_URL]))
   );
   self.skipWaiting();
 });
@@ -25,7 +33,6 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Push notification support
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
   const title = data.title || 'Venn with Friends';
@@ -57,37 +64,45 @@ self.addEventListener('notificationclick', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const url = new URL(request.url);
+
+  if (shouldSkipCache(url)) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   if (request.mode === 'navigate') {
-    // Network-first for navigation requests
     event.respondWith(
-      fetch(request).catch(() => caches.match(request))
-    );
-  } else {
-    // Cache-first for same-origin static assets only
-    const url = new URL(request.url);
-    const isCacheable = url.origin === self.location.origin && CACHEABLE_EXT.test(url.pathname);
-
-    if (!isCacheable) {
-      event.respondWith(fetch(request));
-      return;
-    }
-
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) {
-          return cached;
-        }
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, clone);
-            });
-          }
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
-        });
-      })
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          return cached || caches.match(OFFLINE_URL);
+        })
     );
+    return;
   }
+
+  const isCacheable = url.origin === self.location.origin && CACHEABLE_EXT.test(url.pathname);
+  if (!isCacheable) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+      return fetch(request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      });
+    })
+  );
 });

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline — Venn with Friends</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #07070a;
+        color: #fff;
+        font-family: system-ui, sans-serif;
+        padding: 1.5rem;
+        text-align: center;
+      }
+      .card {
+        max-width: 28rem;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 1.25rem;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      h1 { margin-top: 0; }
+      p { color: rgba(255, 255, 255, 0.72); line-height: 1.5; }
+      button {
+        margin-top: 1rem;
+        border: 0;
+        border-radius: 999px;
+        padding: 0.85rem 1.25rem;
+        font-weight: 700;
+        background: #7c3aed;
+        color: white;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>You are offline</h1>
+      <p>Venn with Friends needs a connection for scoring, multiplayer, and media lookup. Reconnect and try again.</p>
+      <button type="button" onclick="location.reload()">Retry</button>
+    </div>
+  </body>
+</html>

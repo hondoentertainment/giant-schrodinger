@@ -120,6 +120,17 @@ See [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) for the manual launch gat
 - `npm run rehearsal:status` — local summary of env readiness without network.
 - Judge/challenge/multiplayer flows use the same resolve + preload pipeline as solo rounds.
 
+## Completed (Production Hardening Pass)
+
+- Server-only Gemini scoring gate via `src/lib/productionMode.js` (client Gemini disabled in prod when Supabase is configured).
+- Shared edge security module: CORS allowlist (`APP_URL` / `ALLOWED_ORIGINS`), rate limits, input sanitization.
+- Vercel security headers + CSP in `vercel.json`; hidden source maps in production builds.
+- Content moderation: `content_reports` table + `report_content` / `list_content_reports` RPCs; gallery report button; backend-aware moderation service.
+- PWA: build-time manifest generation per host base path; SW v2 with offline fallback; base-path-aware SW registration.
+- Privacy Policy + Terms pages with footer links on all solo/multiplayer layouts.
+- CI: `.github/workflows/production-smoke.yml` (daily + on main push); `.github/SECRETS.template.md`.
+- Updated `DEPLOYMENT.md`, `.env.example`, RPC probe for moderation functions.
+
 ## Next Hosted Rehearsal (requires your credentials)
 
 1. Run `npm run rehearsal:status` to see what's configured.

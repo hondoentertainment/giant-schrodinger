@@ -8,6 +8,7 @@ import { getCollisionMediaMode, getMediaModeLabel } from '../../lib/mediaType';
 import { getHighlights } from '../../services/highlights';
 import { downloadFusionImage } from '../../services/socialShare';
 import { buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
+import { flagContent } from '../../services/moderation';
 import { MEDIA_TYPES } from '../../data/themes';
 import { getJudgeModeFromCollision } from '../../lib/judgeMode';
 import { EmptyState } from '../../components/EmptyState';
@@ -178,6 +179,7 @@ export function Gallery() {
     const [selectedCollision, setSelectedCollision] = useState(null);
     const [shareCopiedId, setShareCopiedId] = useState(null);
     const [shareCardLoadingId, setShareCardLoadingId] = useState(null);
+    const [reportedId, setReportedId] = useState(null);
 
     useEffect(() => {
         const list = getCollisions();
@@ -243,6 +245,16 @@ export function Gallery() {
         } finally {
             setShareCardLoadingId(null);
         }
+    };
+
+    const handleReportContent = async (collision) => {
+        await flagContent(collision.id, 'inappropriate', {
+            contentType: 'collision',
+            submission: collision.submission,
+            mediaType: getCollisionMediaMode(collision),
+        });
+        setReportedId(collision.id);
+        setTimeout(() => setReportedId(null), 2500);
     };
 
     return (
@@ -446,6 +458,13 @@ export function Gallery() {
                                         className="wordle-button flex-1 min-h-[44px] disabled:opacity-50"
                                     >
                                         {shareCardLoadingId === selectedCollision.id ? t('gallery.buildingCard') : t('gallery.downloadShareCard')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleReportContent(selectedCollision)}
+                                        className="wordle-button flex-1 min-h-[44px] text-red-200 border border-red-400/30"
+                                    >
+                                        {reportedId === selectedCollision.id ? t('gallery.reportSubmitted') : t('gallery.reportContent')}
                                     </button>
                                     <button
                                         type="button"

@@ -13,6 +13,8 @@ Prerequisites:
 Set secrets (once per project):
   supabase secrets set PEXELS_API_KEY=... GIPHY_API_KEY=... GEMINI_API_KEY=...
   supabase secrets set APP_URL=https://giant-schrodinger.vercel.app
+  supabase secrets set ALLOWED_ORIGINS=https://your-preview.vercel.app
+  supabase secrets set SUPABASE_URL=... SUPABASE_ANON_KEY=...
 
 Deploy functions:
   supabase functions deploy resolve-image

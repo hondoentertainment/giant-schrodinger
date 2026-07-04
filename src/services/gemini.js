@@ -2,9 +2,11 @@ import { GoogleGenAI } from '@google/genai';
 import { getFusionImage } from '../data/themes';
 import { scoreViaServer } from './serverScoring';
 import { uploadDataUrl } from './mediaStorage';
+import { isClientGeminiEnabled } from '../lib/productionMode';
+import { isBackendEnabled } from '../lib/supabase';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+const ai = API_KEY && isClientGeminiEnabled() ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 const SCORING_PROMPT = `You are a witty judge for a game where players connect two concepts using a creative phrase.
 
@@ -58,6 +60,10 @@ function getFallbackReason(submission, asset1, asset2) {
     if (!hasScorableAsset(asset1) || !hasScorableAsset(asset2)) {
         return 'Missing prompt assets - using mock scores';
     }
+    if (!isClientGeminiEnabled()) {
+        if (isBackendEnabled()) return 'Server scoring unavailable - using mock scores';
+        return 'AI scoring unavailable - using mock scores';
+    }
     if (!ai) return 'AI scoring unavailable - using mock scores';
     return null;
 }
@@ -98,7 +104,7 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
 
     if (!fallbackReason) {
         const serverScore = await scoreViaServer(submission, asset1, asset2);
-        if (serverScore) {
+        if (serverScore && !serverScore.error) {
             return {
                 ...serverScore,
                 isMock: false,
@@ -110,6 +116,15 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
     if (fallbackReason) {
         await new Promise((r) => setTimeout(r, 1500));
         return { ...mockScore(submission, asset1, asset2), isMock: true, errorReason: fallbackReason };
+    }
+
+    if (!isClientGeminiEnabled()) {
+        await new Promise((r) => setTimeout(r, 500));
+        return {
+            ...mockScore(submission, asset1, asset2),
+            isMock: true,
+            errorReason: 'Server scoring unavailable - using mock scores',
+        };
     }
 
     const leftMedia = getMediaDescriptor(asset1, mediaType);

@@ -96,6 +96,11 @@ Before you rely on Supabase in production, apply `supabase/schema.sql`. The curr
 - share and judgement writes to go through RPCs instead of open anonymous inserts
 - multiplayer room/session writes to go through token-validated RPCs
 - manual multiplayer scoring to persist votes and finalized results in backend state
+- content reports to go through `report_content` / `list_content_reports` RPCs
+
+Client-side Gemini scoring is disabled in production builds when Supabase is configured; use the `score-submission` edge function with `GEMINI_API_KEY` instead.
+
+Vercel serves security headers (HSTS, CSP, frame denial) via `vercel.json`. Edge functions restrict CORS to `APP_URL` / `ALLOWED_ORIGINS`.
 
 If the SQL migration has not been applied yet, the app can still fall back to older behavior, but that mode should be treated as compatibility-only rather than production-safe.
 

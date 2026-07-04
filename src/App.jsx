@@ -25,6 +25,8 @@ const AsyncChains = lazy(() => import('./features/challenge/AsyncChains').then(m
 const AnalyticsView = lazy(() => import('./features/analytics/AnalyticsView').then(m => ({ default: m.AnalyticsView })))
 const ModerationDashboard = lazy(() => import('./features/analytics/ModerationDashboard').then(m => ({ default: m.ModerationDashboard })))
 const RankedPanel = lazy(() => import('./features/ranked/RankedPanel'))
+const PrivacyPolicy = lazy(() => import('./features/legal/LegalPages').then(m => ({ default: m.PrivacyPolicy })))
+const TermsOfUse = lazy(() => import('./features/legal/LegalPages').then(m => ({ default: m.TermsOfUse })))
 import { RoomLobby } from './features/room/RoomLobby'
 import { MultiplayerRound } from './features/room/MultiplayerRound'
 import { MultiplayerReveal } from './features/room/MultiplayerReveal'
@@ -73,7 +75,8 @@ initPWAInstall();
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch((err) => {
+        const swPath = `${import.meta.env.BASE_URL}sw.js`;
+        navigator.serviceWorker.register(swPath).catch((err) => {
             console.error('Service worker registration failed:', err);
         });
     });
@@ -126,6 +129,10 @@ function GameContent() {
     const [roundData, setRoundData] = useState(null);
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
     const [challengePayload, setChallengePayload] = useState(() => parseChallengeUrl());
+    const layoutProps = {
+        onPrivacy: () => setGameState('PRIVACY'),
+        onTerms: () => setGameState('TERMS'),
+    };
 
     // Handle incoming encoded theme links on mount
     useEffect(() => {
@@ -204,7 +211,7 @@ function GameContent() {
     // Challenge mode (external link)
     if (challengePayload) {
         return (
-            <Layout>
+            <Layout {...layoutProps}>
                 {headerEl}
                 <Suspense fallback={<LoadingFallback />}>
                     <ChallengeRound payload={challengePayload} onDone={handleChallengeDone} />
@@ -216,7 +223,7 @@ function GameContent() {
     // Judge mode (external link)
     if (judgePayload) {
         return (
-            <Layout>
+            <Layout {...layoutProps}>
                 {headerEl}
                 <JudgeRound payload={judgePayload} onDone={handleJudgeDone} />
             </Layout>
@@ -226,7 +233,7 @@ function GameContent() {
     // Multiplayer mode
     if (isMultiplayer) {
         return (
-            <Layout>
+            <Layout {...layoutProps}>
                 {headerEl}
                 {roomPhase === 'lobby' && <RoomLobby />}
                 {roomPhase === 'playing' && <MultiplayerRound />}
@@ -239,12 +246,14 @@ function GameContent() {
 
     // Solo mode
     return (
-        <Layout>
+        <Layout {...layoutProps}>
             {headerEl}
             <Suspense fallback={<LoadingFallback />}>
             <PhaseTransition phase={gameState}>
                 {gameState === 'LOBBY' && <Lobby />}
                 {gameState === 'GALLERY' && <Gallery />}
+                {gameState === 'PRIVACY' && <PrivacyPolicy onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'TERMS' && <TermsOfUse onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'LEADERBOARD' && <Leaderboard onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'ACHIEVEMENTS' && <Achievements onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'THEME_BUILDER' && <ThemeBuilder onBack={() => setGameState('LOBBY')} />}

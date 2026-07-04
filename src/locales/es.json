@@ -132,7 +132,9 @@
     "allSaved": "Todo guardado",
     "downloadShareCard": "Descargar tarjeta",
     "buildingCard": "Creando tarjeta…",
-    "emptyWeek": "Nada guardado esta semana. Juega una ronda para empezar tu archivo semanal."
+    "emptyWeek": "Nada guardado esta semana. Juega una ronda para empezar tu archivo semanal.",
+    "reportContent": "Reportar contenido",
+    "reportSubmitted": "Reporte enviado"
   },
   "round": {
     "timeLeft": "{{seconds}}s",

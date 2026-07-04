@@ -132,7 +132,9 @@
     "allSaved": "All saved",
     "downloadShareCard": "Download share card",
     "buildingCard": "Building card…",
-    "emptyWeek": "Nothing saved this week yet. Play a round to start your weekly archive."
+    "emptyWeek": "Nothing saved this week yet. Play a round to start your weekly archive.",
+    "reportContent": "Report content",
+    "reportSubmitted": "Report submitted"
   },
   "round": {
     "timeLeft": "{{seconds}}s",

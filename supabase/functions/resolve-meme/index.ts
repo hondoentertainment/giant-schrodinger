@@ -1,29 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import {
+  buildCorsHeaders,
+  getRateLimitKey,
+  isRateLimited,
+  jsonResponse,
+  LIMITS,
+  sanitizeText,
+} from "../_shared/edgeSecurity.ts";
 
 const GIPHY_API_KEY = Deno.env.get("GIPHY_API_KEY");
 const GIPHY_SEARCH_URL = "https://api.giphy.com/v1/gifs/search";
 const GIPHY_TRENDING_URL = "https://api.giphy.com/v1/gifs/trending";
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX = 120;
-
-function isRateLimited(userId: string): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(userId) || [];
-  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  rateLimitMap.set(userId, recent);
-  if (recent.length >= RATE_LIMIT_MAX) return true;
-  recent.push(now);
-  rateLimitMap.set(userId, recent);
-  return false;
-}
 
 type MemeQueryInput = string | { query?: string; fallbackUrl?: string; random?: boolean };
 
@@ -34,21 +23,21 @@ function normalizeQueryInput(input: MemeQueryInput): {
 } {
   if (typeof input === "string") {
     return {
-      query: input.trim(),
+      query: sanitizeText(input, LIMITS.concept),
       fallbackUrl: null,
       random: false,
     };
   }
 
   return {
-    query: String(input?.query || "").trim(),
-    fallbackUrl: input?.fallbackUrl ? String(input.fallbackUrl) : null,
+    query: sanitizeText(input?.query, LIMITS.concept),
+    fallbackUrl: input?.fallbackUrl ? sanitizeText(input.fallbackUrl, 500) : null,
     random: Boolean(input?.random),
   };
 }
 
 function buildMemeSearchTerm(query: string): string {
-  const trimmed = query.slice(0, 120).trim();
+  const trimmed = query.slice(0, LIMITS.concept).trim();
   if (!trimmed) return "reaction meme";
   if (/\bmeme\b/i.test(trimmed)) return trimmed;
   return `${trimmed} meme`;
@@ -119,7 +108,7 @@ async function resolveMemeQuery(input: MemeQueryInput) {
     const gif = random && results.length > 0
       ? results[Math.floor(Math.random() * results.length)]
       : results[0];
-    const url = pickGifUrl(gif);
+    const url = pickGifUrl(gif as Parameters<typeof pickGifUrl>[0]);
 
     if (!url) {
       return buildStaticResult(searchTerm, fallbackUrl);
@@ -129,8 +118,8 @@ async function resolveMemeQuery(input: MemeQueryInput) {
       url,
       fallbackUrl: fallbackUrl || url,
       source: "giphy",
-      attribution: gif?.user?.display_name || "Giphy",
-      title: gif?.title || query || null,
+      attribution: (gif as { user?: { display_name?: string } })?.user?.display_name || "Giphy",
+      title: (gif as { title?: string })?.title || query || null,
     };
   } catch {
     return buildStaticResult(searchTerm, fallbackUrl);
@@ -139,24 +128,16 @@ async function resolveMemeQuery(input: MemeQueryInput) {
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS_HEADERS });
+    return new Response(null, { headers: buildCorsHeaders(req) });
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-    });
+    return jsonResponse(req, { error: "Method not allowed" }, 405);
   }
 
-  const authHeader = req.headers.get("authorization") || "";
-  const userId = authHeader.slice(0, 64) || "anonymous";
-
-  if (isRateLimited(userId)) {
-    return new Response(
-      JSON.stringify({ error: "Rate limit exceeded. Max 120 meme lookups per hour." }),
-      { status: 429, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
-    );
+  const rateLimitKey = getRateLimitKey(req);
+  if (isRateLimited(rateLimitKey, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)) {
+    return jsonResponse(req, { error: "Rate limit exceeded. Max 120 meme lookups per hour." }, 429);
   }
 
   let body: {
@@ -169,10 +150,7 @@ serve(async (req: Request) => {
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-    });
+    return jsonResponse(req, { error: "Invalid JSON body" }, 400);
   }
 
   if (Array.isArray(body.queries) && body.queries.length > 0) {
@@ -185,28 +163,19 @@ serve(async (req: Request) => {
       results[key] = await resolveMemeQuery(queryInput);
     }
 
-    return new Response(JSON.stringify({ results }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-    });
+    return jsonResponse(req, { results });
   }
 
-  const query = String(body.query || "").trim();
+  const query = sanitizeText(body.query, LIMITS.concept);
   if (!query && !body.random) {
-    return new Response(JSON.stringify({ error: "Missing query or queries" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-    });
+    return jsonResponse(req, { error: "Missing query or queries" }, 400);
   }
 
   const resolved = await resolveMemeQuery({
     query: query || "reaction",
-    fallbackUrl: body.fallbackUrl ? String(body.fallbackUrl) : null,
+    fallbackUrl: body.fallbackUrl ? sanitizeText(body.fallbackUrl, 500) : null,
     random: Boolean(body.random),
   });
 
-  return new Response(JSON.stringify(resolved), {
-    status: 200,
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-  });
+  return jsonResponse(req, resolved);
 });
