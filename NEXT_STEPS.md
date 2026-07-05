@@ -64,6 +64,9 @@ Scripts (load `.env.local` automatically):
 | `npm run rehearsal:run` | Full pipeline: preflight + smoke + deployed E2E |
 | `npm run rehearsal:status` | Local env readiness summary (no network) |
 | `npm run launch:gate` | Automated launch gate (status, RPC/edge probes, smoke, deployed E2E) |
+| `npm run setup:backend` | Backend setup orchestrator + env sync guide |
+| `npm run sync:env` | Merge Vercel production `VITE_*` into `.env.local` |
+| `npm run check:vercel-env` | Verify required vars on Vercel production |
 | `PRODUCTION_URL=… npm run test:e2e:rehearsal` | Deployed memes/videos + status E2E |
 
 See [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) for the manual launch gate.
@@ -134,9 +137,11 @@ See [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) for the manual launch gat
 
 ## Next Hosted Rehearsal (requires your credentials)
 
-1. Run `npm run rehearsal:status` to see what's configured.
-2. Fill `.env.local` from `.env.example` (`npm run init:env` if missing).
-2. Apply `supabase/schema.sql` in the Supabase SQL editor.
+See [SETUP_BACKEND.md](SETUP_BACKEND.md) for the full checklist. Summary:
+
+1. Run `npm run setup:backend` (syncs Vercel env + prints remaining steps).
+2. Fill `.env.local` with Supabase URL + anon key (`npm run init:env` if missing).
+3. Apply `supabase/schema.sql` in the Supabase SQL editor.
 3. Set Supabase Edge Function secrets: `PEXELS_API_KEY`, `GIPHY_API_KEY`, `GEMINI_API_KEY`.
 4. Deploy edge functions: `resolve-image`, `resolve-meme`, `score-submission`, `og-tags` (`npm run deploy:edge-functions` for CLI steps).
 5. Run `npm run rehearsal:preflight` (or `npm run rehearsal:run` for the full automated pipeline).

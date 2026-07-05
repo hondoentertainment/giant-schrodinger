@@ -23,12 +23,17 @@ if (existsSync(localPath)) {
 }
 
 copyFileSync(examplePath, localPath);
+let content = readFileSync(localPath, 'utf8');
+if (!content.includes('PRODUCTION_URL=')) {
+    content = `${content.trim()}\nPRODUCTION_URL=https://giant-schrodinger.vercel.app\n`;
+    writeFileSync(localPath, content);
+}
 console.log('Created .env.local from .env.example');
 console.log('\nFill in at minimum:');
 console.log('  VITE_SUPABASE_URL');
 console.log('  VITE_SUPABASE_ANON_KEY');
 console.log('\nOptional: VITE_GEMINI_API_KEY for live AI scoring');
-console.log('\nThen run: npm run rehearsal:preflight:fast');
+console.log('\nThen run: npm run setup:backend');
 
 const content = readFileSync(localPath, 'utf8');
 if (content.includes('your-project') || content.includes('your-anon')) {

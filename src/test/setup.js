@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom';
 import { beforeEach, vi } from 'vitest';
 
+// Unit tests use mock Gemini unless explicitly opted in (avoids .env.local pollution).
+if (process.env.VITEST_USE_GEMINI !== '1') {
+    delete process.env.VITE_GEMINI_API_KEY;
+}
+
 // Mock window.location for share service tests
 const mockLocation = {
     origin: 'http://localhost:5173',

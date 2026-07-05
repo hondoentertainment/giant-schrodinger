@@ -98,6 +98,7 @@ npm run verify:release
 
 For release readiness, use [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 For a launch rehearsal, use [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md).
+For backend setup (Supabase + edge functions), use [SETUP_BACKEND.md](SETUP_BACKEND.md).
 
 ## Known Live Limitations
 

@@ -21,7 +21,7 @@ function parseEnvFile(content) {
         if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
             value = value.slice(1, -1);
         }
-        vars[key] = value;
+        vars[key] = value.replace(/\r/g, '').trim();
     }
     return vars;
 }

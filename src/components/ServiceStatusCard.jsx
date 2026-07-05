@@ -16,6 +16,7 @@ function StatusPill({ ok, label, detail }) {
 
 export function ServiceStatusCard({ className = '' }) {
     const status = getRuntimeStatus();
+    const needsBackendSetup = !status.backendEnabled;
 
     return (
         <div className={`rounded-2xl border border-white/10 bg-black/20 p-4 text-left ${className}`.trim()}>
@@ -35,6 +36,14 @@ export function ServiceStatusCard({ className = '' }) {
                     detail={status.backendEnabled ? 'Supabase configured: multiplayer rooms and persistent judging available.' : 'Supabase missing: solo mode works, but multiplayer and durable judging are limited.'}
                 />
             </div>
+            {needsBackendSetup && (
+                <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100/90">
+                    Launch gate: apply <code className="text-amber-50">supabase/schema.sql</code>, set{' '}
+                    <code className="text-amber-50">VITE_SUPABASE_*</code> on Vercel, deploy edge functions.
+                    See <code className="text-amber-50">SETUP_BACKEND.md</code> or run{' '}
+                    <code className="text-amber-50">npm run setup:backend</code>.
+                </div>
+            )}
             <div className="mt-3 flex items-center gap-2 text-xs text-white/45">
                 <Sparkles className="h-3.5 w-3.5" />
                 Best production experience: configure both Gemini and Supabase secrets.
