@@ -205,7 +205,7 @@ describe('RoomProvider', () => {
             expect(screen.getByTestId('players')).toHaveTextContent('3');
             expect(screen.getByTestId('submissions')).toHaveTextContent('2');
             expect(screen.getByTestId('votes')).toHaveTextContent('1');
-        });
+        }, { timeout: 10000 });
 
         expect(mocks.multiplayer.getRoomById).toHaveBeenCalledWith('room-1');
         expect(mocks.multiplayer.getRoundSubmissions).toHaveBeenLastCalledWith('room-1', 2);

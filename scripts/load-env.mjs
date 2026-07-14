@@ -32,8 +32,13 @@ export function loadEnvFiles(root = repoRoot) {
         const path = resolve(root, file);
         if (!existsSync(path)) continue;
         const parsed = parseEnvFile(readFileSync(path, 'utf8'));
+        const isLocal = file === '.env.local';
         for (const [key, value] of Object.entries(parsed)) {
-            if (process.env[key] === undefined) {
+            if (isLocal) {
+                if (value !== '') process.env[key] = value;
+                continue;
+            }
+            if (process.env[key] === undefined && value !== '') {
                 process.env[key] = value;
             }
         }

@@ -19,7 +19,13 @@ npm run launch:gate            # automated smoke + deployed E2E
 
 ## 2. Local + Vercel env
 
-Add to `.env.local` (or run `npm run sync:env` after adding keys on Vercel):
+Add to `.env.local` (or run `npm run configure:supabase` with your credentials):
+
+```bash
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co VITE_SUPABASE_ANON_KEY=your-anon-key npm run configure:supabase
+```
+
+Or manually:
 
 ```env
 VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
@@ -54,7 +60,11 @@ Deploy: `resolve-image`, `resolve-meme`, `score-submission`, `og-tags`.
 
 ## 4. GitHub Actions (optional)
 
-Add repo secrets per [`.github/SECRETS.template.md`](.github/SECRETS.template.md) so CI runs hosted rehearsal on every push.
+```bash
+npm run configure:github-secrets
+```
+
+Or add repo secrets manually per [`.github/SECRETS.template.md`](.github/SECRETS.template.md) so CI runs hosted rehearsal on every push.
 
 ## 5. Verify
 

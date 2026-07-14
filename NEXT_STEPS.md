@@ -67,6 +67,8 @@ Scripts (load `.env.local` automatically):
 | `npm run setup:backend` | Backend setup orchestrator + env sync guide |
 | `npm run sync:env` | Merge Vercel production `VITE_*` into `.env.local` |
 | `npm run check:vercel-env` | Verify required vars on Vercel production |
+| `npm run configure:supabase` | Write Supabase creds to `.env.local` + Vercel |
+| `npm run configure:github-secrets` | Set GitHub Actions secrets (`PRODUCTION_URL`, optional Supabase) |
 | `PRODUCTION_URL=… npm run test:e2e:rehearsal` | Deployed memes/videos + status E2E |
 
 See [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) for the manual launch gate.
@@ -139,15 +141,14 @@ See [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) for the manual launch gat
 
 See [SETUP_BACKEND.md](SETUP_BACKEND.md) for the full checklist. Summary:
 
-1. Run `npm run setup:backend` (syncs Vercel env + prints remaining steps).
-2. Fill `.env.local` with Supabase URL + anon key (`npm run init:env` if missing).
-3. Apply `supabase/schema.sql` in the Supabase SQL editor.
-3. Set Supabase Edge Function secrets: `PEXELS_API_KEY`, `GIPHY_API_KEY`, `GEMINI_API_KEY`.
-4. Deploy edge functions: `resolve-image`, `resolve-meme`, `score-submission`, `og-tags` (`npm run deploy:edge-functions` for CLI steps).
-5. Run `npm run rehearsal:preflight` (or `npm run rehearsal:run` for the full automated pipeline).
-6. Deploy from `main` with GitHub secrets or Vercel env vars set.
-7. Run `npm run smoke:production` and `PRODUCTION_URL=… npm run test:e2e:rehearsal`.
-8. Run `npm run rehearsal:telemetry` then complete manual checks in PRODUCTION_REHEARSAL.md sections 4–6.
+1. Create a Supabase project and run `supabase/schema.sql`.
+2. Run `npm run configure:supabase` with your URL + anon key (or set manually).
+3. Apply edge secrets and `npm run deploy:edge-functions`.
+4. Sync CI secrets: `npm run configure:github-secrets`.
+5. Rotate invalid Gemini key in Google Cloud + Vercel if scoring fails.
+6. Run `npm run launch:gate` then `npm run rehearsal:run`.
+7. Complete manual checks in PRODUCTION_REHEARSAL.md §4–6; update PRODUCTION_TEST_REPORT.md.
+8. Optional: set `VITE_SENTRY_DSN` / `VITE_POSTHOG_KEY` after telemetry validation.
 
 ## Manual Live Checks
 

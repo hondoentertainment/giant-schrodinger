@@ -50,9 +50,10 @@ function serializeEnv(map, original = '') {
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) {
-      output.push(line);
+      if (!trimmed.startsWith('VERCEL_')) output.push(line);
       continue;
     }
+    if (trimmed.startsWith('VERCEL_')) continue;
     const eq = trimmed.indexOf('=');
     if (eq === -1) {
       output.push(line);

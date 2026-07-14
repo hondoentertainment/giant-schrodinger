@@ -2,7 +2,7 @@
 /**
  * Bootstrap .env.local from .env.example when missing.
  */
-import { copyFileSync, existsSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,7 +35,6 @@ console.log('  VITE_SUPABASE_ANON_KEY');
 console.log('\nOptional: VITE_GEMINI_API_KEY for live AI scoring');
 console.log('\nThen run: npm run setup:backend');
 
-const content = readFileSync(localPath, 'utf8');
 if (content.includes('your-project') || content.includes('your-anon')) {
     console.log('\n⚠ Replace placeholder values before running hosted rehearsal.');
 }

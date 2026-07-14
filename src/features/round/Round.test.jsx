@@ -124,7 +124,7 @@ describe('Round', () => {
 
     it('text input accepts user submission', async () => {
         vi.useRealTimers();
-        const user = userEvent.setup();
+        const user = userEvent.setup({ delay: null });
         render(<Round onSubmit={mockOnSubmit} />);
         const input = screen.getByPlaceholderText('What connects these two?');
         await user.type(input, 'They both have fur');
@@ -138,7 +138,7 @@ describe('Round', () => {
 
     it('submits on Enter even when input is empty', async () => {
         vi.useRealTimers();
-        const user = userEvent.setup();
+        const user = userEvent.setup({ delay: null });
         render(<Round onSubmit={mockOnSubmit} />);
         const input = screen.getByPlaceholderText('What connects these two?');
         await user.type(input, '{Enter}');
@@ -147,7 +147,7 @@ describe('Round', () => {
 
     it('submits whitespace-only input on Enter', async () => {
         vi.useRealTimers();
-        const user = userEvent.setup();
+        const user = userEvent.setup({ delay: null });
         render(<Round onSubmit={mockOnSubmit} />);
         const input = screen.getByPlaceholderText('What connects these two?');
         await user.type(input, '   {Enter}');
@@ -156,7 +156,7 @@ describe('Round', () => {
 
     it('submits valid input with {submission, assets} shape and transitions to REVEAL', async () => {
         vi.useRealTimers();
-        const user = userEvent.setup();
+        const user = userEvent.setup({ delay: null });
         render(<Round onSubmit={mockOnSubmit} />);
         const input = screen.getByPlaceholderText('What connects these two?');
         await user.type(input, 'Both have whiskers{Enter}');

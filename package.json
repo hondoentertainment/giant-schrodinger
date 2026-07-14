@@ -29,6 +29,8 @@
     "setup:backend": "node scripts/setup-backend.mjs",
     "sync:env": "node scripts/sync-env-from-vercel.mjs",
     "check:vercel-env": "node scripts/check-vercel-env.mjs",
+    "configure:supabase": "node scripts/configure-supabase-env.mjs",
+    "configure:github-secrets": "node scripts/configure-github-secrets.mjs",
     "refresh:theme-images": "node scripts/refresh-theme-images.mjs",
     "test:e2e:rehearsal": "playwright test e2e/deployed-rehearsal.spec.js --project=\"Desktop Chrome\"",
     "verify:release": "npm run lint && npm run test && npm run test:e2e:desktop && npm run build",
