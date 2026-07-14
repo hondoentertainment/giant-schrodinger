@@ -29,8 +29,9 @@ function setSecret(name, value) {
     return false;
   }
   console.log(`▶ set ${name}`);
-  const result = spawnSync('gh', ['secret', 'set', name, '--body', value], {
+  const result = spawnSync('gh', ['secret', 'set', name], {
     cwd: root,
+    input: value,
     encoding: 'utf8',
     shell: process.platform === 'win32',
   });
