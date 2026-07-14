@@ -10,7 +10,7 @@ Production URL: https://giant-schrodinger.vercel.app
 
 - Vercel deployment: production alias live
 - Production alias: https://giant-schrodinger.vercel.app
-- Pending ship: launch tooling + Vitest stability (this commit)
+- GitHub `main`: `13afad6` (configure scripts + Vitest stability)
 
 ## Automated Verification
 
