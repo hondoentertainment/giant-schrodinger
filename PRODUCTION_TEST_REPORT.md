@@ -1,62 +1,55 @@
 # Production Test Report
 
-Report date: July 13, 2026
+Report date: July 15, 2026 (evening rehearsal pass)
 
 Repository: https://github.com/hondoentertainment/giant-schrodinger
 
 Production URL: https://giant-schrodinger.vercel.app
 
+**Product status:** [PRD.md](PRD.md) · [ROADMAP.md](ROADMAP.md)
+
 ## Deployment Status
 
 - Vercel deployment: production alias live
 - Production alias: https://giant-schrodinger.vercel.app
-- GitHub `main`: `13afad6` (configure scripts + Vitest stability)
+- Supabase project: `venn-with-friends` (`fnjshhjwoximddoggdrk`, us-west-2)
 
 ## Automated Verification
 
-- `npm run verify:release`: passed (688 unit tests, 33 E2E, build) — prior pass July 4
-- Failing unit timeouts fixed: Gemini env isolation in Vitest + faster Round userEvent
-- `npm run launch:gate`: automated portion passes when prod is up; backend probes skip without Supabase
+| Check | Result |
+|---|---|
+| `npm run launch:gate` (env/RPC/edge/smoke/deployed E2E) | **Passed** |
+| Hosted two-browser multiplayer (`e2e/hosted-two-browser.spec.js`) | **Passed** — create/join/submit/vote/finalize |
+| Hosted friend-judge share (second browser) | **Passed** |
+| Supabase RPC probe | **Passed** |
+| Edge functions | **Passed** (`og-tags` 200; others 405 on GET as expected) |
+| Production smoke | **Passed** |
 
-## Shipped / shipping
+## Shipped this pass
 
-### Production hardening (`446a30e`)
+- Supabase project + schema + pgcrypto wrappers + edge functions
+- Local / Vercel / GitHub secrets wired
+- Multiplayer UX + telemetry + gallery share polish
+- Hosted rehearsal CI hardened
+- New `e2e/hosted-two-browser.spec.js` + `npm run test:e2e:hosted`
 
-- Server-only Gemini scoring gate when Supabase is configured
-- Vercel CSP + security headers; hidden source maps
-- Edge CORS allowlists + input sanitization
-- Content moderation RPCs + gallery report button
-- PWA SW v2 + offline page; Privacy/Terms pages
+## Remaining (optional)
 
-### Launch automation (`8125ba4` + this commit)
-
-- `npm run launch:gate`, `setup:backend`, `sync:env`, `check:vercel-env`
-- `npm run configure:supabase` — local + Vercel Supabase env
-- `npm run configure:github-secrets` — GitHub Actions secrets
-- Real edge deploy when CLI linked (`deploy:edge-functions`)
-- Env loading: `.env.local` overrides empty `.env` placeholders
-- Vitest: clear invalid Gemini key unless `VITEST_USE_GEMINI=1`
-
-## Remaining Hosted Rehearsal (requires your credentials)
-
-1. Create Supabase project → apply `supabase/schema.sql`.
-2. `VITE_SUPABASE_URL=… VITE_SUPABASE_ANON_KEY=… npm run configure:supabase`
-3. `npm run configure:github-secrets`
-4. `supabase link` + edge secrets → `npm run deploy:edge-functions`
-5. Rotate Gemini key if Google returns `API_KEY_INVALID`
-6. Two-browser checks — `PRODUCTION_REHEARSAL.md` §4–6
+1. `npm run rehearsal:telemetry` during a live browser session (observability sink)
+2. Set `PEXELS_API_KEY` / `GIPHY_API_KEY` edge secrets for richer stock/meme lookup
+3. Commit/push so GitHub Pages + Actions pick up the latest docs/tests
 
 ## Known Live Limitations
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Supabase schema + RPCs | **Blocked — no creds** | Missing `VITE_SUPABASE_*` locally and on Vercel |
-| Friend judging / multiplayer | Requires live Supabase | Launch gate |
-| Server AI scoring | Requires edge + valid `GEMINI_API_KEY` | Current Vercel Gemini key reported invalid by Google |
-| OG previews | Requires `og-tags` + secrets | |
-| Ranked / shop / tournaments | Local preview only | |
+| Supabase schema + RPCs | **Live** | Project `fnjshhjwoximddoggdrk` |
+| Friend judging / multiplayer | **Verified live** | Two-browser Playwright rehearsal passed |
+| Server AI scoring | Edge deployed | Live Gemini path exercised in friend-judge flow |
+| OG previews | Edge deployed | `og-tags` with image dimensions/alt |
+| Ranked / shop / tournaments | Local preview only | Product decision locked until Phase 9 |
 | Observability | Optional | Sentry/PostHog not configured |
 
 ## Current Launch Gate
 
-Frontend, CI workflows, and launch automation are ready. Remaining gate: **Supabase credentials + schema/edge deploy + manual two-browser rehearsal**.
+**Cleared for launch candidate.** Optional polish remains (telemetry sink check, Pexels/Giphy secrets).

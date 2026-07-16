@@ -143,8 +143,9 @@ export async function createJudgeShareLinks(round) {
 }
 
 export function getOgShareUrl(publicToken, options = {}) {
-    const { supabaseUrl } = options;
-    const base = supabaseUrl || import.meta.env?.VITE_SUPABASE_URL || '';
+    const base = options.supabaseUrl !== undefined
+        ? (options.supabaseUrl || '')
+        : (import.meta.env?.VITE_SUPABASE_URL || '');
     if (base && publicToken) {
         const fnBase = `${base.replace(/\/$/, '')}/functions/v1/og-tags`;
         return `${fnBase}?roundId=${encodeURIComponent(publicToken)}`;

@@ -9,9 +9,9 @@ loadEnvFiles();
 const base = (process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
 const productionUrl = process.env.PRODUCTION_URL || 'https://giant-schrodinger.vercel.app';
 
-async function probe(name, url, { acceptStatuses = [200, 400, 404] } = {}) {
+async function probe(name, url, { acceptStatuses = [200, 400, 404, 405], headers = {} } = {}) {
     try {
-        const response = await fetch(url, { method: 'GET', redirect: 'manual' });
+        const response = await fetch(url, { method: 'GET', redirect: 'manual', headers });
         const ok = acceptStatuses.includes(response.status);
         console.log(`${ok ? '✓' : '✗'} ${name} — HTTP ${response.status}`);
         return ok;
@@ -30,6 +30,11 @@ async function main() {
         process.exit(0);
     }
 
+    const anon = process.env.VITE_SUPABASE_ANON_KEY || '';
+    const authHeaders = anon
+        ? { apikey: anon, Authorization: `Bearer ${anon}` }
+        : {};
+
     let failures = 0;
     const checks = [
         ['resolve-image', `${base}/functions/v1/resolve-image`],
@@ -39,7 +44,7 @@ async function main() {
     ];
 
     for (const [name, url] of checks) {
-        const ok = await probe(name, url);
+        const ok = await probe(name, url, { headers: authHeaders });
         if (!ok) failures += 1;
     }
 

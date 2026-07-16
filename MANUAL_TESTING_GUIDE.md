@@ -4,7 +4,7 @@
 
 Development server: **http://localhost:5173/giant-schrodinger/**
 
-The project has 179 automated tests across 21 files (16 unit/integration + 5 Playwright E2E specs in `e2e/`). This guide covers manual testing for features that benefit from human verification.
+The project has **688 unit tests** (68 files) and **11 Playwright E2E specs** under `e2e/` (as of July 14, 2026). This guide covers manual testing for features that benefit from human verification.
 
 Run automated tests first:
 ```bash
@@ -574,33 +574,33 @@ All screenshots saved in: `screenshots/`
 
 ---
 
-### Phase 11: Community & Social Features (10 minutes)
+### Phase 11: Personal Gallery & Social Polish (10 minutes)
 
-1. **Community Gallery**:
-   - Open the community gallery from the lobby
-   - Check tabs: Recent, Trending, Top Rated
-   - Verify voting (upvote/downvote) works on submissions
-   - Check that trending algorithm surfaces popular recent content
+1. **Personal gallery** (not a public community feed):
+   - Open Gallery from the lobby
+   - Check filters (newest, score, highlights, judged, media type)
+   - Open a saved collision detail and confirm judge source when present
+   - Reshare / copy link if available
 
-2. **Story Sharing**:
-   - After a round, look for "Share Story" option
-   - Verify a shareable image is generated
-   - Check that the image includes the Venn diagram and score
+2. **Story / result sharing**:
+   - After a round, use share / friend-judge CTAs
+   - Verify copied-link confirmation
+   - With Supabase + `og-tags`, check share preview behavior
 
-3. **Theme Sharing**:
-   - In the shop or profile, look for custom theme options
-   - Verify themes can be shared via URL or code
+3. **Theme sharing**:
+   - Theme builder can share custom themes via URL hash
+   - Verify a shared theme URL opens correctly
 
 4. **Comeback Celebration**:
    - After scoring lower, then scoring higher, check for comeback animation
    - Verify the celebration is proportional to the improvement
 
 **Checklist**:
-- [ ] Community gallery loads with tabs
-- [ ] Voting works on gallery submissions
-- [ ] Story sharing generates an image
-- [ ] Theme sharing produces a shareable link
-- [ ] Comeback celebration triggers after improvement
+- [ ] Personal gallery loads with filters
+- [ ] Judged rounds show friend feedback when available
+- [ ] Share / friend-judge CTAs work
+- [ ] Theme share URL works
+- [ ] Comeback celebration triggers appropriately
 
 ---
 
@@ -663,7 +663,7 @@ All screenshots saved in: `screenshots/`
 
 ### Phase 14: E2E Test Coverage Reference
 
-The `e2e/` directory contains 5 Playwright spec files covering automated flows:
+The `e2e/` directory contains **11 Playwright spec files** covering automated flows:
 
 | Spec | What it tests |
 |------|--------------|

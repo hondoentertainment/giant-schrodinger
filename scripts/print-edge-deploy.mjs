@@ -27,10 +27,12 @@ function run(label, command, args, { optional = false } = {}) {
   return result.status === 0;
 }
 
-function isLinked() {
-  if (!existsSync(configPath)) return false;
+function readProjectRef() {
+  if (!existsSync(configPath)) return null;
   const config = readFileSync(configPath, 'utf8');
-  return /project_id\s*=\s*"(?!YOUR_PROJECT_REF)[^"]+"/.test(config);
+  const match = config.match(/project_id\s*=\s*"([^"]+)"/);
+  if (!match || match[1] === 'YOUR_PROJECT_REF') return null;
+  return match[1];
 }
 
 console.log('Supabase edge function deploy\n');
@@ -45,7 +47,8 @@ if (cliCheck.status !== 0) {
   console.log('Install CLI: npm i -g supabase   (or use npx supabase)');
 }
 
-if (!isLinked()) {
+const projectRef = readProjectRef();
+if (!projectRef) {
   console.log(`
 Project not linked yet. Complete these steps:
 
@@ -53,12 +56,12 @@ Project not linked yet. Complete these steps:
 2. SQL Editor → paste supabase/schema.sql
 3. supabase login
 4. supabase link --project-ref YOUR_PROJECT_REF
+   (or set project_id in supabase/config.toml)
 
 Set secrets (Supabase dashboard → Edge Functions → Secrets):
   GEMINI_API_KEY, PEXELS_API_KEY, GIPHY_API_KEY
   APP_URL=https://giant-schrodinger.vercel.app
   ALLOWED_ORIGINS=https://giant-schrodinger.vercel.app
-  SUPABASE_URL, SUPABASE_ANON_KEY
 
 Then re-run: npm run deploy:edge-functions
 `);
@@ -67,7 +70,12 @@ Then re-run: npm run deploy:edge-functions
 
 let ok = true;
 for (const fn of FUNCTIONS) {
-  if (!run(`Deploy ${fn}`, 'npx', ['supabase', 'functions', 'deploy', fn])) {
+  if (!run(`Deploy ${fn}`, 'npx', [
+    'supabase', 'functions', 'deploy', fn,
+    '--project-ref', projectRef,
+    '--use-api',
+    '--no-verify-jwt',
+  ])) {
     ok = false;
   }
 }

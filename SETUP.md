@@ -127,5 +127,8 @@ The workflow at `.github/workflows/deploy.yml` already reads those secrets durin
 
 ## 7. Current limitation note
 
-Realtime multiplayer requires Supabase today.
-Non-AI multiplayer scoring UI exists, but authoritative backend scoring/voting still needs follow-on product hardening.
+Realtime multiplayer requires Supabase today. There is no user-facing mock multiplayer.
+
+Authoritative room voting RPCs (`cast_room_vote`, `finalize_room_votes`) are implemented in `supabase/schema.sql` and the client. Remaining work is **hosted verification** with real credentials — see [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) and [PRD.md](PRD.md).
+
+Judge modes: [JUDGE_MODEL.md](JUDGE_MODEL.md). Architecture: [ARCHITECTURE.md](ARCHITECTURE.md).

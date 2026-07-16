@@ -1,6 +1,8 @@
 # Screenshots
 
-This folder contains screenshots from testing the Venn with Friends app.
+This folder holds QA and marketing screenshots for Venn with Friends.
+
+Capture against local (`http://localhost:5173/giant-schrodinger/`) or production (`https://giant-schrodinger.vercel.app`). Naming conventions below keep manual guides and release reviews consistent. See [MANUAL_TESTING_GUIDE.md](../MANUAL_TESTING_GUIDE.md).
 
 ## Organization
 

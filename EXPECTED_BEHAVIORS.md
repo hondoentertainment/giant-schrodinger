@@ -1,29 +1,36 @@
 # Venn with Friends - Expected Behaviors & Feature Status
 
+**Last updated:** July 14, 2026  
+**Canonical status:** [PRD.md](PRD.md) §2 · [README.md](README.md) feature matrix
+
 ## Environment Configuration
 
-**Current Setup**: No API keys configured (.env is empty)
+Behavior depends on whether `.env` has live keys. Solo play never requires keys.
 
-### What Works WITHOUT API Keys:
-✅ Solo game mode (uses mock scoring)
-✅ Basic gameplay flow
-✅ Venn diagram visualization
-✅ Mock scoring with random but realistic scores
-✅ Mock multiplayer with simulated players
-✅ UI/UX and visual design
-✅ Responsive layouts
-✅ Gallery/history features
+### What Works WITHOUT API Keys
+- Solo game mode (mock scoring)
+- Basic gameplay flow, Venn diagram, responsive UI
+- Mock scoring with realistic structured scores
+- Personal gallery/history (local)
+- Daily challenge, unlocks, streaks (local)
+- Ranked / shop / tournaments as **local-preview only** (device progress)
 
-### What Requires API Keys:
+### What does NOT work without Supabase
+- Realtime multiplayer rooms (there is **no user-facing mock multiplayer**)
+- Durable friend-judgement persistence across devices
+- Authoritative room voting
 
-#### With Supabase (VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY):
+### What Requires API Keys
+
+#### With Supabase (`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`):
 - Real multiplayer rooms with other players
 - Room codes that work across devices
 - Share links saved to database
 - Friend judgements persisted
-- Real-time synchronization
+- Real-time synchronization and room vote finalization
+- Content reports / moderation dashboard data
 
-#### With Gemini (VITE_GEMINI_API_KEY):
+#### With Gemini (`VITE_GEMINI_API_KEY` and/or edge `GEMINI_API_KEY`):
 - AI-powered scoring (instead of mock scores)
 - Detailed feedback on submissions
 - AI-generated fusion images
@@ -446,7 +453,7 @@
 5. Other players see a "Disconnected" status next to the player's name
 
 #### Without Supabase:
-- Not applicable (mock multiplayer does not simulate disconnects)
+- Not applicable — multiplayer rooms are unavailable without Supabase
 
 ---
 
@@ -530,7 +537,7 @@
 ### Issue: Multiplayer Doesn't Connect
 **Symptoms**: Can't join room, no real-time updates
 **Expected**: This is normal without Supabase credentials
-**Solution**: Test mock multiplayer mode instead
+**Solution**: Configure Supabase per [SETUP.md](SETUP.md); solo and friend-judge (local) still work without it
 
 ### Issue: AI Scoring Doesn't Work
 **Symptoms**: Instant results instead of AI feedback

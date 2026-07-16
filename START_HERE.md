@@ -1,4 +1,6 @@
-# START HERE - Quick Start Guide
+# START HERE — Quick Start Guide
+
+**Last updated:** July 14, 2026
 
 ## Install, Configure, Run, Play
 
@@ -8,11 +10,15 @@
 npm install
 ```
 
-### Step 2: Configure (Optional)
+### Step 2: Configure (optional)
 
-Copy `.env.example` to `.env` and fill in any values you want. All env vars are optional -- the app works fully without them using mock data.
+Copy `.env.example` to `.env` and fill in any values you want.
 
-See [SETUP.md](SETUP.md) for details on each variable.
+- **No keys:** full solo loop with mock scoring and curated fusion art
+- **Gemini:** live AI scores and generated fusion images
+- **Supabase:** realtime multiplayer, durable friend judging, room voting
+
+See [SETUP.md](SETUP.md) for each variable. Multiplayer is **not** available without Supabase.
 
 ### Step 3: Run
 
@@ -20,48 +26,46 @@ See [SETUP.md](SETUP.md) for details on each variable.
 npm run dev
 ```
 
-Open http://localhost:5173/giant-schrodinger/ in your browser.
+Open http://localhost:5173/giant-schrodinger/
 
 ### Step 4: Play
 
-The lobby uses **progressive disclosure** -- new users see a simplified UI with just the essentials. As you play more, additional features unlock in the interface.
+The lobby uses **progressive disclosure** — new users see a simplified UI; more surfaces unlock as you play.
 
-Available game modes:
-- **Solo** -- Play alone with AI scoring
-- **Multiplayer** -- Create or join rooms with friends
-- **Ranked** -- Elo-rated competitive play with tiers
-- **Async** -- Play at your own pace, compare later
-- **Daily Challenge** -- New challenge every day
-- **Tournaments** -- Bracket-style competitions
-- **Party Mode** -- Casual group play
+**Available game modes**
 
-AI scoring is powered by Google Gemini and evaluates wit, logic, originality, and clarity. Without an API key, mock scoring provides a realistic experience.
+| Mode | Availability |
+|---|---|
+| **Solo** | Always — AI or manual scoring |
+| **Daily Challenge** | Always |
+| **Friend judging** | Share links always; durable results need Supabase |
+| **Multiplayer** | Requires Supabase |
+| **Ranked / Shop / Tournaments / Async** | Local-preview only (device progress) |
+
+AI scoring uses Google Gemini (wit, logic, originality, clarity). Without a key, mock scoring still works.
 
 ---
 
 ## What the App Does
 
-Players see two random concept images and write a clever phrase connecting them. The connection appears in the intersection of a Venn diagram. Submissions are scored by AI or friends.
+Players see two media prompts and write a clever phrase connecting them. The connection appears in a Venn diagram intersection and is scored by AI, self-judgement, a friend, or room vote.
 
-The game includes 93 features across 5 development phases:
-- **Phase 1**: Core gameplay, solo and multiplayer
-- **Phase 2**: Social sharing, gallery, friend judging, daily challenges
-- **Phase 3**: Ranked mode, spectator mode, community gallery, tournaments
-- **Phase 4**: Battle pass, story sharing, weekly events, colorblind mode
-- **Phase 5**: Achievement progress, score coaching, progressive lobby, PWA features
+Canonical product status and roadmap: [PRD.md](PRD.md).
 
 ---
 
 ## Project Commands
 
 ```bash
-npm run dev          # Start dev server
-npm run build        # Production build
-npm run preview      # Preview production build
-npm run test         # Run unit/integration tests (680+)
-npm run test:e2e     # Run Playwright E2E tests
-npm run rehearsal:status  # Check hosted env readiness
-npm run lint         # ESLint check
+npm run dev               # Start dev server
+npm run build             # Production build
+npm run preview           # Preview production build
+npm run test              # Unit/integration tests (688)
+npm run test:e2e:desktop  # Playwright E2E (11 specs)
+npm run verify:release    # Lint + unit + E2E + build
+npm run rehearsal:status  # Hosted env readiness
+npm run launch:gate       # Launch gate automation
+npm run lint              # ESLint
 ```
 
 ---
@@ -70,28 +74,37 @@ npm run lint         # ESLint check
 
 | Document | Purpose |
 |----------|---------|
+| [PRD.md](PRD.md) | Product requirements + feature registry |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System design, RPCs, persistence |
+| [ROADMAP.md](ROADMAP.md) | Implementation phase status |
+| [JUDGE_MODEL.md](JUDGE_MODEL.md) | Scoring mode decisions |
 | [SETUP.md](SETUP.md) | Environment variables and backend setup |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Deploy to GitHub Pages and Supabase |
+| [SETUP_BACKEND.md](SETUP_BACKEND.md) | Launch-gate backend checklist |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | GitHub Pages and Vercel |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Contributor workflow |
+| [EXPECTED_BEHAVIORS.md](EXPECTED_BEHAVIORS.md) | Feature QA expectations |
 | [MANUAL_TESTING_GUIDE.md](MANUAL_TESTING_GUIDE.md) | Manual testing instructions |
-| [EXPECTED_BEHAVIORS.md](EXPECTED_BEHAVIORS.md) | Feature specifications |
-| [TEST_REVIEW_CHECKLIST.md](TEST_REVIEW_CHECKLIST.md) | QA checklist |
-| [PERFORMANCE_BUDGET.md](PERFORMANCE_BUDGET.md) | Performance targets and actuals |
-| [NEXT_STEPS.md](NEXT_STEPS.md) | Roadmap and future plans |
+| [TEST_REVIEW_CHECKLIST.md](TEST_REVIEW_CHECKLIST.md) | Pre-release QA checklist |
+| [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) | Hosted launch rehearsal |
+| [PERFORMANCE_BUDGET.md](PERFORMANCE_BUDGET.md) | Performance targets |
 | [DISCORD_BOT.md](DISCORD_BOT.md) | Discord bot setup |
-| [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) | App store preparation |
+| [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) | Future app-store prep |
 
 ---
 
 ## Troubleshooting
 
 ### Page will not load
-1. Check if the dev server is running (`npm run dev`)
-2. Clear browser cache with Ctrl+Shift+R
-3. Check the URL has a trailing slash: http://localhost:5173/giant-schrodinger/
+1. Confirm `npm run dev` is running
+2. Hard refresh (Ctrl+Shift+R)
+3. Use the trailing-slash URL: http://localhost:5173/giant-schrodinger/
 
 ### Blank white screen
-1. Open DevTools (F12) and check the Console tab for errors
-2. Run `npm install` to make sure dependencies are up to date
+1. Open DevTools (F12) → Console
+2. Run `npm install` and retry
 
-### Missing features
-Some features require environment variables. Without `VITE_SUPABASE_URL`, multiplayer uses mock rooms. Without `VITE_GEMINI_API_KEY`, scoring uses mock data. See [SETUP.md](SETUP.md) for the full list.
+### Multiplayer unavailable
+Expected without `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. There is no user-facing mock multiplayer — configure Supabase per [SETUP.md](SETUP.md).
+
+### AI scores feel instant / generic
+Expected without Gemini (or when the edge function falls back). Mock scoring still returns structured commentary.

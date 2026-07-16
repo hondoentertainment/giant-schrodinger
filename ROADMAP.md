@@ -1,140 +1,158 @@
 # Venn with Friends Roadmap
 
-Last updated: June 19, 2026
+**Last updated:** July 14, 2026  
+**Source of truth for product intent:** [PRD.md](PRD.md)
 
-This roadmap turns the PRD into an implementation plan. The near-term focus is launch readiness: stabilize the current product, prove live multiplayer, and make the social loop trustworthy before adding new game modes.
+This roadmap turns the PRD into an implementation plan. Near-term focus: prove live multiplayer, keep social scoring trustworthy, and stay honest about local-preview vs shipped.
 
 ## Current Product Status
 
 | Area | Status | Notes |
 |---|---|---|
-| Solo play | Shipped | Profile creation, configurable rounds, daily challenge, scoring, reveal, and summary flows are implemented. |
-| AI scoring | Shipped with fallback | Gemini scoring is optional. Missing API keys, missing submissions, or unusable prompt assets fall back to mock scoring. |
-| Fusion images | Shipped with fallback | Gemini image generation is optional and falls back to curated fusion art. |
-| Friend judging | Shipped, live persistence depends on Supabase | Share links work locally; manual-mode users can ask a friend before self-scoring; backend persistence requires Supabase configuration. |
-| Gallery/history | Shipped and improved | Local-first saved creations include highlights, friend-feedback filters, details, and reshare copy actions. |
-| Realtime multiplayer | Shipped, needs hosted proof | Supabase-backed rooms, synchronized phases, vote recovery, reveal-phase connection status, and reconnect resync exist but still need repeatable live rehearsal. |
-| Progression and retention | Shipped and wired | Streaks, achievements, unlocks, daily completion, weekly events, next-goal nudges, and ranked services exist. |
-| Production readiness | In progress | README, deployment docs, release checklist, e2e tests, `npm run verify:release`, and GitHub Pages workflow are present. Hosted verification remains the main gap. |
+| Solo play | Shipped | Profile, rounds, daily challenge, scoring, reveal, summary |
+| AI scoring | Shipped with fallback | Gemini optional; null/missing assets → mock |
+| Fusion images | Shipped with fallback | Curated art without Gemini |
+| Friend judging | Shipped; live persistence needs Supabase | Early share from reveal; local fallback |
+| Gallery/history | Shipped | Personal archive; filters; not a public community feed |
+| Realtime multiplayer | Shipped in code; needs hosted proof | Rooms, vote recovery, reconnect, spectator |
+| Moderation (lightweight) | Shipped | Content reports + dashboard |
+| Progression / retention | Shipped | Streaks, achievements, unlocks, weekly events |
+| Ranked / shop / tournaments | Local preview | Device-only; `LocalPreviewBadge` |
+| Production readiness | In progress | Automation ready; Supabase credentials are the gate |
+
+## Phase status summary
+
+| Phase | Status |
+|---|---|
+| 1 Stabilization & Truthfulness | **Complete** |
+| 2 Production Readiness | **Highest priority** — hosted rehearsal |
+| 3 Social Scoring Foundation | **Mostly complete** — polish after live proof |
+| 4 Multiplayer Authority | **Code complete** — verify live |
+| 5 Share Loop Optimization | **Mostly complete locally** |
+| 6 Gallery, Identity, Retention | **In progress** |
+| 7–10 Content / Accounts / Community | **Later** (spectator + moderation already partial) |
+
+---
 
 ## Phase 1: Stabilization and Truthfulness
 
-Goal: keep the shipped app trustworthy and documented.
+**Status: complete**
 
-Status: mostly complete.
+Completed:
 
-Completed or verified:
+- Automated tests for `scoreSubmission()` and `ErrorBoundary` passing
+- Null/label-less prompt assets fall back to mock scoring explicitly
+- README + PRD feature registries separate no-key / Gemini / Supabase behavior
+- First-session lobby, coaching, and reveal next actions instrumented
+- Docs aligned July 2026 (removed Party Mode / community gallery overclaims)
 
-- Automated tests for `scoreSubmission()` and `ErrorBoundary` are passing.
-- `scoreSubmission()` now handles null or label-less prompt assets through explicit mock fallback.
-- README includes a feature status matrix that separates no-key, Gemini, and Supabase behavior.
-- First-session lobby, onboarding, round coaching, and reveal next actions are simplified and instrumented.
-- Share/judge, gallery, retention, and accessibility polish improvements are wired into live app paths.
+Ongoing hygiene:
 
-Remaining work:
+- Run `npm run verify:release` before release candidates
+- Update PRD/README when live-service requirements change
 
-- Run the full test suite and production build after each stabilization pass.
-- Keep README and PRD updated when a feature changes live-service requirements.
-- Use `npm run verify:release` as the repeatable local and CI preflight.
-- Document any hosted-only limitations found during release rehearsal.
+---
 
 ## Phase 2: Production Readiness
 
-Goal: make the app launchable in a real hosted environment.
+**Priority: highest · Status: in progress**
 
-Priority: highest.
+Next steps:
 
-Next implementation steps:
-
-1. Complete a hosted rehearsal with real Supabase credentials and schema applied.
-2. Verify solo, friend-judging, and multiplayer room flows on the deployed site.
-3. Confirm telemetry for profile creation, first-round submission, friend-judge sharing, room creation, joins, vote finalization, AI fallback, and error-boundary catches.
-4. Add any missing release-checklist steps discovered during rehearsal.
+1. Hosted rehearsal with real Supabase credentials and schema applied ([SETUP_BACKEND.md](SETUP_BACKEND.md))
+2. Verify solo, friend-judging, and multiplayer on the deployed site
+3. Confirm telemetry for profile, first submission, friend-judge share, room create/join, vote finalize, AI fallback, error boundary
+4. Fix invalid Gemini key on Vercel if Google returns `API_KEY_INVALID`
 
 Exit criteria:
 
-- Deployed environment is accessible.
-- Core solo and share flows work on the live site.
-- Multiplayer manual voting is verified across two browsers, including join/rejoin around reveal and results.
+- Deployed environment accessible
+- Core solo and share flows work live
+- Multiplayer manual voting verified across two browsers (including rejoin around reveal/results)
+
+Runbook: [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) · status: [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)
+
+---
 
 ## Phase 3: Social Scoring Foundation
 
-Goal: make non-AI judging consistent and explainable.
+**Priority: high after hosted rehearsal · Status: mostly complete**
 
-Priority: high after hosted rehearsal.
+Canonical model: [JUDGE_MODEL.md](JUDGE_MODEL.md)
 
-Next implementation steps:
+Remaining:
 
-1. Continue refining the canonical product model for AI judge, manual judge, and friend judge based on playtesting.
-2. Audit `src/services/judgements.js`, `src/services/votes.js`, `src/services/share.js`, and multiplayer reveal UI for naming or behavior drift after hosted rehearsal.
-3. Persist shared-round outcomes through one consistent model when Supabase is available.
-4. Surface judged results more clearly in gallery/history and session summaries.
+1. Playtest copy for AI / manual / friend clarity after live traffic
+2. Audit `judgements.js`, `votes.js`, `share.js`, and reveal UI for naming drift
+3. Surface judged results more clearly in gallery and session summaries
 
-Exit criteria:
+Exit criteria: manual and friend scoring are clear; judged rounds durable when Supabase is configured.
 
-- Manual and friend scoring behavior is clear to users.
-- Judged rounds can be trusted as durable results when backend services are configured.
+---
 
 ## Phase 4: Multiplayer Authority
 
-Goal: make multiplayer outcomes shared and deterministic.
+**Priority: high · Status: code complete — needs live proof**
 
-Priority: high.
+Shipped in schema/client:
 
-Next implementation steps:
+- `cast_room_vote` / `finalize_room_votes` / `advance_room_state`
+- Reconnect resync, ConnectionBanner, host-exit handling
 
-1. Verify secure Supabase RPCs for submitting votes and finalizing results.
-2. Expand regression coverage for late joins, reconnects, host exits, and result finalization.
-3. Improve room-state messaging for disconnected, waiting, finalizing, and recovered states.
-4. Ensure all clients converge on the same reveal, winner, and standings data.
+Remaining:
 
-Exit criteria:
+1. Live verification of RPCs across two browsers
+2. Expand regression for late joins, reconnects, host exits
+3. Improve messaging for disconnected / waiting / finalizing / recovered states
 
-- Players in the same room see the same winners and standings.
-- Vote finalization can recover from common reconnect and timing edge cases.
+---
 
 ## Phase 5: Share Loop Optimization
 
-Goal: turn strong rounds into repeatable invites and friend judgements.
+**Priority: medium · Status: mostly complete locally**
 
-Priority: medium.
+Done locally: reveal CTAs, copy confirmation, recommended next-move, gallery friend-judgement detail.
 
-Next implementation steps:
+Remaining: richer share-card / OG assets once link flow is stable on hosted env (`og-tags` edge function).
 
-1. Improve post-reveal share CTAs and copied-link confirmation. Done locally with reveal workflow guidance and contextual share metadata.
-2. Add clearer prompts for requesting friend judgement after high-scoring rounds. Done locally with recommended next-move guidance.
-3. Make shared results more useful in gallery/history. Done locally with friend judgement detail and copied-share context.
-4. Explore richer share-card or screenshot-friendly output once the link flow is stable.
-
-Exit criteria:
-
-- Sharing feels like part of the core loop, not an optional utility.
-- More completed rounds create friend judgements or multiplayer invites.
+---
 
 ## Phase 6: Gallery, Identity, and Retention
 
-Goal: make returning valuable.
+**Priority: medium · Status: in progress**
 
-Priority: medium.
+Next:
 
-Next implementation steps:
+1. Richer gallery metadata and share-card generation
+2. Stronger profile surfaces (best scores, favorite themes, streak highlights)
+3. Deeper daily challenge rewards beyond completion tracking
+4. More themed content after reliability is proven (ties to Phase 8)
 
-1. Expand gallery detail views with richer metadata and share-card generation.
-2. Improve profile surfaces for best scores, favorite themes, streaks, and milestones.
-3. Expand daily challenge framing and rewards beyond completion tracking. In progress locally with completion count, best score, and share-ready daily summary.
-4. Add more themed prompt content once reliability and social loops are stable.
+---
 
-Exit criteria:
+## Deferred / local-preview product decision (July 15, 2026)
 
-- Returning users have meaningful history to browse.
-- Progression feels motivating rather than decorative.
+Until Phase 9 cloud sync ships, these modes stay **local-preview only** (device progress, `LocalPreviewBadge` in lobby + screens):
+
+| Mode | Decision |
+|---|---|
+| Ranked / Elo | Stay local-preview — do not imply global ladders |
+| Shop / battle pass | Stay local-preview — no Stripe |
+| Tournaments | Stay local-preview |
+| Async challenge chains | Stay local-preview |
+| AI Battle / AI Settings | Stay local-preview / experimental |
+
+They remain playable for fun on-device. Do not remove them; do not market them as cloud-synced competitive features.
 
 ## Deferred
 
-These should wait until reliability, hosted verification, and social scoring are stronger:
+Wait until hosted verification and social scoring are solid:
 
-- Native mobile apps.
-- Monetization.
-- Heavy account infrastructure.
-- Large-scale public matchmaking.
-- Net-new game modes unrelated to the core connection mechanic.
+- Native mobile apps ([MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) is aspirational)
+- Monetization / Stripe
+- Heavy account infrastructure (Phase 9)
+- Large-scale public matchmaking
+- Public community gallery / Party Mode UI
+- Net-new game modes unrelated to the connection mechanic
+
+Local-preview modes (ranked, shop, tournaments, async) stay labeled until Phase 9 cloud sync is intentional.

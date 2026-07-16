@@ -1,5 +1,7 @@
 # Discord Bot Setup for Venn with Friends
 
+Standalone Node package notes: [discord-bot/README.md](discord-bot/README.md). Prefer the Supabase Edge Function path below for production.
+
 ## Overview
 
 The Venn with Friends Discord bot lets users start challenges directly from Discord servers. It runs as a Supabase Edge Function that handles Discord interactions.

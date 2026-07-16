@@ -81,11 +81,14 @@ serve(async (req: Request) => {
   <meta property="og:title" content="${escapeHtml(title)}" />
   <meta property="og:description" content="${escapeHtml(description)}" />
   <meta property="og:image" content="${escapeHtml(image)}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="og:url" content="${escapeHtml(redirectTarget)}" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(title)}" />
   <meta name="twitter:description" content="${escapeHtml(description)}" />
   <meta name="twitter:image" content="${escapeHtml(image)}" />
+  <meta name="twitter:image:alt" content="${escapeHtml(title)}" />
   <meta http-equiv="refresh" content="0;url=${escapeHtml(redirectTarget)}" />
   <title>${escapeHtml(title)}</title>
 </head>

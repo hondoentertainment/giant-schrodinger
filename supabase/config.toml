@@ -1,7 +1,7 @@
 # Supabase local config — run `supabase link --project-ref YOUR_REF` after creating a project.
 # Docs: https://supabase.com/docs/guides/cli/config
 
-project_id = "YOUR_PROJECT_REF"
+project_id = "fnjshhjwoximddoggdrk"
 
 [api]
 enabled = true

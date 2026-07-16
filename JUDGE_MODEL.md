@@ -1,17 +1,16 @@
 # Judge Model — Canonical Product Decisions
 
-Last updated: June 2025
-
-This document resolves the open product questions in the PRD and defines how judging modes behave across solo, friend, and multiplayer flows.
+**Last updated:** July 14, 2026  
+**Resolves PRD open questions** for scoring modes across solo, friend, and multiplayer.
 
 ## Modes
 
 | Mode | ID | When used | Who scores |
 |------|-----|-----------|------------|
-| AI Judge | `ai` | Solo profile default (optional) | Gemini with mock fallback |
-| Manual Judge | `human` | Solo profile default (optional) | Player self-scores on reveal |
+| AI Judge | `ai` | Solo profile option | Gemini (edge preferred in prod) with mock fallback |
+| Manual Judge | `human` | Solo profile option | Player self-scores on reveal |
 | Friend Judge | `friend` | Share link after any solo round | Async friend via link |
-| Room Vote | `room_vote` | Multiplayer with `human` scoring mode | All players vote; host finalizes |
+| Room Vote | `room_vote` | Multiplayer when scoring mode is `human` | All players vote; host finalizes |
 
 ## Decisions
 
@@ -28,8 +27,15 @@ This document resolves the open product questions in the PRD and defines how jud
 - **Friend judgements:** Supabase `shared_rounds` + `judgements` when backend is configured; localStorage fallback via `judgements.js`.
 - **Room votes:** Supabase RPCs `cast_room_vote` and `finalize_room_votes` — authoritative for multiplayer.
 - **Manual solo scores:** Saved on collision records at reveal time with `judgeMode: 'human'`.
+- **AI scores:** Prefer `score-submission` edge function when Supabase is configured; client Gemini only when allowed (`VITE_ALLOW_CLIENT_GEMINI` or no Supabase).
 
 ## UI copy
 
-- Onboarding and lobby explain all three solo paths (AI, manual, friend link).
+- Onboarding and lobby explain solo paths (AI, manual, friend link).
 - Multiplayer UI states that live rooms require Supabase and use room voting in manual mode.
+- Local-preview competitive surfaces (ranked, etc.) must not imply cloud-authoritative Elo.
+
+## Related
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — scoring pipeline diagram
+- [PRD.md](PRD.md) §13 — remaining open product questions

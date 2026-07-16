@@ -11,6 +11,7 @@ import {
 import { trackEvent } from '../../services/analytics';
 import { Link, Users, Mail, ChevronRight } from 'lucide-react';
 import { GameScreenShell } from '../../components/GameScreenShell';
+import { LocalPreviewBadge } from '../../components/LocalPreviewBadge';
 import { EmptyState } from '../../components/EmptyState';
 
 export function AsyncChains({ onBack }) {
@@ -93,9 +94,12 @@ export function AsyncChains({ onBack }) {
             icon={Link}
             backLabel="Back to lobby"
             badge={(
-                <button type="button" onClick={() => setShowCreate(true)} className="wordle-button wordle-primary text-xs min-h-[40px] px-3 shrink-0">
-                    + New
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                    <LocalPreviewBadge />
+                    <button type="button" onClick={() => setShowCreate(true)} className="wordle-button wordle-primary text-xs min-h-[40px] px-3 shrink-0">
+                        + New
+                    </button>
+                </div>
             )}
         >
             <div className="flex gap-2 mb-6">

@@ -140,7 +140,7 @@ describe('share service', () => {
         });
 
         it('falls back to direct judge link without supabase', () => {
-            const url = getOgShareUrl('abc123');
+            const url = getOgShareUrl('abc123', { supabaseUrl: '' });
             expect(url).toContain('?judge=abc123');
         });
     });

@@ -1,6 +1,10 @@
 # Next Steps
 
-This file tracks remaining work after the memes & videos mode pass and world-class implementation. The app is locally feature-complete for solo play, friend judging, gallery/history, retention, accessibility polish, and Supabase-backed multiplayer code paths.
+**Last updated:** July 14, 2026
+
+This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
+
+This log tracks remaining work after the memes & videos mode pass and world-class implementation. The app is locally feature-complete for solo play, friend judging, gallery/history, retention, accessibility polish, and Supabase-backed multiplayer code paths.
 
 ## Completed (Memes & Videos Pass)
 

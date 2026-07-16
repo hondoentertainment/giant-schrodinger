@@ -7,11 +7,12 @@
 
 ## Automated Test Coverage
 
-The project has **179 tests across 21 files** (16 unit/integration + 5 Playwright E2E). Run them before manual testing:
+The project has **688 unit tests across 68 files** and **11 Playwright E2E specs** (as of July 14, 2026). Run them before manual testing:
 
 ```bash
-npm run test              # 179 unit/integration tests
-npm run test:e2e:desktop  # 5 Playwright E2E specs
+npm run test              # 688 unit/integration tests
+npm run test:e2e:desktop  # 11 Playwright specs
+npm run verify:release    # lint + unit + e2e + build
 ```
 
 ---

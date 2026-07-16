@@ -41,16 +41,16 @@ if (envOk) {
 
 run('Production smoke', 'npm', ['run', 'smoke:production'], { env: { PRODUCTION_URL } });
 run('Deployed E2E rehearsal', 'npm', ['run', 'test:e2e:rehearsal'], { env: { PRODUCTION_URL } });
+run('Hosted two-browser rehearsal', 'npx', ['playwright', 'test', 'e2e/hosted-two-browser.spec.js', '--project=Desktop Chrome', '--workers=1'], {
+  env: { PRODUCTION_URL },
+});
 
 console.log(`
 Automated launch gate complete.
 
 ${envOk ? 'Backend probes ran.' : 'Backend probes skipped — add Supabase credentials to .env.local and Vercel.'}
 
-Manual steps still required (PRODUCTION_REHEARSAL.md §4–6):
-  1. Apply supabase/schema.sql in Supabase SQL editor
-  2. Deploy edge functions — npm run deploy:edge-functions
-  3. Set secrets — .github/SECRETS.template.md
-  4. Two-browser friend judging + multiplayer vote finalize
-  5. npm run rehearsal:telemetry in browser
+Optional follow-ups:
+  • npm run rehearsal:telemetry in a browser console during a live session
+  • Set PEXELS_API_KEY / GIPHY_API_KEY edge secrets for richer media lookup
 `);

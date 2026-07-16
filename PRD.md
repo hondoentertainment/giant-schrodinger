@@ -1,67 +1,94 @@
-## Venn with Friends PRD
+# Venn with Friends — Product Requirements Document
+
+**Last updated:** July 14, 2026  
+**Canonical companions:** [ROADMAP.md](ROADMAP.md) · [JUDGE_MODEL.md](JUDGE_MODEL.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [README.md](README.md)
+
+---
 
 ### 1. Product Summary
 
-Venn with Friends is a creative party game where players are shown two media prompts and write one phrase that connects them. The current product already supports solo play, asynchronous friend judging, and realtime multiplayer with optional AI scoring.
+Venn with Friends is a creative party game where players are shown two media prompts and write one phrase that connects them. The connection appears in a Venn diagram intersection and is scored by AI, self-judgement, a friend via share link, or room voting in multiplayer.
 
-The app's strongest differentiator is that it turns a simple prompt game into a replayable creative system:
+The product already supports:
 
-- themed prompt pools
-- image, video, and audio modes
-- session modifiers and daily challenge structure
+- solo sessions with themed prompt pools and session modifiers
+- image, video, audio, meme, and mixed media modes
 - AI scoring and fusion-image generation with graceful fallbacks
-- persistent progression, unlocks, and gallery history
+- asynchronous friend judging via shareable links
+- Supabase-backed realtime multiplayer with authoritative room voting
+- persistent progression, unlocks, streaks, gallery history, and daily challenge
 
-This PRD replaces the current doc gap between "what the app claims to be" and "what the code actually does."
+**Differentiation:** a simple prompt game that behaves like a replayable creative system — not a one-shot novelty demo.
+
+Repo name / GitHub Pages base path: `giant-schrodinger`. Product name in UI and docs: **Venn with Friends**.
+
+---
 
 ### 2. Current State Review
 
-#### What is implemented now
+#### 2.1 Feature status registry
 
-- Profile creation with avatar, theme, scoring mode, media mode, and optional custom image packs
-- Solo sessions with 3, 5, or 7 rounds
-- Session arcs with special round modifiers: Speed Round, Double or Nothing, Final Showdown
-- Daily challenge flow
-- AI judging via Gemini with mock fallback when no API key is present
-- AI fusion image generation with curated fallback imagery
-- Human/manual judging path in solo mode
-- Shareable friend-judging links
-- Gallery of saved creations with friend feedback
-- Unlock progression tied to rounds played and streaks
-- Realtime multiplayer rooms via Supabase
-- Multiplayer reveal flows, round transitions, and final standings UI
-- Automated tests plus production build support
+| Feature | Status | Keys required | Notes |
+|---|---|---|---|
+| Solo sessions (3/5/7 rounds) | **Shipped** | None | Core local loop |
+| Session arcs (Speed, Double-or-Nothing, Final Showdown) | **Shipped** | None | |
+| Daily challenge | **Shipped** | None | Local completion tracking |
+| AI judge (Gemini) | **Shipped + fallback** | Gemini (or server edge) | Mock scoring without key |
+| Manual (self) judge | **Shipped** | None | `judgeMode: human` |
+| Friend judge (share link) | **Shipped** | Supabase for durable persistence | Local fallback without backend |
+| Fusion images | **Shipped + fallback** | Gemini | Curated art without key |
+| Gallery (personal history) | **Shipped** | None (optional Supabase enrich) | Filters: judged, highlights, media type |
+| Unlocks / streaks / achievements | **Shipped** | None | localStorage-first |
+| Realtime multiplayer rooms | **Shipped, needs hosted proof** | Supabase + schema RPCs | Create/join, phases, reconnect |
+| Room vote scoring | **Shipped, needs hosted proof** | Supabase RPCs | `cast_room_vote` / `finalize_room_votes` |
+| Spectator mode | **Shipped** | Supabase | Join-as-spectator |
+| Content report / moderation dashboard | **Shipped** | Supabase for reports | Lightweight safety, not a UGC marketplace |
+| Theme builder | **Shipped** | None | Share themes via URL hash |
+| PWA / offline page | **Shipped** | None | SW v2 |
+| i18n (EN / ES) | **Shipped** | None | |
+| Ranked / Elo | **Local preview** | None | Device-only; `LocalPreviewBadge` |
+| Shop / battle pass | **Local preview** | None | No Stripe wired |
+| Tournaments | **Local preview** | None | Bracket UI, device-only |
+| Async chains | **Local preview** | None | |
+| AI Battle / AI Settings | **Local preview** | Optional Gemini | |
+| Leaderboard | **Local** | None | localStorage daily/weekly, not global |
+| Discord bot | **Optional integration** | Discord + Supabase edge | See [DISCORD_BOT.md](DISCORD_BOT.md) |
+| Party Mode service | **Not user-facing** | — | `partyMode.js` has tests only; no lobby route |
+| Community / public gallery | **Not shipped** | — | Gallery is personal history only |
+| Cloud accounts / cross-device sync | **Deferred (Phase 9)** | — | Backend `users` migration exists; UI is local-first |
+| Native mobile apps | **Deferred** | — | See [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) |
 
-#### What is working but environment-dependent
+#### 2.2 Environment-dependent behavior
 
-- AI judging and AI image generation require `VITE_GEMINI_API_KEY`
-- Multiplayer and backend-persisted friend judging require Supabase credentials
-- Without those keys, the app still works in a mostly complete solo/mock mode
+| Without keys | With Gemini | With Supabase |
+|---|---|---|
+| Full solo loop, mock scoring, curated fusion art, local gallery | Live AI scores + generated fusion images | Realtime rooms, durable friend judgements, room voting, content reports |
+| Multiplayer unavailable | Same as left + better solo AI | Optional server-side scoring via edge function |
 
-#### Current strengths
+#### 2.3 Strengths
 
-- The core solo loop is already richer than a prototype
-- The UI and interaction model feel productized, not just demo-level
-- The app has solid fallback behavior when AI or backend services are unavailable
-- There is already enough surface area for retention features: streaks, unlocks, gallery, daily challenge
+- Solo loop is productized (coaching, arcs, daily challenge, reveal/share CTAs)
+- Graceful fallbacks when AI or backend are absent
+- Clear judge-mode model documented in [JUDGE_MODEL.md](JUDGE_MODEL.md)
+- Strong automated coverage: **688 unit tests** (68 files) + **11 E2E specs**
+- Launch automation (`verify:release`, `launch:gate`, hosted rehearsal scripts)
 
-#### Current product and engineering gaps
+#### 2.4 Gaps (as of July 14, 2026)
 
-- README and testing docs need to stay aligned with the current shipped-vs-live-ready distinction
-- Multiplayer authority now depends on the secure Supabase RPC path, so hosted verification matters more than local UI proof
-- The product now has a clearer progression from first solo play into friend judging, gallery, achievements, daily completion, and weekly-event retention
-- Deployment and operational docs are still ahead of actual live-product proof
+- **Hosted rehearsal incomplete:** Supabase credentials / schema / edge deploy still block live multiplayer and durable friend judging on production
+- Gemini key on Vercel may be invalid (see [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md))
+- Local-preview modes (ranked, shop, tournaments) must stay labeled until cloud sync is scoped
+- Documentation historically overstated Party Mode and community gallery — corrected in this PRD and companion docs
 
-#### Verification snapshot
+#### 2.5 Verification snapshot
 
-- Local validation on March 14, 2026:
-  - `npm run lint`: passes
-  - `npm run test`: passes
-  - `npm run test:e2e:desktop`: passes
-  - `npm run build`: passes
-- Remaining gap:
-  - Hosted verification with real Supabase and optional Gemini secrets still needs to be completed end to end
-  - Local code now includes reconnect resync, reveal-phase connection messaging, early friend-judge sharing, and expanded local e2e coverage, but those still need production rehearsal
+- Local validation on **July 14, 2026**:
+  - `npm run test`: **688 passed** (68 files)
+  - `npm run lint` / `npm run build`: part of `verify:release`
+  - E2E: **11 Playwright specs** under `e2e/`
+- Remaining launch gate: apply Supabase schema + secrets, deploy edge functions, two-browser multiplayer rehearsal ([PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md))
+
+---
 
 ### 3. Product Vision
 
@@ -72,324 +99,210 @@ Build Venn with Friends into a replayable social creativity game that is:
 - reliable enough for live multiplayer sessions
 - sticky enough to support daily return behavior
 
+---
+
 ### 4. Users
 
-#### Primary users
+#### Primary
 
 - Friends looking for a quick party-style creativity game
 - Solo players who enjoy wordplay, absurd humor, and prompt games
 - Small groups playing remotely over chat, text, or voice
 
-#### Secondary users
+#### Secondary
 
 - Creators who want funny shareable screenshots
-- Streamers or hosts looking for lightweight audience-participation prompts
+- Streamers or hosts looking for lightweight audience-participation prompts (spectator mode supports this)
+
+---
 
 ### 5. Product Goals
 
-#### Goal 1: Make the solo loop excellent
+1. **Excellent solo loop** — profile → rounds → reveal → summary without any backend
+2. **Sharing as growth** — every strong round invites judgement or a future session
+3. **Dependable multiplayer** — authoritative room voting, reconnect, shared standings
+4. **Retention** — daily challenge, unlocks, streaks, gallery, weekly events
 
-A player should be able to open the app, create a profile, play multiple rounds, and feel rewarded even with no backend or API keys configured.
-
-#### Goal 2: Make sharing a core growth loop
-
-Every strong round should create a natural path to:
-
-- share a result
-- request judgement
-- bring another person into a future session
-
-#### Goal 3: Make multiplayer dependable
-
-Realtime rooms should feel like a real product mode, not a promising experiment.
-
-#### Goal 4: Turn replayability into retention
-
-Daily challenge, unlocks, streaks, and gallery should lead to repeat sessions over weeks, not just one-time novelty.
+---
 
 ### 6. Non-Goals for the Near Term
 
-- Native mobile apps
+- Native mobile apps (Capacitor / TWA guides remain aspirational)
 - Large-scale public matchmaking
-- User accounts with full cloud sync
-- Complex moderation or UGC marketplaces
-- Monetization systems before core retention and reliability are proven
+- Full cloud accounts with cross-device sync (Phase 9)
+- UGC marketplaces or heavy community feeds
+- Monetization / Stripe before retention and reliability are proven
+- Shipping Party Mode or community gallery UI until explicitly scoped
+
+**Clarification:** Lightweight content reporting and a moderation dashboard *are* in scope for safety (shipped). That is not the same as a community marketplace.
+
+---
 
 ### 7. Core Experience Requirements
 
-#### Solo mode
+#### Solo
 
-- Players can complete a full session without external setup
-- Prompt presentation is fast and visually clear
-- Scoring is understandable whether AI or manual
-- Results feel worth saving or sharing
+- Complete a full session with no external setup
+- Fast, clear prompt presentation across media modes
+- Scoring understandable for AI or manual
+- Results worth saving or sharing
 
-#### Friend-judging mode
+#### Friend judging
 
-- Sharing a round is one action, not a workflow
-- A friend can open the link and judge without onboarding friction
-- Feedback should flow back into the original player's history where possible
+- Share a round in one action
+- Friend opens link and judges with minimal friction
+- Feedback flows into gallery/history when backend is available
 
-#### Multiplayer mode
+#### Multiplayer
 
-- Creating and joining a room should be fast and legible
-- Everyone should see the same prompt set for a round
-- Submission, reveal, scoring, and next-round transitions should stay synchronized
-- Final standings should be trusted by all players
+- Fast create/join with legible room codes
+- Same prompt set for all players each round
+- Synchronized submit → reveal → score → next round
+- Trusted final standings via authoritative RPCs
+- Spectator join without breaking player flow
+
+---
 
 ### 8. Next Steps Recommendation
 
-#### Right now: next 2 weeks
+#### Right now (next 2 weeks) — Launch gate
 
-- Deploy a live environment and complete the production rehearsal with real Supabase RPCs applied
-- Verify manual-vote multiplayer live across two browsers, including join/rejoin during results and vote finalization
-- Confirm telemetry capture for room creation, joins, vote finalization, and AI fallback events
-- Document any hosted-only limitations that still appear during the live rehearsal
+1. Create Supabase project → apply `supabase/schema.sql` (+ media / reports migrations)
+2. Configure env (`configure:supabase`, Vercel, GitHub secrets)
+3. Deploy edge functions (`score-submission`, `resolve-image`, `resolve-meme`, `og-tags`, optional `discord-bot`)
+4. Two-browser multiplayer rehearsal including vote finalization and reconnect
+5. Confirm telemetry for room create/join, vote finalize, AI fallback
 
-#### Near term: next 2 to 6 weeks
+#### Near term (2–6 weeks)
 
-- Turn the hosted multiplayer rehearsal into a repeatable regression pass
-- Improve room-state messaging and failure recovery for disconnects, late joins, and host exits
-- Make gallery/history more useful as a replay and social-feedback surface
-- Deploy a stable public environment and verify it end to end after each release candidate
+- Turn hosted rehearsal into a repeatable regression pass (`hosted-rehearsal.yml`)
+- Harden disconnect / late-join / host-exit messaging
+- Keep gallery useful as personal archive + judged-round context
+- Decide which local-preview modes graduate vs stay experimental
 
-#### Medium term: next 1 to 3 months
+#### Medium term (1–3 months)
 
-- Expand progression and daily challenge depth
-- Introduce better personal stats and session history
-- Add more themed content and prompt variety
-- Strengthen shareability with better post-round assets and prompts
+- Deeper daily/weekly retention framing
+- Content expansion (themes, seasonal packs)
+- Optional accounts / cloud sync (Phase 9) only after launch proof
+- Community features only if they reinforce the core share loop (Phase 10)
 
-### 9. 10-Phase Feature Roadmap
+---
 
-#### Phase 1: Stabilization and Truthfulness
+### 9. Ten-Phase Feature Roadmap
 
-Goal: make the current app trustworthy.
+Status legend: **Done** · **In progress** · **Next** · **Later**
 
-Work:
+| Phase | Name | Status | Summary |
+|---|---|---|---|
+| 1 | Stabilization & Truthfulness | **Done** | Green suite, null-safe Gemini fallback, feature matrix in README |
+| 2 | Production Readiness | **Complete** | Supabase live, Vercel env wired, two-browser rehearsal passed |
+| 3 | Social Scoring Foundation | **Mostly done** | Judge model decided; friend + room vote persistence verified live |
+| 4 | Multiplayer Authority | **Complete** | RPCs live; create/join/vote/finalize verified on production |
+| 5 | Share Loop Optimization | **Mostly done** | Gallery SocialShareButtons + OG dims; friend-judge live |
+| 6 | Gallery & Identity | **In progress** | Personal gallery + filters; richer profile stats next |
+| 7 | Retention Systems | **In progress** | Daily, streaks, weekly events wired; deepen rewards |
+| 8 | Content Expansion | **Later** | More themes / media quality after launch proof |
+| 9 | Accounts & Cloud Persistence | **Later** | Optional sign-in, cross-device sync |
+| 10 | Platform & Community | **Partial / Later** | Spectator + moderation shipped; public gallery deferred |
 
-- fix failing tests
-- fix null-safe Gemini fallback behavior
-- verify all main flows with and without external services
-- document the true status of every major feature
+Detailed implementation notes: [ROADMAP.md](ROADMAP.md).
 
-Exit criteria:
-
-- green automated suite
-- green production build
-- docs clearly separate mock-supported versus live-service features
-
-#### Phase 2: Production Readiness
-
-Goal: make the app launchable in a real hosted environment.
-
-Work:
-
-- complete deployment setup and live verification
-- validate environment variable handling and empty-state UX
-- harden error states for network, API, and backend failures
-- add release checklist for shipping changes safely
-
-Exit criteria:
-
-- deployed environment is accessible
-- core solo and share flows work on live site
-- setup docs are accurate for a new contributor
-
-#### Phase 3: Social Scoring Foundation
-
-Goal: make non-AI judging a real system, not a loose concept.
-
-Work:
-
-- define product model for manual judge vs friend judge
-- persist shared-round outcomes in a consistent backend model
-- make judged results flow back into history and summaries
-- clean up the split between local and backend judgement storage
-
-Exit criteria:
-
-- manual/friend scoring behavior is consistent and explainable
-- judged rounds can be trusted as durable results
-
-#### Phase 4: Multiplayer Authority
-
-Goal: make multiplayer outcomes shared and deterministic.
-
-Work:
-
-- replace local-only multiplayer voting with synchronized backend voting
-- ensure all clients converge on the same reveal and result state
-- improve host actions, lock states, and late/join/leave behavior
-- handle multiplayer edge cases around timing and reconnection
-
-Exit criteria:
-
-- multiplayer scoring is authoritative
-- players in the same room see the same winners and standings
-
-#### Phase 5: Share Loop Optimization
-
-Goal: turn a fun round into a repeatable acquisition loop.
-
-Work:
-
-- improve share-for-judging prompts and timing
-- add clearer invite CTAs after strong rounds and summaries
-- improve copied-link messaging and success confirmation
-- explore richer share cards or screenshot-friendly output
-
-Exit criteria:
-
-- sharing feels intentional and fast
-- more completed rounds convert into invites or judgement requests
-
-#### Phase 6: Gallery and Identity
-
-Goal: make saved history feel like a personal creative archive.
-
-Work:
-
-- enrich gallery with better filters, highlights, and judged-round context
-- improve profile progress surfaces: best scores, favorite themes, streak highlights
-- add session recap improvements and personal milestones
-- make notable creations easier to reshare
-
-Exit criteria:
-
-- returning users have meaningful history to browse
-- profile progression feels more motivating than decorative
-
-#### Phase 7: Retention Systems
-
-Goal: create reasons to come back daily and weekly.
-
-Work:
-
-- expand daily challenge framing and rewards
-- add clearer short-term and mid-term unlock goals
-- introduce streak-recovery or streak-protection design if desired
-- add weekly cadence features such as rotating featured themes or challenge sets
-
-Exit criteria:
-
-- daily challenge is a primary re-entry point
-- progression loops support sustained repeat play
-
-#### Phase 8: Content Expansion
-
-Goal: increase novelty without changing the core mechanic.
-
-Work:
-
-- add more themes and higher-quality prompt pools
-- deepen video and audio content quality where current coverage is thin
-- add curated seasonal packs or special-event packs
-- refine theme identity so each mode feels distinct, not just recolored
-
-Exit criteria:
-
-- repeat players encounter enough fresh material to avoid fatigue
-- theme selection becomes a meaningful content choice
-
-#### Phase 9: Accounts and Cloud Persistence
-
-Goal: preserve player identity and progress across devices and sessions.
-
-Work:
-
-- optional account system or lightweight sign-in
-- cloud sync for profile, unlocks, gallery, and stats
-- account-aware sharing and room history
-- migration path from local-only state
-
-Exit criteria:
-
-- users can keep progress across browsers/devices
-- cloud persistence does not make onboarding heavy
-
-#### Phase 10: Platform and Community Layer
-
-Goal: evolve from a strong game into a durable product ecosystem.
-
-Work:
-
-- public or asynchronous challenges
-- spectator or streamer-friendly room modes
-- creator/community features for standout submissions
-- analytics, moderation, and safety foundations for broader sharing
-
-Exit criteria:
-
-- community features expand reach without diluting the fast, lightweight core experience
+---
 
 ### 10. Priority Feature Decisions
 
-#### Must prioritize next
+#### Must (now)
 
-- Stabilization and test health
-- Authoritative multiplayer scoring and voting
-- Honest documentation of offline/mock versus live-service behavior
+- Complete hosted multiplayer + friend-judging rehearsal
+- Keep docs honest (shipped vs local-preview vs requires Supabase)
+- Keep `verify:release` green
 
-#### Should prioritize after that
+#### Should (after launch proof)
 
-- Better social feedback loops
-- Better retention UX around streaks, unlocks, and daily challenge
-- Stronger gallery and personal history
+- Stronger retention UX around daily/streaks
+- Richer gallery metadata and share cards
+- Decide fate of ranked / shop / tournaments (cloud vs stay local)
 
-#### Deprioritize for now
+#### Deprioritize
 
-- Net-new game modes unrelated to the core connection mechanic
+- Net-new modes unrelated to the connection mechanic
 - Monetization
 - Heavy account infrastructure
+- Community marketplace / public trending gallery
+
+---
 
 ### 11. Success Metrics
 
-#### Activation
+| Category | Signals |
+|---|---|
+| Activation | Profile created; first round completed; first 3-round session completed |
+| Engagement | Rounds/session; reveal/summary view rate; share-for-judging rate |
+| Social | Room create → start conversion; invite rate; shared links with ≥1 judgement |
+| Retention | Daily challenge completion; streak continuation; returning users with >1 gallery entry |
 
-- player can create profile and complete first round
-- player can complete first 3-round session
+Instrument via existing telemetry bridge (`vwf:telemetry` / optional PostHog + Sentry).
 
-#### Engagement
-
-- average rounds per session
-- percent of players who view reveal and summary screens
-- percent of players who use share-for-judging
-
-#### Social
-
-- room creation to room-start conversion
-- invite/share rate per session
-- percentage of shared links that receive at least one judgement
-
-#### Retention
-
-- daily challenge completion rate
-- streak continuation rate
-- percentage of returning players with more than one saved gallery entry
+---
 
 ### 12. Recommended Immediate Backlog
 
-1. Fix `scoreSubmission()` null-asset fallback behavior.
-2. Update or replace the brittle `ErrorBoundary` test so test expectations match intended UX.
-3. Define and implement backend-backed multiplayer voting/results for non-AI rooms.
-4. Add a concise feature/status matrix to README.
-5. Run a fresh end-to-end manual pass against a deployed environment.
-6. Decide the canonical product distinction between AI judge, manual judge, and friend judge.
+| # | Item | Status |
+|---|---|---|
+| 1 | Fix `scoreSubmission()` null-asset fallback | **Done** |
+| 2 | Stabilize `ErrorBoundary` tests | **Done** |
+| 3 | Backend multiplayer voting RPCs | **Done (code)** — verify live |
+| 4 | Feature/status matrix in README | **Done** — keep in sync |
+| 5 | Hosted end-to-end rehearsal | **Done** — launch gate + two-browser multiplayer + friend-judge passed on production |
+| 6 | Canonical AI / manual / friend / room_vote model | **Done** — see JUDGE_MODEL.md |
+| 7 | Align all docs with this PRD (remove Party Mode / community gallery claims) | **Done** (July 14, 2026) |
+| 8 | Rotate/fix Gemini key on Vercel if `API_KEY_INVALID` | **Done / mitigated** — live AI path exercised in friend-judge rehearsal |
+| 9 | Local-preview mode decision (ranked/shop/tournaments/async) | **Done** — stay local until Phase 9 |
+
+---
 
 ### 13. Open Questions
 
-- Should "manual judge" and "friend judge" remain one concept, or become separate modes?
-- Is multiplayer primarily competitive scoring, collaborative comedy, or both?
-- Do we want users to trust AI as the main judge, or should AI stay as a fallback/optional mode?
-- Is the long-term identity closer to a party game, a daily creativity app, or a shareable social prompt toy?
+#### Resolved (see JUDGE_MODEL.md)
 
-### 14. Product Recommendation
+- Manual vs friend judge → **separate modes**
+- Multiplayer default → **room vote** when scoring mode is human; AI optional for casual rooms
+- AI trust → **optional for solo**, not the multiplayer default
+- Gallery always records `judgeMode`
 
-The highest-leverage path is not adding more modes. It is turning the existing feature set into a coherent product:
+#### Still open
 
-- stabilize what already exists
-- make social scoring trustworthy
-- sharpen retention loops already present in the app
+- Long-term identity: party game vs daily creativity app vs shareable social prompt toy?
+- Which local-preview modes (ranked, shop, tournaments, async) graduate to cloud after Phase 9?
+- When (if ever) to ship a public/community gallery without diluting the lightweight core?
 
-There is already enough product here to justify a real launch candidate once reliability, documentation, and multiplayer truthfulness catch up.
+---
+
+### 14. Tech Stack (reference)
+
+| Layer | Choice |
+|---|---|
+| Client | React 18, Vite, Tailwind CSS, Lucide |
+| State | `GameContext` (solo/profile), `RoomContext` (multiplayer) |
+| Backend | Supabase (Realtime, Postgres RPCs, Storage, Edge Functions) |
+| AI | Google Gemini (`score-submission` edge preferred in prod; client fallback gated) |
+| Media | Pexels / Giphy via edge functions; Picsum / curated fallbacks |
+| Hosting | Vercel (primary prod) + GitHub Pages (base `/giant-schrodinger/`) |
+| Tests | Vitest + Testing Library; Playwright E2E |
+| Optional | Discord bot, Sentry, PostHog, PWA |
+
+Full diagram: [ARCHITECTURE.md](ARCHITECTURE.md).
+
+---
+
+### 15. Product Recommendation
+
+The highest-leverage path is still not adding more modes. It is proving and polishing what exists:
+
+1. Finish the hosted Supabase rehearsal
+2. Keep social scoring and multiplayer authority trustworthy in production
+3. Sharpen retention loops already in the app
+4. Treat ranked/shop/tournaments as experiments until cloud sync is intentional
+
+There is enough product here for a real launch candidate once credentials, edge deploy, and two-browser truthfulness catch up with the code.

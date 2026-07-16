@@ -148,10 +148,7 @@ function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 4) {
 }
 
 export async function createShareCard(imageUrl, shareData) {
-  if (!imageUrl) return null;
-
   try {
-    const image = await loadImage(imageUrl);
     const canvas = document.createElement('canvas');
     canvas.width = SHARE_CARD_WIDTH;
     canvas.height = SHARE_CARD_HEIGHT;
@@ -188,22 +185,39 @@ export async function createShareCard(imageUrl, shareData) {
     ctx.save();
     ctx.clip();
 
-    const imageRatio = image.width / image.height;
-    const frameRatio = 864 / 720;
-    let drawWidth = 864;
-    let drawHeight = 720;
-    let drawX = 108;
-    let drawY = 154;
+    if (imageUrl) {
+      try {
+        const image = await loadImage(imageUrl);
+        const imageRatio = image.width / image.height;
+        const frameRatio = 864 / 720;
+        let drawWidth = 864;
+        let drawHeight = 720;
+        let drawX = 108;
+        let drawY = 154;
 
-    if (imageRatio > frameRatio) {
-      drawWidth = 720 * imageRatio;
-      drawX = 108 - (drawWidth - 864) / 2;
+        if (imageRatio > frameRatio) {
+          drawWidth = 720 * imageRatio;
+          drawX = 108 - (drawWidth - 864) / 2;
+        } else {
+          drawHeight = 864 / imageRatio;
+          drawY = 154 - (drawHeight - 720) / 2;
+        }
+
+        ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+      } catch {
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillRect(108, 154, 864, 720);
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.font = '700 42px Arial';
+        ctx.fillText('VENN', 480, 480);
+      }
     } else {
-      drawHeight = 864 / imageRatio;
-      drawY = 154 - (drawHeight - 720) / 2;
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.fillRect(108, 154, 864, 720);
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = '700 42px Arial';
+      ctx.fillText(buildCardSubtitle(shareData), 160, 520);
     }
-
-    ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 
     const overlay = ctx.createLinearGradient(0, 154, 0, 874);
     overlay.addColorStop(0, 'rgba(12,4,18,0.08)');
@@ -236,7 +250,10 @@ export async function createShareCard(imageUrl, shareData) {
 
     ctx.fillStyle = 'rgba(255,255,255,0.78)';
     ctx.font = '500 30px Arial';
-    drawWrappedText(ctx, buildCardFooter(shareData), 120, 1212, 840, 42, 3);
+    const footer = shareData.friendScore != null
+      ? `Friend Judge ${shareData.friendScore}/10${shareData.commentary ? ` — ${clampText(shareData.commentary, 80)}` : ''}`
+      : buildCardFooter(shareData);
+    drawWrappedText(ctx, footer, 120, 1212, 840, 42, 3);
 
     roundRect(ctx, 120, 1126, 240, 58, 24);
     ctx.fillStyle = 'rgba(83,216,255,0.18)';
@@ -326,6 +343,7 @@ export async function copyShareLink(shareData) {
 
 export async function downloadFusionImage(imageDataUrl, shareData, filename = 'venn-with-friends-share-card.png') {
   const shareCard = await createShareCard(imageDataUrl, shareData);
+  if (!shareCard && !imageDataUrl) return;
   const link = document.createElement('a');
   link.download = filename;
   link.href = shareCard || imageDataUrl;

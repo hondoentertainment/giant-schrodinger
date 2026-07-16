@@ -5,9 +5,9 @@ Run automated tests first, then use this checklist for a quick manual pass.
 ## Prerequisites
 
 ```bash
-npm run test              # 680+ unit/integration tests should pass
-npm run test:e2e:desktop  # 5 Playwright E2E specs should pass
-npm run build             # Production build should succeed (149 KB gzipped main)
+npm run test              # 688 unit/integration tests should pass
+npm run test:e2e:desktop  # 11 Playwright E2E specs should pass
+npm run build             # Production build should succeed
 ```
 
 ## URLs
@@ -44,8 +44,8 @@ npm run build             # Production build should succeed (149 KB gzipped main
 
 ## 3. Quick Feature Spot-Check (~3 min)
 
-- [ ] Ranked panel accessible (shows Elo and tier)
-- [ ] Community gallery loads with tabs (Recent / Trending / Top Rated)
+- [ ] Ranked panel accessible (local-preview Elo / tier badge)
+- [ ] Personal gallery loads with filters (not a public community feed)
 - [ ] Achievements panel shows progress bars
 - [ ] Colorblind mode toggle available in settings
 

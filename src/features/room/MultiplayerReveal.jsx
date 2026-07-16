@@ -41,6 +41,7 @@ export function MultiplayerReveal() {
         isHost,
         roomPhase,
         playerName,
+        roomClosureReason,
         castVoteForSubmission,
         finalizeMultiplayerVoting,
         advanceToNextRound,
@@ -232,6 +233,28 @@ export function MultiplayerReveal() {
         </>
     );
 
+    if (roomClosureReason === 'host_left') {
+        return withConnectionBanner(
+            <div className="w-full max-w-xl flex flex-col items-center animate-spring-in">
+                <div className="game-mp-shell p-8 w-full text-center">
+                    <h2 className="text-2xl font-display font-bold text-white mb-3">
+                        Room ended
+                    </h2>
+                    <p className="text-white/60 text-sm mb-6">
+                        The host left, so this session is closed. Return to the lobby to start or join another room.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={leaveCurrentRoom}
+                        className="wordle-button wordle-primary min-h-[44px] px-6"
+                    >
+                        Return to lobby
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (revealPhase === REVEAL_PHASES.COUNTDOWN && !isResultsReady) {
         return withConnectionBanner(
             <div className="w-full max-w-4xl flex flex-col items-center justify-center min-h-[50vh] animate-spring-in">
@@ -322,7 +345,7 @@ export function MultiplayerReveal() {
                         <div className="space-y-3">
                             {scored.map((entry) => {
                                 const isOwnSubmission = entry.player_name === playerName;
-                                const canVote = !hasVoted && !isOwnSubmission;
+                                const canVote = !hasVoted && !isOwnSubmission && roomClosureReason !== 'host_left';
                                 const isSelected = selectedVoteId === entry.id;
 
                                 return (

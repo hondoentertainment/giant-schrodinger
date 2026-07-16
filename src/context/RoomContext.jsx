@@ -59,6 +59,8 @@ export function RoomProvider({ children }) {
     const [connectionState, setConnectionState] = useState('connected');
     const [roomSyncState, setRoomSyncState] = useState('idle');
     const [roomClosureReason, setRoomClosureReason] = useState(null);
+    const [joinedMidRound, setJoinedMidRound] = useState(false);
+    const [joinPhase, setJoinPhase] = useState(null);
 
     const unsubRef = useRef(null);
     const isHostRef = useRef(false);
@@ -70,6 +72,11 @@ export function RoomProvider({ children }) {
     const isMultiplayer = !!room;
     const roomCode = room?.code || null;
     const allSubmitted = players.length > 0 && submissions.length >= players.length;
+    const isSpectator = Boolean(
+        roomSession?.isSpectator
+        || roomSession?.role === 'spectator'
+        || players.find((p) => p.player_name === playerName)?.is_spectator
+    );
 
     useEffect(() => {
         isHostRef.current = isHost;
@@ -91,6 +98,8 @@ export function RoomProvider({ children }) {
         setConnectionState('connected');
         setRoomSyncState('idle');
         setRoomClosureReason(null);
+        setJoinedMidRound(false);
+        setJoinPhase(null);
         usedAssetIdsRef.current = [];
     }, []);
 
@@ -175,6 +184,10 @@ export function RoomProvider({ children }) {
                 setPlayers((prev) => prev.filter((entry) => entry.id !== player.id));
                 if (player.is_host) {
                     setRoomClosureReason('host_left');
+                    reportAppEvent('multiplayer_host_left', {
+                        roomId: room?.id,
+                        hostName: player.player_name,
+                    });
                     if (!isHostRef.current) {
                         toast.warn(t('room.hostLeftToast', { name: player.player_name || 'The host' }));
                     }
@@ -311,6 +324,9 @@ export function RoomProvider({ children }) {
         setIsHost(true);
         setPlayerName(result.session?.playerName || hostName);
         setRoomPhase(getRoomPhaseFromStatus(result.room.status));
+        setJoinedMidRound(false);
+        setJoinPhase(null);
+        setRoomClosureReason(null);
 
         const roomPlayers = await getRoomPlayers(result.room.id);
         setPlayers(roomPlayers);
@@ -378,16 +394,23 @@ export function RoomProvider({ children }) {
         setupSubscriptions(result.room.id);
 
         toast.success(`Joined room ${result.room.code}!`);
-        if (['playing', 'revealing', 'results'].includes(result.room.status)) {
+        const midRound = ['playing', 'revealing', 'results'].includes(result.room.status);
+        if (midRound) {
+            setJoinedMidRound(true);
+            setJoinPhase(result.room.status);
             toast.info(t('room.joinedMidRound'));
+        } else {
+            setJoinedMidRound(false);
+            setJoinPhase(null);
         }
         reportAppEvent('multiplayer_room_joined', {
             secureMode: result.session?.secureMode !== false,
             roomCode: result.room.code,
-            joinedMidRound: ['playing', 'revealing', 'results'].includes(result.room.status),
+            joinedMidRound: midRound,
+            joinPhase: result.room.status,
         });
         return result.room;
-    }, [setupSubscriptions, toast, user?.scoringMode, user?.themeId]);
+    }, [hydrateRoomState, setupSubscriptions, toast, user?.scoringMode, user?.themeId]);
 
     const leaveCurrentRoom = useCallback(async () => {
         if (room && playerName) {
@@ -454,6 +477,13 @@ export function RoomProvider({ children }) {
                     if (submission.score) continue;
                     try {
                         const scoreResult = await scoreSubmission(submission.submission, assets.left, assets.right);
+                        if (scoreResult?.isMock) {
+                            reportAppEvent('ai_mock_score_fallback', {
+                                source: 'multiplayer',
+                                roomId: room.id,
+                                roundNumber: room.round_number,
+                            });
+                        }
                         const multiplier = theme?.modifier?.scoreMultiplier || 1;
                         const finalScore = Math.min(10, Math.max(1, Math.round(scoreResult.score * multiplier)));
                         await updateSubmissionScore(
@@ -498,6 +528,11 @@ export function RoomProvider({ children }) {
         if (!result.ok && result.error) {
             toast.warn(result.error);
             reportAppError('multiplayer_cast_vote', new Error(result.error), {
+                roomId: room.id,
+                roundNumber: room.round_number,
+            });
+        } else if (result.ok) {
+            reportAppEvent('multiplayer_vote_cast', {
                 roomId: room.id,
                 roundNumber: room.round_number,
             });
@@ -570,6 +605,9 @@ export function RoomProvider({ children }) {
         connectionState,
         roomSyncState,
         roomClosureReason,
+        joinedMidRound,
+        joinPhase,
+        isSpectator,
         allSubmitted,
         hostRoom,
         joinRoomByCode,

@@ -13,6 +13,7 @@ import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
 import { ServiceStatusCard } from '../../components/ServiceStatusCard';
 import { PWAInstallBanner } from '../../components/PWAInstallBanner';
+import { LocalPreviewBadge } from '../../components/LocalPreviewBadge';
 import { isE2EMockRoomEnabled } from '../../lib/e2eMockRoom';
 import { trackEvent } from '../../services/analytics';
 import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
@@ -501,6 +502,7 @@ export function Lobby() {
                                     >
                                         <ShoppingBag className="w-4 h-4" />
                                         Shop
+                                        <LocalPreviewBadge />
                                     </button>
                                 </div>
                             )}
@@ -513,6 +515,7 @@ export function Lobby() {
                                     >
                                         <Shield className="w-4 h-4" />
                                         Ranked
+                                        <LocalPreviewBadge />
                                     </button>
                                     <button
                                         onClick={() => {
@@ -523,6 +526,7 @@ export function Lobby() {
                                     >
                                         <Brain className="w-4 h-4" />
                                         AI Battle
+                                        <LocalPreviewBadge />
                                     </button>
                                     <button
                                         onClick={() => setGameState('TOURNAMENT')}
@@ -530,6 +534,7 @@ export function Lobby() {
                                     >
                                         <Trophy className="w-4 h-4" />
                                         Tournament
+                                        <LocalPreviewBadge />
                                     </button>
                                     <button
                                         onClick={() => setGameState('ASYNC_CHAINS')}
@@ -537,6 +542,7 @@ export function Lobby() {
                                     >
                                         <Link className="w-4 h-4" />
                                         Challenge Links
+                                        <LocalPreviewBadge />
                                     </button>
                                     <button
                                         onClick={() => setGameState('AI_SETTINGS')}
@@ -544,6 +550,7 @@ export function Lobby() {
                                     >
                                         <Brain className="w-4 h-4" />
                                         AI Settings
+                                        <LocalPreviewBadge />
                                     </button>
                                     <button
                                         onClick={() => setGameState('ANALYTICS')}

@@ -1,4 +1,29 @@
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
+
+-- Public wrappers so RPCs resolve gen_random_bytes/digest without search_path issues
+create or replace function public.gen_random_bytes(length integer)
+returns bytea
+language sql
+volatile
+as $$
+  select extensions.gen_random_bytes(length);
+$$;
+
+create or replace function public.digest(data text, type text)
+returns bytea
+language sql
+immutable
+as $$
+  select extensions.digest(data, type);
+$$;
+
+create or replace function public.digest(data bytea, type text)
+returns bytea
+language sql
+immutable
+as $$
+  select extensions.digest(data, type);
+$$;
 
 -- Run this in Supabase SQL editor to create or upgrade the backend schema for
 -- Venn with Friends. The schema keeps reads simple for realtime clients, while

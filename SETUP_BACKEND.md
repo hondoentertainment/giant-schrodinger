@@ -2,6 +2,8 @@
 
 Complete these steps once to unlock multiplayer, friend judging, server AI scoring, and OG previews.
 
+**Related:** [ARCHITECTURE.md](ARCHITECTURE.md) · [SETUP.md](SETUP.md) · [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) · [PRD.md](PRD.md)
+
 ## Quick commands
 
 ```bash

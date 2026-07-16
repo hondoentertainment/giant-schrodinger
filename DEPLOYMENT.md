@@ -1,14 +1,27 @@
 # Deployment Guide
 
-This repo is set up for static frontend deployment, with GitHub Pages as the primary documented path and Vercel as a secondary option.
+**Last updated:** July 14, 2026
+
+This repo supports static frontend deployment on **Vercel** (current primary production URL) and **GitHub Pages**. Product/launch status: [PRD.md](PRD.md) · [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md).
 
 ## Current deployment assets in the repo
 
+- Vercel config: `vercel.json` (primary prod: https://giant-schrodinger.vercel.app)
 - GitHub Pages workflow: `.github/workflows/deploy.yml`
-- Vercel config: `vercel.json`
 - Vite config with host-aware base path: `vite.config.js`
 
-## Recommended path: GitHub Pages
+## Option A: Vercel (recommended for SPA routing)
+
+Primary production alias: https://giant-schrodinger.vercel.app
+
+```bash
+vercel
+vercel --prod
+```
+
+See [SETUP_BACKEND.md](SETUP_BACKEND.md) for Supabase + edge secrets, and [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) for the launch gate.
+
+## Option B: GitHub Pages
 
 ### 1. Confirm repository settings
 
@@ -130,19 +143,6 @@ The app emits structured telemetry through:
 - the browser event `vwf:telemetry`
 
 This keeps the frontend vendor-neutral while making it easy to plug in Sentry, PostHog, or another monitor later.
-
-## Vercel option
-
-`vercel.json` is already present.
-
-Typical deploy flow:
-
-```bash
-vercel
-vercel --prod
-```
-
-Use Vercel if you want preview deployments and simpler SPA hosting behavior.
 
 ## Troubleshooting
 

@@ -15,6 +15,8 @@ describe('ConnectionBanner', () => {
             connectionState: 'connected',
             roomSyncState: 'idle',
             roomClosureReason: null,
+            joinedMidRound: false,
+            joinPhase: null,
             attemptReconnect: vi.fn(),
             leaveCurrentRoom: vi.fn(),
             room: { scoring_mode: 'ai' },
@@ -31,6 +33,8 @@ describe('ConnectionBanner', () => {
             connectionState: 'reconnecting',
             roomSyncState: 'idle',
             roomClosureReason: null,
+            joinedMidRound: false,
+            joinPhase: null,
             attemptReconnect: vi.fn(),
             leaveCurrentRoom: vi.fn(),
             room: null,
@@ -48,6 +52,8 @@ describe('ConnectionBanner', () => {
             connectionState: 'connected',
             roomSyncState: 'idle',
             roomClosureReason: 'host_left',
+            joinedMidRound: false,
+            joinPhase: null,
             attemptReconnect: vi.fn(),
             leaveCurrentRoom: leave,
             room: { scoring_mode: 'human', status: 'finished' },
@@ -61,11 +67,31 @@ describe('ConnectionBanner', () => {
         expect(leave).toHaveBeenCalled();
     });
 
+    it('shows late-join banner when joined mid-round', () => {
+        useRoom.mockReturnValue({
+            connectionState: 'connected',
+            roomSyncState: 'idle',
+            roomClosureReason: null,
+            joinedMidRound: true,
+            joinPhase: 'revealing',
+            attemptReconnect: vi.fn(),
+            leaveCurrentRoom: vi.fn(),
+            room: { scoring_mode: 'human', status: 'revealing' },
+            votes: [],
+            submissions: [],
+        });
+
+        render(<ConnectionBanner />);
+        expect(screen.getByText(/Joined during voting/i)).toBeInTheDocument();
+    });
+
     it('shows finalizing sync message', () => {
         useRoom.mockReturnValue({
             connectionState: 'connected',
             roomSyncState: 'finalizing',
             roomClosureReason: null,
+            joinedMidRound: false,
+            joinPhase: null,
             attemptReconnect: vi.fn(),
             leaveCurrentRoom: vi.fn(),
             room: { scoring_mode: 'human', status: 'results' },

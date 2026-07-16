@@ -11,6 +11,8 @@ Use this before pushing a release candidate or merging a deployment-bound change
 - [ ] `npm run build` passes
 - [ ] New code paths have test coverage or an intentional gap is documented
 - [ ] README and setup docs match current behavior
+- [ ] PRD feature registry / ROADMAP updated if live-service requirements changed
+- [ ] Local-preview modes still labeled (ranked / shop / tournaments)
 
 ## 2. Solo experience
 

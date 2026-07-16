@@ -7,11 +7,14 @@ import { getJudgementForCollision } from '../../services/judgements';
 import { getCollisionMediaMode, getMediaModeLabel } from '../../lib/mediaType';
 import { getHighlights } from '../../services/highlights';
 import { downloadFusionImage } from '../../services/socialShare';
+import { getOgShareUrl } from '../../services/share';
+import SocialShareButtons from '../../components/SocialShareButtons';
 import { buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
 import { flagContent } from '../../services/moderation';
 import { MEDIA_TYPES } from '../../data/themes';
 import { getJudgeModeFromCollision } from '../../lib/judgeMode';
 import { EmptyState } from '../../components/EmptyState';
+import { trackEvent } from '../../services/analytics';
 
 const SORT_OPTIONS = [
     { id: 'newest', label: 'Newest', fn: (a, b) => new Date(b.timestamp) - new Date(a.timestamp) },
@@ -225,22 +228,42 @@ export function Gallery() {
             : '';
         const highlightLine = (collision.score || 0) >= 8 ? ' Highlight-worthy.' : '';
         const mediaLine = ` ${getMediaModeLabel(getCollisionMediaMode(collision))} round.`;
-        const text = `My Venn connection: "${collision.submission}" scored ${collision.score}/10.${promptLine}${mediaLine}${judgeLine}${dailyLine}${friendLine}${highlightLine} Play Venn with Friends: ${window.location.origin}${window.location.pathname}`;
+        const previewUrl = collision.shareToken
+            ? getOgShareUrl(collision.shareToken)
+            : `${window.location.origin}${window.location.pathname}`;
+        const text = `My Venn connection: "${collision.submission}" scored ${collision.score}/10.${promptLine}${mediaLine}${judgeLine}${dailyLine}${friendLine}${highlightLine} Play Venn with Friends: ${previewUrl}`;
         if (navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(text);
+            trackEvent('gallery_share_copy', { hasToken: Boolean(collision.shareToken) });
             setShareCopiedId(collision.id);
             setTimeout(() => setShareCopiedId(null), 2000);
         }
     };
 
+    const buildGalleryShareData = (collision) => {
+        const judgement = getDisplayJudgement(collision);
+        return {
+            submission: collision.submission,
+            score: collision.score,
+            judgeMode: collision.judgeMode || (judgement ? 'friend' : undefined),
+            assets: collision.assets,
+            commentary: judgement?.commentary,
+            friendScore: judgement?.score,
+            isDailyChallenge: collision.isDailyChallenge,
+            previewUrl: collision.shareToken ? getOgShareUrl(collision.shareToken) : undefined,
+            imageUrl: collision.imageUrl || collision.fallbackImageUrl,
+            surface: 'gallery',
+        };
+    };
+
     const handleDownloadShareCard = async (collision) => {
         setShareCardLoadingId(collision.id);
         try {
-            await downloadFusionImage(collision.imageUrl, {
-                submission: collision.submission,
-                score: collision.score,
-                judgeMode: collision.judgeMode,
-                assets: collision.assets,
+            const shareData = buildGalleryShareData(collision);
+            await downloadFusionImage(shareData.imageUrl, shareData);
+            trackEvent('gallery_share_card_download', {
+                hasImage: Boolean(shareData.imageUrl),
+                judgeMode: shareData.judgeMode,
             });
         } finally {
             setShareCardLoadingId(null);
@@ -443,13 +466,19 @@ export function Gallery() {
                                         )}
                                     </div>
                                 )}
+                                <div className="mb-4">
+                                    <SocialShareButtons
+                                        shareData={buildGalleryShareData(selectedCollision)}
+                                        imageUrl={selectedCollision.imageUrl || selectedCollision.fallbackImageUrl}
+                                    />
+                                </div>
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <button
                                         type="button"
                                         onClick={() => handleCopyShare(selectedCollision)}
                                         className="wordle-button wordle-primary flex-1 min-h-[44px]"
                                     >
-                                        Copy Share Text
+                                        {shareCopiedId === selectedCollision.id ? 'Copied!' : 'Copy Share Text'}
                                     </button>
                                     <button
                                         type="button"

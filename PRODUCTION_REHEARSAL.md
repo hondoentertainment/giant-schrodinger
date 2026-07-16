@@ -1,5 +1,8 @@
 # Production Rehearsal
 
+**Last updated:** July 14, 2026  
+**Companions:** [SETUP_BACKEND.md](SETUP_BACKEND.md) · [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md) · [PRD.md](PRD.md)
+
 Run this once before the first public launch and again before any major release.
 
 ## 1. Backend migration
@@ -12,6 +15,7 @@ Run this once before the first public launch and again before any major release.
    - `submit_round_judgement`
    - `cast_room_vote`
    - `finalize_room_votes`
+   - `report_content` (moderation)
 3. Confirm the old anonymous write policies are gone and only read policies remain.
 
 ## 2. Secrets and hosting
