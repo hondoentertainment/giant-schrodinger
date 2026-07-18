@@ -28,6 +28,7 @@ export function Reveal({ submission, assets }) {
     const [humanCommentary, setHumanCommentary] = useState('');
     const [savedCollision, setSavedCollision] = useState(null);
     const [shareCopied, setShareCopied] = useState(false);
+    const [shareLinks, setShareLinks] = useState(null);
     const [newlyUnlocked, setNewlyUnlocked] = useState([]);
     const [processError, setProcessError] = useState(null);
     const [retryTrigger, setRetryTrigger] = useState(0);
@@ -37,7 +38,7 @@ export function Reveal({ submission, assets }) {
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
     const mediaType = normalizeMediaType(user?.mediaType);
     const mod = currentModifier;
-    const canShareForJudging = Boolean(fusionImage?.url && assets?.left && assets?.right);
+    const canShareForJudging = Boolean(fusionImage?.url && assets?.left && assets?.right && savedCollision?.id);
     const savedMediaType = getCollisionMediaMode({
         mediaType: getEffectiveRoundMediaType({
             userMediaType: mediaType,
@@ -144,6 +145,16 @@ export function Reveal({ submission, assets }) {
                             toast.success(`Achievement unlocked: ${achievement.name}`);
                         });
                         savedRef.current = true;
+                        createJudgeShareLinks({
+                            assets: { left: assets.left, right: assets.right },
+                            submission,
+                            imageUrl: image.url,
+                            shareFrom: user?.name || 'A friend',
+                            collisionId: collision?.id || null,
+                            judgeMode: 'friend',
+                        }).then((links) => {
+                            if (mounted && links) setShareLinks(links);
+                        }).catch(() => {});
                     }
                     completeRound({
                         score: finalScore,
@@ -151,6 +162,8 @@ export function Reveal({ submission, assets }) {
                         breakdown: scoreResult.breakdown,
                         collisionId: collision?.id,
                         judgeMode: scoringMode,
+                        submission,
+                        assets: savedAssetPair,
                     });
                 } else {
                     // Human scoring path
@@ -206,15 +219,19 @@ export function Reveal({ submission, assets }) {
 
     const handleShareForJudging = async () => {
         if (!canShareForJudging) return;
-        const roundPayload = {
-            assets: { left: assets.left, right: assets.right },
-            submission,
-            imageUrl: fusionImage?.url,
-            shareFrom: user?.name || 'A friend',
-            collisionId: savedCollision?.id || null,
-            judgeMode: 'friend',
-        };
-        const links = await createJudgeShareLinks(roundPayload);
+        let links = shareLinks;
+        if (!links?.shareUrl) {
+            const roundPayload = {
+                assets: { left: assets.left, right: assets.right },
+                submission,
+                imageUrl: fusionImage?.url,
+                shareFrom: user?.name || 'A friend',
+                collisionId: savedCollision?.id || null,
+                judgeMode: 'friend',
+            };
+            links = await createJudgeShareLinks(roundPayload);
+            if (links) setShareLinks(links);
+        }
         const url = links?.shareUrl;
         reportAppEvent('friend_judge_share_created', {
             hasSavedCollision: Boolean(savedCollision?.id),
@@ -288,8 +305,25 @@ export function Reveal({ submission, assets }) {
                 toast.success(`Achievement unlocked: ${achievement.name}`);
             });
             savedRef.current = true;
+            createJudgeShareLinks({
+                assets: { left: assets.left, right: assets.right },
+                submission,
+                imageUrl: fusionImage.url,
+                shareFrom: user?.name || 'A friend',
+                collisionId: collision?.id || null,
+                judgeMode: 'friend',
+            }).then((links) => {
+                if (links) setShareLinks(links);
+            }).catch(() => {});
         }
-        completeRound({ score: finalScore, baseScore: scoreValue, collisionId: collision?.id, judgeMode: scoringMode });
+        completeRound({
+            score: finalScore,
+            baseScore: scoreValue,
+            collisionId: collision?.id,
+            judgeMode: scoringMode,
+            submission,
+            assets: savedAssetPair,
+        });
     };
 
     if (processError) {
@@ -528,6 +562,8 @@ export function Reveal({ submission, assets }) {
                                     assets,
                                     judgeMode: scoringMode,
                                     isDailyChallenge,
+                                    previewUrl: shareLinks?.previewUrl,
+                                    surface: 'reveal',
                                 }}
                                 imageUrl={fusionImage?.url}
                                 onToast={(type, msg) => toast[type]?.(msg)}

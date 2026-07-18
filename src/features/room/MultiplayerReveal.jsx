@@ -65,6 +65,13 @@ export function MultiplayerReveal() {
     const isResultsReady = roomPhase === 'results' || room?.status === 'results' || isFinished;
     const expectedVoteCount = scoringMode === 'human' ? Math.max(submissions.length, 0) : 0;
     const currentVoteCount = votes.length;
+    const pendingVoters = useMemo(() => {
+        if (scoringMode !== 'human') return [];
+        const voted = new Set(votes.map((vote) => vote.voter_name));
+        return submissions
+            .map((entry) => entry.player_name)
+            .filter((name) => name && !voted.has(name));
+    }, [scoringMode, submissions, votes]);
 
     useEffect(() => {
         if (!isFinished || !room?.id) return undefined;
@@ -334,12 +341,17 @@ export function MultiplayerReveal() {
                             </h2>
                             <p className="text-white/45 text-sm">
                                 {hasVoted
-                                    ? 'Your vote is locked in. Waiting for the host to reveal results...'
+                                    ? 'Your vote is locked in. Waiting for everyone else, then the host reveals results.'
                                     : 'Tap one connection to cast your vote. You cannot vote for yourself.'}
                             </p>
                             <p className="text-white/30 text-xs mt-2 tabular-nums">
                                 Votes locked in: {currentVoteCount}/{expectedVoteCount || submissions.length}
                             </p>
+                            {pendingVoters.length > 0 && (
+                                <p className="text-amber-200/70 text-xs mt-2">
+                                    Still need to vote: {pendingVoters.join(', ')}
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-3">
@@ -396,6 +408,8 @@ export function MultiplayerReveal() {
                                 <p className="mt-3 text-center text-xs text-white/35">
                                     {currentVoteCount >= expectedVoteCount && expectedVoteCount > 0
                                         ? 'All submitted players have voted.'
+                                        : pendingVoters.length > 0
+                                        ? `Waiting on ${pendingVoters.join(', ')} — or reveal results now.`
                                         : 'You can wait for the remaining submitted players or reveal results now.'}
                                 </p>
                             </>
@@ -415,6 +429,16 @@ export function MultiplayerReveal() {
                         <h2 className="text-3xl font-display font-bold tracking-tight text-white">
                             {isFinished ? 'Game over' : 'The results are in'}
                         </h2>
+                        {isFinished && (
+                            <p className="text-white/45 text-sm mt-2 max-w-md mx-auto">
+                                Final standings from every round. Invite the group back for another room when you are ready.
+                            </p>
+                        )}
+                        {!isFinished && scoringMode === 'ai' && (
+                            <p className="text-white/40 text-xs mt-2">
+                                AI scored each connection on Wit, Logic, Originality, and Clarity.
+                            </p>
+                        )}
                     </div>
 
                     {!isFinished && (
@@ -525,7 +549,11 @@ export function MultiplayerReveal() {
                     {!isFinished && scored.length === 0 && (
                         <div className="text-center py-12 text-white/40">
                             <div className="w-12 h-12 rounded-full border-2 border-t-game-accent border-white/10 animate-spin mx-auto mb-4" />
-                            <p>Waiting for scores...</p>
+                            <p>
+                                {scoringMode === 'ai'
+                                    ? 'Gemini is scoring the room — this usually takes a few seconds.'
+                                    : 'Waiting for scores...'}
+                            </p>
                         </div>
                     )}
 

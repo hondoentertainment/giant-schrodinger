@@ -1,3 +1,6 @@
+import { getCollisions } from './storage';
+import { getJudgementForCollision } from './judgements';
+
 const STORAGE_KEY = 'vwf_stats';
 const MILESTONES = [
     { id: 'first_round', threshold: 1, type: 'rounds', reward: 'avatar', rewardId: '🎯', label: 'First Connection' },
@@ -145,6 +148,16 @@ export function getFavoriteThemeId(stats = null) {
     return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 }
 
+export function getStreakStatus(stats = null) {
+    const s = stats || getStats();
+    const today = getTodayKey();
+    if (!s.currentStreak || !s.lastPlayedDate) return 'none';
+    const days = daysBetween(s.lastPlayedDate, today);
+    if (days === 0) return 'active_today';
+    if (days === 1) return 'at_risk';
+    return 'broken';
+}
+
 export function getProfileSummary(stats = null) {
     const s = stats || getStats();
     const bestScore = getBestScore(s);
@@ -157,11 +170,52 @@ export function getProfileSummary(stats = null) {
         })
         .sort((a, b) => a.remaining - b.remaining)[0] || null;
 
+    let savedCount = 0;
+    let friendJudgedCount = 0;
+    let highlightCount = 0;
+    let dailySavedCount = 0;
+    const judgeModeCounts = { ai: 0, human: 0, friend: 0, other: 0 };
+    const mediaCounts = {};
+
+    try {
+        const collisions = getCollisions() || [];
+        savedCount = collisions.length;
+        for (const collision of collisions) {
+            if (getJudgementForCollision(collision.id)) friendJudgedCount += 1;
+            if ((collision.score || 0) >= 8) highlightCount += 1;
+            if (collision.isDailyChallenge) dailySavedCount += 1;
+            const mode = collision.judgeMode || collision.scoringMode || 'other';
+            if (mode === 'ai' || mode === 'human' || mode === 'friend') judgeModeCounts[mode] += 1;
+            else judgeModeCounts.other += 1;
+            const media = collision.mediaType || 'image';
+            mediaCounts[media] = (mediaCounts[media] || 0) + 1;
+        }
+    } catch {
+        // Profile enrichment must never break lobby render.
+    }
+
+    const finiteScores = (s.scores || []).filter((score) => Number.isFinite(score));
+    const averageScore = finiteScores.length
+        ? finiteScores.reduce((sum, score) => sum + score, 0) / finiteScores.length
+        : null;
+    const streakStatus = getStreakStatus(s);
+    const topMediaType = Object.entries(mediaCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
     return {
         bestScore,
         favoriteThemeId,
         currentStreak: s.currentStreak,
+        maxStreak: s.maxStreak,
         totalRounds: s.totalRounds,
         nextMilestone,
+        averageScore,
+        savedCount,
+        friendJudgedCount,
+        highlightCount,
+        dailySavedCount,
+        judgeModeCounts,
+        topMediaType,
+        streakStatus,
+        streakAtRisk: streakStatus === 'at_risk',
     };
 }

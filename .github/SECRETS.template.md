@@ -53,4 +53,10 @@ npm run rehearsal:preflight
 PRODUCTION_URL=https://giant-schrodinger.vercel.app npm run test:e2e:rehearsal
 ```
 
-Apply `supabase/schema.sql` (includes content report RPCs) before enabling moderation backend.
+Apply `supabase/schema.sql` (includes content report RPCs + `analytics_events` insert policy) before enabling moderation backend / Supabase analytics inserts.
+
+Observability wiring in the app:
+
+- `VITE_SENTRY_DSN` → `SentryReporter` via `initErrorMonitoring()`; `reportAppError()` also bridges into `logError()`
+- `VITE_POSTHOG_KEY` (+ optional `VITE_POSTHOG_HOST`) → `initTelemetry()` registers PostHog capture
+- Without those keys, events stay in localStorage + console (dev) + optional Supabase `analytics_events` inserts

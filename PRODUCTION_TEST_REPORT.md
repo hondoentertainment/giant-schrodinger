@@ -1,6 +1,6 @@
 # Production Test Report
 
-Report date: July 15, 2026 (evening rehearsal pass)
+Report date: July 18, 2026
 
 Repository: https://github.com/hondoentertainment/giant-schrodinger
 
@@ -18,26 +18,29 @@ Production URL: https://giant-schrodinger.vercel.app
 
 | Check | Result |
 |---|---|
-| `npm run launch:gate` (env/RPC/edge/smoke/deployed E2E) | **Passed** |
-| Hosted two-browser multiplayer (`e2e/hosted-two-browser.spec.js`) | **Passed** — create/join/submit/vote/finalize |
+| `npm run launch:gate` (env/RPC/edge/smoke/deployed E2E) | **Passed** (July 15) |
+| Hosted two-browser multiplayer (`e2e/hosted-two-browser.spec.js`) | **Passed** |
 | Hosted friend-judge share (second browser) | **Passed** |
 | Supabase RPC probe | **Passed** |
-| Edge functions | **Passed** (`og-tags` 200; others 405 on GET as expected) |
-| Production smoke | **Passed** |
+| Edge functions | **Passed** (`og-tags` redeployed July 18 with richer meta) |
+| `analytics_events` INSERT RLS | **Applied** July 18 (no `users` FK) |
 
-## Shipped this pass
+## Shipped since soft-launch clear
 
-- Supabase project + schema + pgcrypto wrappers + edge functions
-- Local / Vercel / GitHub secrets wired
-- Multiplayer UX + telemetry + gallery share polish
-- Hosted rehearsal CI hardened
-- New `e2e/hosted-two-browser.spec.js` + `npm run test:e2e:hosted`
+- End-user retention/share/gallery/MP polish (July 17)
+- `reportAppError` → Sentry/`logError` bridge
+- `trackRoundComplete` + session funnel events
+- Richer lobby profile summary + streak-at-risk CTA
+- `analytics_events` table + anon INSERT policy
+- OG tags: site_name, richer descriptions, challenge copy
 
-## Remaining (optional)
+## Remaining (optional — needs external keys)
 
-1. `npm run rehearsal:telemetry` during a live browser session (observability sink)
-2. Set `PEXELS_API_KEY` / `GIPHY_API_KEY` edge secrets for richer stock/meme lookup
-3. Commit/push so GitHub Pages + Actions pick up the latest docs/tests
+1. Set Vercel `VITE_SENTRY_DSN` / `VITE_POSTHOG_KEY` (code already wired)
+2. Set Supabase edge secrets via `npm run configure:edge-secrets` (`PEXELS_API_KEY` / `GIPHY_API_KEY`)
+3. Optional Sentry map upload: GitHub secrets `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT`
+4. Optional Discord: `DISCORD_PUBLIC_KEY` + interactions URL → `…/functions/v1/discord-bot`
+5. `npm run rehearsal:telemetry` to confirm sink status + browser checklist
 
 ## Known Live Limitations
 
@@ -46,10 +49,11 @@ Production URL: https://giant-schrodinger.vercel.app
 | Supabase schema + RPCs | **Live** | Project `fnjshhjwoximddoggdrk` |
 | Friend judging / multiplayer | **Verified live** | Two-browser Playwright rehearsal passed |
 | Server AI scoring | Edge deployed | Live Gemini path exercised in friend-judge flow |
-| OG previews | Edge deployed | `og-tags` with image dimensions/alt |
+| OG previews | Edge redeployed | Richer title/description/site_name |
+| Analytics inserts | **Live** | Anon INSERT allowed; reads locked down |
 | Ranked / shop / tournaments | Local preview only | Product decision locked until Phase 9 |
-| Observability | Optional | Sentry/PostHog not configured |
+| Observability dashboards | Optional | Needs PostHog/Sentry project keys |
 
 ## Current Launch Gate
 
-**Cleared for launch candidate.** Optional polish remains (telemetry sink check, Pexels/Giphy secrets).
+**Cleared for launch candidate.** Remaining items require third-party API keys, not more product code.

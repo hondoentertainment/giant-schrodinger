@@ -3,6 +3,7 @@ import { useGame } from '../../context/GameContext';
 import { useRoom } from '../../context/RoomContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked, getProfileSummary } from '../../services/stats';
+import { reportAppEvent } from '../../lib/telemetry';
 import { getDailyChallenge, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { isBackendEnabled } from '../../lib/supabase';
 import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, Laugh, CalendarDays, Zap, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
@@ -71,6 +72,8 @@ export function Lobby() {
     const [joinCode, setJoinCode] = useState('');
     const [mpLoading, setMpLoading] = useState(false);
     const [mpLoadingAction, setMpLoadingAction] = useState(null); // 'create' | 'join'
+    const [dailyShareCopied, setDailyShareCopied] = useState(false);
+    const [dailyRefreshKey, setDailyRefreshKey] = useState(0);
 
     const theme = getThemeById(themeId);
     const stats = getStats();
@@ -79,8 +82,29 @@ export function Lobby() {
     const backendReady = isBackendEnabled() || isE2EMockRoomEnabled();
     const lobbyTier = stats.totalRounds >= 5 ? 3 : stats.totalRounds >= 3 ? 2 : stats.totalRounds >= 1 ? 1 : 0;
     const isFirstSession = lobbyTier === 0 && !sessionId;
+
+    useEffect(() => {
+        if (!sessionId) setDailyRefreshKey((key) => key + 1);
+    }, [sessionId]);
+
+    useEffect(() => {
+        if (profileSummary.streakAtRisk) {
+            trackEvent('streak_at_risk', {
+                currentStreak: profileSummary.currentStreak,
+            });
+        }
+    }, [profileSummary.streakAtRisk, profileSummary.currentStreak]);
+
     const weeklyEvent = useMemo(() => getCurrentWeeklyEvent(), []);
     const weeklyCountdown = useMemo(() => formatWeeklyCountdown(getTimeUntilNextWeek()), []);
+
+    useEffect(() => {
+        if (weeklyEvent && !isFirstSession) {
+            reportAppEvent('weekly_event_view', {
+                eventId: weeklyEvent.id || weeklyEvent.name,
+            });
+        }
+    }, [weeklyEvent, isFirstSession]);
     const welcomeMessage = useMemo(() => {
         if (!user || !stats.lastPlayedDate || stats.totalRounds === 0) return null;
         const lastPlayed = new Date(`${stats.lastPlayedDate}T00:00:00`);
@@ -125,8 +149,25 @@ export function Lobby() {
     };
 
     const dailyChallenge = useMemo(() => getDailyChallenge(), []);
-    const dailySummary = useMemo(() => getDailyChallengeSummary(), []);
-    const dailyPlayed = useMemo(() => hasDailyChallengeBeenPlayed(), []);
+    const dailySummary = useMemo(() => getDailyChallengeSummary(), [dailyRefreshKey]);
+    const dailyPlayed = useMemo(() => hasDailyChallengeBeenPlayed(), [dailyRefreshKey]);
+
+    const handleDailyShare = () => {
+        const url = window.location.origin + window.location.pathname;
+        const msg = `${dailySummary.shareLine} Play today's Venn: ${url}`;
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(msg);
+            haptic('success');
+            setDailyShareCopied(true);
+            trackEvent('daily_challenge_share', { completions: dailySummary.completions });
+            setTimeout(() => setDailyShareCopied(false), 2500);
+        }
+    };
+
+    const handleScoringModeChange = (mode) => {
+        setScoringMode(mode);
+        if (user) login({ ...user, scoringMode: mode });
+    };
 
     const startGame = () => {
         if (!sessionId && stats.totalRounds === 0) {
@@ -248,7 +289,7 @@ export function Lobby() {
                     </p>
                     <p className="text-white/40 text-sm mb-4">
                         {isFirstSession
-                            ? 'Write one clever phrase, score it, then send the best one to a friend.'
+                            ? 'Write one clever phrase, score it (AI, Manual, or Friend Judge), then invite someone to play.'
                             : `Complete ${sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.`}
                     </p>
                     {!isFirstSession && <ServiceStatusCard className="mb-4" />}
@@ -270,7 +311,50 @@ export function Lobby() {
                                 </div>
                                 <div>
                                     <div className="text-white/50 text-xs">{tr('lobby.nextUnlock')}</div>
-                                    <div className="text-white font-bold">{profileSummary.nextMilestone ? profileSummary.nextMilestone.label : tr('lobby.allUnlocked')}</div>
+                                    <div className="text-white font-bold">
+                                        {profileSummary.nextMilestone ? profileSummary.nextMilestone.label : tr('lobby.allUnlocked')}
+                                    </div>
+                                    {profileSummary.nextMilestone && (
+                                        <>
+                                            <div className="text-amber-200/80 text-[11px] mt-1">
+                                                {profileSummary.nextMilestone.remaining === 0
+                                                    ? 'Ready to unlock'
+                                                    : `${profileSummary.nextMilestone.remaining} more ${profileSummary.nextMilestone.type === 'rounds' ? 'rounds' : 'streak days'}`}
+                                            </div>
+                                            <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-400"
+                                                    style={{
+                                                        width: `${Math.min(100, Math.round(
+                                                            ((profileSummary.nextMilestone.threshold - profileSummary.nextMilestone.remaining)
+                                                                / Math.max(1, profileSummary.nextMilestone.threshold)) * 100
+                                                        ))}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                            {profileSummary.streakAtRisk && (
+                                <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-amber-100 text-xs">
+                                    Day {profileSummary.currentStreak} streak is at risk — play today to keep it alive.
+                                </div>
+                            )}
+                            <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+                                <div className="rounded-xl bg-white/[0.04] border border-white/10 px-2 py-2">
+                                    <div className="text-white/40">Avg</div>
+                                    <div className="text-white font-semibold tabular-nums">
+                                        {profileSummary.averageScore != null ? profileSummary.averageScore.toFixed(1) : '—'}
+                                    </div>
+                                </div>
+                                <div className="rounded-xl bg-white/[0.04] border border-white/10 px-2 py-2">
+                                    <div className="text-white/40">Friend scores</div>
+                                    <div className="text-white font-semibold tabular-nums">{profileSummary.friendJudgedCount}</div>
+                                </div>
+                                <div className="rounded-xl bg-white/[0.04] border border-white/10 px-2 py-2">
+                                    <div className="text-white/40">Highlights</div>
+                                    <div className="text-white font-semibold tabular-nums">{profileSummary.highlightCount}</div>
                                 </div>
                             </div>
                             {dailySummary.weeklyCompletions > 0 && (
@@ -304,9 +388,32 @@ export function Lobby() {
                             <span>Rounds</span>
                             <span className="text-white/80">{stats.totalRounds}</span>
                         </span>
-                        {stats.currentStreak > 0 && (
-                            <span className="col-span-3 wordle-tile wordle-tile-present min-h-[36px] px-2 text-[0.65rem]">{stats.currentStreak} day streak</span>
-                        )}
+                    </div>
+                    <div className="mb-4 rounded-[18px] border border-white/10 bg-white/[0.04] p-3 text-left">
+                        <div className="game-section-label mb-2">How scoring works</div>
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                            <button
+                                type="button"
+                                onClick={() => handleScoringModeChange('human')}
+                                aria-pressed={scoringMode === 'human'}
+                                className={`game-choice min-h-[40px] py-2 text-xs font-semibold ${scoringMode === 'human' ? 'game-choice-selected' : ''}`}
+                            >
+                                Manual Judge
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleScoringModeChange('ai')}
+                                aria-pressed={scoringMode === 'ai'}
+                                className={`game-choice min-h-[40px] py-2 text-xs font-semibold ${scoringMode === 'ai' ? 'game-choice-selected' : ''}`}
+                            >
+                                AI Judge
+                            </button>
+                        </div>
+                        <p className="text-white/45 text-[11px] leading-relaxed">
+                            {scoringMode === 'human'
+                                ? 'You score the reveal yourself. After any round you can still copy a Friend Judge link for async feedback. Multiplayer rooms use live room voting.'
+                                : 'Gemini scores solo rounds when configured. Friend Judge links still work after the reveal. Multiplayer rooms vote live when set to Manual.'}
+                        </p>
                     </div>
                     {!isFirstSession && ([MEDIA_TYPES.IMAGE, MEDIA_TYPES.MEMES_VIDEOS, MEDIA_TYPES.VIDEO].includes(user?.mediaType || MEDIA_TYPES.IMAGE)) && (
                         <div className="mb-4">
@@ -380,6 +487,7 @@ export function Lobby() {
                                     </div>
                                     <div className="text-white/50 text-sm">{dailyChallenge.prompt}</div>
                                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-amber-200/70">
+                                        <span>1.5× score bonus today</span>
                                         <span>{dailySummary.completions} daily completion{dailySummary.completions === 1 ? '' : 's'}</span>
                                         {dailySummary.bestScore !== null && <span>Best daily: {dailySummary.bestScore}/10</span>}
                                     </div>
@@ -405,7 +513,15 @@ export function Lobby() {
                                 Daily challenge complete
                             </div>
                             <p className="mt-1 text-white/60">{dailySummary.shareLine}</p>
-                            <p className="mt-2 text-white/40 text-xs">Come back tomorrow for a new prompt and another streak check-in.</p>
+                            <p className="mt-2 text-amber-100/70 text-xs">1.5× daily bonus was applied to today&apos;s scores.</p>
+                            <p className="mt-1 text-white/40 text-xs">Come back tomorrow for a new prompt and another streak check-in.</p>
+                            <button
+                                type="button"
+                                onClick={handleDailyShare}
+                                className="wordle-button wordle-primary mt-3 min-h-[40px] text-sm"
+                            >
+                                {dailyShareCopied ? 'Daily result copied!' : 'Share today\'s result'}
+                            </button>
                         </div>
                     )}
 
@@ -809,8 +925,8 @@ export function Lobby() {
                     </div>
                     <p className="mt-2 text-center text-white/50 text-xs">
                         {scoringMode === 'human'
-                            ? 'Manual Judge means you score the reveal yourself. Friend Judge links can still be copied after the round.'
-                            : 'AI Judge scores automatically with Gemini when configured, and falls back gracefully when unavailable.'
+                            ? 'Manual Judge: you score the reveal. Friend Judge is a separate share link after the round. Multiplayer Manual uses live room voting.'
+                            : 'AI Judge: Gemini scores solo rounds when configured (with a local fallback). Friend Judge links still work after reveal.'
                         }
                     </p>
                 </section>

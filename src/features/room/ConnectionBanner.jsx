@@ -26,10 +26,17 @@ export function ConnectionBanner() {
     const scoringMode = room?.scoring_mode || 'ai';
     const isHumanScoring = scoringMode === 'human';
     const roomPhase = room?.status;
+    const expectedVotes = Math.max(submissions.length, 0);
     const waitingForVotes = isHumanScoring
         && (roomPhase === 'revealing' || roomPhase === 'results')
         && submissions.length > 0
-        && votes.length < Math.max(submissions.length - 1, 0);
+        && votes.length < expectedVotes;
+
+    const pendingVoterNames = waitingForVotes
+        ? submissions
+            .map((entry) => entry.player_name)
+            .filter((name) => !votes.some((vote) => vote.voter_name === name))
+        : [];
 
     if (roomClosureReason === 'host_left') {
         return (
@@ -83,7 +90,11 @@ export function ConnectionBanner() {
                 {lateJoinBanner}
                 <div className={`w-full py-2.5 px-4 text-sm font-semibold text-center rounded-2xl mb-4 border ${tone}`} role="status" aria-live="polite">
                     {syncMessage}
-                    {connectionState === 'connected' && waitingForVotes && roomSyncState === 'idle' ? null : null}
+                    {waitingForVotes && pendingVoterNames.length > 0 && (
+                        <span className="block mt-1 font-normal text-xs opacity-90">
+                            Still need to vote: {pendingVoterNames.join(', ')} ({votes.length}/{expectedVotes})
+                        </span>
+                    )}
                 </div>
             </>
         );

@@ -48,7 +48,7 @@ function isWithinLastWeek(timestamp) {
     return date.getTime() >= weekAgo;
 }
 
-function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyShare }) {
+function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyShare, onSaveCard }) {
     const [imageStatus, setImageStatus] = useState('loading');
     const [isVisible, setIsVisible] = useState(false);
     const ref = useRef(null);
@@ -127,6 +127,20 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
                     onError={handleError}
                 />
             )}
+            {(collision.isDailyChallenge || fj) && (
+                <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap gap-1.5 pointer-events-none">
+                    {collision.isDailyChallenge && (
+                        <span className="rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-black">
+                            Daily
+                        </span>
+                    )}
+                    {fj && (
+                        <span className="rounded-full bg-sky-500/90 px-2 py-0.5 text-[10px] font-bold text-white">
+                            Friend {fj.score}/10
+                        </span>
+                    )}
+                </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
                 <div className="text-2xl font-bold text-white mb-1">{collision.submission}</div>
                 <div className="flex flex-col gap-1">
@@ -156,6 +170,15 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
                     >
                         Copy share
                     </button>
+                    {onSaveCard && (
+                        <button
+                            type="button"
+                            onClick={() => onSaveCard(collision)}
+                            className="wordle-button flex-1 min-h-[44px] py-2 text-sm"
+                        >
+                            Save card
+                        </button>
+                    )}
                 </div>
             </div>
             <div className="absolute left-3 right-3 bottom-3 rounded-xl bg-black/70 p-3 text-left opacity-100 group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity md:hidden">
@@ -163,7 +186,15 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
                     <span className="text-white font-semibold truncate">{collision.submission}</span>
                     <span className="text-yellow-300 font-bold">{collision.score}/10</span>
                 </div>
-                {isHighlight && <div className="text-amber-300 text-xs mt-1">Highlight</div>}
+                <div className="flex flex-wrap gap-2 mt-1">
+                    {isHighlight && <span className="text-amber-300 text-xs">Highlight</span>}
+                    {collision.isDailyChallenge && <span className="text-amber-200 text-xs">Daily</span>}
+                    {fj && (
+                        <span className="text-sky-200 text-xs">
+                            Friend {fj.score}/10
+                        </span>
+                    )}
+                </div>
             </div>
         </article>
         </div>
@@ -212,6 +243,7 @@ export function Gallery() {
         if (feedbackFilter === 'judged' && !getDisplayJudgement(collision)) return false;
         if (feedbackFilter === 'highlights' && !(highlightIds.has(collision.id) || (collision.score || 0) >= 8)) return false;
         if (feedbackFilter === 'week' && !isWithinLastWeek(collision.timestamp)) return false;
+        if (feedbackFilter === 'daily' && !collision.isDailyChallenge) return false;
         if (mediaFilter !== 'all' && getCollisionMediaMode(collision) !== mediaFilter) return false;
         return true;
     });
@@ -242,6 +274,7 @@ export function Gallery() {
 
     const buildGalleryShareData = (collision) => {
         const judgement = getDisplayJudgement(collision);
+        const mediaType = getCollisionMediaMode(collision);
         return {
             submission: collision.submission,
             score: collision.score,
@@ -249,7 +282,11 @@ export function Gallery() {
             assets: collision.assets,
             commentary: judgement?.commentary,
             friendScore: judgement?.score,
+            friendJudgeName: judgement?.judgeName || judgement?.judge_name,
             isDailyChallenge: collision.isDailyChallenge,
+            mediaType,
+            mediaLabel: getMediaModeLabel(mediaType),
+            promptPair: getPromptPairLabel(collision),
             previewUrl: collision.shareToken ? getOgShareUrl(collision.shareToken) : undefined,
             imageUrl: collision.imageUrl || collision.fallbackImageUrl,
             surface: 'gallery',
@@ -347,6 +384,7 @@ export function Gallery() {
                         {[
                             { id: 'all', label: t('gallery.allSaved') },
                             { id: 'week', label: t('gallery.bestOfWeek') },
+                            { id: 'daily', label: t('gallery.dailyChallenges') },
                             { id: 'judged', label: t('gallery.withFriendFeedback') },
                             { id: 'highlights', label: t('gallery.highlights') },
                         ].map((option) => (
@@ -394,6 +432,8 @@ export function Gallery() {
                                 ? 'No friend feedback yet. Share a round for judging to fill this view.'
                                 : feedbackFilter === 'highlights'
                                 ? 'No highlights yet. Score 8+ to build your best-of archive.'
+                                : feedbackFilter === 'daily'
+                                ? t('gallery.emptyDaily')
                                 : feedbackFilter === 'week'
                                 ? t('gallery.emptyWeek')
                                 : mediaFilter !== 'all'
@@ -414,6 +454,7 @@ export function Gallery() {
                                 isHighlight={highlightIds.has(c.id) || (c.score || 0) >= 8}
                                 onSelect={setSelectedCollision}
                                 onCopyShare={handleCopyShare}
+                                onSaveCard={handleDownloadShareCard}
                             />
                         ))}
                     </div>

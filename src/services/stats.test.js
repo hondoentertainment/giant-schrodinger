@@ -117,6 +117,29 @@ describe('stats service', () => {
             expect(summary.bestScore).toBe(9);
             expect(summary.favoriteThemeId).toBe('neon');
             expect(summary.nextMilestone).toBeTruthy();
+            expect(summary.averageScore).toBe(8);
+            expect(summary.streakStatus).toBe('active_today');
+            expect(summary.streakAtRisk).toBe(false);
+        });
+
+        it('marks streak at risk when last play was yesterday', () => {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const key = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+            localStorage.setItem('vwf_stats', JSON.stringify({
+                lastPlayedDate: key,
+                currentStreak: 4,
+                maxStreak: 4,
+                totalRounds: 4,
+                totalCollisions: 4,
+                scores: [8],
+                dailyScores: [],
+                themesPlayed: ['neon'],
+                milestonesUnlocked: ['first_round'],
+            }));
+            const summary = getProfileSummary();
+            expect(summary.streakStatus).toBe('at_risk');
+            expect(summary.streakAtRisk).toBe(true);
         });
     });
 });

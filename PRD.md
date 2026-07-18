@@ -73,20 +73,19 @@ Repo name / GitHub Pages base path: `giant-schrodinger`. Product name in UI and 
 - Strong automated coverage: **688 unit tests** (68 files) + **11 E2E specs**
 - Launch automation (`verify:release`, `launch:gate`, hosted rehearsal scripts)
 
-#### 2.4 Gaps (as of July 14, 2026)
+#### 2.4 Gaps (as of July 18, 2026)
 
-- **Hosted rehearsal incomplete:** Supabase credentials / schema / edge deploy still block live multiplayer and durable friend judging on production
-- Gemini key on Vercel may be invalid (see [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md))
+- Soft-launch gate is **cleared** — see [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)
+- Optional observability: set `VITE_SENTRY_DSN` / `VITE_POSTHOG_KEY` on Vercel when ready
+- Optional media richness: `PEXELS_API_KEY` / `GIPHY_API_KEY` edge secrets
 - Local-preview modes (ranked, shop, tournaments) must stay labeled until cloud sync is scoped
-- Documentation historically overstated Party Mode and community gallery — corrected in this PRD and companion docs
+- Party Mode UI and public community gallery remain non-goals
 
 #### 2.5 Verification snapshot
 
-- Local validation on **July 14, 2026**:
-  - `npm run test`: **688 passed** (68 files)
-  - `npm run lint` / `npm run build`: part of `verify:release`
-  - E2E: **11 Playwright specs** under `e2e/`
-- Remaining launch gate: apply Supabase schema + secrets, deploy edge functions, two-browser multiplayer rehearsal ([PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md))
+- Hosted rehearsal cleared **July 15, 2026** (two-browser multiplayer + friend judge)
+- Local validation + launch gate scripts: `npm run verify:release`, `npm run launch:gate`, `npm run test:e2e:hosted`
+- Remaining work is post-launch polish (observability dashboards, richer stock media), not product blockers
 
 ---
 
@@ -199,10 +198,10 @@ Status legend: **Done** · **In progress** · **Next** · **Later**
 | 2 | Production Readiness | **Complete** | Supabase live, Vercel env wired, two-browser rehearsal passed |
 | 3 | Social Scoring Foundation | **Mostly done** | Judge model decided; friend + room vote persistence verified live |
 | 4 | Multiplayer Authority | **Complete** | RPCs live; create/join/vote/finalize verified on production |
-| 5 | Share Loop Optimization | **Mostly done** | Gallery SocialShareButtons + OG dims; friend-judge live |
-| 6 | Gallery & Identity | **In progress** | Personal gallery + filters; richer profile stats next |
-| 7 | Retention Systems | **In progress** | Daily, streaks, weekly events wired; deepen rewards |
-| 8 | Content Expansion | **Later** | More themes / media quality after launch proof |
+| 5 | Share Loop Optimization | **Done** | Eager judge links, gallery share cards, richer og-tags |
+| 6 | Gallery & Identity | **Done** | Filters, friend chips, lobby profile + next-unlock |
+| 7 | Retention Systems | **Done** | Daily share, streak-at-risk, session best-line invite |
+| 8 | Content Expansion | **Started** | Summer Heat theme + prompt pack; Pexels/Giphy optional |
 | 9 | Accounts & Cloud Persistence | **Later** | Optional sign-in, cross-device sync |
 | 10 | Platform & Community | **Partial / Later** | Spectator + moderation shipped; public gallery deferred |
 
@@ -214,15 +213,15 @@ Detailed implementation notes: [ROADMAP.md](ROADMAP.md).
 
 #### Must (now)
 
-- Complete hosted multiplayer + friend-judging rehearsal
+- Keep `verify:release` / `launch:gate` green
 - Keep docs honest (shipped vs local-preview vs requires Supabase)
-- Keep `verify:release` green
+- Soft-launch messaging: local-preview modes stay labeled
 
 #### Should (after launch proof)
 
-- Stronger retention UX around daily/streaks
-- Richer gallery metadata and share cards
+- Enable PostHog / Sentry / Pexels / Giphy with real project keys
 - Decide fate of ranked / shop / tournaments (cloud vs stay local)
+- Optional Discord bot go-live (`DISCORD_PUBLIC_KEY` + interactions URL)
 
 #### Deprioritize
 

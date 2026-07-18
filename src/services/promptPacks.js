@@ -64,6 +64,26 @@ const BUILT_IN_PACKS = [
     isBuiltIn: true,
     createdAt: '2025-01-01T00:00:00.000Z',
   },
+  {
+    id: 'builtin-summer-heat',
+    name: 'Summer Heat',
+    description: 'Sun, sweat, festivals, and the weird poetry of hot days',
+    pairings: [
+      { left: 'Heat Mirages', right: 'Office Air Conditioning' },
+      { left: 'Festival Wristbands', right: 'Library Silence' },
+      { left: 'Popsicles', right: 'Deadline Panic' },
+      { left: 'Road Trip Playlists', right: 'Wedding Vows' },
+      { left: 'Sunscreen', right: 'Ambition' },
+      { left: 'Fireflies', right: 'Push Notifications' },
+      { left: 'Lemonade Stands', right: 'Venture Capital' },
+      { left: 'Pool Noodles', right: 'Diplomacy' },
+      { left: 'Thunderstorms', right: 'Group Chats' },
+      { left: 'Golden Hour', right: 'Last Call' },
+    ],
+    creatorName: 'Built-in',
+    isBuiltIn: true,
+    createdAt: '2026-07-01T00:00:00.000Z',
+  },
 ];
 
 function loadCustomPacks() {

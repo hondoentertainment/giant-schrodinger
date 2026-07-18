@@ -203,7 +203,7 @@ export function MultiplayerRound() {
                         <div className="space-y-2">
                             <p className="text-white/40 text-sm flex items-center justify-center gap-2">
                                 <Clock className="w-4 h-4 animate-pulse" />
-                                Waiting for {waitingPlayers.length} player{waitingPlayers.length !== 1 ? 's' : ''}...
+                                Still writing: {waitingPlayers.map((p) => p.player_name).join(', ')}
                             </p>
                             <div className="flex gap-2 justify-center flex-wrap">
                                 {waitingPlayers.map((p) => (
@@ -226,7 +226,11 @@ export function MultiplayerRound() {
                             aria-label="Scoring submissions, please wait"
                         >
                             <div className="w-5 h-5 rounded-full border-2 border-t-game-accent border-white/10 animate-spin" aria-hidden="true" />
-                            <span className="text-sm font-medium">Scoring submissions...</span>
+                            <span className="text-sm font-medium">
+                                {room?.scoring_mode === 'ai'
+                                    ? 'AI is scoring every connection…'
+                                    : 'Preparing the reveal for voting…'}
+                            </span>
                         </div>
                     )}
                 </div>

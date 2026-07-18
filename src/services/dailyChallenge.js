@@ -34,6 +34,14 @@ const DAILY_PROMPTS = [
     'Find harmony in contrast.',
     'The best answers are the ones nobody else would write.',
     'One phrase, two concepts, infinite possibilities.',
+    'Pair nostalgia with something brand new this week.',
+    'Find the shared pulse between analog and digital.',
+    'What do a memory and a meme have in common?',
+    'Connect a quiet ritual with a loud celebration.',
+    'Link something you cook with something you code.',
+    'Bridge a childhood toy and a grown-up tool.',
+    'Where do comfort food and comfort tech overlap?',
+    'Make one phrase that fits both summer heat and winter quiet.',
 ];
 
 function seededRandom(seed) {

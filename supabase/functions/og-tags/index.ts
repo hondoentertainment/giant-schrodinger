@@ -34,15 +34,38 @@ async function fetchSharedRound(publicToken: string) {
   return payload || null;
 }
 
+function getAssetLabels(round: Record<string, unknown>) {
+  const assets = round.assets as { left?: { label?: string }; right?: { label?: string } } | undefined;
+  const left = assets?.left?.label || String(round.left_label || round.leftLabel || '');
+  const right = assets?.right?.label || String(round.right_label || round.rightLabel || '');
+  return { left, right };
+}
+
 function buildRoundTitle(round: Record<string, unknown>) {
   const submission = String(round.submission || 'a clever connection');
   const score = round.score ?? round.finalScore;
-  const left = (round.assets as { left?: { label?: string } })?.left?.label;
-  const right = (round.assets as { right?: { label?: string } })?.right?.label;
-  if (left && right && score) {
+  const { left, right } = getAssetLabels(round);
+  if (left && right && score != null && score !== '') {
     return `I scored ${score}/10 connecting ${left} and ${right}!`;
   }
+  if (left && right) {
+    return `"${submission}" — the link between ${left} and ${right}`;
+  }
   return `"${submission}" — can you beat my Venn score?`;
+}
+
+function buildRoundDescription(round: Record<string, unknown>) {
+  const submission = String(round.submission || '').trim();
+  const { left, right } = getAssetLabels(round);
+  const score = round.score ?? round.finalScore;
+  const judge = round.judgeMode || round.judge_mode || round.scoringMode || '';
+  const parts = [];
+  if (submission) parts.push(`Connection: "${submission}"`);
+  if (left && right) parts.push(`Prompts: ${left} × ${right}`);
+  if (score != null && score !== '') parts.push(`Score: ${score}/10`);
+  if (judge) parts.push(`Judged via ${String(judge)}`);
+  parts.push('Play Venn with Friends and send your own connection.');
+  return parts.join(' · ');
 }
 
 serve(async (req: Request) => {
@@ -59,7 +82,7 @@ serve(async (req: Request) => {
     const round = await fetchSharedRound(roundId);
     if (round) {
       title = buildRoundTitle(round);
-      description = String(round.submission || description);
+      description = buildRoundDescription(round);
       image = String(round.imageUrl || round.image_url || DEFAULT_IMAGE);
       redirectTarget = `${DEFAULT_APP_URL.replace(/\/$/, '')}/?judge=${encodeURIComponent(roundId)}`;
     } else {
@@ -69,7 +92,7 @@ serve(async (req: Request) => {
 
   if (challengeId) {
     title = 'Can you beat my Daily Venn score?';
-    description = 'Accept the challenge and connect two prompts with one phrase.';
+    description = 'Accept the challenge and connect two prompts with one phrase. Daily Venn includes a 1.5× score bonus.';
     redirectTarget = `${DEFAULT_APP_URL.replace(/\/$/, '')}/?challenge=${encodeURIComponent(challengeId)}`;
   }
 
@@ -78,11 +101,13 @@ serve(async (req: Request) => {
 <head>
   <meta charset="utf-8" />
   <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Venn with Friends" />
   <meta property="og:title" content="${escapeHtml(title)}" />
   <meta property="og:description" content="${escapeHtml(description)}" />
   <meta property="og:image" content="${escapeHtml(image)}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="${escapeHtml(title)}" />
   <meta property="og:url" content="${escapeHtml(redirectTarget)}" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(title)}" />

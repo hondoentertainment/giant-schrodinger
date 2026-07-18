@@ -11,7 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 const configPath = resolve(root, 'supabase', 'config.toml');
 
-const FUNCTIONS = ['resolve-image', 'resolve-meme', 'score-submission', 'og-tags'];
+const FUNCTIONS = ['resolve-image', 'resolve-meme', 'score-submission', 'og-tags', 'discord-bot'];
 
 function run(label, command, args, { optional = false } = {}) {
   console.log(`\n▶ ${label}`);
@@ -58,10 +58,11 @@ Project not linked yet. Complete these steps:
 4. supabase link --project-ref YOUR_PROJECT_REF
    (or set project_id in supabase/config.toml)
 
-Set secrets (Supabase dashboard → Edge Functions → Secrets):
+Set secrets (or run npm run configure:edge-secrets):
   GEMINI_API_KEY, PEXELS_API_KEY, GIPHY_API_KEY
   APP_URL=https://giant-schrodinger.vercel.app
   ALLOWED_ORIGINS=https://giant-schrodinger.vercel.app
+  DISCORD_PUBLIC_KEY (optional, for discord-bot signature verify)
 
 Then re-run: npm run deploy:edge-functions
 `);

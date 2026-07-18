@@ -1,6 +1,6 @@
--- ============================================================
--- ANALYTICS EVENTS
--- ============================================================
+-- Allow anonymous/authenticated clients to insert analytics events.
+-- Reads stay locked down (no SELECT policy for anon).
+
 -- user_id is optional metadata only (no FK — local-first app may not have public.users).
 CREATE TABLE IF NOT EXISTS analytics_events (
   id BIGSERIAL PRIMARY KEY,

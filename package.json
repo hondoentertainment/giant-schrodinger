@@ -31,6 +31,7 @@
     "check:vercel-env": "node scripts/check-vercel-env.mjs",
     "configure:supabase": "node scripts/configure-supabase-env.mjs",
     "configure:github-secrets": "node scripts/configure-github-secrets.mjs",
+    "configure:edge-secrets": "node scripts/configure-edge-secrets.mjs",
     "refresh:theme-images": "node scripts/refresh-theme-images.mjs",
     "test:e2e:rehearsal": "playwright test e2e/deployed-rehearsal.spec.js --project=\"Desktop Chrome\"",
     "test:e2e:hosted": "playwright test e2e/hosted-two-browser.spec.js --project=\"Desktop Chrome\" --workers=1",
@@ -51,6 +52,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
+    "@sentry/vite-plugin": "^3.6.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.5.2",

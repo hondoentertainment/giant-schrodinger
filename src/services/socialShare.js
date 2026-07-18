@@ -85,7 +85,12 @@ function buildShareContext(shareData) {
   const judgeLabel = getJudgeLabel(shareData.judgeMode);
   if (judgeLabel) pieces.push(judgeLabel);
   if (shareData.isDailyChallenge) pieces.push('Daily Challenge');
-  if (shareData.friendScore) pieces.push(`Friend score ${shareData.friendScore}/10`);
+  if (shareData.mediaLabel) pieces.push(shareData.mediaLabel);
+  if (shareData.promptPair) pieces.push(shareData.promptPair);
+  if (shareData.friendScore) {
+    const friendName = shareData.friendJudgeName ? ` from ${shareData.friendJudgeName}` : '';
+    pieces.push(`Friend score ${shareData.friendScore}/10${friendName}`);
+  }
   return pieces.join(' · ');
 }
 

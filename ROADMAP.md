@@ -1,9 +1,9 @@
 # Venn with Friends Roadmap
 
-**Last updated:** July 14, 2026  
+**Last updated:** July 18, 2026  
 **Source of truth for product intent:** [PRD.md](PRD.md)
 
-This roadmap turns the PRD into an implementation plan. Near-term focus: prove live multiplayer, keep social scoring trustworthy, and stay honest about local-preview vs shipped.
+This roadmap turns the PRD into an implementation plan. Soft-launch gate is cleared; code for observability/retention is shipped — enable sinks with API keys when ready.
 
 ## Current Product Status
 
@@ -12,25 +12,26 @@ This roadmap turns the PRD into an implementation plan. Near-term focus: prove l
 | Solo play | Shipped | Profile, rounds, daily challenge, scoring, reveal, summary |
 | AI scoring | Shipped with fallback | Gemini optional; null/missing assets → mock |
 | Fusion images | Shipped with fallback | Curated art without Gemini |
-| Friend judging | Shipped; live persistence needs Supabase | Early share from reveal; local fallback |
-| Gallery/history | Shipped | Personal archive; filters; not a public community feed |
-| Realtime multiplayer | Shipped in code; needs hosted proof | Rooms, vote recovery, reconnect, spectator |
+| Friend judging | Shipped | Eager share links from reveal; local fallback without Supabase |
+| Gallery/history | Shipped | Personal archive; daily/week/friend/highlight filters |
+| Realtime multiplayer | Shipped | Rooms, vote recovery, reconnect, pending-voter UX |
 | Moderation (lightweight) | Shipped | Content reports + dashboard |
-| Progression / retention | Shipped | Streaks, achievements, unlocks, weekly events |
+| Progression / retention | Shipped | Streaks, next-unlock progress, daily share CTA |
 | Ranked / shop / tournaments | Local preview | Device-only; `LocalPreviewBadge` |
-| Production readiness | In progress | Automation ready; Supabase credentials are the gate |
+| Production readiness | Soft-launch candidate | Hosted rehearsal + launch gate passed; optional PostHog/Sentry |
 
 ## Phase status summary
 
 | Phase | Status |
 |---|---|
 | 1 Stabilization & Truthfulness | **Complete** |
-| 2 Production Readiness | **Highest priority** — hosted rehearsal |
-| 3 Social Scoring Foundation | **Mostly complete** — polish after live proof |
-| 4 Multiplayer Authority | **Code complete** — verify live |
-| 5 Share Loop Optimization | **Mostly complete locally** |
-| 6 Gallery, Identity, Retention | **In progress** |
-| 7–10 Content / Accounts / Community | **Later** (spectator + moderation already partial) |
+| 2 Production Readiness | **Complete for soft launch** — see [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md) |
+| 3 Social Scoring Foundation | **Complete enough for launch** — copy + gallery clarity shipped |
+| 4 Multiplayer Authority | **Complete enough for launch** — hosted two-browser rehearsal passed |
+| 5 Share Loop Optimization | **Complete enough for launch** |
+| 6 Gallery, Identity, Retention | **Complete enough for launch** |
+| 8 Content Expansion | **Started** — Summer Heat theme/pack; media APIs optional |
+| 9–10 Accounts / Community | **Later** |
 
 ---
 
@@ -38,37 +39,29 @@ This roadmap turns the PRD into an implementation plan. Near-term focus: prove l
 
 **Status: complete**
 
-Completed:
+- Automated scoring/ErrorBoundary coverage
+- Docs aligned (no Party Mode / community gallery overclaims)
+- First-session lobby and reveal next-actions instrumented
 
-- Automated tests for `scoreSubmission()` and `ErrorBoundary` passing
-- Null/label-less prompt assets fall back to mock scoring explicitly
-- README + PRD feature registries separate no-key / Gemini / Supabase behavior
-- First-session lobby, coaching, and reveal next actions instrumented
-- Docs aligned July 2026 (removed Party Mode / community gallery overclaims)
-
-Ongoing hygiene:
-
-- Run `npm run verify:release` before release candidates
-- Update PRD/README when live-service requirements change
+Hygiene: run `npm run verify:release` before release candidates.
 
 ---
 
 ## Phase 2: Production Readiness
 
-**Priority: highest · Status: in progress**
+**Status: complete for soft launch**
 
-Next steps:
+Done:
 
-1. Hosted rehearsal with real Supabase credentials and schema applied ([SETUP_BACKEND.md](SETUP_BACKEND.md))
-2. Verify solo, friend-judging, and multiplayer on the deployed site
-3. Confirm telemetry for profile, first submission, friend-judge share, room create/join, vote finalize, AI fallback, error boundary
-4. Fix invalid Gemini key on Vercel if Google returns `API_KEY_INVALID`
+1. Hosted Supabase project + schema + edge functions
+2. Hosted two-browser multiplayer + friend-judge rehearsal (`npm run test:e2e:hosted`)
+3. Launch gate script wired
 
-Exit criteria:
+Code complete; enable with keys (not launch blockers):
 
-- Deployed environment accessible
-- Core solo and share flows work live
-- Multiplayer manual voting verified across two browsers (including rejoin around reveal/results)
+- Set `VITE_POSTHOG_KEY` / `VITE_SENTRY_DSN` on Vercel (`reportAppError` already bridges to Sentry)
+- Set `PEXELS_API_KEY` / `GIPHY_API_KEY` edge secrets for richer stock/meme lookup
+- Confirm events in PostHog/Sentry dashboards (`npm run rehearsal:telemetry`)
 
 Runbook: [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) · status: [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)
 
@@ -76,57 +69,42 @@ Runbook: [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) · status: [PRODUCTI
 
 ## Phase 3: Social Scoring Foundation
 
-**Priority: high after hosted rehearsal · Status: mostly complete**
+**Status: complete enough for launch**
 
 Canonical model: [JUDGE_MODEL.md](JUDGE_MODEL.md)
 
-Remaining:
-
-1. Playtest copy for AI / manual / friend clarity after live traffic
-2. Audit `judgements.js`, `votes.js`, `share.js`, and reveal UI for naming drift
-3. Surface judged results more clearly in gallery and session summaries
-
-Exit criteria: manual and friend scoring are clear; judged rounds durable when Supabase is configured.
+Shipped polish: AI / Manual / Friend / room-vote clarity in lobby + onboarding; friend chips in gallery; session summary feedback.
 
 ---
 
 ## Phase 4: Multiplayer Authority
 
-**Priority: high · Status: code complete — needs live proof**
+**Status: complete enough for launch**
 
-Shipped in schema/client:
-
-- `cast_room_vote` / `finalize_room_votes` / `advance_room_state`
-- Reconnect resync, ConnectionBanner, host-exit handling
-
-Remaining:
-
-1. Live verification of RPCs across two browsers
-2. Expand regression for late joins, reconnects, host exits
-3. Improve messaging for disconnected / waiting / finalizing / recovered states
+Shipped: RPCs, reconnect, ConnectionBanner, host-exit, pending voter names, aligned vote counts.
 
 ---
 
 ## Phase 5: Share Loop Optimization
 
-**Priority: medium · Status: mostly complete locally**
+**Status: complete enough for launch**
 
-Done locally: reveal CTAs, copy confirmation, recommended next-move, gallery friend-judgement detail.
-
-Remaining: richer share-card / OG assets once link flow is stable on hosted env (`og-tags` edge function).
+Shipped: reveal CTAs, eager `createJudgeShareLinks`, preview URLs, daily/session share lines, gallery save-card, richer `og-tags` meta (redeployed).
 
 ---
 
 ## Phase 6: Gallery, Identity, and Retention
 
-**Priority: medium · Status: in progress**
+**Status: complete enough for launch**
 
-Next:
+Shipped:
 
-1. Richer gallery metadata and share-card generation
-2. Stronger profile surfaces (best scores, favorite themes, streak highlights)
-3. Deeper daily challenge rewards beyond completion tracking
-4. More themed content after reliability is proven (ties to Phase 8)
+1. Gallery daily filter + friend chips + richer share metadata
+2. Lobby next-unlock + avg/friend/highlight stats + streak-at-risk banner
+3. Daily challenge share CTA + 1.5× bonus + session best-line invite
+4. Funnel events: `round_complete`, `first_round_complete`, `session_complete`, `streak_at_risk`, etc.
+
+Next (post soft-launch): accounts, graduate local-preview modes, community surfaces only if intentional.
 
 ---
 
@@ -146,7 +124,7 @@ They remain playable for fun on-device. Do not remove them; do not market them a
 
 ## Deferred
 
-Wait until hosted verification and social scoring are solid:
+Wait until soft-launch learnings settle:
 
 - Native mobile apps ([MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) is aspirational)
 - Monetization / Stripe
@@ -154,5 +132,3 @@ Wait until hosted verification and social scoring are solid:
 - Large-scale public matchmaking
 - Public community gallery / Party Mode UI
 - Net-new game modes unrelated to the connection mechanic
-
-Local-preview modes (ranked, shop, tournaments, async) stay labeled until Phase 9 cloud sync is intentional.

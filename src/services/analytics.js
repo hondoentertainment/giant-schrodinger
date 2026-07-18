@@ -155,9 +155,22 @@ export function trackEvent(eventName, properties = {}) {
 
 /**
  * Track completion of a round with score, mode, and duration.
+ * @param {number} score
+ * @param {string} mode - solo | multiplayer | daily
+ * @param {number|null} duration - seconds, if known
+ * @param {object} [extras] - judgeMode, roundNumber, totalRounds, etc.
  */
-export function trackRoundComplete(score, mode, duration) {
-  trackEvent('round_complete', { score, mode, duration });
+export function trackRoundComplete(score, mode, duration = null, extras = {}) {
+  trackEvent('round_complete', {
+    score,
+    mode,
+    duration,
+    judgeMode: extras.judgeMode,
+    roundNumber: extras.roundNumber,
+    totalRounds: extras.totalRounds,
+    isDailyChallenge: extras.isDailyChallenge,
+    ...extras,
+  });
 }
 
 /**

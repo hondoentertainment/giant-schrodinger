@@ -78,16 +78,16 @@ export function OnboardingModal({ onDismiss }) {
                 </div>
 
                 <p className="text-white/55 text-sm mb-4 text-center">
-                    Scored on <span className="text-white">Wit</span>, <span className="text-white">Logic</span>, <span className="text-white">Originality</span>, and <span className="text-white">Clarity</span>.
+                    Every score weighs <span className="text-white">Wit</span>, <span className="text-white">Logic</span>, <span className="text-white">Originality</span>, and <span className="text-white">Clarity</span> — clever, coherent, fresh, and clear.
                 </p>
 
                 <div className="rounded-[22px] bg-white/[0.05] border border-white/[0.08] p-4 mb-3">
-                    <p className="text-white text-sm font-semibold mb-2">Pick how the round gets judged</p>
+                    <p className="text-white text-sm font-semibold mb-2">Three solo judging paths (plus live rooms)</p>
                     <ul className="space-y-1.5 text-white/55 text-xs leading-relaxed">
                         <li><span className="text-white">AI Judge:</span> Gemini scores automatically when configured; mock scoring keeps solo playable without a key.</li>
-                        <li><span className="text-white">Manual Judge:</span> you score the reveal yourself after seeing the fusion.</li>
-                        <li><span className="text-white">Friend Judge:</span> copy a judge link so someone else can score the same round asynchronously.</li>
-                        <li><span className="text-white">Multiplayer:</span> live rooms use room voting (manual mode) and require Supabase.</li>
+                        <li><span className="text-white">Manual Judge:</span> you enter the score yourself after the reveal — not the same as Friend Judge.</li>
+                        <li><span className="text-white">Friend Judge:</span> after any round, copy a link so someone else scores asynchronously.</li>
+                        <li><span className="text-white">Multiplayer:</span> live rooms vote together when set to Manual; AI rooms score on the server.</li>
                     </ul>
                 </div>
 

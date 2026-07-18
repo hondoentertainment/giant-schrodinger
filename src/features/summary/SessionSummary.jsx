@@ -6,10 +6,12 @@ import { ArrowRight, Home } from 'lucide-react';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgementForCollision } from '../../services/judgements';
-import { getStats } from '../../services/stats';
-import { getDailyChallengeHistory } from '../../services/dailyChallenge';
+import { getStats, getStreakStatus } from '../../services/stats';
+import { getDailyChallengeHistory, getDailyChallengeSummary } from '../../services/dailyChallenge';
 import { AchievementProgress } from '../../components/AchievementProgress';
 import { PWAInstallBanner } from '../../components/PWAInstallBanner';
+import { haptic } from '../../lib/haptics';
+import { trackEvent } from '../../services/analytics';
 
 function RoundCard({ result, index, feedback }) {
     const mod = result.modifier;
@@ -34,6 +36,9 @@ function RoundCard({ result, index, feedback }) {
                         </span>
                     )}
                 </div>
+                {result.submission && (
+                    <div className="text-white/75 text-sm mt-0.5 truncate italic">&ldquo;{result.submission}&rdquo;</div>
+                )}
                 {result.breakdown && (
                     <div className="text-white/30 text-xs mt-0.5">
                         W:{result.breakdown.wit} L:{result.breakdown.logic} O:{result.breakdown.originality} C:{result.breakdown.clarity}
@@ -56,8 +61,20 @@ export function SessionSummary() {
     const { sessionResults, sessionScore, totalRounds, endSession, isDailyChallenge, setGameState } = useGame();
     const { toast } = useToast();
     const [feedbackByCollision, setFeedbackByCollision] = useState({});
+    const [inviteCopied, setInviteCopied] = useState(false);
     const playerStats = useMemo(() => getStats(), []);
+    const streakStatus = useMemo(() => getStreakStatus(playerStats), [playerStats]);
     const dailyHistory = useMemo(() => getDailyChallengeHistory(), []);
+    const dailySummary = useMemo(() => getDailyChallengeSummary(), []);
+
+    useEffect(() => {
+        trackEvent('session_summary_viewed', {
+            totalRounds,
+            sessionScore,
+            isDailyChallenge,
+            streakStatus,
+        });
+    }, [totalRounds, sessionScore, isDailyChallenge, streakStatus]);
 
     useEffect(() => {
         const collisionIds = sessionResults.map((result) => result.collisionId).filter(Boolean);
@@ -97,6 +114,14 @@ export function SessionSummary() {
         return { avg, best, worst, specialRounds };
     }, [sessionResults]);
 
+    const bestRound = useMemo(() => {
+        if (!sessionResults.length) return null;
+        return sessionResults.reduce(
+            (best, result) => ((result.score || 0) > (best.score || 0) ? result : best),
+            sessionResults[0]
+        );
+    }, [sessionResults]);
+
     const feedbackCount = useMemo(
         () => sessionResults.filter((result) => result.collisionId && feedbackByCollision[result.collisionId]).length,
         [sessionResults, feedbackByCollision]
@@ -111,6 +136,20 @@ export function SessionSummary() {
     const handleBackToLobby = () => {
         endSession();
         setGameState('LOBBY');
+    };
+
+    const handleInviteFriends = () => {
+        const url = `${window.location.origin}${window.location.pathname}`;
+        const line = bestRound?.submission
+            ? `My best Venn: "${bestRound.submission}" (${bestRound.score}/10). Play with me: ${url}`
+            : `Play Venn with Friends with me! ${url}`;
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(line);
+            haptic('success');
+            setInviteCopied(true);
+            toast.success('Invite copied — send it to a friend!');
+            setTimeout(() => setInviteCopied(false), 2500);
+        }
     };
 
     if (!sessionResults.length) {
@@ -173,19 +212,50 @@ export function SessionSummary() {
                     )}
                 </div>
 
+                {bestRound && (
+                    <div className="mb-8 rounded-[22px] border border-amber-400/25 bg-gradient-to-br from-amber-500/15 to-orange-500/10 p-5 text-center">
+                        <div className="game-section-label text-amber-200/70 mb-2">Best line this session</div>
+                        <p className="text-xl sm:text-2xl font-display font-bold text-white italic leading-snug">
+                            &ldquo;{bestRound.submission || 'Untitled connection'}&rdquo;
+                        </p>
+                        <div className="mt-2 text-amber-200 font-bold tabular-nums">{bestRound.score}/10</div>
+                        {isDailyChallenge && (
+                            <p className="mt-3 text-white/50 text-xs">{dailySummary.shareLine}</p>
+                        )}
+                        <button
+                            type="button"
+                            onClick={handleInviteFriends}
+                            className="wordle-button wordle-primary mt-4 min-h-[44px] w-full sm:w-auto px-8"
+                        >
+                            {inviteCopied ? 'Invite copied!' : 'Invite friends'}
+                        </button>
+                    </div>
+                )}
+
                 <div className="mb-8 rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
                     <div className="game-section-label mb-3">Keep the run going</div>
                     <div className="space-y-3 text-sm text-white/65">
-                        {playerStats.currentStreak > 0 ? (
+                        {streakStatus === 'active_today' || playerStats.currentStreak > 0 ? (
                             <p>
-                                Day <span className="text-amber-300 font-bold">{playerStats.currentStreak}</span> streak is alive. Come back tomorrow to keep it.
+                                Day <span className="text-amber-300 font-bold">{playerStats.currentStreak}</span> streak is alive.
+                                {streakStatus === 'active_today'
+                                    ? ' Come back tomorrow to keep it.'
+                                    : ' Play again tomorrow before the window closes.'}
                             </p>
                         ) : (
                             <p>Play again tomorrow to start a streak and unlock richer rewards.</p>
                         )}
+                        {!isDailyChallenge && (
+                            <p className="text-amber-100/80">
+                                Tip: Tomorrow&apos;s Daily Venn applies a 1.5× score bonus and keeps your streak ritual sharp.
+                            </p>
+                        )}
                         {isDailyChallenge && dailyHistory.length > 0 && (
                             <p>
                                 Daily challenge history: {dailyHistory.length} completion{dailyHistory.length === 1 ? '' : 's'} saved locally.
+                                {dailySummary.weeklyCompletions > 0
+                                    ? ` This week: ${dailySummary.weeklyCompletions} daily run${dailySummary.weeklyCompletions === 1 ? '' : 's'}.`
+                                    : ''}
                             </p>
                         )}
                         <AchievementProgress score={Math.round(stats.avg)} stats={playerStats} />
@@ -209,12 +279,16 @@ export function SessionSummary() {
                 <div className="mb-8">
                     <SocialShareButtons
                         shareData={{
-                            submission: `I scored ${sessionScore} points across ${totalRounds} rounds!`,
-                            score: Math.round(stats.avg),
+                            submission: bestRound?.submission
+                                || `I scored ${sessionScore} points across ${totalRounds} rounds!`,
+                            score: bestRound?.score ?? Math.round(stats.avg),
                             scoreBand: overallBand?.label,
-                            commentary: `Average: ${stats.avg.toFixed(1)}/10 | Best: ${stats.best}/10`,
+                            commentary: isDailyChallenge
+                                ? dailySummary.shareLine
+                                : `Average: ${stats.avg.toFixed(1)}/10 | Best: ${stats.best}/10`,
                             judgeMode: sessionResults.some((result) => result.judgeMode === 'ai') ? 'ai' : 'human',
                             isDailyChallenge,
+                            surface: 'session_summary',
                         }}
                         onToast={(type, msg) => toast[type]?.(msg)}
                     />

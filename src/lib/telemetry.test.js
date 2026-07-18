@@ -1,9 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { reportAppEvent, reportAppError } from './telemetry';
 
+vi.mock('../services/errorMonitoring.js', () => ({
+    logError: vi.fn(),
+}));
+
+import { logError } from '../services/errorMonitoring.js';
+
 describe('telemetry helpers', () => {
     beforeEach(() => {
         window.__VWF_TELEMETRY__ = [];
+        vi.clearAllMocks();
     });
 
     it('pushes structured events into an array sink', () => {
@@ -28,6 +35,20 @@ describe('telemetry helpers', () => {
             type: 'error',
             scope: 'judge_round',
             payload: { shareMode: 'backend' },
+        });
+    });
+
+    it('bridges reportAppError into errorMonitoring.logError', async () => {
+        reportAppError('reveal_process_round', new Error('fusion failed'), { themeId: 'neon' });
+
+        await vi.waitFor(() => {
+            expect(logError).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    message: 'fusion failed',
+                    source: 'reveal_process_round',
+                    themeId: 'neon',
+                })
+            );
         });
     });
 });

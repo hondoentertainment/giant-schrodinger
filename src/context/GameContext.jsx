@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { markDailyChallengeComplete } from '../services/dailyChallenge';
-import { trackDailyChallenge } from '../services/analytics';
+import { trackDailyChallenge, trackRoundComplete, trackEvent } from '../services/analytics';
+import { reportAppEvent } from '../lib/telemetry';
 import { getAssetKey } from '../services/assetSelection';
 import { normalizeMediaType } from '../lib/mediaType';
 
@@ -159,6 +160,22 @@ export function GameProvider({ children }) {
         setSessionResults((prev) => [...prev, enrichedResult]);
         setSessionScore((prev) => prev + finalScore);
         setRoundComplete(true);
+
+        const mode = isDailyChallenge ? 'daily' : 'solo';
+        trackRoundComplete(finalScore, mode, null, {
+            judgeMode: result?.judgeMode || null,
+            roundNumber,
+            totalRounds,
+            isDailyChallenge,
+            modifierId: mod?.id,
+        });
+        if (roundNumber === 1) {
+            trackEvent('first_round_complete', {
+                score: finalScore,
+                mode,
+                judgeMode: result?.judgeMode || null,
+            });
+        }
     };
 
     const advanceRound = () => {
@@ -168,11 +185,28 @@ export function GameProvider({ children }) {
 
     const nextRound = () => {
         if (roundNumber >= totalRounds) {
+            const finalTotal = sessionScore;
             if (isDailyChallenge) {
-                const averageScore = totalRounds > 0 ? Math.round(sessionScore / totalRounds) : 0;
+                const averageScore = totalRounds > 0 ? Math.round(finalTotal / totalRounds) : 0;
                 markDailyChallengeComplete(averageScore);
                 trackDailyChallenge(true);
             }
+            trackEvent('session_complete', {
+                totalScore: finalTotal,
+                totalRounds,
+                isDailyChallenge,
+            });
+            if (totalRounds >= 3) {
+                trackEvent('three_round_session_complete', {
+                    totalScore: finalTotal,
+                    isDailyChallenge,
+                });
+            }
+            reportAppEvent('session_summary_view', {
+                totalRounds,
+                totalScore: finalTotal,
+                isDailyChallenge,
+            });
             setGameState('SESSION_SUMMARY');
             return;
         }

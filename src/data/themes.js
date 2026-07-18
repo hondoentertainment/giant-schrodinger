@@ -385,6 +385,36 @@ export const THEMES = [
         fusionImages: DEFAULT_FUSIONS,
         unlockMilestone: "streak_7",
     },
+    {
+        id: "summer-heat",
+        label: "Summer Heat",
+        gradient: "from-amber-400 to-orange-500",
+        seasonal: true,
+        modifier: {
+            timeLimit: 55,
+            scoreMultiplier: 1.12,
+            hint: "Sun-soaked, sticky, festival energy. Keep it vivid.",
+        },
+        keywords: ["summer festival", "beach sunset", "lemonade stand", "road trip", "heatwave city"],
+        assets: [
+            createImage({ id: "1507525428034-b723cf961d3e", label: "The Beach That Forgot Winter", fallback: "beach summer", categories: ['nature', 'water', 'emotion'] }),
+            createImage({ id: "1505228395891-9a51e7e86bf6", label: "A Leap Into Warm Water", fallback: "cliff jump ocean", categories: ['adventure', 'water', 'human'] }),
+            createImage({ id: "1502680390548-bca8fcc47c11", label: "Salt on Your Skin, Stars in Your Hair", fallback: "beach party", categories: ['human', 'water', 'emotion'] }),
+            createImage({ id: "1470337458703-46ad1756a187", label: "Lemonade Before the Thunder", fallback: "lemonade summer", categories: ['human', 'nostalgia', 'emotion'] }),
+            createImage({ id: "1469474968028-56623f02e42e", label: "Highway Mirage at Noon", fallback: "desert highway", categories: ['adventure', 'nature', 'abstract'] }),
+            createImage({ id: "1492684223066-81342ee5ff30", label: "Festival Dust and Basslines", fallback: "outdoor concert", categories: ['music', 'human', 'emotion'] }),
+            createImage({ id: "1501785888041-af3ef285b470", label: "Lake That Stole the Sky", fallback: "summer lake", categories: ['nature', 'water', 'emotion'] }),
+            createImage({ id: "1514565131-fce0801e5785", label: "City Heat Rising Off the Asphalt", fallback: "city summer night", categories: ['urban', 'emotion', 'nostalgia'] }),
+            createImage({ id: "1505852679233-d9fd70aff56d", label: "Wildflowers Before the Storm", fallback: "summer wildflowers", categories: ['nature', 'emotion', 'art'] }),
+            createImage({ id: "1470225620780-dba8ba36b745", label: "When the Sunset Starts the Party", fallback: "sunset festival", categories: ['music', 'emotion', 'human'] }),
+            createImage({ id: "1530053969600-cacd65653d22", label: "Borrowed Time on a Borrowed Wave", fallback: "surfer wave", categories: ['adventure', 'water', 'human'] }),
+            createImage({ id: "1508739773434-c26b3d09e071", label: "Golden Hour Teaching the Leaves", fallback: "golden hour", categories: ['nature', 'emotion', 'nostalgia'] }),
+        ],
+        fusionImages: [
+            createImage({ id: "1507525428034-b723cf961d3e", label: "Sunstruck Blend", fallback: "summer abstract" }),
+            createImage({ id: "1501785888041-af3ef285b470", label: "Heat Haze Echo", fallback: "summer haze" }),
+        ],
+    },
 ];
 
 // ── Video assets (royalty-free Pexels/Pixabay hosted) ──

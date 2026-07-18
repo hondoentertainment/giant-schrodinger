@@ -23,6 +23,7 @@ import { selectRoundAssets, getAssetKey, loadSelectedAssets } from '../services/
 import { scoreSubmission } from '../services/gemini';
 import { useGame } from './GameContext';
 import { reportAppError, reportAppEvent } from '../lib/telemetry';
+import { trackRoundComplete, trackEvent } from '../services/analytics';
 import { buildE2EMockRoom, isE2EMockRoomEnabled, subscribeToE2EMockRoom } from '../lib/e2eMockRoom';
 import { t } from '../lib/i18n';
 
@@ -503,6 +504,18 @@ export function RoomProvider({ children }) {
                         });
                     }
                 }
+                trackRoundComplete(null, 'multiplayer', null, {
+                    judgeMode: 'ai',
+                    roundNumber: room.round_number,
+                    totalRounds: room.total_rounds,
+                    roomId: room.id,
+                    submissionCount: roundSubmissions.length,
+                });
+                trackEvent('multiplayer_round_complete', {
+                    roomId: room.id,
+                    roundNumber: room.round_number,
+                    judgeMode: 'ai',
+                });
             } else {
                 toast.info('All answers are in - vote for the winner.');
             }
@@ -561,8 +574,20 @@ export function RoomProvider({ children }) {
             roomId: room.id,
             roundNumber: room.round_number,
         });
+        trackRoundComplete(null, 'multiplayer', null, {
+            judgeMode: room.scoring_mode || 'human',
+            roundNumber: room.round_number,
+            totalRounds: room.total_rounds,
+            roomId: room.id,
+            voteCount: votes.length,
+        });
+        trackEvent('multiplayer_round_complete', {
+            roomId: room.id,
+            roundNumber: room.round_number,
+            judgeMode: room.scoring_mode || 'human',
+        });
         return true;
-    }, [isHost, room, roomSession, toast]);
+    }, [isHost, room, roomSession, toast, votes.length]);
 
     const advanceToNextRound = useCallback(async () => {
         if (!room || !isHost) return;

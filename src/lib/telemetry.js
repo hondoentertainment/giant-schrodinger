@@ -24,6 +24,22 @@ function bridgeToAnalytics(entry) {
     });
 }
 
+function bridgeToErrorMonitoring(entry) {
+    if (typeof window === 'undefined' || entry.type !== 'error') return;
+
+    import('../services/errorMonitoring.js').then(({ logError }) => {
+        logError({
+            message: entry.message || 'Unknown error',
+            stack: entry.stack ? String(entry.stack).slice(0, 500) : undefined,
+            source: entry.scope || 'reportAppError',
+            scope: entry.scope,
+            ...entry.payload,
+        });
+    }).catch(() => {
+        // Error monitoring bridge must never break gameplay.
+    });
+}
+
 function emitTelemetry(entry) {
     const target = getTelemetryTarget();
     const sink = target.__VWF_TELEMETRY__;
@@ -43,6 +59,7 @@ function emitTelemetry(entry) {
     }
 
     bridgeToAnalytics(entry);
+    bridgeToErrorMonitoring(entry);
 
     return entry;
 }

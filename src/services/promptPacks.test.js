@@ -31,9 +31,10 @@ function makePairings(count = 10) {
 
 describe('promptPacks service', () => {
     describe('getBuiltInPacks', () => {
-        it('returns 3 built-in packs', () => {
+        it('returns built-in packs including Summer Heat', () => {
             const packs = getBuiltInPacks();
-            expect(packs).toHaveLength(3);
+            expect(packs.length).toBeGreaterThanOrEqual(4);
+            expect(packs.some((pack) => pack.id === 'builtin-summer-heat')).toBe(true);
             packs.forEach(pack => {
                 expect(pack.isBuiltIn).toBe(true);
                 expect(pack.pairings.length).toBeGreaterThanOrEqual(10);

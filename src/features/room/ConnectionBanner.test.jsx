@@ -102,4 +102,26 @@ describe('ConnectionBanner', () => {
         render(<ConnectionBanner />);
         expect(screen.getByText(/Finalizing votes/i)).toBeInTheDocument();
     });
+
+    it('lists players who still need to vote', () => {
+        useRoom.mockReturnValue({
+            connectionState: 'connected',
+            roomSyncState: 'idle',
+            roomClosureReason: null,
+            joinedMidRound: false,
+            joinPhase: null,
+            attemptReconnect: vi.fn(),
+            leaveCurrentRoom: vi.fn(),
+            room: { scoring_mode: 'human', status: 'revealing' },
+            votes: [{ voter_name: 'Alex', submission_id: 'sub-2' }],
+            submissions: [
+                { id: 'sub-1', player_name: 'Alex' },
+                { id: 'sub-2', player_name: 'Sam' },
+            ],
+        });
+
+        render(<ConnectionBanner />);
+        expect(screen.getByText(/Still need to vote: Sam/i)).toBeInTheDocument();
+        expect(screen.getByText(/\(1\/2\)/)).toBeInTheDocument();
+    });
 });
