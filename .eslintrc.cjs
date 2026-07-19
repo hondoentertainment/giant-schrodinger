@@ -29,7 +29,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: ["discord-bot/**/*.js", "*.config.js", "playwright.config.js", "lighthouse.config.js"],
+      files: ["discord-bot/**/*.js", "*.config.js", "playwright.config.js", "lighthouse.config.cjs"],
       env: { node: true },
     },
     {

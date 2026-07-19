@@ -44,7 +44,7 @@ a real backend/CDN or are not meaningful against a `staticDistDir` build:
 
 Lighthouse CI runs on every pull request to `main` via
 `.github/workflows/lighthouse.yml`. Thresholds are configured in
-`lighthouse.config.js` (all assertions are `error` level, so a failing metric
+`lighthouse.config.cjs` (all assertions are `error` level, so a failing metric
 fails the PR check).
 
 The CI workflow:
@@ -52,7 +52,7 @@ The CI workflow:
 2. Runs Lighthouse against the built output (3 runs, median)
 3. Uploads artifacts with the full Lighthouse report (plus a
    `temporaryPublicStorage` link commented on the PR)
-4. Fails the PR check if any assertion in `lighthouse.config.js` is violated
+4. Fails the PR check if any assertion in `lighthouse.config.cjs` is violated
 
 ## Bundle budget CI
 
