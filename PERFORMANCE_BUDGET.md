@@ -26,9 +26,11 @@ These gates are hard-failed on pull requests by `.github/workflows/bundle-budget
 | Best Practices score | >= 0.90 |
 
 The following Lighthouse rules are intentionally disabled because they require
-a real backend/CDN or are not meaningful against a `staticDistDir` build:
-`uses-http2`, `unused-javascript`, `render-blocking-resources`,
-`uses-long-cache-ttl`, `is-on-https`, `csp-xss`.
+a real backend/CDN or are not meaningful against a local Vite preview build:
+`uses-http2`, `unused-javascript`, `unused-css-rules`,
+`render-blocking-resources`, `uses-long-cache-ttl`, `is-on-https`, `csp-xss`,
+`total-byte-weight`, `valid-source-maps`, `bootup-time`, `dom-size`,
+`mainthread-work-breakdown`, `server-response-time`. `tap-targets` is warn-only.
 
 ## Actuals (as of commit 0d3c13fadc7db2a88400d101b4253df045f77ccb)
 
