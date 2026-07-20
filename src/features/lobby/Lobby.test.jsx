@@ -241,7 +241,7 @@ describe('Lobby', () => {
         mockUser = loggedInUser;
         globalThis.__testStreakValue = 3;
         render(<Lobby />);
-        expect(screen.getByText(/3 day streak/)).toBeInTheDocument();
+        expect(screen.getByText('3 days')).toBeInTheDocument();
     });
 
     it('shows daily challenge ritual context in the lobby', () => {

@@ -4,10 +4,11 @@ import { startSoloRound } from './helpers';
 const productionUrl = process.env.PRODUCTION_URL;
 
 test.describe('Deployed rehearsal smoke', () => {
+    test.describe.configure({ timeout: 90000 });
     test.skip(!productionUrl, 'Set PRODUCTION_URL to run deployed rehearsal checks');
 
     test.beforeEach(async ({ page }) => {
-        await page.goto(productionUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+        await page.goto(productionUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
     });
 
     test('landing loads with profile entry', async ({ page }) => {

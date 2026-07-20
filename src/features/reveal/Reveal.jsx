@@ -38,7 +38,7 @@ export function Reveal({ submission, assets }) {
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
     const mediaType = normalizeMediaType(user?.mediaType);
     const mod = currentModifier;
-    const canShareForJudging = Boolean(fusionImage?.url && assets?.left && assets?.right && savedCollision?.id);
+    const canShareForJudging = Boolean(fusionImage?.url && assets?.left && assets?.right);
     const savedMediaType = getCollisionMediaMode({
         mediaType: getEffectiveRoundMediaType({
             userMediaType: mediaType,

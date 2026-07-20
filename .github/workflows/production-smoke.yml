@@ -25,11 +25,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Production smoke
-        run: npm run smoke:production
-
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
+
+      - name: Production smoke
+        run: npm run smoke:production
 
       - name: Deployed rehearsal E2E
         run: npm run test:e2e:rehearsal
