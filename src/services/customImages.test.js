@@ -1,4 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// CI injects Supabase secrets for the Pages build; keep these unit tests on the
+// localStorage path so they never hang on a live storage upload.
+vi.mock('./mediaStorage', () => ({
+    isStorageEnabled: () => false,
+    uploadMediaFile: vi.fn(async () => null),
+    deleteMediaAtPath: vi.fn(async () => false),
+}));
+
 import {
     getCustomImages,
     addCustomImage,
