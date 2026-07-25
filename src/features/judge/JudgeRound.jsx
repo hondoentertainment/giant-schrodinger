@@ -6,10 +6,14 @@ import { saveJudgementToBackend, getSharedRound } from '../../services/backend';
 import { clearJudgeFromUrl } from '../../services/share';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResolvedRoundAssets } from '../../hooks/useResolvedRoundAssets';
+import { haptic } from '../../lib/haptics';
+import { playSubmitSound } from '../../services/sounds';
+
+const SCORE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export function JudgeRound({ payload, onDone }) {
     const { toast } = useToast();
-    const [score, setScore] = useState('');
+    const [score, setScore] = useState(null);
     const [relevance, setRelevance] = useState('Highly Logical');
     const [commentary, setCommentary] = useState('');
     const [submitted, setSubmitted] = useState(false);
@@ -53,6 +57,23 @@ export function JudgeRound({ payload, onDone }) {
         return () => { cancelled = true; };
     }, [payload?.backendId, toast]);
 
+    useEffect(() => {
+        if (submitted) return undefined;
+        const onKey = (event) => {
+            if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.tagName === 'SELECT') {
+                return;
+            }
+            const digit = Number(event.key);
+            if (Number.isInteger(digit) && digit >= 1 && digit <= 9) {
+                setScore(digit);
+            } else if (event.key === '0') {
+                setScore(10);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [submitted]);
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
@@ -71,7 +92,7 @@ export function JudgeRound({ payload, onDone }) {
                 : 'This link is invalid or malformed. Make sure you copied the full URL from your friend.';
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md px-4">
-                <div className="text-6xl mb-4" role="img" aria-hidden="true">??</div>
+                <div className="text-6xl mb-4" role="img" aria-hidden="true">🔗</div>
                 <h2 className="text-2xl font-display font-bold text-white mb-2">Can&apos;t load this round</h2>
                 <p className="text-white/60 mb-6">{errorMessage}</p>
                 <button
@@ -87,7 +108,10 @@ export function JudgeRound({ payload, onDone }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         const scoreValue = Number(score);
-        if (!Number.isFinite(scoreValue) || scoreValue < 1 || scoreValue > 10) return;
+        if (!Number.isFinite(scoreValue) || scoreValue < 1 || scoreValue > 10) {
+            toast.warn('Pick a score from 1 to 10');
+            return;
+        }
 
         const judgement = {
             score: scoreValue,
@@ -115,20 +139,42 @@ export function JudgeRound({ payload, onDone }) {
             }
         }
 
+        haptic('success');
+        playSubmitSound();
         toast.success('Judgement submitted!');
         setSubmitted(true);
-        setTimeout(() => {
-            clearJudgeFromUrl();
-            onDone?.();
-        }, 2000);
     };
 
     if (submitted) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-in zoom-in-95 duration-500">
-                <div className="text-6xl mb-4">?</div>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-in zoom-in-95 duration-500 px-4">
+                <div className="text-6xl mb-4" role="img" aria-label="Success">✓</div>
                 <h2 className="text-3xl font-display font-bold text-white mb-2">Thanks for judging!</h2>
-                <p className="text-white/60">Your friend will see your score. Redirecting...</p>
+                <p className="text-white/60 mb-6 max-w-sm">
+                    Your friend will see your score. Want to make your own connection?
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                    <button
+                        type="button"
+                        className="wordle-button wordle-primary flex-1 min-h-[48px]"
+                        onClick={() => {
+                            clearJudgeFromUrl();
+                            onDone?.();
+                        }}
+                    >
+                        Try today&apos;s Venn
+                    </button>
+                    <button
+                        type="button"
+                        className="wordle-button flex-1 min-h-[48px]"
+                        onClick={() => {
+                            clearJudgeFromUrl();
+                            onDone?.();
+                        }}
+                    >
+                        Make your own connection
+                    </button>
+                </div>
             </div>
         );
     }
@@ -182,17 +228,29 @@ export function JudgeRound({ payload, onDone }) {
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-white/60 mb-2">Score (1-10)</label>
-                    <input
-                        type="number"
-                        min="1"
-                        max="10"
-                        value={score}
-                        onChange={(e) => setScore(e.target.value)}
-                        className="game-input"
-                        placeholder="10"
-                        required
-                    />
+                    <div className="block text-sm font-medium text-white/60 mb-2" id="judge-score-label">
+                        Score (1-10)
+                    </div>
+                    <div
+                        className="grid grid-cols-5 gap-2"
+                        role="group"
+                        aria-labelledby="judge-score-label"
+                    >
+                        {SCORE_OPTIONS.map((value) => (
+                            <button
+                                key={value}
+                                type="button"
+                                onClick={() => setScore(value)}
+                                aria-pressed={score === value}
+                                className={`game-choice min-h-[44px] py-2 text-sm font-bold tabular-nums ${
+                                    score === value ? 'game-choice-selected' : ''
+                                }`}
+                            >
+                                {value}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-white/35 text-xs mt-2">Tip: press 1–9 or 0 for 10 on a keyboard.</p>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-white/60 mb-2">Relevance</label>
@@ -207,18 +265,19 @@ export function JudgeRound({ payload, onDone }) {
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-white/60 mb-2">Commentary</label>
+                    <label className="block text-sm font-medium text-white/60 mb-2">Commentary (optional)</label>
                     <textarea
                         value={commentary}
                         onChange={(e) => setCommentary(e.target.value)}
                         rows="3"
                         className="game-input resize-none min-h-[96px]"
-                        placeholder="Share your verdict..."
+                        placeholder="Share your verdict, or skip and submit"
                     />
                 </div>
                 <button
                     type="submit"
-                    className="wordle-button wordle-primary w-full text-lg"
+                    disabled={!score}
+                    className="wordle-button wordle-primary w-full text-lg disabled:opacity-50"
                 >
                     Submit Judgement
                 </button>

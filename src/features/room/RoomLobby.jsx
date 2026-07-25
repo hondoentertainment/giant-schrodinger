@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useRoom } from '../../context/RoomContext';
 import { useToast } from '../../context/ToastContext';
-import { Copy, Users, Crown, LogOut, Play } from 'lucide-react';
+import { Copy, Users, Crown, LogOut, Play, Share2 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { ConnectionBanner } from './ConnectionBanner';
+
+function buildJoinInvite(code) {
+    const origin = typeof window !== 'undefined'
+        ? `${window.location.origin}${window.location.pathname}`
+        : '';
+    const joinUrl = `${origin}?join=${encodeURIComponent(code)}`;
+    const text = `Join my Venn with Friends room! Code ${code}: ${joinUrl}`;
+    return { joinUrl, text };
+}
 
 export function RoomLobby() {
     const {
@@ -18,6 +27,7 @@ export function RoomLobby() {
     const { toast } = useToast();
     const [starting, setStarting] = useState(false);
     const [countdown, setCountdown] = useState(null);
+    const [inviteShared, setInviteShared] = useState(false);
 
     useEffect(() => {
         if (countdown === null) return;
@@ -31,11 +41,48 @@ export function RoomLobby() {
         return () => clearTimeout(t);
     }, [countdown, startMultiplayerRound]);
 
+    // Mid-session return to lobby (waiting) — auto-start next round for the host
+    useEffect(() => {
+        if (!isHost || starting || countdown !== null) return;
+        if (room?.status === 'waiting' && (room.round_number || 1) > 1 && players.length >= 2) {
+            setStarting(true);
+            setCountdown(2);
+        }
+    }, [countdown, isHost, players.length, room?.round_number, room?.status, starting]);
+
     const copyCode = () => {
         if (roomCode && navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(roomCode);
             haptic('light');
             toast.success('Room code copied!');
+        }
+    };
+
+    const shareInvite = async () => {
+        if (!roomCode) return;
+        const { joinUrl, text } = buildJoinInvite(roomCode);
+        try {
+            if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+                await navigator.share({
+                    title: 'Join my Venn room',
+                    text,
+                    url: joinUrl,
+                });
+                haptic('success');
+                setInviteShared(true);
+                toast.success('Invite shared!');
+                setTimeout(() => setInviteShared(false), 2500);
+                return;
+            }
+        } catch (err) {
+            if (err?.name === 'AbortError') return;
+        }
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            haptic('success');
+            setInviteShared(true);
+            toast.success('Invite link copied!');
+            setTimeout(() => setInviteShared(false), 2500);
         }
     };
 
@@ -73,10 +120,18 @@ export function RoomLobby() {
                         <Copy className="w-5 h-5 text-white/70" />
                     </button>
                 </div>
-                <p className="text-white/50 text-sm">Share this code with friends to join</p>
+                <p className="text-white/50 text-sm mb-3">Share this code with friends to join</p>
+                <button
+                    type="button"
+                    onClick={shareInvite}
+                    className="wordle-button wordle-primary min-h-[44px] px-6 inline-flex items-center gap-2"
+                >
+                    <Share2 className="w-4 h-4" />
+                    {inviteShared ? 'Invite ready!' : 'Share invite'}
+                </button>
                 <div className="mt-4 p-4 rounded-[22px] bg-white/[0.05] border border-white/[0.08] text-left text-sm text-white/55">
                     <div className="font-semibold text-white/80 mb-1">How to invite</div>
-                    <p>Friends join from the main lobby: tap Play with Friends, enter this code, then Join. Everyone sees the same concepts and plays simultaneously.</p>
+                    <p>Share the invite link (includes the code) or have friends open Play with Friends, enter {roomCode || 'this code'}, then Join.</p>
                 </div>
             </div>
 
@@ -86,8 +141,8 @@ export function RoomLobby() {
                     <div className="text-white/45 text-xs mt-0.5">Rounds</div>
                 </div>
                 <div className="game-stat-tile">
-                    <div className="text-white font-semibold text-lg">{room?.scoring_mode === 'human' ? 'Manual' : 'AI'}</div>
-                    <div className="text-white/45 text-xs mt-0.5">Judge</div>
+                    <div className="text-white font-semibold text-lg">{room?.scoring_mode === 'human' ? 'Room vote' : 'AI'}</div>
+                    <div className="text-white/45 text-xs mt-0.5">Scoring</div>
                 </div>
                 <div className="game-stat-tile">
                     <div className="text-white font-semibold text-lg capitalize">{room?.theme_id || 'neon'}</div>

@@ -70,18 +70,45 @@ vi.mock('../services/multiplayer', () => ({
 import { RoomProvider, useRoom } from './RoomContext';
 
 function RoomProbe() {
-    const { joinRoomByCode, roomPhase, submissions, votes, players, roomClosureReason } = useRoom();
+    const {
+        joinRoomByCode,
+        hostRoom,
+        rematchRoom,
+        roomPhase,
+        submissions,
+        votes,
+        players,
+        roomClosureReason,
+        roomCode,
+        isHost,
+    } = useRoom();
 
     return (
         <div>
             <button type="button" onClick={() => joinRoomByCode('ABCD12', 'Ava', 'A')}>
                 Join
             </button>
+            <button
+                type="button"
+                onClick={() => hostRoom({
+                    hostName: 'Host',
+                    themeId: 'neon',
+                    totalRounds: 5,
+                    scoringMode: 'ai',
+                })}
+            >
+                Host
+            </button>
+            <button type="button" onClick={() => rematchRoom()}>
+                Rematch
+            </button>
             <div data-testid="phase">{roomPhase}</div>
             <div data-testid="players">{players.length}</div>
             <div data-testid="submissions">{submissions.length}</div>
             <div data-testid="votes">{votes.length}</div>
             <div data-testid="closure">{roomClosureReason || 'none'}</div>
+            <div data-testid="code">{roomCode || ''}</div>
+            <div data-testid="host">{isHost ? 'yes' : 'no'}</div>
         </div>
     );
 }
@@ -243,5 +270,65 @@ describe('RoomProvider', () => {
 
         expect(screen.getByTestId('closure')).toHaveTextContent('host_left');
         expect(mocks.toast.warn).toHaveBeenCalled();
+    });
+
+    it('rematchRoom leaves the current room and hosts a new one with the same settings', async () => {
+        mocks.multiplayer.createRoom
+            .mockResolvedValueOnce({
+                room: {
+                    id: 'room-1',
+                    code: 'OLD123',
+                    status: 'lobby',
+                    theme_id: 'neon',
+                    total_rounds: 5,
+                    scoring_mode: 'ai',
+                    round_number: 1,
+                },
+                session: { playerName: 'Host', secureMode: true },
+            })
+            .mockResolvedValueOnce({
+                room: {
+                    id: 'room-2',
+                    code: 'NEW456',
+                    status: 'lobby',
+                    theme_id: 'neon',
+                    total_rounds: 5,
+                    scoring_mode: 'ai',
+                    round_number: 1,
+                },
+                session: { playerName: 'Host', secureMode: true },
+            });
+        mocks.multiplayer.leaveRoom.mockResolvedValue(undefined);
+        mocks.multiplayer.getRoomPlayers.mockResolvedValue([
+            { id: 'host', player_name: 'Host', is_host: true, avatar: 'H' },
+        ]);
+
+        render(
+            <RoomProvider>
+                <RoomProbe />
+            </RoomProvider>
+        );
+
+        await userEvent.click(screen.getByRole('button', { name: 'Host' }));
+        await waitFor(() => {
+            expect(screen.getByTestId('code')).toHaveTextContent('OLD123');
+            expect(screen.getByTestId('host')).toHaveTextContent('yes');
+        });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Rematch' }));
+
+        await waitFor(() => {
+            expect(mocks.multiplayer.leaveRoom).toHaveBeenCalledWith('room-1', 'Host', expect.anything());
+            expect(mocks.multiplayer.createRoom).toHaveBeenLastCalledWith(expect.objectContaining({
+                hostName: 'Host',
+                themeId: 'neon',
+                totalRounds: 5,
+                scoringMode: 'ai',
+            }));
+            expect(screen.getByTestId('code')).toHaveTextContent('NEW456');
+        });
+        expect(mocks.toast.success).toHaveBeenCalledWith(
+            expect.stringMatching(/Rematch ready — new code NEW456/)
+        );
     });
 });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react'
+import { scrollMainToTop } from './lib/scroll'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { ToastProvider } from './context/ToastContext'
@@ -56,7 +57,7 @@ function LoadingFallback() {
 function GameLogoMark() {
     return (
         <div className="game-logo-mark" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
                 <circle cx="8" cy="11" r="6.5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" fill="rgba(10,132,255,0.35)" />
                 <circle cx="14" cy="11" r="6.5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" fill="rgba(191,90,242,0.35)" />
             </svg>
@@ -96,25 +97,29 @@ function OfflineQueueHandler() {
     return null;
 }
 
-function PhaseTransition({ children, phase }) {
+function PhaseTransition({ children, phase, screenKey }) {
     const [currentChildren, setCurrentChildren] = useState(children);
     const [animClass, setAnimClass] = useState('phase-enter-active');
 
     useEffect(() => {
         // Fade out
         setAnimClass('phase-exit-active');
+        scrollMainToTop();
         const timer = setTimeout(() => {
             setCurrentChildren(children);
             setAnimClass('phase-enter');
+            scrollMainToTop();
             // Force reflow then fade in
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     setAnimClass('phase-enter-active');
+                    scrollMainToTop();
                 });
             });
         }, 150);
         return () => clearTimeout(timer);
-    }, [phase]); // Only transition when phase changes
+        // screenKey covers ROUND→REVEAL when roundData attaches on the same phase name
+    }, [phase, screenKey]); // eslint-disable-line react-hooks/exhaustive-deps -- children swapped intentionally on phase/key
 
     return (
         <div className={animClass}>
@@ -124,7 +129,7 @@ function PhaseTransition({ children, phase }) {
 }
 
 function GameContent() {
-    const { gameState, setGameState } = useGame();
+    const { gameState, setGameState, user } = useGame();
     const { isMultiplayer, roomPhase } = useRoom();
     const [roundData, setRoundData] = useState(null);
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
@@ -133,6 +138,20 @@ function GameContent() {
         onPrivacy: () => setGameState('PRIVACY'),
         onTerms: () => setGameState('TERMS'),
     };
+
+    const screenKey = [
+        gameState,
+        isMultiplayer ? `mp:${roomPhase || ''}` : 'solo',
+        roundData?.submission || '',
+        judgePayload ? 'judge' : '',
+        challengePayload ? 'challenge' : '',
+        user?.name || 'anon',
+    ].join('|');
+
+    // Always land at the top when entering a new screen (main is the scroll container)
+    useEffect(() => {
+        scrollMainToTop();
+    }, [screenKey]);
 
     // Handle incoming encoded theme links on mount
     useEffect(() => {
@@ -197,12 +216,12 @@ function GameContent() {
     };
 
     const headerEl = (
-        <div className="wordle-topbar sticky top-0 z-30 mb-3 flex w-full justify-center">
-            <h1 className="flex items-center gap-3 text-center">
+        <div className="wordle-topbar sticky top-0 z-30 mb-1 flex w-full justify-center">
+            <h1 className="flex items-center gap-2.5 text-center">
                 <GameLogoMark />
                 <span className="flex flex-col items-start leading-none">
-                    <span className="font-display text-xl sm:text-2xl font-bold tracking-tight text-white">Venn</span>
-                    <span className="text-[0.7rem] sm:text-xs font-medium text-white/45">with Friends</span>
+                    <span className="font-display text-lg sm:text-xl font-bold tracking-tight text-white">Venn</span>
+                    <span className="text-[0.65rem] sm:text-[0.7rem] font-medium text-white/45">with Friends</span>
                 </span>
             </h1>
         </div>
@@ -249,7 +268,7 @@ function GameContent() {
         <Layout {...layoutProps}>
             {headerEl}
             <Suspense fallback={<LoadingFallback />}>
-            <PhaseTransition phase={gameState}>
+            <PhaseTransition phase={gameState} screenKey={screenKey}>
                 {gameState === 'LOBBY' && <Lobby />}
                 {gameState === 'GALLERY' && <Gallery />}
                 {gameState === 'PRIVACY' && <PrivacyPolicy onBack={() => setGameState('LOBBY')} />}

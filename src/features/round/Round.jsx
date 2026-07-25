@@ -8,6 +8,7 @@ import { getEffectiveRoundMediaType, normalizeMediaType } from '../../lib/mediaT
 import { getStats, isThemeUnlocked } from '../../services/stats';
 import { haptic } from '../../lib/haptics';
 import { trackEvent } from '../../services/analytics';
+import { playSubmitSound, playTickSound, playUrgentTick } from '../../services/sounds';
 
 export function Round({ onSubmit }) {
     const { setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge, trackUsedAssets, getUsedAssetIds } = useGame();
@@ -84,6 +85,7 @@ export function Round({ onSubmit }) {
         if (submittedRef.current) return;
         submittedRef.current = true;
         haptic('success');
+        playSubmitSound();
         if (stats.totalRounds === 0 && roundNumber === 1) {
             trackEvent('first_session_round_submitted', {
                 hasSubmission: Boolean(submission.trim()),
@@ -104,6 +106,14 @@ export function Round({ onSubmit }) {
             return () => clearInterval(interval);
         } else if (!submittedRef.current && !showTimeUp) {
             setShowTimeUp(true);
+        }
+    }, [timer, showTimeUp]);
+
+    useEffect(() => {
+        if (submittedRef.current || showTimeUp) return;
+        if (timer > 0 && timer <= 10) {
+            if (timer <= 5) playUrgentTick();
+            else playTickSound();
         }
     }, [timer, showTimeUp]);
 

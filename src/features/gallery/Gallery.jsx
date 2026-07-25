@@ -7,7 +7,7 @@ import { getJudgementForCollision } from '../../services/judgements';
 import { getCollisionMediaMode, getMediaModeLabel } from '../../lib/mediaType';
 import { getHighlights } from '../../services/highlights';
 import { downloadFusionImage } from '../../services/socialShare';
-import { getOgShareUrl } from '../../services/share';
+import { createJudgeShareLinks, getOgShareUrl } from '../../services/share';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
 import { flagContent } from '../../services/moderation';
@@ -15,6 +15,7 @@ import { MEDIA_TYPES } from '../../data/themes';
 import { getJudgeModeFromCollision } from '../../lib/judgeMode';
 import { EmptyState } from '../../components/EmptyState';
 import { trackEvent } from '../../services/analytics';
+import { haptic } from '../../lib/haptics';
 
 const SORT_OPTIONS = [
     { id: 'newest', label: 'Newest', fn: (a, b) => new Date(b.timestamp) - new Date(a.timestamp) },
@@ -81,6 +82,21 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
     const fj = displayJudgement;
     const displayDate = formatCollisionDate(collision.timestamp);
 
+    const openDetails = () => onSelect(collision);
+
+    const handleArticleClick = (event) => {
+        if (event.target.closest('button')) return;
+        openDetails();
+    };
+
+    const handleArticleKeyDown = (event) => {
+        if (event.target.closest('button')) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openDetails();
+        }
+    };
+
     return (
         <div
             ref={ref}
@@ -88,9 +104,11 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
             className="contents"
         >
         <article
-            className="group relative aspect-square rounded-[22px] overflow-hidden border border-white/10 bg-white/[0.04] backdrop-blur-sm transition-transform hover:scale-[1.02] focus-within:scale-[1.02] focus-within:ring-2 focus-within:ring-game-accent focus-within:outline-none shadow-game-card"
+            className="group relative aspect-square rounded-[22px] overflow-hidden border border-white/10 bg-white/[0.04] backdrop-blur-sm transition-transform hover:scale-[1.02] focus-within:scale-[1.02] focus-within:ring-2 focus-within:ring-game-accent focus-within:outline-none shadow-game-card cursor-pointer"
             tabIndex={0}
-            aria-label={`Connection: "${collision.submission}". Score ${collision.score} out of 10. ${displayDate}.${fj ? ` Judged by ${fj.judgeName || fj.judge_name || 'a friend'}: ${fj.score}/10.` : ''}`}
+            aria-label={`Connection: "${collision.submission}". Score ${collision.score} out of 10. ${displayDate}.${fj ? ` Judged by ${fj.judgeName || fj.judge_name || 'a friend'}: ${fj.score}/10.` : ''} Open details.`}
+            onClick={handleArticleClick}
+            onKeyDown={handleArticleKeyDown}
         >
             {imageStatus === 'loading' && (
                 <div className="absolute inset-0 z-10">
@@ -214,6 +232,8 @@ export function Gallery() {
     const [shareCopiedId, setShareCopiedId] = useState(null);
     const [shareCardLoadingId, setShareCardLoadingId] = useState(null);
     const [reportedId, setReportedId] = useState(null);
+    const [judgeInviteLoadingId, setJudgeInviteLoadingId] = useState(null);
+    const [judgeInviteCopiedId, setJudgeInviteCopiedId] = useState(null);
 
     useEffect(() => {
         const list = getCollisions();
@@ -315,6 +335,44 @@ export function Gallery() {
         });
         setReportedId(collision.id);
         setTimeout(() => setReportedId(null), 2500);
+    };
+
+    const handleAskFriendToJudge = async (collision) => {
+        if (!collision?.assets?.left || !collision?.assets?.right || !collision?.submission) return;
+        setJudgeInviteLoadingId(collision.id);
+        try {
+            const links = await createJudgeShareLinks({
+                assets: { left: collision.assets.left, right: collision.assets.right },
+                submission: collision.submission,
+                imageUrl: collision.imageUrl || collision.fallbackImageUrl,
+                shareFrom: 'A friend',
+                collisionId: collision.id || null,
+                judgeMode: 'friend',
+            });
+            const url = links?.shareUrl;
+            if (!url) return;
+            trackEvent('gallery_friend_judge_invite', { collisionId: collision.id });
+            const text = 'Score my Venn connection — open the link and give it 1–10.';
+            try {
+                if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+                    await navigator.share({ title: 'Judge my Venn connection', text, url });
+                    haptic('success');
+                    setJudgeInviteCopiedId(collision.id);
+                    setTimeout(() => setJudgeInviteCopiedId(null), 2500);
+                    return;
+                }
+            } catch (err) {
+                if (err?.name === 'AbortError') return;
+            }
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(url);
+                haptic('success');
+                setJudgeInviteCopiedId(collision.id);
+                setTimeout(() => setJudgeInviteCopiedId(null), 2500);
+            }
+        } finally {
+            setJudgeInviteLoadingId(null);
+        }
     };
 
     return (
@@ -514,6 +572,20 @@ export function Gallery() {
                                     />
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-3">
+                                    {!getDisplayJudgement(selectedCollision) && selectedCollision.assets?.left && selectedCollision.assets?.right && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAskFriendToJudge(selectedCollision)}
+                                            disabled={judgeInviteLoadingId === selectedCollision.id}
+                                            className="wordle-button wordle-primary flex-1 min-h-[44px] disabled:opacity-50"
+                                        >
+                                            {judgeInviteLoadingId === selectedCollision.id
+                                                ? 'Creating link…'
+                                                : judgeInviteCopiedId === selectedCollision.id
+                                                ? 'Judge invite ready!'
+                                                : 'Ask a friend to judge'}
+                                        </button>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={() => handleCopyShare(selectedCollision)}

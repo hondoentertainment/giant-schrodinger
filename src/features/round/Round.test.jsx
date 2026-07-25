@@ -76,6 +76,18 @@ vi.mock('../../lib/haptics', () => ({
     haptic: vi.fn(),
 }));
 
+vi.mock('../../services/analytics', () => ({
+    trackEvent: vi.fn(),
+}));
+
+const soundMocks = vi.hoisted(() => ({
+    playSubmitSound: vi.fn(),
+    playTickSound: vi.fn(),
+    playUrgentTick: vi.fn(),
+}));
+
+vi.mock('../../services/sounds', () => soundMocks);
+
 // Baseline context used by most tests.
 const baselineContext = {
     setGameState: mockSetGameState,
@@ -221,5 +233,28 @@ describe('Round', () => {
         render(<Round onSubmit={mockOnSubmit} />);
         expect(screen.getByPlaceholderText(/What connects this meme and video/i)).toBeInTheDocument();
         expect(screen.getByText(/Connect the vibe, not just the visuals/i)).toBeInTheDocument();
+    });
+
+    it('plays submit sound when the player submits', async () => {
+        vi.useRealTimers();
+        const user = userEvent.setup({ delay: null });
+        render(<Round onSubmit={mockOnSubmit} />);
+        await user.type(screen.getByPlaceholderText('What connects these two?'), 'Both pets{Enter}');
+        expect(soundMocks.playSubmitSound).toHaveBeenCalled();
+    });
+
+    it('plays tick sounds in the final 10 seconds and urgent ticks in the final 5', () => {
+        render(<Round onSubmit={mockOnSubmit} />);
+        act(() => {
+            vi.advanceTimersByTime(50_000);
+        });
+        expect(soundMocks.playTickSound).toHaveBeenCalled();
+        const ticksBeforeUrgent = soundMocks.playTickSound.mock.calls.length;
+
+        act(() => {
+            vi.advanceTimersByTime(5_000);
+        });
+        expect(soundMocks.playUrgentTick).toHaveBeenCalled();
+        expect(soundMocks.playTickSound.mock.calls.length).toBeGreaterThanOrEqual(ticksBeforeUrgent);
     });
 });

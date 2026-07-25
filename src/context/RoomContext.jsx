@@ -421,9 +421,37 @@ export function RoomProvider({ children }) {
         toast.info('Left the room');
     }, [cleanup, playerName, room, roomSession, toast]);
 
-    const startMultiplayerRound = useCallback(async () => {
+    const rematchRoom = useCallback(async () => {
+        if (!room || !isHost || !playerName) return null;
+
+        const settings = {
+            hostName: playerName,
+            themeId: room.theme_id,
+            totalRounds: room.total_rounds || 3,
+            scoringMode: room.scoring_mode || 'human',
+        };
+
+        if (room.id) {
+            await leaveRoom(room.id, playerName, roomSession);
+        }
+        cleanup();
+
+        const newRoom = await hostRoom(settings);
+        if (newRoom?.code) {
+            toast.success(`Rematch ready — new code ${newRoom.code}. Share it with friends.`);
+            reportAppEvent('multiplayer_rematch_created', {
+                roomCode: newRoom.code,
+                themeId: settings.themeId,
+                scoringMode: settings.scoringMode,
+            });
+        }
+        return newRoom;
+    }, [cleanup, hostRoom, isHost, playerName, room, roomSession, toast]);
+
+    const startMultiplayerRound = useCallback(async (roundOverride) => {
         if (!room || !isHost) return false;
 
+        const roundNumber = roundOverride ?? room.round_number;
         const theme = getThemeById(room.theme_id);
         const mediaType = user?.mediaType || MEDIA_TYPES.IMAGE;
 
@@ -431,13 +459,13 @@ export function RoomProvider({ children }) {
             theme,
             mediaType,
             excludeIds: usedAssetIdsRef.current,
-            roundNumber: room.round_number,
+            roundNumber,
             useCustomImages: user?.useCustomImages,
         });
         usedAssetIdsRef.current = [...usedAssetIdsRef.current, getAssetKey(left), getAssetKey(right)].filter(Boolean);
 
         const resolved = await loadSelectedAssets([left, right]);
-        const success = await startRoundApi(room.id, room.round_number, { left: resolved[0], right: resolved[1] }, roomSession);
+        const success = await startRoundApi(room.id, roundNumber, { left: resolved[0], right: resolved[1] }, roomSession);
         if (!success) {
             toast.error('Failed to start round');
             return false;
@@ -589,33 +617,55 @@ export function RoomProvider({ children }) {
         return true;
     }, [isHost, room, roomSession, toast, votes.length]);
 
+    const finishMultiplayerGame = useCallback(async () => {
+        if (!room || !isHost) return false;
+        const moved = await setRoomStatus(room.id, 'finished', roomSession);
+        if (!moved) {
+            toast.error('Failed to finish the game');
+            return false;
+        }
+        setRoom((prev) => (prev ? { ...prev, status: 'finished' } : prev));
+        setRoomPhase('finished');
+        return true;
+    }, [isHost, room, roomSession, toast]);
+
     const advanceToNextRound = useCallback(async () => {
         if (!room || !isHost) return;
 
         const nextRound = room.round_number + 1;
+        if (nextRound > room.total_rounds) {
+            if (roomSession?.hostToken) {
+                const result = await advanceRoom(room.id, roomSession);
+                if (result.ok) return;
+            }
+            await finishMultiplayerGame();
+            return;
+        }
+
         if (roomSession?.hostToken) {
             const result = await advanceRoom(room.id, roomSession);
             if (!result.ok) {
                 toast.error(result.error || 'Failed to advance round');
+                return;
             }
-            return;
+        } else {
+            const moved = await setRoomStatus(room.id, 'waiting', roomSession);
+            if (!moved) {
+                toast.error('Failed to advance round');
+                return;
+            }
         }
 
-        if (nextRound > room.total_rounds) {
-            await setRoomStatus(room.id, 'finished', roomSession);
-            return;
-        }
-
-        const moved = await setRoomStatus(room.id, 'waiting', roomSession);
-        if (!moved) {
-            toast.error('Failed to advance round');
-            return;
-        }
-
-        setRoom((prev) => prev ? { ...prev, round_number: nextRound, assets: null, status: 'waiting' } : prev);
         setSubmissions([]);
         setVotes([]);
-    }, [isHost, room, roomSession, toast]);
+        setRoom((prev) => (prev ? { ...prev, round_number: nextRound, assets: null, status: 'waiting' } : prev));
+
+        // Skip full lobby reset — start the next round immediately
+        const started = await startMultiplayerRound(nextRound);
+        if (!started) {
+            toast.info('Next round ready — host can start from the lobby');
+        }
+    }, [finishMultiplayerGame, isHost, room, roomSession, startMultiplayerRound, toast]);
 
     const value = {
         room,
@@ -637,12 +687,14 @@ export function RoomProvider({ children }) {
         hostRoom,
         joinRoomByCode,
         leaveCurrentRoom,
+        rematchRoom,
         startMultiplayerRound,
         submitMultiplayerAnswer,
         scoreAllSubmissions,
         castVoteForSubmission,
         finalizeMultiplayerVoting,
         advanceToNextRound,
+        finishMultiplayerGame,
         attemptReconnect,
         cleanup,
     };

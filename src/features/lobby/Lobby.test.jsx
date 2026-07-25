@@ -19,6 +19,7 @@ vi.mock('../../context/GameContext', () => ({
     useGame: () => ({
         user: mockUser,
         login: mockLogin,
+        logout: vi.fn(),
         setGameState: mockSetGameState,
         sessionId: mockSessionId,
         roundNumber: 1,
@@ -61,7 +62,12 @@ vi.mock('../../services/stats', () => ({
         favoriteThemeId: 'neon',
         currentStreak: globalThis.__testStreakValue || 0,
         totalRounds: 20,
-        nextMilestone: { label: 'Test milestone', remaining: 2 },
+        nextMilestone: { label: 'Test milestone', remaining: 2, threshold: 25, type: 'rounds' },
+        averageScore: 8.5,
+        friendJudgedCount: 1,
+        highlightCount: 2,
+        streakAtRisk: false,
+        streakStatus: 'active_today',
     }),
 }));
 
@@ -159,7 +165,7 @@ vi.mock('../../components/OnboardingTour', () => ({
 }));
 
 vi.mock('../../components/NotificationBanner', () => ({
-    NotificationBanner: () => null,
+    NotificationBanner: () => <div data-testid="notification-banner">Notify</div>,
 }));
 
 vi.mock('../../components/UnlockModal', () => ({
@@ -209,10 +215,6 @@ vi.mock('../../components/LanguageSelector', () => ({
 
 vi.mock('../../components/OnboardingTour', () => ({
     OnboardingTour: () => null,
-}));
-
-vi.mock('../../components/NotificationBanner', () => ({
-    NotificationBanner: () => null,
 }));
 
 const loggedInUser = { name: 'TestUser', avatar: '👽', themeId: 'classic', scoringMode: 'human', mediaType: 'image', useCustomImages: false };
@@ -288,5 +290,22 @@ describe('Lobby', () => {
     it('shows profile form when user is not logged in', () => {
         render(<Lobby />);
         expect(screen.getByPlaceholderText('Enter your name...')).toBeInTheDocument();
+    });
+
+    it('prefills multiplayer join code from ?join= query param', async () => {
+        mockUser = loggedInUser;
+        mockBackendEnabled = true;
+        window.history.pushState({}, '', '/?join=ABCD');
+        render(<Lobby />);
+        expect(await screen.findByDisplayValue('ABCD')).toBeInTheDocument();
+        await vi.waitFor(() => {
+            expect(window.location.search).not.toContain('join=');
+        });
+    });
+
+    it('mounts the notification banner once the player has enough rounds', () => {
+        mockUser = loggedInUser;
+        render(<Lobby />);
+        expect(screen.getByTestId('notification-banner')).toBeInTheDocument();
     });
 });

@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback } from 'react';
 import { useRoom } from '../../context/RoomContext';
 import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
 import { Trophy, ArrowRight, Home, ThumbsUp, Crown, Star } from 'lucide-react';
 import { getRoomSubmissions } from '../../services/multiplayer';
 import { ConnectionBanner } from './ConnectionBanner';
+import { playScoreReveal } from '../../services/sounds';
+import { haptic } from '../../lib/haptics';
+import { scrollMainToTop } from '../../lib/scroll';
 
 function ScoreBar({ label, value, max = 10 }) {
     const pct = Math.round((value / max) * 100);
@@ -45,11 +48,16 @@ export function MultiplayerReveal() {
         castVoteForSubmission,
         finalizeMultiplayerVoting,
         advanceToNextRound,
+        finishMultiplayerGame,
         leaveCurrentRoom,
+        rematchRoom,
     } = useRoom();
     const { toast } = useToast();
 
     const [advancing, setAdvancing] = useState(false);
+    const [finishing, setFinishing] = useState(false);
+    const [rematching, setRematching] = useState(false);
+    const finishAttemptedRef = React.useRef(false);
     const [finishingVotes, setFinishingVotes] = useState(false);
     const [allSubmissions, setAllSubmissions] = useState([]);
     const [revealPhase, setRevealPhase] = useState(REVEAL_PHASES.COUNTDOWN);
@@ -84,6 +92,10 @@ export function MultiplayerReveal() {
         };
     }, [isFinished, room?.id]);
 
+    useLayoutEffect(() => {
+        scrollMainToTop();
+    }, [room?.id, room?.round_number, roomPhase]);
+
     useEffect(() => {
         setRevealedCount(0);
         setCountdownValue(3);
@@ -95,7 +107,12 @@ export function MultiplayerReveal() {
         } else {
             setRevealPhase(REVEAL_PHASES.COUNTDOWN);
         }
+        scrollMainToTop();
     }, [room?.id, room?.round_number, roomPhase, isResultsReady]);
+
+    useEffect(() => {
+        scrollMainToTop();
+    }, [revealPhase]);
 
     useEffect(() => {
         if (revealPhase !== REVEAL_PHASES.COUNTDOWN || isResultsReady) return;
@@ -189,6 +206,13 @@ export function MultiplayerReveal() {
             });
     }, [isFinished, isResultsReady, players, revealPhase, scoringMode, sourceSubmissions]);
 
+    useEffect(() => {
+        if (!isResultsReady || !scored.length) return;
+        const top = scored[0]?.finalScore ?? scored[0]?.voteCount ?? 0;
+        playScoreReveal(Number(top) || 5);
+        haptic('success');
+    }, [isResultsReady, room?.round_number, scored]);
+
     const sessionLeaderboard = useMemo(() => {
         const totals = new Map();
         for (const entry of scored) {
@@ -231,6 +255,33 @@ export function MultiplayerReveal() {
         setAdvancing(true);
         await advanceToNextRound();
         setAdvancing(false);
+    };
+
+    const handleSeeFinalStandings = async () => {
+        if (finishing || isFinished) return;
+        setFinishing(true);
+        await finishMultiplayerGame();
+        setFinishing(false);
+    };
+
+    // Last round results → promote to finished so cumulative standings unlock
+    useEffect(() => {
+        if (!isHost || hasNextRound || isFinished || !isResultsReady) return;
+        if (revealPhase !== REVEAL_PHASES.RESULTS) return;
+        if (finishAttemptedRef.current) return;
+        finishAttemptedRef.current = true;
+        handleSeeFinalStandings();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when last-round results land
+    }, [isHost, hasNextRound, isFinished, isResultsReady, revealPhase]);
+
+    const handleRematch = async () => {
+        if (rematching) return;
+        setRematching(true);
+        const result = await rematchRoom();
+        if (!result) {
+            toast.error('Could not start rematch — try again from the lobby');
+        }
+        setRematching(false);
     };
 
     const withConnectionBanner = (content) => (
@@ -571,21 +622,51 @@ export function MultiplayerReveal() {
                                 className="wordle-button wordle-primary px-8 text-lg flex items-center gap-2 disabled:opacity-50"
                             >
                                 <ArrowRight className="w-5 h-5" />
-                                {advancing ? 'Loading...' : `Next Round (${room.round_number + 1}/${room.total_rounds})`}
+                                {advancing ? 'Starting next round...' : `Next Round (${room.round_number + 1}/${room.total_rounds})`}
                             </button>
                         )}
-                        {(isFinished || (isHost && !hasNextRound)) && (
+                        {!isFinished && isHost && !hasNextRound && (
                             <button
-                                onClick={leaveCurrentRoom}
-                                className="wordle-button wordle-primary px-8 text-lg flex items-center gap-2"
+                                type="button"
+                                onClick={handleSeeFinalStandings}
+                                disabled={finishing}
+                                className="wordle-button wordle-primary px-8 text-lg flex items-center gap-2 disabled:opacity-50"
                             >
-                                <Home className="w-5 h-5" />
-                                Back to Lobby
+                                <Trophy className="w-5 h-5" />
+                                {finishing ? 'Loading standings...' : 'See final standings'}
                             </button>
+                        )}
+                        {isFinished && (
+                            <>
+                                {isHost && (
+                                    <button
+                                        type="button"
+                                        onClick={handleRematch}
+                                        disabled={rematching}
+                                        className="wordle-button wordle-primary px-8 text-lg flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        <ArrowRight className="w-5 h-5" />
+                                        {rematching ? 'Starting rematch...' : 'Rematch'}
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={leaveCurrentRoom}
+                                    className="wordle-button px-8 text-lg flex items-center gap-2"
+                                >
+                                    <Home className="w-5 h-5" />
+                                    Back to Lobby
+                                </button>
+                                {!isHost && (
+                                    <p className="text-white/40 text-sm w-full text-center">
+                                        Want another round? Ask the host to rematch and share the new room code.
+                                    </p>
+                                )}
+                            </>
                         )}
                         {!isFinished && !isHost && (
                             <div className="text-white/40 text-sm">
-                                {hasNextRound ? 'Waiting for host to start next round...' : 'Game complete - waiting for final results...'}
+                                {hasNextRound ? 'Waiting for host to start next round...' : 'Game complete — waiting for final standings...'}
                             </div>
                         )}
                     </div>

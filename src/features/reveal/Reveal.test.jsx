@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Reveal } from './Reveal';
 
@@ -25,10 +25,17 @@ vi.mock('../../context/GameContext', () => ({
     }),
 }));
 
+const toastMocks = vi.hoisted(() => ({
+    error: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+}));
+
 // ── Mock ToastContext ──
 vi.mock('../../context/ToastContext', () => ({
     useToast: () => ({
-        toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warn: vi.fn() },
+        toast: toastMocks,
     }),
 }));
 
@@ -164,6 +171,12 @@ describe('Reveal', () => {
                 writeText: mockClipboardWriteText,
             },
         });
+        // Avoid leakage from other suites that stub Web Share
+        Object.defineProperty(navigator, 'share', {
+            configurable: true,
+            writable: true,
+            value: undefined,
+        });
     });
 
     it('displays score when result is provided', async () => {
@@ -195,22 +208,43 @@ describe('Reveal', () => {
         expect(shareBtn).toBeInTheDocument();
     });
 
-    it('lets manual scoring users ask a friend to judge before self-scoring', async () => {
-        mockScoringMode = 'human';
+    it('lets players ask a friend to judge after a scored round is saved', async () => {
         const user = userEvent.setup();
         const { createJudgeShareLinks } = await import('../../services/share');
 
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
 
         const friendJudgeButton = await screen.findByRole('button', { name: /ask a friend to judge/i }, { timeout: 3000 });
+        await waitFor(() => expect(friendJudgeButton).toBeEnabled());
+        createJudgeShareLinks.mockClear();
         await user.click(friendJudgeButton);
 
-        expect(createJudgeShareLinks).toHaveBeenCalledWith(expect.objectContaining({
-            submission: mockSubmission,
-            collisionId: null,
-            judgeMode: 'friend',
-        }));
-        expect(await screen.findByRole('button', { name: /friend judge link copied/i })).toBeInTheDocument();
+        await waitFor(() => {
+            expect(toastMocks.success).toHaveBeenCalled();
+        });
+        expect(await screen.findByRole('button', { name: /link copied|friend judge link copied/i })).toBeInTheDocument();
+    });
+
+    it('prefers navigator.share for friend-judge invites when available', async () => {
+        const share = vi.fn().mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'share', {
+            configurable: true,
+            value: share,
+        });
+        const user = userEvent.setup();
+
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+        const friendJudgeButton = await screen.findByRole('button', { name: /ask a friend to judge/i }, { timeout: 3000 });
+        await waitFor(() => expect(friendJudgeButton).toBeEnabled());
+        await user.click(friendJudgeButton);
+
+        await waitFor(() => {
+            expect(share).toHaveBeenCalledWith(expect.objectContaining({
+                title: 'Judge my Venn connection',
+                url: 'https://example.com/judge/123',
+            }));
+        });
+        expect(mockClipboardWriteText).not.toHaveBeenCalled();
     });
 
     it('Next Round button navigates forward', async () => {

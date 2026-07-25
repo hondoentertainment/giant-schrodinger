@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -31,6 +32,8 @@ const mocks = vi.hoisted(() => ({
         finalizeMultiplayerVoting: vi.fn(),
         advanceToNextRound: vi.fn(),
         leaveCurrentRoom: vi.fn(),
+        rematchRoom: vi.fn(),
+        finishMultiplayerGame: vi.fn().mockResolvedValue(true),
     },
     toast: {
         success: vi.fn(),
@@ -61,12 +64,30 @@ vi.mock('../../services/multiplayer', () => ({
     getRoomSubmissions: mocks.getRoomSubmissions,
 }));
 
+vi.mock('../../services/sounds', () => ({
+    playScoreReveal: vi.fn(),
+}));
+
+vi.mock('../../lib/haptics', () => ({
+    haptic: vi.fn(),
+}));
+
 import { MultiplayerReveal } from './MultiplayerReveal';
 
 describe('MultiplayerReveal', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.roomState.connectionState = 'connected';
+        mocks.roomState.isHost = false;
+        mocks.roomState.roomPhase = 'revealing';
+        mocks.roomState.room = {
+            id: 'room-1',
+            round_number: 1,
+            total_rounds: 3,
+            theme_id: 'neon',
+            scoring_mode: 'human',
+        };
+        mocks.getRoomSubmissions.mockResolvedValue(mocks.roomState.submissions);
         vi.useFakeTimers();
     });
 
@@ -94,5 +115,40 @@ describe('MultiplayerReveal', () => {
 
         expect(screen.getByText(/Disconnected from the room/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
+    });
+
+    it('shows Rematch for the host when the game is finished', async () => {
+        vi.useRealTimers();
+        mocks.roomState.isHost = true;
+        mocks.roomState.roomPhase = 'finished';
+        mocks.roomState.room = {
+            ...mocks.roomState.room,
+            status: 'finished',
+            round_number: 3,
+            total_rounds: 3,
+        };
+
+        render(<MultiplayerReveal />);
+
+        expect(await screen.findByRole('button', { name: /Rematch/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Back to Lobby/i })).toBeInTheDocument();
+    });
+
+    it('calls rematchRoom when the host clicks Rematch', async () => {
+        vi.useRealTimers();
+        const user = userEvent.setup();
+        mocks.roomState.isHost = true;
+        mocks.roomState.roomPhase = 'finished';
+        mocks.roomState.rematchRoom.mockResolvedValue({ code: 'NEW123' });
+        mocks.roomState.room = {
+            ...mocks.roomState.room,
+            status: 'finished',
+            round_number: 3,
+            total_rounds: 3,
+        };
+
+        render(<MultiplayerReveal />);
+        await user.click(await screen.findByRole('button', { name: /Rematch/i }));
+        expect(mocks.roomState.rematchRoom).toHaveBeenCalled();
     });
 });

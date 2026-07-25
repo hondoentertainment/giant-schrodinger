@@ -98,17 +98,21 @@ export function GameProvider({ children }) {
         }
     }, [user]);
 
+    const logout = () => {
+        setUser(null);
+        localStorage.removeItem('vwf_user');
+        setGameState('LOBBY');
+    };
+
     const login = (profile) => {
+        if (profile == null) {
+            logout();
+            return;
+        }
         setUser({
             ...profile,
             mediaType: normalizeMediaType(profile?.mediaType),
         });
-        setGameState('LOBBY');
-    };
-
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('vwf_user');
         setGameState('LOBBY');
     };
 

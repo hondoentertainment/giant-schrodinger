@@ -82,12 +82,12 @@ export function OnboardingModal({ onDismiss }) {
                 </p>
 
                 <div className="rounded-[22px] bg-white/[0.05] border border-white/[0.08] p-4 mb-3">
-                    <p className="text-white text-sm font-semibold mb-2">Three solo judging paths (plus live rooms)</p>
+                    <p className="text-white text-sm font-semibold mb-2">Who scores your solo rounds?</p>
                     <ul className="space-y-1.5 text-white/55 text-xs leading-relaxed">
-                        <li><span className="text-white">AI Judge:</span> Gemini scores automatically when configured; mock scoring keeps solo playable without a key.</li>
-                        <li><span className="text-white">Manual Judge:</span> you enter the score yourself after the reveal — not the same as Friend Judge.</li>
-                        <li><span className="text-white">Friend Judge:</span> after any round, copy a link so someone else scores asynchronously.</li>
-                        <li><span className="text-white">Multiplayer:</span> live rooms vote together when set to Manual; AI rooms score on the server.</li>
+                        <li><span className="text-white">You:</span> score the reveal yourself (default).</li>
+                        <li><span className="text-white">AI:</span> Gemini scores when configured (local fallback otherwise).</li>
+                        <li><span className="text-white">Friend Judge:</span> optional share link after any round — separate from your solo setting.</li>
+                        <li><span className="text-white">Live rooms:</span> Manual mode means room vote; AI mode scores on the server.</li>
                     </ul>
                 </div>
 

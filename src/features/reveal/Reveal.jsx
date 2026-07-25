@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { scoreSubmission, generateFusionImage } from '../../services/gemini';
-import { saveCollision } from '../../services/storage';
+import { saveCollision, updateCollision } from '../../services/storage';
 import { getMilestones, getStats, recordPlay } from '../../services/stats';
 import { createJudgeShareLinks } from '../../services/share';
 import { getThemeById } from '../../data/themes';
@@ -14,8 +14,10 @@ import { AchievementProgress } from '../../components/AchievementProgress';
 import { ScoreReveal } from '../../components/ScoreReveal';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { haptic } from '../../lib/haptics';
+import { playScoreReveal } from '../../services/sounds';
 import { reportAppError, reportAppEvent } from '../../lib/telemetry';
 import { checkAchievements } from '../../services/achievements';
+import { scrollMainToTop } from '../../lib/scroll';
 
 export function Reveal({ submission, assets }) {
     const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, isDailyChallenge } = useGame();
@@ -38,7 +40,18 @@ export function Reveal({ submission, assets }) {
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
     const mediaType = normalizeMediaType(user?.mediaType);
     const mod = currentModifier;
+    // Friend Judge can open as soon as fusion + prompts exist (draft collision on share)
     const canShareForJudging = Boolean(fusionImage?.url && assets?.left && assets?.right);
+
+    // Lobby → Round → Reveal: always open this screen at the top
+    useLayoutEffect(() => {
+        scrollMainToTop();
+    }, [submission, assets?.left?.id, assets?.right?.id]);
+
+    useEffect(() => {
+        if (result || fusionImage) scrollMainToTop();
+    }, [result, fusionImage]);
+
     const savedMediaType = getCollisionMediaMode({
         mediaType: getEffectiveRoundMediaType({
             userMediaType: mediaType,
@@ -202,6 +215,15 @@ export function Reveal({ submission, assets }) {
         nextRound();
     };
 
+    useEffect(() => {
+        if (!result) return;
+        const score = result.finalScore ?? result.score;
+        if (Number.isFinite(score)) {
+            playScoreReveal(score);
+            haptic('success');
+        }
+    }, [result]);
+
     // Keyboard shortcut: S to share for judging
     useEffect(() => {
         if (!result || !savedCollision) return;
@@ -217,8 +239,33 @@ export function Reveal({ submission, assets }) {
         return () => window.removeEventListener('keydown', onKey);
     }, [result, savedCollision]); // handleShareForJudging is stable enough for this use
 
+    const ensureDraftCollision = () => {
+        if (savedCollision?.id) return savedCollision;
+        if (!fusionImage?.url || !assets?.left || !assets?.right) return null;
+        const draft = saveCollision({
+            submission,
+            imageUrl: fusionImage.url,
+            fallbackImageUrl: fusionImage.fallbackUrl,
+            score: null,
+            pendingFriendJudge: true,
+            commentary: '',
+            themeId: theme?.id,
+            scoringMode,
+            assets: savedAssetPair,
+            judgeMode: 'friend',
+            isDailyChallenge,
+            roundNumber,
+            totalRounds,
+            scoreMultiplier,
+            mediaType: savedMediaType,
+        });
+        setSavedCollision(draft);
+        return draft;
+    };
+
     const handleShareForJudging = async () => {
         if (!canShareForJudging) return;
+        const draft = ensureDraftCollision();
         let links = shareLinks;
         if (!links?.shareUrl) {
             const roundPayload = {
@@ -226,7 +273,7 @@ export function Reveal({ submission, assets }) {
                 submission,
                 imageUrl: fusionImage?.url,
                 shareFrom: user?.name || 'A friend',
-                collisionId: savedCollision?.id || null,
+                collisionId: draft?.id || savedCollision?.id || null,
                 judgeMode: 'friend',
             };
             links = await createJudgeShareLinks(roundPayload);
@@ -234,7 +281,7 @@ export function Reveal({ submission, assets }) {
         }
         const url = links?.shareUrl;
         reportAppEvent('friend_judge_share_created', {
-            hasSavedCollision: Boolean(savedCollision?.id),
+            hasSavedCollision: Boolean(draft?.id || savedCollision?.id),
             scoringMode,
             roundNumber,
             hasOgPreview: Boolean(links?.previewUrl && links.previewUrl !== url),
@@ -242,7 +289,30 @@ export function Reveal({ submission, assets }) {
         if (url?.includes('#judge_')) {
             toast.warn('Backend unavailable — sharing via link encoding');
         }
-        if (url && navigator.clipboard?.writeText) {
+        if (!url) {
+            toast.error('Could not create share link — try again');
+            return;
+        }
+
+        const shareText = 'Score my Venn connection — open the link and give it 1–10.';
+        try {
+            if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+                await navigator.share({
+                    title: 'Judge my Venn connection',
+                    text: shareText,
+                    url,
+                });
+                haptic('success');
+                setShareCopied(true);
+                toast.success('Share sheet opened — send it to a friend!');
+                setTimeout(() => setShareCopied(false), 2500);
+                return;
+            }
+        } catch (err) {
+            if (err?.name === 'AbortError') return;
+        }
+
+        if (navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(url);
             haptic('success');
             setShareCopied(true);
@@ -270,7 +340,7 @@ export function Reveal({ submission, assets }) {
 
         let collision = savedCollision;
         if (fusionImage?.url && !savedRef.current) {
-            collision = saveCollision({
+            const scoredPayload = {
                 submission,
                 imageUrl: fusionImage.url,
                 fallbackImageUrl: fusionImage.fallbackUrl,
@@ -281,12 +351,21 @@ export function Reveal({ submission, assets }) {
                 scoringMode,
                 assets: savedAssetPair,
                 judgeMode: scoringMode,
+                pendingFriendJudge: false,
                 isDailyChallenge,
                 roundNumber,
                 totalRounds,
                 scoreMultiplier,
                 mediaType: savedMediaType,
-            });
+            };
+            if (savedCollision?.id) {
+                collision = updateCollision(savedCollision.id, scoredPayload) || {
+                    ...savedCollision,
+                    ...scoredPayload,
+                };
+            } else {
+                collision = saveCollision(scoredPayload);
+            }
             setSavedCollision(collision);
             const { stats: updatedStats = getStats(), newlyUnlocked: unlocked } = recordPlay(finalScore, {
                 isDailyChallenge,
@@ -433,9 +512,9 @@ export function Reveal({ submission, assets }) {
                             </button>
                         </form>
                         <div className="mt-4 rounded-[22px] border border-white/10 bg-white/[0.05] p-4 text-left">
-                            <p className="text-white font-semibold">Want a real reaction?</p>
+                            <p className="text-white font-semibold">Or skip self-score</p>
                             <p className="text-white/50 text-sm mt-1">
-                                Send this round to a friend. Their score can come back as feedback when backend persistence is available.
+                                Send a Friend Judge link now — they score asynchronously while you keep playing.
                             </p>
                             <button
                                 type="button"

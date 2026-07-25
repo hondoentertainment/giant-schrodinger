@@ -25,6 +25,14 @@ vi.mock('../../services/share', () => ({
     clearJudgeFromUrl: vi.fn(),
 }));
 
+vi.mock('../../services/sounds', () => ({
+    playSubmitSound: vi.fn(),
+}));
+
+vi.mock('../../lib/haptics', () => ({
+    haptic: vi.fn(),
+}));
+
 vi.mock('../../hooks/useFocusTrap', () => ({
     useFocusTrap: vi.fn(),
 }));
@@ -61,20 +69,21 @@ describe('JudgeRound', () => {
         vi.clearAllMocks();
     });
 
-    it('shows the score form fields', () => {
+    it('shows the score pills and optional commentary', () => {
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
-        expect(screen.getByPlaceholderText('10')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: '10', pressed: false })).toBeInTheDocument();
         expect(screen.getByDisplayValue('Highly Logical')).toBeInTheDocument();
-        expect(screen.getByPlaceholderText('Share your verdict...')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Submit Judgement/i })).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Share your verdict/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Submit Judgement/i })).toBeDisabled();
     });
 
-    it('submits a score through the form', async () => {
+    it('submits a score through score pills', async () => {
         const { saveJudgement } = await import('../../services/judgements');
         const user = userEvent.setup();
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
 
-        await user.type(screen.getByPlaceholderText('10'), '10');
+        await user.click(screen.getByRole('button', { name: '10' }));
+        expect(screen.getByRole('button', { name: '10', pressed: true })).toBeInTheDocument();
         await user.click(screen.getByRole('button', { name: /Submit Judgement/i }));
 
         expect(saveJudgement).toHaveBeenCalledWith(
@@ -85,6 +94,9 @@ describe('JudgeRound', () => {
             })
         );
         expect(mockToast.success).toHaveBeenCalledWith('Judgement submitted!');
+        expect(await screen.findByText(/Thanks for judging/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Try today's Venn/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Make your own connection/i })).toBeInTheDocument();
     });
 
     it('shows the submission text being judged', () => {

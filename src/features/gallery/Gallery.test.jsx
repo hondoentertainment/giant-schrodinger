@@ -72,6 +72,18 @@ vi.mock('../../services/moderation', () => ({
   flagContent: vi.fn(),
 }));
 
+vi.mock('../../services/share', async () => {
+  const actual = await vi.importActual('../../services/share');
+  return {
+    ...actual,
+    createJudgeShareLinks: vi.fn(() => Promise.resolve({
+      shareUrl: 'https://example.com/?judge=token123',
+      previewUrl: 'https://example.com/og?roundId=token123',
+    })),
+    getOgShareUrl: (token) => `https://example.com/og?roundId=${token}`,
+  };
+});
+
 const mockSetGameState = vi.fn();
 vi.mock('../../context/GameContext', () => ({
   useGame: () => ({ setGameState: mockSetGameState }),
@@ -79,6 +91,18 @@ vi.mock('../../context/GameContext', () => ({
 
 vi.mock('../../lib/scoreBands', () => ({
   getScoreBand: () => ({ label: 'Great', color: 'from-green-400 to-green-600' }),
+}));
+
+vi.mock('../../services/analytics', () => ({
+  trackEvent: vi.fn(),
+}));
+
+vi.mock('../../lib/haptics', () => ({
+  haptic: vi.fn(),
+}));
+
+vi.mock('../../components/SocialShareButtons', () => ({
+  default: () => <div data-testid="social-share-buttons">Share</div>,
 }));
 
 // Import after mocks
@@ -237,6 +261,81 @@ describe('Gallery', () => {
     expect(card).toHaveAttribute('aria-label', expect.stringContaining('Lazy thing'));
     const img = await within(card).findByAltText('Lazy thing');
     expect(img).toHaveAttribute('src', 'https://example.com/lazy.jpg');
+  });
+
+  it('opens detail modal when a gallery tile is clicked', async () => {
+    const user = userEvent.setup();
+    mockCollisions = [
+      {
+        id: 'tap1',
+        submission: 'Tap me open',
+        score: 8,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/tap.jpg',
+        assets: { left: { label: 'Left' }, right: { label: 'Right' } },
+      },
+    ];
+    render(<Gallery />);
+    const card = await screen.findByRole('article');
+    await user.click(card);
+    expect(await screen.findByRole('dialog', { name: /connection details/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Connection details/i })).toBeInTheDocument();
+  });
+
+  it('asks a friend to judge from the detail modal via navigator.share', async () => {
+    const user = userEvent.setup();
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: share,
+    });
+    const { createJudgeShareLinks } = await import('../../services/share');
+    mockCollisions = [
+      {
+        id: 'judge1',
+        submission: 'Needs a friend score',
+        score: 6,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/judge.jpg',
+        assets: {
+          left: { id: 'a', label: 'Left', type: 'image', url: 'https://example.com/a.jpg' },
+          right: { id: 'b', label: 'Right', type: 'image', url: 'https://example.com/b.jpg' },
+        },
+      },
+    ];
+    render(<Gallery />);
+    await user.click(await screen.findByRole('article'));
+    await user.click(await screen.findByRole('button', { name: /Ask a friend to judge/i }));
+
+    await waitFor(() => {
+      expect(createJudgeShareLinks).toHaveBeenCalledWith(expect.objectContaining({
+        submission: 'Needs a friend score',
+        collisionId: 'judge1',
+        judgeMode: 'friend',
+      }));
+      expect(share).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Judge my Venn connection',
+        url: 'https://example.com/?judge=token123',
+      }));
+    });
+  });
+
+  it('opens detail modal when Enter is pressed on a focused tile', async () => {
+    const user = userEvent.setup();
+    mockCollisions = [
+      {
+        id: 'key1',
+        submission: 'Keyboard open',
+        score: 7,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/key.jpg',
+      },
+    ];
+    render(<Gallery />);
+    const card = await screen.findByRole('article');
+    card.focus();
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 
   it('filters gallery by media type', async () => {

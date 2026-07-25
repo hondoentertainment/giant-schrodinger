@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useRoom } from '../../context/RoomContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
+import { normalizeMediaType } from '../../lib/mediaType';
 import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked, getProfileSummary } from '../../services/stats';
 import { reportAppEvent } from '../../lib/telemetry';
 import { getDailyChallenge, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
@@ -15,6 +16,7 @@ import { getCustomImages } from '../../services/customImages';
 import { ServiceStatusCard } from '../../components/ServiceStatusCard';
 import { PWAInstallBanner } from '../../components/PWAInstallBanner';
 import { LocalPreviewBadge } from '../../components/LocalPreviewBadge';
+import { NotificationBanner } from '../../components/NotificationBanner';
 import { isE2EMockRoomEnabled } from '../../lib/e2eMockRoom';
 import { trackEvent } from '../../services/analytics';
 import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
@@ -27,6 +29,7 @@ export function Lobby() {
     const {
         user,
         login,
+        logout,
         setGameState,
         sessionId,
         roundNumber,
@@ -74,6 +77,7 @@ export function Lobby() {
     const [mpLoadingAction, setMpLoadingAction] = useState(null); // 'create' | 'join'
     const [dailyShareCopied, setDailyShareCopied] = useState(false);
     const [dailyRefreshKey, setDailyRefreshKey] = useState(0);
+    const [dailyConflictOpen, setDailyConflictOpen] = useState(false);
 
     const theme = getThemeById(themeId);
     const stats = getStats();
@@ -86,6 +90,26 @@ export function Lobby() {
     useEffect(() => {
         if (!sessionId) setDailyRefreshKey((key) => key + 1);
     }, [sessionId]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const params = new URLSearchParams(window.location.search || '');
+        const join = (params.get('join') || '').trim().toUpperCase();
+        if (!join || join.length < 4) return undefined;
+        setJoinCode(join);
+        setShowMultiplayer(true);
+        trackEvent('join_link_opened', { codeLength: join.length });
+        // Defer URL cleanup so React Strict Mode remount can still read ?join=
+        const timer = window.setTimeout(() => {
+            const latest = new URLSearchParams(window.location.search || '');
+            if (!latest.has('join')) return;
+            latest.delete('join');
+            const next = latest.toString();
+            const cleaned = `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash || ''}`;
+            window.history.replaceState(null, '', cleaned);
+        }, 0);
+        return () => window.clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         if (profileSummary.streakAtRisk) {
@@ -196,7 +220,7 @@ export function Lobby() {
         beginRound();
     };
 
-    const startDailyChallenge = () => {
+    const beginDailyChallenge = () => {
         if (!sessionId && stats.totalRounds === 0) {
             trackEvent('first_session_onboarding_opened', { source: 'daily' });
             setOnboardingDismissCallback(() => {
@@ -210,6 +234,25 @@ export function Lobby() {
         }
         startSession(3, true);
         beginRound();
+    };
+
+    const startDailyChallenge = () => {
+        if (sessionId) {
+            setDailyConflictOpen(true);
+            return;
+        }
+        beginDailyChallenge();
+    };
+
+    const openEditProfile = () => {
+        setName(user?.name || '');
+        setAvatar(user?.avatar || AVATARS[0]);
+        setThemeId(user?.themeId || THEMES[0].id);
+        setScoringMode(user?.scoringMode || 'human');
+        setMediaType(normalizeMediaType(user?.mediaType) || MEDIA_TYPES.IMAGE);
+        setUseCustomImages(user?.useCustomImages ?? false);
+        setSessionLength(totalRounds || 3);
+        logout();
     };
 
     const handleOnboardingDismiss = () => {
@@ -252,308 +295,174 @@ export function Lobby() {
                     <OnboardingModal onDismiss={onboardingDismissCallback} />
                 )}
                 {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
-            <div className="w-full max-w-md space-y-6 wordle-card p-5 sm:p-7 animate-spring-in">
+                {dailyConflictOpen && (
+                    <div className="game-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="daily-conflict-title">
+                        <div className="game-modal-panel p-6 max-w-md w-full">
+                            <h2 id="daily-conflict-title" className="text-xl font-display font-bold text-white mb-2">
+                                Practice session in progress
+                            </h2>
+                            <p className="text-white/60 text-sm mb-5">
+                                End this practice run to play today&apos;s Daily, or keep practicing.
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    type="button"
+                                    className="wordle-button wordle-primary min-h-[48px]"
+                                    onClick={() => {
+                                        setDailyConflictOpen(false);
+                                        endSession();
+                                        beginDailyChallenge();
+                                    }}
+                                >
+                                    End session &amp; play Daily
+                                </button>
+                                <button
+                                    type="button"
+                                    className="wordle-button min-h-[48px]"
+                                    onClick={() => setDailyConflictOpen(false)}
+                                >
+                                    Keep practicing
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            <div className="w-full max-w-md space-y-4 wordle-card p-4 sm:p-5 animate-spring-in">
                 <div className="text-center">
                     {welcomeMessage && !welcomeDismissed && !isFirstSession && (
-                        <div className="mb-4 rounded-[22px] border border-emerald-400/20 bg-emerald-500/10 p-3 text-left flex items-center gap-3 backdrop-blur-xl">
-                            <p className="text-emerald-200 text-sm flex-1">{welcomeMessage}</p>
+                        <div className="mb-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-2.5 text-left flex items-center gap-2">
+                            <p className="text-emerald-200 text-xs sm:text-sm flex-1">{welcomeMessage}</p>
                             <button
                                 type="button"
                                 onClick={() => setWelcomeDismissed(true)}
-                                className="min-h-[44px] min-w-[44px] text-white/50 hover:text-white"
+                                className="min-h-[40px] min-w-[40px] text-white/50 hover:text-white"
                                 aria-label="Dismiss welcome back message"
                             >
                                 &times;
                             </button>
                         </div>
                     )}
-                    {/* Avatar with prominent Edit Profile */}
-                    <div className="relative inline-block mb-4 group">
-                        <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${getThemeById(user?.themeId).gradient} flex items-center justify-center text-5xl shadow-lg ring-4 ring-white/5 transition-transform group-hover:ring-white/10`}>
-                            {user.avatar}
+                    <div className="flex items-center gap-3 text-left mb-3">
+                        <div className="relative shrink-0 group">
+                            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br ${getThemeById(user?.themeId).gradient} flex items-center justify-center text-3xl shadow-lg ring-2 ring-white/10`}>
+                                {user.avatar}
+                            </div>
+                            <button
+                                onClick={openEditProfile}
+                                className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm border border-white/20 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                                aria-label="Edit profile"
+                                title="Edit profile"
+                            >
+                                <Pencil className="w-3.5 h-3.5" />
+                            </button>
                         </div>
-                        <button
-                            onClick={() => login(null)}
-                            className="absolute -bottom-1 -right-1 p-2.5 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm border border-white/20 transition-all hover:scale-110 active:scale-95 shadow-lg min-w-[44px] min-h-[44px] flex items-center justify-center"
-                            aria-label="Edit profile"
-                            title="Edit profile"
-                        >
-                            <Pencil className="w-4 h-4" />
-                        </button>
+                        <div className="min-w-0 flex-1">
+                            <h2 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-white truncate">
+                                Hi, {user.name}
+                            </h2>
+                            <p className="text-white/50 text-sm">
+                                {isFirstSession
+                                    ? 'Guided 3-round warmup — write one clever connection.'
+                                    : sessionId
+                                        ? `Round ${roundNumber} of ${totalRounds} · ${sessionScore} pts`
+                                        : 'Play today\'s puzzle, then practice or invite friends.'}
+                            </p>
+                        </div>
                     </div>
-                    <h2 className="text-2xl font-display font-bold tracking-tight text-white mb-2">
-                        Hi, {user.name}
-                    </h2>
-                    <p className="text-white/55 mb-4">
-                        {isFirstSession ? 'Your first run is a guided 3-round warmup.' : 'Ready to make some connections?'}
-                    </p>
-                    <p className="text-white/40 text-sm mb-4">
-                        {isFirstSession
-                            ? 'Write one clever phrase, score it (AI, Manual, or Friend Judge), then invite someone to play.'
-                            : `Complete ${sessionId ? totalRounds : sessionLength} rounds and try to beat your average score.`}
-                    </p>
-                    {!isFirstSession && <ServiceStatusCard className="mb-4" />}
                     {!isFirstSession && stats.totalRounds > 0 && (
-                        <div className="mb-4 rounded-[22px] border border-white/10 bg-white/[0.05] p-4 text-left">
-                            <div className="game-section-label mb-2">{tr('lobby.yourProgress')}</div>
-                            <div className="grid grid-cols-2 gap-3 text-sm">
-                                <div>
-                                    <div className="text-white/50 text-xs">{tr('lobby.bestScore')}</div>
-                                    <div className="text-white font-bold">{profileSummary.bestScore != null ? `${profileSummary.bestScore}/10` : '—'}</div>
-                                </div>
-                                <div>
-                                    <div className="text-white/50 text-xs">{tr('lobby.streakLabel')}</div>
-                                    <div className="text-emerald-300 font-bold">{profileSummary.currentStreak > 0 ? `${profileSummary.currentStreak} days` : tr('lobby.startToday')}</div>
-                                </div>
-                                <div>
-                                    <div className="text-white/50 text-xs">{tr('lobby.favoriteTheme')}</div>
-                                    <div className="text-white font-bold">{profileSummary.favoriteThemeId ? getThemeById(profileSummary.favoriteThemeId).label : '—'}</div>
-                                </div>
-                                <div>
-                                    <div className="text-white/50 text-xs">{tr('lobby.nextUnlock')}</div>
-                                    <div className="text-white font-bold">
-                                        {profileSummary.nextMilestone ? profileSummary.nextMilestone.label : tr('lobby.allUnlocked')}
-                                    </div>
-                                    {profileSummary.nextMilestone && (
-                                        <>
-                                            <div className="text-amber-200/80 text-[11px] mt-1">
-                                                {profileSummary.nextMilestone.remaining === 0
-                                                    ? 'Ready to unlock'
-                                                    : `${profileSummary.nextMilestone.remaining} more ${profileSummary.nextMilestone.type === 'rounds' ? 'rounds' : 'streak days'}`}
-                                            </div>
-                                            <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                                <div
-                                                    className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-400"
-                                                    style={{
-                                                        width: `${Math.min(100, Math.round(
-                                                            ((profileSummary.nextMilestone.threshold - profileSummary.nextMilestone.remaining)
-                                                                / Math.max(1, profileSummary.nextMilestone.threshold)) * 100
-                                                        ))}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                            {profileSummary.streakAtRisk && (
-                                <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-amber-100 text-xs">
-                                    Day {profileSummary.currentStreak} streak is at risk — play today to keep it alive.
-                                </div>
-                            )}
-                            <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
-                                <div className="rounded-xl bg-white/[0.04] border border-white/10 px-2 py-2">
-                                    <div className="text-white/40">Avg</div>
-                                    <div className="text-white font-semibold tabular-nums">
-                                        {profileSummary.averageScore != null ? profileSummary.averageScore.toFixed(1) : '—'}
-                                    </div>
-                                </div>
-                                <div className="rounded-xl bg-white/[0.04] border border-white/10 px-2 py-2">
-                                    <div className="text-white/40">Friend scores</div>
-                                    <div className="text-white font-semibold tabular-nums">{profileSummary.friendJudgedCount}</div>
-                                </div>
-                                <div className="rounded-xl bg-white/[0.04] border border-white/10 px-2 py-2">
-                                    <div className="text-white/40">Highlights</div>
-                                    <div className="text-white font-semibold tabular-nums">{profileSummary.highlightCount}</div>
-                                </div>
-                            </div>
-                            {dailySummary.weeklyCompletions > 0 && (
-                                <p className="text-white/45 text-xs mt-3">
-                                    {tr('lobby.weeklyDaily', {
-                                        count: dailySummary.weeklyCompletions,
-                                        plural: dailySummary.weeklyCompletions === 1 ? '' : 's',
-                                    })}
-                                    {dailySummary.weeklyBest != null
-                                        ? ` · ${tr('lobby.weeklyDailyBest', { score: dailySummary.weeklyBest })}`
-                                        : ''}.
-                                </p>
-                            )}
-                        </div>
-                    )}
-                    {!isFirstSession && <PWAInstallBanner className="mb-4" />}
-                    <div className="mb-4 grid grid-cols-3 gap-2 text-xs uppercase tracking-wide text-white/70">
-                        <span className="wordle-tile min-h-[44px] flex-col px-2 text-[0.65rem]">
-                            <span>Judge</span>
-                            <span className="text-white/80">{scoringMode === 'human' ? 'Manual' : 'AI'}</span>
-                        </span>
-                        <span className="wordle-tile min-h-[44px] flex-col px-2 text-[0.65rem]">
-                            <span>Media</span>
-                            <span className="text-white/80">
-                                {(user?.mediaType || MEDIA_TYPES.IMAGE) === MEDIA_TYPES.IMAGE ? tr('lobby.images') :
-                                 (user?.mediaType) === MEDIA_TYPES.VIDEO ? tr('lobby.videos') :
-                                 (user?.mediaType) === MEDIA_TYPES.MEMES_VIDEOS ? tr('lobby.memesVideos') : tr('lobby.audio')}
+                        <div className="mb-3 flex flex-wrap justify-center gap-2 text-xs">
+                            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-white/70">
+                                Best <span className="text-white font-semibold">{profileSummary.bestScore != null ? `${profileSummary.bestScore}/10` : '—'}</span>
                             </span>
-                        </span>
-                        <span className="wordle-tile min-h-[44px] flex-col px-2 text-[0.65rem]">
-                            <span>Rounds</span>
-                            <span className="text-white/80">{stats.totalRounds}</span>
-                        </span>
-                    </div>
-                    <div className="mb-4 rounded-[18px] border border-white/10 bg-white/[0.04] p-3 text-left">
-                        <div className="game-section-label mb-2">How scoring works</div>
-                        <div className="grid grid-cols-2 gap-2 mb-2">
-                            <button
-                                type="button"
-                                onClick={() => handleScoringModeChange('human')}
-                                aria-pressed={scoringMode === 'human'}
-                                className={`game-choice min-h-[40px] py-2 text-xs font-semibold ${scoringMode === 'human' ? 'game-choice-selected' : ''}`}
-                            >
-                                Manual Judge
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleScoringModeChange('ai')}
-                                aria-pressed={scoringMode === 'ai'}
-                                className={`game-choice min-h-[40px] py-2 text-xs font-semibold ${scoringMode === 'ai' ? 'game-choice-selected' : ''}`}
-                            >
-                                AI Judge
-                            </button>
-                        </div>
-                        <p className="text-white/45 text-[11px] leading-relaxed">
-                            {scoringMode === 'human'
-                                ? 'You score the reveal yourself. After any round you can still copy a Friend Judge link for async feedback. Multiplayer rooms use live room voting.'
-                                : 'Gemini scores solo rounds when configured. Friend Judge links still work after the reveal. Multiplayer rooms vote live when set to Manual.'}
-                        </p>
-                    </div>
-                    {!isFirstSession && ([MEDIA_TYPES.IMAGE, MEDIA_TYPES.MEMES_VIDEOS, MEDIA_TYPES.VIDEO].includes(user?.mediaType || MEDIA_TYPES.IMAGE)) && (
-                        <div className="mb-4">
-                            <CustomImagesManager
-                                customImages={customImages}
-                                onRefresh={refreshCustomImages}
-                                useCustomImages={useCustomImages}
-                                onUseCustomImagesChange={handleUseCustomImagesChange}
-                                mediaType={user?.mediaType || MEDIA_TYPES.IMAGE}
-                            />
+                            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-white/70">
+                                <span className="text-emerald-300 font-semibold">
+                                    {profileSummary.currentStreak > 0 ? `${profileSummary.currentStreak} days` : tr('lobby.startToday')}
+                                </span>
+                            </span>
+                            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-white/70">
+                                Solo <span className="text-white font-semibold">{scoringMode === 'human' ? 'You' : 'AI'}</span>
+                            </span>
                         </div>
                     )}
-                    <div className="flex flex-wrap gap-4 justify-center mb-4">
-                        <button
-                            onClick={handleInvite}
-                            className="text-sm text-white/50 hover:text-white underline min-h-[44px] flex items-center"
-                            aria-label={inviteCopied ? 'Link copied to clipboard' : 'Invite friends to play'}
-                        >
-                            {inviteCopied ? 'Copied!' : 'Invite friends to play'}
-                        </button>
-                        <button
-                            onClick={() => {
-                                setOnboardingDismissCallback(() => () => setShowOnboarding(false));
-                                setShowOnboarding(true);
-                            }}
-                            className="text-sm text-white/50 hover:text-white underline flex items-center gap-1 min-h-[44px]"
-                            aria-label="How it works"
-                        >
-                            <HelpCircle className="w-4 h-4" />
-                            How it works
-                        </button>
-                        <button
-                            onClick={() => setShowUnlockModal(true)}
-                            className="text-sm text-white/50 hover:text-white underline flex items-center gap-1 min-h-[44px]"
-                            aria-label="How to unlock avatars and themes"
-                        >
-                            <Unlock className="w-4 h-4" />
-                            Unlocks
-                        </button>
-                    </div>
-                    {sessionId && (
-                        <div className="mb-6 text-sm text-white/60">
-                            Session: <span className="text-white font-semibold">Round {roundNumber} of {totalRounds}</span> ·
-                            <span className="text-white font-semibold"> {sessionScore} pts</span>
+                    {profileSummary.streakAtRisk && (
+                        <div className="mb-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-amber-100 text-xs text-left">
+                            Day {profileSummary.currentStreak} streak is at risk — play today to keep it alive.
                         </div>
                     )}
+                    {!backendReady && !isFirstSession && <ServiceStatusCard className="mb-3" />}
+                    {stats.totalRounds >= 3 && <NotificationBanner />}
 
-                    {!showMultiplayer && !sessionId && (
-                        <div className="mb-3 text-center">
-                            <div className="game-section-label">Start here</div>
-                            <p className="text-white/55 text-sm mt-1">Play today&apos;s puzzle first, then practice or invite friends.</p>
-                        </div>
-                    )}
-
-                    {/* Daily Challenge */}
+                    {/* Daily Challenge — primary entry CTA */}
                     {!showMultiplayer && !dailyPlayed && (
                         <button
                             onClick={startDailyChallenge}
-                            disabled={!!sessionId}
                             aria-label="Start today's Venn daily puzzle"
-                            className="game-hero-card w-full mb-4 disabled:opacity-50 disabled:cursor-not-allowed group"
+                            className="game-hero-card w-full mb-3 group"
                         >
                             <div className="flex items-center gap-3">
-                                <div className="wordle-tile wordle-tile-present h-12 w-12 shrink-0 rounded-2xl">
-                                    <CalendarDays className="w-6 h-6 text-amber-950" />
+                                <div className="wordle-tile wordle-tile-present h-11 w-11 shrink-0 rounded-2xl">
+                                    <CalendarDays className="w-5 h-5 text-amber-950" />
                                 </div>
-                                <div className="flex-1">
-                                    <div className="text-white font-semibold flex items-center gap-2">
+                                <div className="flex-1 text-left">
+                                    <div className="text-white font-semibold flex items-center gap-2 flex-wrap">
                                         Today&apos;s Venn
-                                        <span className="text-[10px] px-2.5 py-0.5 rounded-full border border-amber-300/40 bg-amber-300/20 text-amber-100 font-semibold">Daily Challenge</span>
+                                        <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-300/40 bg-amber-300/20 text-amber-100 font-semibold">Daily Challenge</span>
                                     </div>
-                                    <div className="text-white/50 text-sm">{dailyChallenge.prompt}</div>
-                                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-amber-200/70">
-                                        <span>1.5× score bonus today</span>
+                                    <div className="text-white/50 text-sm line-clamp-1">{dailyChallenge.prompt}</div>
+                                    <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-amber-200/70">
+                                        <span>1.5× today</span>
                                         <span>{dailySummary.completions} daily completion{dailySummary.completions === 1 ? '' : 's'}</span>
                                         {dailySummary.bestScore !== null && <span>Best daily: {dailySummary.bestScore}/10</span>}
                                     </div>
                                 </div>
-                                <Zap className="w-5 h-5 text-amber-400" />
+                                <Zap className="w-5 h-5 text-amber-400 shrink-0" />
                             </div>
                         </button>
                     )}
-                    {!isFirstSession && !showMultiplayer && weeklyEvent && (
-                        <div className="w-full mb-4 p-4 rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 text-left">
-                            <div className="flex items-center justify-between gap-3 mb-1">
-                                <span className="text-purple-300 text-xs uppercase tracking-wider font-bold">This Week&apos;s Event</span>
-                                <span className="text-white/40 text-xs">Ends in {weeklyCountdown}</span>
-                            </div>
-                            <div className="text-white font-bold">{weeklyEvent.name}</div>
-                            <div className="text-white/60 text-sm">{weeklyEvent.description}</div>
-                        </div>
-                    )}
                     {!showMultiplayer && dailyPlayed && (
-                        <div className="w-full mb-4 p-4 rounded-xl border border-amber-400/20 bg-amber-500/10 text-left text-sm">
-                            <div className="flex items-center gap-2 text-amber-200 font-semibold">
-                                <CalendarDays className="w-4 h-4" />
-                                Daily challenge complete
+                        <div className="w-full mb-3 p-3 rounded-xl border border-amber-400/20 bg-amber-500/10 text-left text-sm">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 text-amber-200 font-semibold">
+                                    <CalendarDays className="w-4 h-4" />
+                                    Daily complete
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleDailyShare}
+                                    className="text-xs text-amber-100 underline min-h-[40px] px-2"
+                                >
+                                    {dailyShareCopied ? 'Copied!' : 'Share result'}
+                                </button>
                             </div>
-                            <p className="mt-1 text-white/60">{dailySummary.shareLine}</p>
-                            <p className="mt-2 text-amber-100/70 text-xs">1.5× daily bonus was applied to today&apos;s scores.</p>
-                            <p className="mt-1 text-white/40 text-xs">Come back tomorrow for a new prompt and another streak check-in.</p>
-                            <button
-                                type="button"
-                                onClick={handleDailyShare}
-                                className="wordle-button wordle-primary mt-3 min-h-[40px] text-sm"
-                            >
-                                {dailyShareCopied ? 'Daily result copied!' : 'Share today\'s result'}
-                            </button>
+                            <p className="mt-1 text-white/55 text-xs line-clamp-2">{dailySummary.shareLine}</p>
                         </div>
                     )}
 
-                    {/* Solo play */}
+                    {/* Solo play — keep primary actions above the fold */}
                     {!showMultiplayer && (
                         <>
-                            {/* Session length (only when not in active session) */}
                             {!sessionId && !isFirstSession && (
-                                <div className="mb-4">
-                                    <label className="game-section-label block mb-2 text-center">Session length</label>
-                                    <div className="flex gap-2 justify-center">
-                                        {[3, 5, 7].map((rounds) => (
-                                            <button
-                                                key={rounds}
-                                                type="button"
-                                                onClick={() => setSessionLength(rounds)}
-                                                aria-pressed={sessionLength === rounds}
-                                                aria-label={`${rounds} rounds`}
-                                                className={`game-segment ${sessionLength === rounds ? 'game-segment-selected' : ''}`}
-                                            >
-                                                {rounds}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <p className="text-center text-white/40 text-xs mt-2">{sessionLength} rounds · beat your average</p>
+                                <div className="mb-3 flex items-center justify-center gap-2">
+                                    <span className="text-white/40 text-xs">Rounds</span>
+                                    {[3, 5, 7].map((rounds) => (
+                                        <button
+                                            key={rounds}
+                                            type="button"
+                                            onClick={() => setSessionLength(rounds)}
+                                            aria-pressed={sessionLength === rounds}
+                                            aria-label={`${rounds} rounds`}
+                                            className={`game-segment ${sessionLength === rounds ? 'game-segment-selected' : ''}`}
+                                        >
+                                            {rounds}
+                                        </button>
+                                    ))}
                                 </div>
                             )}
-                            <div className="flex gap-4 w-full">
+                            <div className="flex gap-3 w-full">
                                 <button
                                     onClick={startGame}
                                     disabled={sessionId && roundComplete && roundNumber >= totalRounds}
-                                    className="wordle-button wordle-primary flex-1 min-h-[52px] text-base"
+                                    className="wordle-button wordle-primary flex-1 min-h-[48px] text-base"
                                     aria-label={sessionId
                                         ? roundComplete && roundNumber === totalRounds
                                             ? 'Session complete'
@@ -570,7 +479,7 @@ export function Lobby() {
                                 </button>
                                 <button
                                     onClick={() => setGameState('GALLERY')}
-                                    className="wordle-button min-w-[52px] min-h-[52px] flex items-center justify-center text-xl"
+                                    className="wordle-button min-w-[48px] min-h-[48px] flex items-center justify-center text-xl"
                                     aria-label="View connection gallery"
                                     title="Connection Gallery"
                                 >
@@ -581,7 +490,7 @@ export function Lobby() {
                             {!isFirstSession && (
                                 <button
                                     onClick={() => setShowMultiplayer(true)}
-                                    className="wordle-button mt-4 w-full flex items-center justify-center gap-2"
+                                    className="wordle-button mt-3 w-full flex items-center justify-center gap-2 min-h-[48px]"
                                 >
                                     <Users className="w-5 h-5" />
                                     Play with Friends
@@ -589,103 +498,232 @@ export function Lobby() {
                                 </button>
                             )}
 
-                            {showFeatureNav && (
-                                <div className="mt-4 grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={() => setGameState('LEADERBOARD')}
-                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                                    >
-                                        <Trophy className="w-4 h-4" />
-                                        Leaderboard
-                                    </button>
-                                    <button
-                                        onClick={() => setGameState('ACHIEVEMENTS')}
-                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                                    >
-                                        <Award className="w-4 h-4" />
-                                        Achievements
-                                    </button>
-                                    <button
-                                        onClick={() => setGameState('THEME_BUILDER')}
-                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                                    >
-                                        <Palette className="w-4 h-4" />
-                                        Creator
-                                    </button>
-                                    <button
-                                        onClick={() => setGameState('SHOP')}
-                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                                    >
-                                        <ShoppingBag className="w-4 h-4" />
-                                        Shop
-                                        <LocalPreviewBadge />
-                                    </button>
-                                </div>
-                            )}
+                            <details className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] text-left group">
+                                <summary className="cursor-pointer list-none px-4 py-3 text-sm text-white/70 font-semibold flex items-center justify-between min-h-[44px]">
+                                    <span>Progress &amp; settings</span>
+                                    <span className="text-white/35 text-xs group-open:hidden">Show</span>
+                                    <span className="text-white/35 text-xs hidden group-open:inline">Hide</span>
+                                </summary>
+                                <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-3">
+                                    {!isFirstSession && stats.totalRounds > 0 && (
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                                            <div className="game-section-label mb-2">{tr('lobby.yourProgress')}</div>
+                                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                                <div>
+                                                    <div className="text-white/50 text-xs">{tr('lobby.favoriteTheme')}</div>
+                                                    <div className="text-white font-bold">{profileSummary.favoriteThemeId ? getThemeById(profileSummary.favoriteThemeId).label : '—'}</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-white/50 text-xs">{tr('lobby.nextUnlock')}</div>
+                                                    <div className="text-white font-bold">
+                                                        {profileSummary.nextMilestone ? profileSummary.nextMilestone.label : tr('lobby.allUnlocked')}
+                                                    </div>
+                                                    {profileSummary.nextMilestone && (
+                                                        <div className="text-amber-200/80 text-[11px] mt-1">
+                                                            {profileSummary.nextMilestone.remaining === 0
+                                                                ? 'Ready to unlock'
+                                                                : `${profileSummary.nextMilestone.remaining} more ${profileSummary.nextMilestone.type === 'rounds' ? 'rounds' : 'streak days'}`}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+                                                <div className="rounded-xl bg-white/[0.04] border border-white/10 px-2 py-2">
+                                                    <div className="text-white/40">Avg</div>
+                                                    <div className="text-white font-semibold tabular-nums">
+                                                        {profileSummary.averageScore != null ? profileSummary.averageScore.toFixed(1) : '—'}
+                                                    </div>
+                                                </div>
+                                                <div className="rounded-xl bg-white/[0.04] border border-white/10 px-2 py-2">
+                                                    <div className="text-white/40">Friend scores</div>
+                                                    <div className="text-white font-semibold tabular-nums">{profileSummary.friendJudgedCount}</div>
+                                                </div>
+                                                <div className="rounded-xl bg-white/[0.04] border border-white/10 px-2 py-2">
+                                                    <div className="text-white/40">Highlights</div>
+                                                    <div className="text-white font-semibold tabular-nums">{profileSummary.highlightCount}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
-                            {showAdvancedModes && (
-                                <div className="mt-3 grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={() => setGameState('RANKED')}
-                                        className="py-3 px-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-100 text-sm font-semibold flex items-center justify-center gap-2 transition-colors border border-indigo-400/20"
-                                    >
-                                        <Shield className="w-4 h-4" />
-                                        Ranked
-                                        <LocalPreviewBadge />
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            if (!sessionId) startSession(sessionLength);
-                                            setGameState('AI_BATTLE');
-                                        }}
-                                        className="py-3 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-100 text-sm font-semibold flex items-center justify-center gap-2 transition-colors border border-red-400/20"
-                                    >
-                                        <Brain className="w-4 h-4" />
-                                        AI Battle
-                                        <LocalPreviewBadge />
-                                    </button>
-                                    <button
-                                        onClick={() => setGameState('TOURNAMENT')}
-                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                                    >
-                                        <Trophy className="w-4 h-4" />
-                                        Tournament
-                                        <LocalPreviewBadge />
-                                    </button>
-                                    <button
-                                        onClick={() => setGameState('ASYNC_CHAINS')}
-                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                                    >
-                                        <Link className="w-4 h-4" />
-                                        Challenge Links
-                                        <LocalPreviewBadge />
-                                    </button>
-                                    <button
-                                        onClick={() => setGameState('AI_SETTINGS')}
-                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                                    >
-                                        <Brain className="w-4 h-4" />
-                                        AI Settings
-                                        <LocalPreviewBadge />
-                                    </button>
-                                    <button
-                                        onClick={() => setGameState('ANALYTICS')}
-                                        className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                                    >
-                                        <BarChart3 className="w-4 h-4" />
-                                        Stats
-                                    </button>
-                                </div>
-                            )}
+                                    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                                        <div className="game-section-label mb-2">Who scores solo rounds?</div>
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleScoringModeChange('human')}
+                                                aria-pressed={scoringMode === 'human'}
+                                                className={`game-choice min-h-[40px] py-2 text-xs font-semibold ${scoringMode === 'human' ? 'game-choice-selected' : ''}`}
+                                            >
+                                                You score
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleScoringModeChange('ai')}
+                                                aria-pressed={scoringMode === 'ai'}
+                                                className={`game-choice min-h-[40px] py-2 text-xs font-semibold ${scoringMode === 'ai' ? 'game-choice-selected' : ''}`}
+                                            >
+                                                AI scores
+                                            </button>
+                                        </div>
+                                        <p className="text-white/45 text-[11px] leading-relaxed">
+                                            {scoringMode === 'human'
+                                                ? 'You score the reveal. Friend Judge is a separate share link after any round. Live rooms use room vote when Manual.'
+                                                : 'AI scores solo rounds when configured. Friend Judge still works after reveal.'}
+                                        </p>
+                                    </div>
 
-                            {lobbyTier < 3 && (
-                                <button
-                                    onClick={handleShowAllFeatures}
-                                    className="mt-3 text-sm text-white/40 hover:text-white underline"
-                                >
-                                    {showAllFeatures ? 'Hide advanced features' : 'Show all features'}
-                                </button>
-                            )}
+                                    {!isFirstSession && ([MEDIA_TYPES.IMAGE, MEDIA_TYPES.MEMES_VIDEOS, MEDIA_TYPES.VIDEO].includes(user?.mediaType || MEDIA_TYPES.IMAGE)) && (
+                                        <CustomImagesManager
+                                            customImages={customImages}
+                                            onRefresh={refreshCustomImages}
+                                            useCustomImages={useCustomImages}
+                                            onUseCustomImagesChange={handleUseCustomImagesChange}
+                                            mediaType={user?.mediaType || MEDIA_TYPES.IMAGE}
+                                        />
+                                    )}
+
+                                    {!isFirstSession && weeklyEvent && (
+                                        <div className="p-3 rounded-xl border border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
+                                            <div className="flex items-center justify-between gap-3 mb-1">
+                                                <span className="text-purple-300 text-xs uppercase tracking-wider font-bold">This Week</span>
+                                                <span className="text-white/40 text-xs">{weeklyCountdown}</span>
+                                            </div>
+                                            <div className="text-white font-bold text-sm">{weeklyEvent.name}</div>
+                                            <div className="text-white/60 text-xs">{weeklyEvent.description}</div>
+                                        </div>
+                                    )}
+
+                                    {!isFirstSession && <PWAInstallBanner />}
+
+                                    <div className="flex flex-wrap gap-3 justify-center">
+                                        <button
+                                            onClick={handleInvite}
+                                            className="text-sm text-white/50 hover:text-white underline min-h-[40px]"
+                                            aria-label={inviteCopied ? 'Link copied to clipboard' : 'Invite friends to play'}
+                                        >
+                                            {inviteCopied ? 'Copied!' : 'Invite friends'}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setOnboardingDismissCallback(() => () => setShowOnboarding(false));
+                                                setShowOnboarding(true);
+                                            }}
+                                            className="text-sm text-white/50 hover:text-white underline flex items-center gap-1 min-h-[40px]"
+                                            aria-label="How it works"
+                                        >
+                                            <HelpCircle className="w-4 h-4" />
+                                            How it works
+                                        </button>
+                                        <button
+                                            onClick={() => setShowUnlockModal(true)}
+                                            className="text-sm text-white/50 hover:text-white underline flex items-center gap-1 min-h-[40px]"
+                                            aria-label="How to unlock avatars and themes"
+                                        >
+                                            <Unlock className="w-4 h-4" />
+                                            Unlocks
+                                        </button>
+                                    </div>
+
+                                    {showFeatureNav && (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => setGameState('LEADERBOARD')}
+                                                className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2"
+                                            >
+                                                <Trophy className="w-4 h-4" />
+                                                Leaderboard
+                                            </button>
+                                            <button
+                                                onClick={() => setGameState('ACHIEVEMENTS')}
+                                                className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2"
+                                            >
+                                                <Award className="w-4 h-4" />
+                                                Achievements
+                                            </button>
+                                            <button
+                                                onClick={() => setGameState('THEME_BUILDER')}
+                                                className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2"
+                                            >
+                                                <Palette className="w-4 h-4" />
+                                                Creator
+                                            </button>
+                                            <button
+                                                onClick={() => setGameState('SHOP')}
+                                                className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2"
+                                            >
+                                                <ShoppingBag className="w-4 h-4" />
+                                                Shop
+                                                <LocalPreviewBadge />
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {showAdvancedModes && (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => setGameState('RANKED')}
+                                                className="py-3 px-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-100 text-sm font-semibold flex items-center justify-center gap-2 border border-indigo-400/20"
+                                            >
+                                                <Shield className="w-4 h-4" />
+                                                Ranked
+                                                <LocalPreviewBadge />
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (!sessionId) startSession(sessionLength);
+                                                    setGameState('AI_BATTLE');
+                                                }}
+                                                className="py-3 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-100 text-sm font-semibold flex items-center justify-center gap-2 border border-red-400/20"
+                                            >
+                                                <Brain className="w-4 h-4" />
+                                                AI Battle
+                                                <LocalPreviewBadge />
+                                            </button>
+                                            <button
+                                                onClick={() => setGameState('TOURNAMENT')}
+                                                className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2"
+                                            >
+                                                <Trophy className="w-4 h-4" />
+                                                Tournament
+                                                <LocalPreviewBadge />
+                                            </button>
+                                            <button
+                                                onClick={() => setGameState('ASYNC_CHAINS')}
+                                                className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2"
+                                            >
+                                                <Link className="w-4 h-4" />
+                                                Challenge Links
+                                                <LocalPreviewBadge />
+                                            </button>
+                                            <button
+                                                onClick={() => setGameState('AI_SETTINGS')}
+                                                className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2"
+                                            >
+                                                <Brain className="w-4 h-4" />
+                                                AI Settings
+                                                <LocalPreviewBadge />
+                                            </button>
+                                            <button
+                                                onClick={() => setGameState('ANALYTICS')}
+                                                className="py-3 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/75 text-sm font-semibold flex items-center justify-center gap-2"
+                                            >
+                                                <BarChart3 className="w-4 h-4" />
+                                                Stats
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {lobbyTier < 3 && (
+                                        <button
+                                            onClick={handleShowAllFeatures}
+                                            className="w-full text-sm text-white/40 hover:text-white underline"
+                                        >
+                                            {showAllFeatures ? 'Hide advanced features' : 'Show all features'}
+                                        </button>
+                                    )}
+                                </div>
+                            </details>
                         </>
                     )}
 
@@ -779,12 +817,12 @@ export function Lobby() {
     // Create Profile view
     // ============================================================
     return (
-        <div className="w-full max-w-md wordle-card p-5 sm:p-7 animate-spring-in">
+        <div className="w-full max-w-md wordle-card p-4 sm:p-5 animate-spring-in">
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
-            <h2 className="text-2xl font-display font-bold tracking-tight text-white mb-2 text-center">Create Profile</h2>
-            <p className="text-white/50 text-sm text-center mb-6">Set up today&apos;s puzzle run and keep your streak moving.</p>
-            <ServiceStatusCard className="mb-6" />
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <h2 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-white mb-1 text-center">Create Profile</h2>
+            <p className="text-white/50 text-sm text-center mb-4">Name, pick an avatar, and start playing.</p>
+            {!backendReady && <ServiceStatusCard className="mb-4" />}
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <section aria-labelledby="profile-username">
                     <label id="profile-username" className="block text-sm font-medium text-white/60 mb-2">Username</label>
                     <div className="relative">
@@ -797,6 +835,7 @@ export function Lobby() {
                             maxLength={12}
                             aria-describedby="name-char-count"
                             aria-invalid={!name.trim()}
+                            autoFocus
                         />
                         <span
                             id="name-char-count"
@@ -809,42 +848,39 @@ export function Lobby() {
                 </section>
 
                 <section aria-labelledby="profile-avatar">
-                    <div className="flex items-center justify-between mb-2">
-                        <label id="profile-avatar" className="block text-sm font-medium text-white/60">Avatar</label>
-                        <button
-                            type="button"
-                            onClick={() => setShowUnlockModal(true)}
-                            className="text-xs text-purple-300 hover:text-purple-200 flex items-center gap-1"
-                            aria-label="How to unlock more avatars"
-                        >
-                            <Unlock className="w-3 h-3" />
-                            Unlock more
-                        </button>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2" role="group">
-                        {AVATARS.map((a) => {
-                            const locked = !isAvatarUnlocked(a, stats);
-                            return (
-                                <button
-                                    key={a}
-                                    type="button"
-                                    onClick={() => !locked && setAvatar(a)}
-                                    disabled={locked}
-                                    aria-pressed={avatar === a}
-                                    aria-label={locked ? `Locked. Unlock with milestones.` : `Select avatar ${a}`}
-                                    className={`wordle-tile aspect-square min-w-[44px] min-h-[44px] text-2xl transition-all relative
-                                        ${locked ? 'opacity-50 cursor-not-allowed grayscale' : ''}
-                                        ${avatar === a ? 'wordle-tile-correct scale-95' : 'hover:border-[#565758]'}
-                                    `}
-                                    title={locked ? 'Unlock with milestones' : a}
-                                >
-                                    {a}
-                                    {locked && <span className="absolute bottom-0 right-0 text-xs" aria-hidden="true">🔒</span>}
-                                </button>
-                            );
-                        })}
+                    <label id="profile-avatar" className="block text-sm font-medium text-white/60 mb-2">Avatar</label>
+                    <div className="grid grid-cols-6 gap-2" role="group">
+                        {AVATARS.slice(0, 6).map((a) => (
+                            <button
+                                key={a}
+                                type="button"
+                                onClick={() => setAvatar(a)}
+                                aria-pressed={avatar === a}
+                                aria-label={`Select avatar ${a}`}
+                                className={`wordle-tile aspect-square min-w-[44px] min-h-[44px] text-2xl transition-all
+                                    ${avatar === a ? 'wordle-tile-correct scale-95' : 'hover:border-[#565758]'}
+                                `}
+                            >
+                                {a}
+                            </button>
+                        ))}
                     </div>
                 </section>
+
+                <button
+                    type="submit"
+                    disabled={!name.trim()}
+                    className="wordle-button wordle-primary w-full text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Join Lobby
+                </button>
+
+                <details className="rounded-2xl border border-white/10 bg-white/[0.03] text-left">
+                    <summary className="cursor-pointer list-none px-4 py-3 text-sm text-white/60 font-semibold min-h-[44px] flex items-center justify-between">
+                        <span>More options</span>
+                        <span className="text-white/35 text-xs">Theme, scoring, media</span>
+                    </summary>
+                    <div className="px-4 pb-4 space-y-4 border-t border-white/10 pt-3">
 
                 <section aria-labelledby="profile-theme">
                     <div className="flex items-center justify-between mb-2">
@@ -896,37 +932,37 @@ export function Lobby() {
                 </section>
 
                 <section aria-labelledby="profile-scoring">
-                    <label id="profile-scoring" className="block text-sm font-medium text-white/60 mb-2">Scoring</label>
+                    <label id="profile-scoring" className="block text-sm font-medium text-white/60 mb-2">Who scores solo rounds?</label>
                     <div className="grid grid-cols-2 gap-3" role="group">
                         <button
                             type="button"
                             onClick={() => setScoringMode('human')}
                             aria-pressed={scoringMode === 'human'}
-                            aria-label="Manual judge — you enter the score yourself after each round"
+                            aria-label="You score — enter the score yourself after each round"
                             className={`game-choice min-h-[44px] py-3 text-sm font-semibold transition-all ${scoringMode === 'human'
                                     ? 'game-choice-selected'
                                     : ''
                                 }`}
                         >
-                            Manual Judge
+                            You score
                         </button>
                         <button
                             type="button"
                             onClick={() => setScoringMode('ai')}
                             aria-pressed={scoringMode === 'ai'}
-                            aria-label="AI judge — Gemini scores your connections automatically"
+                            aria-label="AI scores — Gemini scores your connections automatically"
                             className={`game-choice min-h-[44px] py-3 text-sm font-semibold transition-all ${scoringMode === 'ai'
                                     ? 'game-choice-selected'
                                     : ''
                                 }`}
                         >
-                            AI Judge
+                            AI scores
                         </button>
                     </div>
                     <p className="mt-2 text-center text-white/50 text-xs">
                         {scoringMode === 'human'
-                            ? 'Manual Judge: you score the reveal. Friend Judge is a separate share link after the round. Multiplayer Manual uses live room voting.'
-                            : 'AI Judge: Gemini scores solo rounds when configured (with a local fallback). Friend Judge links still work after reveal.'
+                            ? 'You score the reveal. Friend Judge is a separate share link. Live rooms use room vote when Manual.'
+                            : 'AI scores solo rounds when configured. Friend Judge links still work after reveal.'
                         }
                     </p>
                 </section>
@@ -1047,14 +1083,8 @@ export function Lobby() {
                         ))}
                     </div>
                 </section>
-
-                <button
-                    type="submit"
-                    disabled={!name.trim()}
-                    className="wordle-button wordle-primary w-full mt-4 text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Join Lobby
-                </button>
+                    </div>
+                </details>
             </form>
         </div>
     );

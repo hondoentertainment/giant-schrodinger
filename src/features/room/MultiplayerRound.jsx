@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
 import { CheckCircle, Clock, Users } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
+import { playSubmitSound, playTickSound, playUrgentTick } from '../../services/sounds';
 import { ConnectionBanner } from './ConnectionBanner';
 import { useResolvedRoundAssets } from '../../hooks/useResolvedRoundAssets';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -49,6 +50,7 @@ export function MultiplayerRound() {
         const answer = submission.trim() || '(no answer)';
         setSubmitted(true);
         haptic('success');
+        playSubmitSound();
         await submitMultiplayerAnswer(answer);
     }, [submission, submitted, submitMultiplayerAnswer]);
 
@@ -74,6 +76,14 @@ export function MultiplayerRound() {
         handleSubmit();
         return undefined;
     }, [timer, submitted, handleSubmit]);
+
+    useEffect(() => {
+        if (submitted) return;
+        if (timer > 0 && timer <= 10) {
+            if (timer <= 5) playUrgentTick();
+            else playTickSound();
+        }
+    }, [timer, submitted]);
 
     useEffect(() => {
         if (isHost && submissions.length >= players.length && players.length > 0 && !scoring) {
