@@ -3,7 +3,7 @@ import { useGame } from '../../context/GameContext';
 import { useRoom } from '../../context/RoomContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { normalizeMediaType } from '../../lib/mediaType';
-import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked, getProfileSummary } from '../../services/stats';
+import { getStats, getMilestones, isThemeUnlocked, getProfileSummary } from '../../services/stats';
 import { reportAppEvent } from '../../lib/telemetry';
 import { getDailyChallenge, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { isBackendEnabled } from '../../lib/supabase';

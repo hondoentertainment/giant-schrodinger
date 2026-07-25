@@ -118,8 +118,7 @@ function PhaseTransition({ children, phase, screenKey }) {
             });
         }, 150);
         return () => clearTimeout(timer);
-        // screenKey covers ROUND→REVEAL when roundData attaches on the same phase name
-    }, [phase, screenKey]); // eslint-disable-line react-hooks/exhaustive-deps -- children swapped intentionally on phase/key
+    }, [phase, screenKey]);
 
     return (
         <div className={animClass}>

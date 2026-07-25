@@ -271,7 +271,6 @@ export function MultiplayerReveal() {
         if (finishAttemptedRef.current) return;
         finishAttemptedRef.current = true;
         handleSeeFinalStandings();
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when last-round results land
     }, [isHost, hasNextRound, isFinished, isResultsReady, revealPhase]);
 
     const handleRematch = async () => {
