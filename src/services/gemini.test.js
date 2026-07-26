@@ -46,6 +46,22 @@ describe('gemini service', () => {
             expect(result.commentary).toContain('Test Concept B');
         });
 
+        it('returns mock score with safe labels when prompt assets are null', async () => {
+            const result = await scoreSubmission('some answer', null, undefined);
+            expect(result.isMock).toBe(true);
+            expect(result.errorReason).toMatch(/Missing prompt assets/);
+            expect(result.commentary).toContain('the first concept');
+            expect(result.commentary).toContain('the second concept');
+        });
+
+        it('returns mock score when prompt assets have no usable label', async () => {
+            const result = await scoreSubmission('some answer', {}, { label: '   ' });
+            expect(result.isMock).toBe(true);
+            expect(result.errorReason).toMatch(/Missing prompt assets/);
+            expect(result.score).toBeGreaterThanOrEqual(1);
+            expect(result.score).toBeLessThanOrEqual(10);
+        });
+
         it('handles submission with special characters', async () => {
             const result = await scoreSubmission('He said "hello" & <tag>', asset1, asset2);
             expect(result).toBeDefined();

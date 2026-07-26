@@ -1,5 +1,7 @@
 # Mobile Deployment Guide for Venn with Friends
 
+> **Status: aspirational / deferred.** Native packaging is a PRD non-goal until hosted web multiplayer is proven. This guide is a preparation checklist, not a claim that Capacitor or store builds are shipped in-repo today. Prefer the live web app (Vercel / GitHub Pages) for production.
+
 ## Android: PWABuilder (Trusted Web Activity)
 
 ### Steps

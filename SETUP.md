@@ -1,128 +1,137 @@
-# Venn with Friends -- Backend & AI Setup
+# Venn with Friends Setup
 
-## 0. Quick Start
+## 0. Quick start
 
 1. Install deps: `npm install`
 2. Copy `.env.example` to `.env`
-3. Fill in the values you need (all are optional -- see table below)
-4. Run `npm run lint` and `npm run build`
+3. Fill in Supabase and Gemini values as needed
+4. Run `npm run test` and `npm run build`
 5. Start local app: `npm run dev`
 
----
+## 1. Environment modes
 
-## Environment Variables
+The app supports three useful runtime modes:
 
-| Variable | Purpose | Features affected without it |
-|----------|---------|------------------------------|
-| `VITE_SUPABASE_URL` | Supabase project URL | Multiplayer uses mock rooms; leaderboards, shared rounds, and friend judgements are client-only |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anonymous key | Same as above |
-| `VITE_GEMINI_API_KEY` | Google Gemini API key | AI scoring falls back to mock scores; fusion images use curated themes |
-| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | Shop purchases disabled; cosmetic items still browsable |
-| `VITE_VAPID_PUBLIC_KEY` | Web Push VAPID key | Push notifications disabled; in-app notifications still work |
-| `VITE_SENTRY_DSN` | Sentry error tracking DSN | Error monitoring disabled; errors still appear in console |
+- Solo local mode: no keys required
+- AI-enhanced mode: Gemini configured
+- Full social mode: Gemini and Supabase configured
 
-**The app runs fully without any env vars.** Solo play, mock multiplayer, gallery, achievements, and all UI features work out of the box.
+If you launch without any env vars:
 
----
+- solo play works
+- AI scoring falls back to mock scoring
+- fusion images fall back to curated theme art
+- friend judging uses local/basic behavior
+- realtime multiplayer is unavailable
 
-## 1. Supabase (multiplayer, persistence, server-side scoring)
+## 2. Supabase setup
 
-1. Create a project at [supabase.com](https://supabase.com).
-2. Run the SQL in `supabase/schema.sql` in the Supabase SQL editor. This creates all tables (users, rounds, leaderboard, challenges, rooms, analytics_events, ranked data) with Row Level Security policies and indexes.
-3. In Supabase: Settings > API > copy the URL and anon key.
-4. Create `.env` with:
+Supabase powers:
 
-```
-VITE_SUPABASE_URL=https://xxxx.supabase.co
+- realtime multiplayer rooms
+- shared rounds
+- persistent friend judgements
+
+Steps:
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Run `supabase/schema.sql` in the Supabase SQL editor
+3. Copy the project URL and anon key from Settings > API
+4. Add them to `.env`:
+
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-5. Enable access to `shared_rounds` and `judgements` (for anon) via RLS or public access for prototyping.
-6. Ensure Realtime is enabled for `rooms`, `room_players`, and `room_submissions`.
+5. Ensure Realtime is enabled for:
+   - `rooms`
+   - `room_players`
+   - `room_submissions`
 
-### Realtime SQL Note
+### Rerun note
 
-If you have already added the tables to `supabase_realtime`, these lines in `supabase/schema.sql` can fail on rerun:
+If you already added tables to `supabase_realtime`, these statements in `supabase/schema.sql` can fail when rerun:
 
 - `alter publication supabase_realtime add table rooms;`
 - `alter publication supabase_realtime add table room_players;`
 - `alter publication supabase_realtime add table room_submissions;`
 
-In that case, skip those lines or run the rest of the schema only.
+If that happens, skip those lines and run the rest of the schema.
 
-### Edge Functions
+6. Apply `supabase/migrations/20260412000014_media_storage.sql` to create the public `media` bucket used for custom uploads and fusion images.
 
-Three Supabase Edge Functions are included in `supabase/functions/`:
-
-- **score-submission** -- Server-side Gemini scoring (keeps API key off the client)
-- **og-tags** -- Dynamic Open Graph meta tags for shared links
-- **discord-bot** -- Discord bot webhook integration
-
-Deploy them with the Supabase CLI:
+7. Deploy edge functions and set secrets:
 
 ```bash
-supabase link --project-ref your-project-ref
-supabase secrets set GEMINI_API_KEY=your-gemini-api-key
+supabase functions deploy resolve-image
 supabase functions deploy score-submission
-supabase functions deploy og-tags
-supabase functions deploy discord-bot
+supabase secrets set PEXELS_API_KEY=your-pexels-api-key
+supabase secrets set GEMINI_API_KEY=your-gemini-api-key
 ```
 
----
+The `resolve-image` function powers semantic stock photo lookup for AI-generated concepts and keyword fallbacks. Without it, the app falls back to Picsum placeholders.
 
-## 2. Gemini API (AI scoring + fusion images)
+## 3. Gemini setup
 
-1. Get an API key from [Google AI Studio](https://aistudio.google.com/apikey).
-2. Add to `.env`:
+Gemini powers:
 
-```
-VITE_GEMINI_API_KEY=your-key
-```
+- live AI scoring
+- generated fusion images
 
-3. **Scoring**: Uses `gemini-2.0-flash`. Falls back to mock scoring if the key is missing.
-4. **Fusion images**: Uses `imagen-3.0-generate-002` when a key is set. Falls back to curated images if Imagen is unavailable (e.g. API-key-only plans).
+Add this to `.env`:
 
----
-
-## 3. Stripe (shop payments)
-
-1. Get a publishable key from [Stripe Dashboard](https://dashboard.stripe.com/).
-2. Add to `.env`:
-
-```
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```env
+VITE_GEMINI_API_KEY=your-gemini-api-key
 ```
 
-3. Without this key, the shop UI is still browsable but purchases are disabled.
+Current runtime behavior:
 
----
+- scoring uses `gemini-2.0-flash`
+- image generation uses `imagen-3.0-generate-002`
+- if Gemini is unavailable, the app falls back gracefully instead of blocking play
 
-## 4. Push Notifications (VAPID)
+## 4. Pexels setup (optional, recommended)
 
-1. Generate VAPID keys (e.g. via `web-push generate-vapid-keys`).
-2. Add the public key to `.env`:
+Pexels powers semantic image lookup through the `resolve-image` Supabase Edge Function.
 
-```
-VITE_VAPID_PUBLIC_KEY=your-vapid-public-key
-```
+1. Create a free API key at [pexels.com/api](https://www.pexels.com/api/)
+2. Set `PEXELS_API_KEY` as a Supabase function secret (see section 2)
+3. Optionally refresh theme catalogs locally:
 
-3. Without this key, push notifications are disabled but in-app notification banners still work.
-
----
-
-## 5. Sentry (error monitoring)
-
-1. Create a project at [sentry.io](https://sentry.io/).
-2. Add to `.env`:
-
-```
-VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+```bash
+PEXELS_API_KEY=your-key npm run refresh:theme-images -- --theme neon --out scripts/output/neon-assets.json
 ```
 
-3. Without this, errors are only logged to the browser console.
+When Pexels is unavailable, the app falls back to Picsum placeholders.
 
----
+## 5. Local validation
 
+Run before shipping changes:
+
+```bash
+npm run test
+npm run build
+npm run test:e2e:desktop
+```
+
+## 6. Production secrets
+
+For GitHub Pages deployment, add these repository secrets if you want live services in production:
+
+- `VITE_GEMINI_API_KEY`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+The workflow at `.github/workflows/deploy.yml` already reads those secrets during test and build steps.
+
+## 7. Current limitation note
+
+Realtime multiplayer requires Supabase today. There is no user-facing mock multiplayer.
+
+Authoritative room voting RPCs (`cast_room_vote`, `finalize_room_votes`) are implemented in `supabase/schema.sql` and the client. Remaining work is **hosted verification** with real credentials — see [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) and [PRD.md](PRD.md).
+
+<<<<<<< HEAD
 ## Without Env Vars
 
 The app runs without any of these env vars:
@@ -184,3 +193,6 @@ The app runs without any of these env vars:
 - **Supabase Dashboard**: Monitor database size, query performance, Realtime connections
 - **GitHub Actions**: Monitor deployment success rate and test results
 - **Lighthouse CI**: Performance budgets enforced on every PR
+=======
+Judge modes: [JUDGE_MODEL.md](JUDGE_MODEL.md). Architecture: [ARCHITECTURE.md](ARCHITECTURE.md).
+>>>>>>> origin/main

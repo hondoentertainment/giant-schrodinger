@@ -372,7 +372,8 @@ export function getPartyStandings(gameId) {
 }
 
 /**
- * Advances the game to the next round.
+ * Advances the game to the between-rounds state so startPartyRound can
+ * begin the next round. Does NOT start the next round itself.
  * @param {string} gameId - The 4-char game code
  * @returns {Object} The updated game object
  */
@@ -387,8 +388,8 @@ export function advancePartyRound(gameId) {
     throw new Error('Game has already finished');
   }
 
-  // Reset status back to waiting-for-round so startPartyRound can be called
-  game.status = 'playing';
+  // Reset status back to waiting-for-round so startPartyRound can be called.
+  game.status = 'waiting';
 
   persistGame(game);
   return game;

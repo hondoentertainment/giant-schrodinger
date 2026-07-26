@@ -5,7 +5,8 @@ const WEEKLY_EVENTS = [
   { id: 'double-week', name: 'Double or Nothing Week', description: 'Score 7+ or lose it all', themeId: null, modifier: 'doubleOrNothing' },
   { id: 'nature-week', name: 'Wild Nature Week', description: 'Connect the natural world', themeId: 'nature', modifier: null },
   { id: 'retro-week', name: 'Retro Tech Week', description: 'Blast from the past', themeId: 'retro-tech', modifier: null },
-  { id: 'community-challenge', name: 'Community Challenge', description: 'One impossible pair — global leaderboard', themeId: null, modifier: null },
+  { id: 'summer-heat-week', name: 'Summer Heat Week', description: 'Sun-soaked prompts and festival energy', themeId: 'summer-heat', modifier: null },
+  { id: 'community-challenge', name: 'Community Challenge', description: 'One impossible pair — local streak bragging rights', themeId: null, modifier: null },
 ];
 
 export function getCurrentWeeklyEvent() {

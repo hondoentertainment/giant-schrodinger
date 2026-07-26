@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked } from '../../services/stats';
-import { Image, Film, Music, Unlock } from 'lucide-react';
+import { Image, Film, Music, Unlock, Laugh } from 'lucide-react';
 import { UnlockModal } from '../../components/UnlockModal';
 import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
 export function ProfileForm({ onLogin }) {
+    const { t } = useTranslation();
     const [name, setName] = useState('');
     const [avatar, setAvatar] = useState(AVATARS[0]);
     const [themeId, setThemeId] = useState(THEMES[0].id);
@@ -184,24 +186,26 @@ export function ProfileForm({ onLogin }) {
                     </p>
                 </section>
 
-                {mediaType === MEDIA_TYPES.IMAGE && (
+                {([MEDIA_TYPES.IMAGE, MEDIA_TYPES.MEMES_VIDEOS, MEDIA_TYPES.VIDEO].includes(mediaType)) && (
                     <section aria-labelledby="profile-custom-images">
                         <CustomImagesManager
                             customImages={customImages}
                             onRefresh={refreshCustomImages}
                             useCustomImages={useCustomImages}
                             onUseCustomImagesChange={setUseCustomImages}
+                            mediaType={mediaType}
                         />
                     </section>
                 )}
 
                 <section aria-labelledby="profile-media">
                     <label id="profile-media" className="block text-sm font-medium text-white/60 mb-2">Media Type</label>
-                    <div className="grid grid-cols-3 gap-3" role="group">
+                    <div className="grid grid-cols-2 gap-3" role="group">
                         {[
-                            { type: MEDIA_TYPES.IMAGE, label: 'Images', Icon: Image, desc: 'Classic visual Venn' },
-                            { type: MEDIA_TYPES.VIDEO, label: 'Videos', Icon: Film, desc: 'Looping video clips' },
-                            { type: MEDIA_TYPES.AUDIO, label: 'Audio', Icon: Music, desc: 'Sound-based connections' },
+                            { type: MEDIA_TYPES.IMAGE, label: t('lobby.images'), Icon: Image, desc: t('lobby.imagesDesc') },
+                            { type: MEDIA_TYPES.MEMES_VIDEOS, label: t('lobby.memesVideos'), Icon: Laugh, desc: t('lobby.memesVideosDesc') },
+                            { type: MEDIA_TYPES.VIDEO, label: t('lobby.videos'), Icon: Film, desc: t('lobby.videosDesc') },
+                            { type: MEDIA_TYPES.AUDIO, label: t('lobby.audio'), Icon: Music, desc: t('lobby.audioDesc') },
                         ].map(({ type, label, Icon, desc }) => (
                             <button
                                 key={type}
@@ -220,9 +224,10 @@ export function ProfileForm({ onLogin }) {
                         ))}
                     </div>
                     <p className="mt-2 text-center text-white/50 text-xs">
-                        {mediaType === MEDIA_TYPES.IMAGE && 'Classic mode — connect two images with a phrase.'}
-                        {mediaType === MEDIA_TYPES.VIDEO && 'Video mode — connect two video clips with a phrase.'}
-                        {mediaType === MEDIA_TYPES.AUDIO && 'Audio mode — connect two sounds with a phrase.'}
+                        {mediaType === MEDIA_TYPES.IMAGE && t('lobby.imagesDesc')}
+                        {mediaType === MEDIA_TYPES.MEMES_VIDEOS && t('lobby.memesVideosDesc')}
+                        {mediaType === MEDIA_TYPES.VIDEO && t('lobby.videosDesc')}
+                        {mediaType === MEDIA_TYPES.AUDIO && t('lobby.audioDesc')}
                     </p>
                 </section>
 

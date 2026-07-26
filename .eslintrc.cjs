@@ -2,6 +2,7 @@ module.exports = {
   env: {
     browser: true,
     es2021: true,
+    node: true,
   },
   parserOptions: {
     ecmaVersion: "latest",
@@ -27,5 +28,21 @@ module.exports = {
     "react-hooks/exhaustive-deps": "off",
     "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
   },
+  overrides: [
+    {
+      files: ["discord-bot/**/*.js", "*.config.js", "playwright.config.js", "lighthouse.config.cjs"],
+      env: { node: true },
+    },
+    {
+      files: ["scripts/**/*.mjs", "scripts/**/*.js"],
+      env: { node: true, es2022: true },
+      parserOptions: { ecmaVersion: 2022, sourceType: "module" },
+    },
+    {
+      files: ["public/sw.js"],
+      env: { serviceworker: true, browser: true },
+      globals: { clients: "readonly" },
+    },
+  ],
   ignorePatterns: ["dist/"],
 };

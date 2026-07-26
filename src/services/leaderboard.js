@@ -16,14 +16,26 @@ export function getTodayKey() {
 }
 
 /**
- * Returns the current week's key in YYYY-WNN format (ISO week).
+ * Returns the current week's key in YYYY-WNN format (ISO 8601 week).
+ *
+ * ISO 8601 weeks start on Monday, and week 1 is the week containing Jan 4
+ * (equivalently, the week containing the first Thursday of the year).
+ * Note the returned year is the ISO week-year, which for days near the
+ * year boundary may differ from the calendar year (e.g. 2024-12-31 is
+ * ISO "2025-W01").
+ *
+ * @param {Date} [date] - Defaults to now.
  */
-export function getWeekKey() {
-  const now = new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
-  const days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
-  const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
-  return `${now.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
+export function getWeekKey(date = new Date()) {
+  // Work in UTC so host timezone doesn't shift the week.
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  // ISO day of week: Mon=1..Sun=7
+  const dayNum = d.getUTCDay() || 7;
+  // Shift to the Thursday of this week (ISO week is defined by its Thursday).
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
 }
 
 /**

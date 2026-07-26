@@ -7,6 +7,7 @@ import {
     downloadFusionImage,
     shareViaWebShare,
 } from '../services/socialShare';
+import { trackEvent } from '../services/analytics';
 
 const ICON_SIZE = 20;
 
@@ -82,20 +83,24 @@ export default function SocialShareButtons({ shareData, imageUrl, onToast }) {
 
     const handleTwitter = () => {
         shareToTwitter(shareData);
+        trackEvent('share_click', { platform: 'twitter', surface: shareData?.surface || 'share' });
     };
 
     const handleFacebook = () => {
         shareToFacebook(shareData);
+        trackEvent('share_click', { platform: 'facebook', surface: shareData?.surface || 'share' });
     };
 
     const handleLinkedIn = () => {
         shareToLinkedIn(shareData);
+        trackEvent('share_click', { platform: 'linkedin', surface: shareData?.surface || 'share' });
     };
 
     const handleCopy = async () => {
         const result = await copyShareLink(shareData);
         if (result.success) {
             setCopied(true);
+            trackEvent('share_click', { platform: 'copy', surface: shareData?.surface || 'share' });
             onToast?.('success', result.message);
             setTimeout(() => setCopied(false), 2500);
         }
@@ -103,13 +108,16 @@ export default function SocialShareButtons({ shareData, imageUrl, onToast }) {
 
     const handleDownload = () => {
         if (!imageUrl) return;
-        downloadFusionImage(imageUrl);
-        onToast?.('success', 'Image downloaded!');
+        downloadFusionImage(imageUrl, shareData);
+        trackEvent('share_click', { platform: 'download', surface: shareData?.surface || 'share' });
+        onToast?.('success', 'Share card downloaded!');
     };
 
     const handleWebShare = async () => {
         const result = await shareViaWebShare({ ...shareData, imageUrl });
-        if (result && !result.success && result.error) {
+        if (result?.success) {
+            trackEvent('share_click', { platform: 'web_share', surface: shareData?.surface || 'share' });
+        } else if (result && !result.success && result.error) {
             onToast?.('warn', 'Share failed — try another option');
         }
     };
@@ -117,7 +125,7 @@ export default function SocialShareButtons({ shareData, imageUrl, onToast }) {
     return (
         <div className="w-full">
             <p className="text-white/40 text-xs uppercase tracking-widest text-center mb-3">
-                Share your result
+                Share your masterpiece
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
                 {/* Twitter / X */}
@@ -165,10 +173,10 @@ export default function SocialShareButtons({ shareData, imageUrl, onToast }) {
                     <button
                         onClick={handleDownload}
                         className={`${BUTTON_BASE} bg-white/5 hover:bg-purple-500/20 text-white/80 hover:text-purple-400`}
-                        title="Download fusion image"
+                        title="Download social share card"
                     >
                         <DownloadIcon />
-                        <span className="hidden sm:inline">Save</span>
+                        <span className="hidden sm:inline">Save Card</span>
                     </button>
                 )}
 

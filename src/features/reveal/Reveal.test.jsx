@@ -1,33 +1,46 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Reveal } from './Reveal';
 
 // ── Mock GameContext ──
 const mockSetGameState = vi.fn();
 const mockCompleteRound = vi.fn();
 const mockNextRound = vi.fn();
+let mockScoringMode = 'ai';
+let mockRoundNumber = 1;
+let mockTotalRounds = 3;
+const mockClipboardWriteText = vi.fn();
 
 vi.mock('../../context/GameContext', () => ({
     useGame: () => ({
         setGameState: mockSetGameState,
-        user: { name: 'TestUser', avatar: '👽', themeId: 'classic', scoringMode: 'ai', mediaType: 'image' },
+        user: { name: 'TestUser', avatar: '👽', themeId: 'classic', scoringMode: mockScoringMode, mediaType: 'image' },
         completeRound: mockCompleteRound,
-        roundNumber: 1,
-        totalRounds: 3,
+        roundNumber: mockRoundNumber,
+        totalRounds: mockTotalRounds,
         currentModifier: { id: 'normal', label: 'Standard Round', timeFactor: 1.0, scoreFactor: 1.0, icon: '🎯' },
         nextRound: mockNextRound,
     }),
 }));
 
+const toastMocks = vi.hoisted(() => ({
+    error: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+}));
+
 // ── Mock ToastContext ──
 vi.mock('../../context/ToastContext', () => ({
     useToast: () => ({
-        toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warn: vi.fn() },
+        toast: toastMocks,
     }),
 }));
 
 // ── Mock services ──
+<<<<<<< HEAD
 const _mockScoreResult = {
     score: 8,
     baseScore: 8,
@@ -37,6 +50,8 @@ const _mockScoreResult = {
     isMock: true,
 };
 
+=======
+>>>>>>> origin/main
 vi.mock('../../services/gemini', () => ({
     scoreSubmission: vi.fn().mockResolvedValue({
         score: 8,
@@ -59,7 +74,8 @@ vi.mock('../../services/storage', () => ({
 
 vi.mock('../../services/stats', () => ({
     recordPlay: vi.fn(() => ({ newlyUnlocked: [] })),
-    getStats: vi.fn(() => ({ currentStreak: 0, totalRounds: 0 })),
+    getStats: vi.fn(() => ({ currentStreak: 0, totalRounds: 0, milestonesUnlocked: [] })),
+    getMilestones: vi.fn(() => []),
 }));
 
 vi.mock('../../services/offlineQueue', () => ({
@@ -67,7 +83,10 @@ vi.mock('../../services/offlineQueue', () => ({
 }));
 
 vi.mock('../../services/share', () => ({
-    createJudgeShareUrl: vi.fn(() => Promise.resolve('https://example.com/judge/123')),
+    createJudgeShareLinks: vi.fn(() => Promise.resolve({
+        shareUrl: 'https://example.com/judge/123',
+        previewUrl: 'https://example.com/judge/123',
+    })),
 }));
 
 vi.mock('../../services/challenges', () => ({
@@ -153,29 +172,91 @@ describe('Reveal', () => {
     const mockSubmission = 'They both have fur';
 
     beforeEach(() => {
+        mockScoringMode = 'ai';
+        mockRoundNumber = 1;
+        mockTotalRounds = 3;
         vi.clearAllMocks();
+        mockClipboardWriteText.mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'clipboard', {
+            configurable: true,
+            value: {
+                writeText: mockClipboardWriteText,
+            },
+        });
+        // Avoid leakage from other suites that stub Web Share
+        Object.defineProperty(navigator, 'share', {
+            configurable: true,
+            writable: true,
+            value: undefined,
+        });
     });
 
     it('displays score when result is provided', async () => {
+        const { saveCollision } = await import('../../services/storage');
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
         // Initially shows loading/scoring status
         expect(screen.getByRole('status')).toBeInTheDocument();
         // Wait for scoring to complete
         const scoreDisplays = await screen.findAllByText(/\/10/, {}, { timeout: 3000 });
         expect(scoreDisplays.length).toBeGreaterThan(0);
+        expect(saveCollision).toHaveBeenCalledWith(expect.objectContaining({
+            assets: {
+                left: expect.objectContaining({ label: 'Cat' }),
+                right: expect.objectContaining({ label: 'Dog' }),
+            },
+            judgeMode: 'ai',
+        }));
     });
 
-    it('shows "Why this score?" explanation section', async () => {
+    it('shows score breakdown and commentary after scoring', async () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
-        const explanation = await screen.findByText('Why this score?', {}, { timeout: 3000 });
-        expect(explanation).toBeInTheDocument();
-        expect(await screen.findByText(/beloved household pets/)).toBeInTheDocument();
+        expect(await screen.findByText(/Great connection between Cat and Dog!/, {}, { timeout: 3000 })).toBeInTheDocument();
+        expect(await screen.findByText(/Wit:/)).toBeInTheDocument();
     });
 
     it('share button exists after scoring', async () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
-        const shareBtn = await screen.findByRole('button', { name: /share for friend to judge/i }, { timeout: 3000 });
+        const shareBtn = await screen.findByRole('button', { name: /ask a friend to judge|share for friend to judge/i }, { timeout: 3000 });
         expect(shareBtn).toBeInTheDocument();
+    });
+
+    it('lets players ask a friend to judge after a scored round is saved', async () => {
+        const user = userEvent.setup();
+        const { createJudgeShareLinks } = await import('../../services/share');
+
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+
+        const friendJudgeButton = await screen.findByRole('button', { name: /ask a friend to judge/i }, { timeout: 3000 });
+        await waitFor(() => expect(friendJudgeButton).toBeEnabled());
+        createJudgeShareLinks.mockClear();
+        await user.click(friendJudgeButton);
+
+        await waitFor(() => {
+            expect(toastMocks.success).toHaveBeenCalled();
+        });
+        expect(await screen.findByRole('button', { name: /link copied|friend judge link copied/i })).toBeInTheDocument();
+    });
+
+    it('prefers navigator.share for friend-judge invites when available', async () => {
+        const share = vi.fn().mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'share', {
+            configurable: true,
+            value: share,
+        });
+        const user = userEvent.setup();
+
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+        const friendJudgeButton = await screen.findByRole('button', { name: /ask a friend to judge/i }, { timeout: 3000 });
+        await waitFor(() => expect(friendJudgeButton).toBeEnabled());
+        await user.click(friendJudgeButton);
+
+        await waitFor(() => {
+            expect(share).toHaveBeenCalledWith(expect.objectContaining({
+                title: 'Judge my Venn connection',
+                url: 'https://example.com/judge/123',
+            }));
+        });
+        expect(mockClipboardWriteText).not.toHaveBeenCalled();
     });
 
     it('Next Round button navigates forward', async () => {
@@ -184,8 +265,29 @@ describe('Reveal', () => {
         expect(nextBtn).toBeInTheDocument();
     });
 
-    it('shows the submission in quotes while loading', () => {
+    it('shows a recommended workflow after a standout round', async () => {
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+
+        expect(await screen.findByText(/Recommended next move/i, {}, { timeout: 3000 })).toBeInTheDocument();
+        expect(screen.getByText(/Share this standout round for friend feedback/i)).toBeInTheDocument();
+        expect(screen.getByText(/Saved to your gallery/i)).toBeInTheDocument();
+        expect(screen.getByText(/Continue to round 2/i)).toBeInTheDocument();
+    });
+
+    it('recommends session summary on the final round', async () => {
+        mockRoundNumber = 3;
+        mockTotalRounds = 3;
+
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+
+        expect(await screen.findByText(/Review your session summary/i, {}, { timeout: 3000 })).toBeInTheDocument();
+        expect(screen.getByText(/Open your session summary/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /See Results/i })).toBeInTheDocument();
+    });
+
+    it('shows the submission in quotes while loading', async () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
         expect(screen.getByText(`\u201c${mockSubmission}\u201d`)).toBeInTheDocument();
+        expect(await screen.findByText(/Great connection between Cat and Dog!/, {}, { timeout: 3000 })).toBeInTheDocument();
     });
 });

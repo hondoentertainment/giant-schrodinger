@@ -1,15 +1,66 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MEDIA_TYPES } from '../../data/themes';
+import { getAssetMediaLabel } from '../../services/assetSelection';
+import { isGiphyUrl } from '../../services/memeResolve';
+import { getYoutubeEmbedUrl, getYoutubeVideoIdFromAsset } from '../../lib/youtube';
+import { buildResponsiveSrcSet, getGiphyPreviewUrl, buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
+import { MediaLoadingShell } from '../../components/MediaLoadingShell';
+import { useTranslation } from '../../hooks/useTranslation';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
-// ── Responsive srcset helper ──
-function buildSrcSet(baseUrl) {
-    if (!baseUrl?.includes('unsplash.com')) return undefined;
-    const id = baseUrl.match(/photo-([^?]+)/)?.[1];
-    if (!id) return undefined;
-    return [400, 640, 1080].map(w =>
-        `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80 ${w}w`
-    ).join(', ');
+// ── Meme circle (GIFs/images with letterboxing) ──
+function VennMeme({ asset }) {
+    const [loaded, setLoaded] = useState(false);
+    const [useFallback, setUseFallback] = useState(false);
+    const [useFullRes, setUseFullRes] = useState(!getGiphyPreviewUrl(asset.url));
+    const previewUrl = asset.previewUrl || getGiphyPreviewUrl(asset.url);
+    const primaryUrl = useFullRes ? asset.url : (previewUrl || asset.url);
+    const src = useFallback && asset.fallbackUrl ? asset.fallbackUrl : primaryUrl;
+    const blurUrl = asset.blurUrl || (useFallback ? null : buildBlurPlaceholderUrl(asset.fallbackUrl));
+    const showGiphyAttribution = asset.memeSource === 'giphy' || isGiphyUrl(asset.url);
+
+    const handleLoad = () => {
+        setLoaded(true);
+        if (!useFullRes && previewUrl && asset.url && previewUrl !== asset.url) {
+            setUseFullRes(true);
+            setLoaded(false);
+        }
+    };
+
+    return (
+        <div className="relative overflow-hidden w-full h-full bg-black">
+            <MediaLoadingShell blurUrl={blurUrl} loaded={loaded} label={asset.label} />
+            <img
+                src={src}
+                alt={asset.label}
+                className={`w-full h-full object-contain transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                referrerPolicy="no-referrer"
+                onLoad={handleLoad}
+                onError={() => {
+                    if (!useFallback && asset.fallbackUrl && src !== asset.fallbackUrl) {
+                        setUseFallback(true);
+                        setLoaded(false);
+                        return;
+                    }
+                    setLoaded(true);
+                }}
+                loading="eager"
+                decoding="async"
+                draggable={false}
+            />
+            {showGiphyAttribution && (
+                <a
+                    href="https://giphy.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-2 right-2 z-20 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm text-[9px] font-medium text-white/70 hover:text-white border border-white/10"
+                    aria-label="Meme via Giphy"
+                >
+                    via Giphy
+                </a>
+            )}
+        </div>
+    );
 }
 
 // ── Image circle ──
@@ -19,19 +70,16 @@ function VennImage({ asset }) {
     // 0 = primary, 1 = fallback URL, 2 = gradient card
 
     const src = fallbackLevel === 0 ? asset.url : asset.fallbackUrl;
+    const blurUrl = asset.blurUrl || buildBlurPlaceholderUrl(src);
 
     const handleError = () => {
         if (fallbackLevel === 0 && asset.fallbackUrl) {
             setFallbackLevel(1);
+            setLoaded(false);
         } else {
             setFallbackLevel(2);
         }
     };
-
-    // Build tiny blur URL for Unsplash images
-    const blurUrl = src?.includes('unsplash.com')
-        ? src.replace(/w=\d+/, 'w=20') + '&blur=10'
-        : null;
 
     if (fallbackLevel >= 2) {
         return (
@@ -43,36 +91,138 @@ function VennImage({ asset }) {
 
     return (
         <div className="relative overflow-hidden w-full h-full">
-            {/* Blur placeholder */}
-            {blurUrl && !loaded && (
-                <img src={blurUrl} alt="" aria-hidden="true"
-                    className="absolute inset-0 w-full h-full object-cover scale-110 blur-sm" />
-            )}
-            {/* Loading spinner when no blur available */}
-            {!blurUrl && !loaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/5 animate-pulse">
-                    <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
-                </div>
-            )}
-            {/* Full image */}
+            <MediaLoadingShell blurUrl={blurUrl} loaded={loaded} label={asset.label} />
             <img
                 src={src}
-                srcSet={buildSrcSet(src)}
+                srcSet={buildResponsiveSrcSet(src)}
                 sizes="(max-width: 640px) 400px, (max-width: 1024px) 640px, 1080px"
                 alt={asset.label}
-                className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`w-full h-full object-cover object-center transition-all duration-700 ease-out ${
+                    loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.03]'
+                }`}
                 referrerPolicy="no-referrer"
                 onError={handleError}
                 onLoad={() => setLoaded(true)}
                 loading="eager"
                 decoding="async"
+                draggable={false}
             />
         </div>
     );
 }
 
-// ── Video circle ──
-function VennVideo({ asset }) {
+// ── YouTube embed circle ──
+function VennYoutube({ asset, videoId }) {
+    const containerRef = useRef(null);
+    const iframeRef = useRef(null);
+    const [loaded, setLoaded] = useState(false);
+    const [shouldLoadIframe, setShouldLoadIframe] = useState(false);
+    const [playing, setPlaying] = useState(true);
+    const [muted, setMuted] = useState(true);
+
+    const embedUrl = getYoutubeEmbedUrl(videoId, { autoplay: true, mute: true, loop: true });
+    const posterUrl = asset.posterUrl || asset.blurUrl;
+
+    useEffect(() => {
+        const node = containerRef.current;
+        if (!node) return undefined;
+
+        if (typeof IntersectionObserver === 'undefined') {
+            setShouldLoadIframe(true);
+            return undefined;
+        }
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setShouldLoadIframe(true);
+                    observer.disconnect();
+                }
+            },
+            { rootMargin: '80px', threshold: 0.01 },
+        );
+        observer.observe(node);
+
+        // Eager load when already visible (e.g. round screen mounts in view).
+        const rect = node.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+            setShouldLoadIframe(true);
+            observer.disconnect();
+        }
+
+        return () => observer.disconnect();
+    }, []);
+
+    const postPlayerCommand = useCallback((func) => {
+        const frame = iframeRef.current?.contentWindow;
+        if (!frame) return;
+        frame.postMessage(JSON.stringify({ event: 'command', func, args: '' }), '*');
+    }, []);
+
+    const togglePlay = useCallback((e) => {
+        e.stopPropagation();
+        if (playing) {
+            postPlayerCommand('pauseVideo');
+            setPlaying(false);
+        } else {
+            postPlayerCommand('playVideo');
+            setPlaying(true);
+        }
+    }, [playing, postPlayerCommand]);
+
+    const toggleMute = useCallback((e) => {
+        e.stopPropagation();
+        if (muted) {
+            postPlayerCommand('unMute');
+            setMuted(false);
+        } else {
+            postPlayerCommand('mute');
+            setMuted(true);
+        }
+    }, [muted, postPlayerCommand]);
+
+    return (
+        <div ref={containerRef} className="relative w-full h-full">
+            <MediaLoadingShell blurUrl={posterUrl} loaded={loaded} label={asset.label} />
+            {shouldLoadIframe && (
+                <iframe
+                    ref={iframeRef}
+                    src={embedUrl}
+                    title={asset.label || 'YouTube video'}
+                    className={`absolute inset-0 w-full h-full border-0 transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                    loading="lazy"
+                    onLoad={() => setLoaded(true)}
+                />
+            )}
+            {loaded && (
+                <div className="absolute top-3 right-3 flex gap-1.5 z-20">
+                    <button
+                        onClick={togglePlay}
+                        className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition-all min-w-[44px] min-h-[44px]"
+                        aria-label={playing ? 'Pause video' : 'Play video'}
+                        title={playing ? 'Pause' : 'Play'}
+                    >
+                        {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                        onClick={toggleMute}
+                        className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition-all min-w-[44px] min-h-[44px]"
+                        aria-label={muted ? 'Unmute video' : 'Mute video'}
+                        title={muted ? 'Unmute' : 'Mute'}
+                    >
+                        {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ── Native file video circle ──
+function VennNativeVideo({ asset }) {
     const videoRef = useRef(null);
     const [loaded, setLoaded] = useState(false);
     const [playing, setPlaying] = useState(true);
@@ -114,11 +264,11 @@ function VennVideo({ asset }) {
 
     return (
         <>
-            {!loaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/5 animate-pulse z-10">
-                    <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
-                </div>
-            )}
+            <MediaLoadingShell
+                blurUrl={asset.posterUrl || asset.blurUrl}
+                loaded={loaded}
+                label={asset.label}
+            />
             <video
                 ref={videoRef}
                 src={asset.url}
@@ -127,6 +277,8 @@ function VennVideo({ asset }) {
                 loop
                 muted={muted}
                 playsInline
+                preload="metadata"
+                onLoadedData={() => setLoaded(true)}
                 onCanPlay={() => setLoaded(true)}
                 onError={handleError}
             />
@@ -152,6 +304,12 @@ function VennVideo({ asset }) {
             )}
         </>
     );
+}
+
+function VennVideo({ asset }) {
+    const youtubeId = getYoutubeVideoIdFromAsset(asset);
+    if (youtubeId) return <VennYoutube asset={asset} videoId={youtubeId} />;
+    return <VennNativeVideo asset={asset} />;
 }
 
 // ── Audio circle with waveform visualization ──
@@ -315,22 +473,122 @@ function VennMedia({ asset }) {
     const type = asset?.type || MEDIA_TYPES.IMAGE;
     if (type === MEDIA_TYPES.VIDEO) return <VennVideo asset={asset} />;
     if (type === MEDIA_TYPES.AUDIO) return <VennAudio asset={asset} />;
+    if (type === MEDIA_TYPES.MEME) return <VennMeme asset={asset} />;
     return <VennImage asset={asset} />;
 }
 
+// ── Concept title caption below each circle ──
+function ConceptCaption({ label, align = 'left', accentColor, assetType }) {
+    const conceptLabel = getAssetMediaLabel(assetType);
+    return (
+        <div
+            className={`flex flex-col gap-1 min-w-0 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 backdrop-blur-md ${
+                align === 'right' ? 'items-end text-right' : 'items-start text-left'
+            }`}
+            style={{
+                maxWidth: '46%',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.08)',
+            }}
+        >
+            <span
+                className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.12em]"
+                style={{ color: accentColor ? `${accentColor}cc` : 'rgba(255,255,255,0.45)' }}
+            >
+                {conceptLabel}
+            </span>
+            <h3 className="font-display text-sm sm:text-base md:text-lg font-semibold text-white leading-snug line-clamp-3">
+                {label}
+            </h3>
+        </div>
+    );
+}
+
+// ── Single Venn circle ──
+function VennCircle({ asset, side, colorblindMode, colors }) {
+    const assetType = asset?.type || MEDIA_TYPES.IMAGE;
+    const isAudio = assetType === MEDIA_TYPES.AUDIO;
+    const isMeme = assetType === MEDIA_TYPES.MEME;
+    const isLeft = side === 'left';
+    const accentColor = isLeft ? colors.left : colors.right;
+    const patternId = isLeft ? 'pattern-left' : 'pattern-right';
+
+    const sideTint = colorblindMode
+        ? `linear-gradient(to ${isLeft ? 'right' : 'left'}, ${accentColor}20, transparent 55%)`
+        : isAudio
+            ? `linear-gradient(to ${isLeft ? 'right' : 'left'}, ${isLeft ? 'rgba(168,85,247,0.12)' : 'rgba(236,72,153,0.12)'}, transparent 55%)`
+            : 'none';
+
+    return (
+        <div
+            className={`absolute ${isLeft ? 'left-0' : 'right-0'} w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-[1.015] duration-500 shadow-2xl group`}
+            style={{
+                border: `2px solid ${colorblindMode ? accentColor : 'rgba(255,255,255,0.18)'}`,
+                boxShadow: `0 24px 56px -16px ${accentColor}44, 0 0 0 1px rgba(255,255,255,0.06) inset`,
+            }}
+        >
+            <VennMedia asset={asset} />
+
+            {/* Subtle edge vignette — keeps images visible in the center */}
+            <div
+                className={`absolute inset-0 pointer-events-none rounded-full ${
+                    isAudio
+                        ? isLeft
+                            ? 'bg-gradient-to-t from-purple-900/50 via-transparent to-black/10'
+                            : 'bg-gradient-to-t from-fuchsia-900/50 via-transparent to-black/10'
+                        : isMeme
+                            ? 'bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.5)_100%)]'
+                        : 'bg-[radial-gradient(circle_at_center,transparent_55%,rgba(0,0,0,0.35)_100%)]'
+                }`}
+            />
+
+            {sideTint !== 'none' && (
+                <div className="absolute inset-0 pointer-events-none rounded-full" style={{ background: sideTint }} />
+            )}
+
+            {colorblindMode && (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none z-[2]" aria-hidden="true">
+                    <rect width="100%" height="100%" fill={`url(#${patternId})`} />
+                </svg>
+            )}
+
+            {/* Inner ring for polish */}
+            <div
+                className="absolute inset-[3px] rounded-full pointer-events-none z-[3]"
+                style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)' }}
+            />
+
+            {assetType !== MEDIA_TYPES.IMAGE && (
+                <div className={`absolute top-2.5 ${isLeft ? 'left-2.5' : 'right-2.5'} z-20`}>
+                    <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[10px] font-bold text-white/80 uppercase tracking-wider border border-white/10">
+                        {getAssetMediaLabel(assetType)}
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Main Venn Diagram ──
-export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAsset }) {
-    const mediaType = leftAsset?.type || MEDIA_TYPES.IMAGE;
-    const isAudio = mediaType === MEDIA_TYPES.AUDIO;
+export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAsset, mediaLoading = false }) {
+    const { t } = useTranslation();
     const colorblindMode = localStorage.getItem('venn_colorblind') === 'true';
 
     const COLORS = colorblindMode
-        ? { left: '#0ea5e9', right: '#f97316', overlap: '#10b981' }  // Blue, Orange, Green
-        : { left: '#a855f7', right: '#6366f1', overlap: '#8b5cf6' }; // Purple, Indigo, Violet
+        ? { left: '#0ea5e9', right: '#f97316', overlap: '#10b981' }
+        : { left: '#a855f7', right: '#6366f1', overlap: '#8b5cf6' };
 
     return (
         <div className="relative w-full max-w-2xl mx-auto my-4 sm:my-8">
-            {/* SVG pattern definitions for colorblind mode */}
+            {mediaLoading && (
+                <div
+                    className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[10px] font-semibold uppercase tracking-wider text-white/70"
+                    role="status"
+                    aria-live="polite"
+                >
+                    {t('round.sharpeningMedia')}
+                </div>
+            )}
             {colorblindMode && (
                 <svg className="absolute w-0 h-0" aria-hidden="true">
                     <defs>
@@ -343,86 +601,41 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                     </defs>
                 </svg>
             )}
-            {/* Circles container */}
+
+            {/* Circles */}
             <div className="relative w-full aspect-[2/1.1] flex justify-center items-center">
-                {/* Left Circle */}
-                <div className="absolute left-0 w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-105 duration-500 shadow-2xl shadow-blue-500/10"
-                    style={{ border: `3px solid ${colorblindMode ? COLORS.left : 'rgba(255,255,255,0.15)'}` }}>
-                    <VennMedia asset={leftAsset} />
-                    {/* Gradient overlay for readability */}
-                    <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-t from-purple-900/70 via-transparent to-transparent' : 'bg-gradient-to-t from-black/60 via-black/10 to-transparent'}`} />
-                    <div className="absolute inset-0 pointer-events-none"
-                        style={{ background: colorblindMode
-                            ? `linear-gradient(to right, ${COLORS.left}26, transparent)`
-                            : isAudio ? 'linear-gradient(to right, rgba(168,85,247,0.15), transparent)' : 'linear-gradient(to right, rgba(59,130,246,0.15), transparent)'
-                        }} />
-                    {/* Colorblind pattern overlay */}
-                    {colorblindMode && (
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-[2]" aria-hidden="true">
-                            <rect width="100%" height="100%" fill="url(#pattern-left)" />
-                        </svg>
-                    )}
-                    {/* Label */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 z-10">
-                        <span className="text-sm sm:text-lg md:text-xl font-black text-white uppercase tracking-wider drop-shadow-lg"
-                            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)' }}>
-                            {leftAsset.label}
-                        </span>
-                    </div>
-                    {mediaType !== MEDIA_TYPES.IMAGE && (
-                        <div className="absolute top-2.5 left-2.5 z-20">
-                            <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[10px] font-bold text-white/80 uppercase tracking-wider border border-white/10">
-                                {mediaType === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
-                            </span>
-                        </div>
-                    )}
-                </div>
+                <VennCircle
+                    asset={leftAsset}
+                    side="left"
+                    colorblindMode={colorblindMode}
+                    colors={COLORS}
+                />
+                <VennCircle
+                    asset={rightAsset}
+                    side="right"
+                    colorblindMode={colorblindMode}
+                    colors={COLORS}
+                />
 
-                {/* Right Circle */}
-                <div className="absolute right-0 w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-105 duration-500 shadow-2xl shadow-pink-500/10"
-                    style={{ border: `3px solid ${colorblindMode ? COLORS.right : 'rgba(255,255,255,0.15)'}` }}>
-                    <VennMedia asset={rightAsset} />
-                    {/* Gradient overlay for readability */}
-                    <div className={`absolute inset-0 pointer-events-none ${isAudio ? 'bg-gradient-to-t from-fuchsia-900/70 via-transparent to-transparent' : 'bg-gradient-to-t from-black/60 via-black/10 to-transparent'}`} />
-                    <div className="absolute inset-0 pointer-events-none"
-                        style={{ background: colorblindMode
-                            ? `linear-gradient(to left, ${COLORS.right}26, transparent)`
-                            : isAudio ? 'linear-gradient(to left, rgba(236,72,153,0.15), transparent)' : 'linear-gradient(to left, rgba(236,72,153,0.15), transparent)'
-                        }} />
-                    {/* Colorblind pattern overlay */}
-                    {colorblindMode && (
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-[2]" aria-hidden="true">
-                            <rect width="100%" height="100%" fill="url(#pattern-right)" />
-                        </svg>
-                    )}
-                    {/* Label */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 z-10 text-right">
-                        <span className="text-sm sm:text-lg md:text-xl font-black text-white uppercase tracking-wider drop-shadow-lg"
-                            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)' }}>
-                            {rightAsset.label}
-                        </span>
-                    </div>
-                    {mediaType !== MEDIA_TYPES.IMAGE && (
-                        <div className="absolute top-2.5 right-2.5 z-20">
-                            <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[10px] font-bold text-white/80 uppercase tracking-wider border border-white/10">
-                                {mediaType === MEDIA_TYPES.VIDEO ? 'Video' : 'Audio'}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Intersection Highlight - centered between circles */}
+                {/* Intersection highlight */}
                 <div className="absolute z-10 text-center pointer-events-none flex flex-col items-center">
-                    <div className="relative">
-                        <div className="absolute -inset-4 rounded-full bg-white/5 blur-2xl animate-pulse" />
-                        <span className="relative text-[10px] sm:text-xs font-medium text-white/70 tracking-[0.35em] uppercase"
-                            style={{ textShadow: '0 1px 12px rgba(0,0,0,0.9)' }}>
+                    <div className="relative px-4 py-2 rounded-full backdrop-blur-xl border border-white/12"
+                        style={{ background: 'rgba(0,0,0,0.35)' }}>
+                        <span className="relative text-[10px] sm:text-xs font-semibold text-white/85 tracking-[0.08em]">
                             The Intersection
                         </span>
                     </div>
-                    <div className="w-8 h-8 sm:w-12 sm:h-12 mt-1 rounded-full blur-xl animate-pulse"
-                        style={{ backgroundColor: colorblindMode ? `${COLORS.overlap}33` : 'rgba(255,255,255,0.1)' }} />
+                    <div
+                        className="w-5 h-5 sm:w-7 sm:h-7 mt-2 rounded-full blur-md"
+                        style={{ backgroundColor: colorblindMode ? `${COLORS.overlap}66` : 'rgba(10,132,255,0.45)' }}
+                    />
                 </div>
+            </div>
+
+            {/* Concept titles below circles */}
+            <div className="relative w-full flex justify-between items-start gap-4 mt-3 sm:mt-4 px-1">
+                <ConceptCaption label={leftAsset.label} align="left" accentColor={COLORS.left} assetType={leftAsset?.type} />
+                <ConceptCaption label={rightAsset.label} align="right" accentColor={COLORS.right} assetType={rightAsset?.type} />
             </div>
         </div>
     );

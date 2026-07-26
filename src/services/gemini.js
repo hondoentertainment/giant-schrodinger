@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { TIMINGS } from '../lib/timings';
 import { getFusionImage } from '../data/themes';
 import { getAIDifficulty, getDifficultyConfig } from './aiFeatures';
@@ -20,12 +21,23 @@ async function getAI() {
         return null;
     }
 }
+=======
+import { GoogleGenAI } from '@google/genai';
+import { getFusionImage } from '../data/themes';
+import { scoreViaServer } from './serverScoring';
+import { uploadDataUrl } from './mediaStorage';
+import { isClientGeminiEnabled } from '../lib/productionMode';
+import { isBackendEnabled } from '../lib/supabase';
+
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const ai = API_KEY && isClientGeminiEnabled() ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+>>>>>>> origin/main
 
 const SCORING_PROMPT = `You are a witty judge for a game where players connect two concepts using a creative phrase.
 
 Given:
-- Left concept ({{mediaType}}): {{left}}
-- Right concept ({{mediaType}}): {{right}}
+- Left concept ({{leftMedia}}): {{left}}
+- Right concept ({{rightMedia}}): {{right}}
 - Player's connecting phrase: "{{submission}}"
 
 Score the connection from 1-10 on four criteria (each 1-10):
@@ -37,25 +49,54 @@ Score the connection from 1-10 on four criteria (each 1-10):
 Respond with ONLY valid JSON, no other text:
 {"wit": N, "logic": N, "originality": N, "clarity": N, "relevance": "Highly Logical" or "Absurdly Creative" or "Wild Card", "commentary": "One witty sentence"}`;
 
-function applyDifficulty(result) {
-    const config = getDifficultyConfig(getAIDifficulty());
-    const strictness = config.scoringStrictness;
-    if (strictness === 1.0) return result;
+function buildFusionPrompt(theme, submission, asset1, asset2) {
+    const themeLabel = theme?.label || 'Venn with Friends';
+    const themeKeywords = Array.isArray(theme?.keywords) && theme.keywords.length
+        ? theme.keywords.slice(0, 4).join(', ')
+        : 'bold color, surreal composition, social-first poster energy';
+    const leftLabel = getAssetLabel(asset1, 'left concept');
+    const rightLabel = getAssetLabel(asset2, 'right concept');
+    const conceptLine = submission
+        ? `Visualize the phrase "${submission}" as a clever collision between "${leftLabel}" and "${rightLabel}".`
+        : `Create a clever visual collision between "${leftLabel}" and "${rightLabel}".`;
 
-    const adjust = (val) => Math.min(10, Math.max(1, Math.round(val * strictness)));
-    const breakdown = {
-        wit: adjust(result.breakdown.wit),
-        logic: adjust(result.breakdown.logic),
-        originality: adjust(result.breakdown.originality),
-        clarity: adjust(result.breakdown.clarity),
-    };
-    const score = Math.min(10, Math.max(1, Math.round(
-        (breakdown.wit + breakdown.logic + breakdown.originality + breakdown.clarity) / 4
-    )));
-    return { ...result, breakdown, baseScore: score, score };
+    return [
+        `Create an instantly shareable hero image for a party game called Venn with Friends.`,
+        `Theme: ${themeLabel}. Reference mood: ${themeKeywords}.`,
+        conceptLine,
+        `The image should feel viral, witty, and poster-worthy rather than generic abstract art.`,
+        `Use one bold focal idea, striking contrast, crisp silhouette readability, playful surrealism, premium lighting, and composition that looks great as a social post.`,
+        `Avoid text, watermarks, logos, UI, split-screen layouts, stock-photo realism, muddy detail, or bland wallpaper aesthetics.`,
+        `Aim for something surprising enough that a friend would screenshot and repost it.`
+    ].join(' ');
+}
+
+function getAssetLabel(asset, fallbackLabel) {
+    if (typeof asset === 'string' && asset.trim()) return asset.trim();
+    return asset?.label || asset?.title || asset?.name || fallbackLabel;
+}
+
+function hasScorableAsset(asset) {
+    return getAssetLabel(asset, '').trim().length > 0;
+}
+
+function getFallbackReason(submission, asset1, asset2) {
+    if (!submission) return 'Missing submission - using mock scores';
+    if (!hasScorableAsset(asset1) || !hasScorableAsset(asset2)) {
+        return 'Missing prompt assets - using mock scores';
+    }
+    if (!isClientGeminiEnabled()) {
+        if (isBackendEnabled()) return 'Server scoring unavailable - using mock scores';
+        return 'AI scoring unavailable - using mock scores';
+    }
+    if (!ai) return 'AI scoring unavailable - using mock scores';
+    return null;
 }
 
 function mockScore(submission, asset1, asset2) {
+    const leftLabel = getAssetLabel(asset1, 'the first concept');
+    const rightLabel = getAssetLabel(asset2, 'the second concept');
+    const safeSubmission = submission || 'your connection';
     const breakdown = {
         wit: Math.floor(Math.random() * 4) + 7,
         logic: Math.floor(Math.random() * 4) + 6,
@@ -66,49 +107,69 @@ function mockScore(submission, asset1, asset2) {
         (breakdown.wit + breakdown.logic + breakdown.originality + breakdown.clarity) / 4
     );
     const relevance = Math.random() > 0.5 ? 'Highly Logical' : 'Absurdly Creative';
-    const leftLabel = asset1?.label ?? 'Thing A';
-    const rightLabel = asset2?.label ?? 'Thing B';
     return {
         baseScore,
         breakdown,
         score: baseScore,
         relevance,
-        commentary: `An interesting bridge between ${leftLabel} and ${rightLabel}. '${submission || ''}' is ${relevance.toLowerCase()}!`,
+        commentary: `An interesting bridge between ${leftLabel} and ${rightLabel}. '${safeSubmission}' is ${relevance.toLowerCase()}!`,
     };
 }
 
+function getMediaDescriptor(asset, mediaType = 'image') {
+    const type = asset?.type || mediaType;
+    if (type === 'video') return 'video clip';
+    if (type === 'meme') return 'meme';
+    if (type === 'audio') return 'audio clip';
+    return 'image';
+}
+
 export async function scoreSubmission(submission, asset1, asset2, mediaType = 'image') {
-    // Try server-side scoring first (anti-cheat)
-    try {
-        const serverResult = await scoreViaServer(
-            submission, asset1?.label, asset2?.label
-        );
-        if (serverResult?.score != null) {
-            return { ...serverResult, scoredServerSide: true };
+    const fallbackReason = getFallbackReason(submission, asset1, asset2);
+
+    if (!fallbackReason) {
+        const serverScore = await scoreViaServer(submission, asset1, asset2);
+        if (serverScore && !serverScore.error) {
+            return {
+                ...serverScore,
+                isMock: false,
+                isServerScored: true,
+            };
         }
-    } catch {
-        // Server scoring unavailable, fall through to client-side
     }
 
+<<<<<<< HEAD
     const ai = await getAI();
     if (!ai || !submission || !asset1 || !asset2) {
         await new Promise((r) => setTimeout(r, TIMINGS.MOCK_AI_DELAY));
         return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true, scoredServerSide: false });
+=======
+    if (fallbackReason) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return { ...mockScore(submission, asset1, asset2), isMock: true, errorReason: fallbackReason };
+>>>>>>> origin/main
     }
 
-    if (!scoringLimiter.canProceed()) {
-        console.warn('Rate limited — falling back to mock scoring');
+    if (!isClientGeminiEnabled()) {
         await new Promise((r) => setTimeout(r, 500));
-        return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true, errorReason: 'Rate limited — please wait a few seconds' });
+        return {
+            ...mockScore(submission, asset1, asset2),
+            isMock: true,
+            errorReason: 'Server scoring unavailable - using mock scores',
+        };
     }
 
-    const mediaLabel = mediaType === 'video' ? 'video clip' : mediaType === 'audio' ? 'audio clip' : 'image';
+    const leftMedia = getMediaDescriptor(asset1, mediaType);
+    const rightMedia = getMediaDescriptor(asset2, mediaType);
+    const leftLabel = getAssetLabel(asset1, 'left concept');
+    const rightLabel = getAssetLabel(asset2, 'right concept');
 
     try {
-        const prompt = SCORING_PROMPT.replace(/\{\{left\}\}/g, asset1.label)
-            .replace(/\{\{right\}\}/g, asset2.label)
+        const prompt = SCORING_PROMPT.replace(/\{\{left\}\}/g, leftLabel)
+            .replace(/\{\{right\}\}/g, rightLabel)
             .replace(/\{\{submission\}\}/g, submission.replace(/"/g, '\\"'))
-            .replace(/\{\{mediaType\}\}/g, mediaLabel);
+            .replace(/\{\{leftMedia\}\}/g, leftMedia)
+            .replace(/\{\{rightMedia\}\}/g, rightMedia);
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.0-flash',
@@ -125,7 +186,7 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
         const baseScore = Math.round(
             (parsed.wit + parsed.logic + parsed.originality + parsed.clarity) / 4
         );
-        return applyDifficulty({
+        return {
             baseScore: Math.min(10, Math.max(1, baseScore)),
             breakdown: {
                 wit: Math.min(10, Math.max(1, parsed.wit)),
@@ -135,31 +196,29 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
             },
             score: Math.min(10, Math.max(1, baseScore)),
             relevance: parsed.relevance || 'Highly Logical',
-            commentary: parsed.commentary || `Solid connection between ${asset1.label} and ${asset2.label}!`,
+            commentary: parsed.commentary || `Solid connection between ${leftLabel} and ${rightLabel}!`,
             isMock: false,
-            scoredServerSide: false,
-        });
+        };
     } catch (err) {
         console.warn('Gemini scoring failed, using mock:', err);
-        if (!navigator.onLine) {
-            addToOfflineQueue({ submission, assets: { left: asset1, right: asset2 }, mediaType });
-        }
-        await new Promise((r) => setTimeout(r, TIMINGS.PHASE_TRANSITION));
-        return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true, scoredServerSide: false, errorReason: 'AI scoring unavailable — using mock scores' });
+        await new Promise((r) => setTimeout(r, 500));
+        return { ...mockScore(submission, asset1, asset2), isMock: true, errorReason: 'AI scoring unavailable - using mock scores' };
     }
 }
 
+<<<<<<< HEAD
 export async function generateFusionImage(theme, submission) {
     const ai = await getAI();
+=======
+export async function generateFusionImage(theme, submission, asset1 = null, asset2 = null) {
+>>>>>>> origin/main
     if (!ai || !API_KEY) {
-        await new Promise((r) => setTimeout(r, TIMINGS.MOCK_AI_DELAY));
+        await new Promise((r) => setTimeout(r, 1500));
         return { ...getFusionImage(theme), isFallback: true };
     }
 
     try {
-        const prompt = submission
-            ? `Abstract artistic fusion image visualizing the concept: "${submission}". Surreal, dreamlike, colorful.`
-            : `Abstract surreal art, colorful dreamscape, fluid shapes.`;
+        const prompt = buildFusionPrompt(theme, submission, asset1, asset2);
 
         const response = await ai.models.generateImages({
             model: 'imagen-3.0-generate-002',
@@ -172,10 +231,17 @@ export async function generateFusionImage(theme, submission) {
         const mime = image?.image?.mimeType || 'image/png';
 
         if (base64) {
+            const dataUrl = `data:${mime};base64,${base64}`;
+            const uploaded = await uploadDataUrl(dataUrl, {
+                folder: 'fusion',
+                filename: `fusion-${Date.now()}.png`,
+            });
+
             return {
                 id: `fusion-${Date.now()}`,
                 label: 'AI Fusion',
-                url: `data:${mime};base64,${base64}`,
+                url: uploaded?.url || dataUrl,
+                storagePath: uploaded?.storagePath || null,
                 fallbackUrl: getFusionImage(theme)?.url,
                 isFallback: false,
             };
@@ -184,6 +250,6 @@ export async function generateFusionImage(theme, submission) {
         console.warn('Gemini image gen failed, using curated:', err);
     }
 
-    await new Promise((r) => setTimeout(r, TIMINGS.COUNTDOWN_ANIM));
-    return { ...getFusionImage(theme), isFallback: true, errorReason: 'AI image generation failed — using curated image' };
+    await new Promise((r) => setTimeout(r, 800));
+    return { ...getFusionImage(theme), isFallback: true, errorReason: 'AI image generation failed - using curated image' };
 }

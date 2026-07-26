@@ -31,7 +31,10 @@ export function JudgeCalibration({ onComplete }) {
   const [userScore, setUserScore] = useState('');
   const [feedback, setFeedback] = useState(null); // { passed, diff }
   const [passedCount, setPassedCount] = useState(0);
+<<<<<<< HEAD
   const [, setFailedCount] = useState(0);
+=======
+>>>>>>> origin/main
   const [finished, setFinished] = useState(false);
 
   const example = CALIBRATION_EXAMPLES[currentIndex];
@@ -46,8 +49,6 @@ export function JudgeCalibration({ onComplete }) {
 
     if (passed) {
       setPassedCount((c) => c + 1);
-    } else {
-      setFailedCount((c) => c + 1);
     }
 
     setFeedback({ passed, diff, userScore: score, aiScore: example.aiScore });
@@ -65,7 +66,6 @@ export function JudgeCalibration({ onComplete }) {
         // Failed — restart
         setCurrentIndex(0);
         setPassedCount(0);
-        setFailedCount(0);
         setFeedback(null);
         setUserScore('');
       }

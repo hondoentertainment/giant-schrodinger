@@ -18,6 +18,34 @@ function saveConcepts(concepts) {
   }));
 }
 
+async function attachResolvedImages(pairs) {
+  const { resolveImageUrls } = await import('./imageResolve');
+  const { buildPicsumFallback } = await import('../lib/imageUrls');
+
+  const labels = pairs.flatMap((pair) => [pair.left, pair.right]);
+  const resolved = await resolveImageUrls(labels);
+
+  return pairs.map((pair) => {
+    const left = resolved[pair.left] || { url: buildPicsumFallback(pair.left), fallbackUrl: buildPicsumFallback(pair.left) };
+    const right = resolved[pair.right] || { url: buildPicsumFallback(pair.right), fallbackUrl: buildPicsumFallback(pair.right) };
+
+    return {
+      left: {
+        label: pair.left,
+        url: left.url,
+        fallbackUrl: left.fallbackUrl || buildPicsumFallback(pair.left),
+        categories: ['ai-generated'],
+      },
+      right: {
+        label: pair.right,
+        url: right.url,
+        fallbackUrl: right.fallbackUrl || buildPicsumFallback(pair.right),
+        categories: ['ai-generated'],
+      },
+    };
+  });
+}
+
 // Generate concept pairs via AI
 export async function generateConceptPairs(theme, count = 5) {
   // Check cache first
@@ -46,21 +74,13 @@ Be specific and vivid. Avoid generic words. Examples: "Rubber Duck" not "Toy", "
     if (!jsonMatch) return null;
 
     const pairs = JSON.parse(jsonMatch[0]);
-    const concepts = pairs.map(p => ({
-      left: { label: p.left, url: buildPicsumUrl(p.left), categories: ['ai-generated'] },
-      right: { label: p.right, url: buildPicsumUrl(p.right), categories: ['ai-generated'] },
-    }));
+    const concepts = await attachResolvedImages(pairs);
 
     saveConcepts(concepts);
     return concepts;
   } catch {
     return null;
   }
-}
-
-function buildPicsumUrl(label) {
-  const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  return `https://picsum.photos/seed/${slug}-${Date.now()}/800/800`;
 }
 
 // Get supplemental concepts when static pool is exhausted

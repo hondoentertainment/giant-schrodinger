@@ -1,25 +1,42 @@
+<<<<<<< HEAD
 /* global global */
 import React from 'react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
+=======
+import React from 'react';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { render, screen, waitFor, within, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+>>>>>>> origin/main
 
 beforeAll(() => {
-  global.IntersectionObserver = class {
+  vi.stubGlobal('IntersectionObserver', class {
     constructor(cb) { this._cb = cb; }
     observe() { this._cb([{ isIntersecting: true }]); }
     unobserve() {}
     disconnect() {}
-  };
+  });
 });
 
+// Collisions fixture - the tests below can override the returned array to cover
+// empty state, sort, and judgement merging behavior.
+const baseCollisions = [
+  {
+    id: '1',
+    submission: 'Test connection',
+    score: 8,
+    timestamp: Date.now() - 1000,
+    imageUrl: 'https://example.com/a.jpg',
+  },
+];
+let mockCollisions = baseCollisions;
 vi.mock('../../services/storage', () => ({
-  getCollisions: () => [
-    { id: '1', submission: 'Test connection', score: 8, createdAt: Date.now() },
-  ],
+  getCollisions: () => mockCollisions,
 }));
 
 vi.mock('../../services/votes', () => ({
-  getVotes: () => ({}),
+  getVotes: () => ({ up: 0, down: 0, score: 0 }),
   upvote: vi.fn(),
   downvote: vi.fn(),
   getAllVotes: () => ({}),
@@ -31,39 +48,333 @@ vi.mock('../../services/highlights', () => ({
   getWeeklyHighlights: () => [],
 }));
 
+// Judgement mock is controllable per-test: tests set the resolved value via
+// `mockJudgementsResolve`, or set `holdJudgementResolve = true` and call
+// `releaseJudgementResolve()` manually to assert the loading state.
+let mockJudgementsResolve = () => ({});
+let holdJudgementResolve = false;
+let _pendingJudgementResolve = null;
+function releaseJudgementResolve() {
+  if (_pendingJudgementResolve) {
+    _pendingJudgementResolve(mockJudgementsResolve());
+    _pendingJudgementResolve = null;
+  }
+}
 vi.mock('../../services/backend', () => ({
   isBackendEnabled: () => false,
-  getJudgementsByCollisionIds: () => Promise.resolve({}),
+  getJudgementsByCollisionIds: vi.fn(() => {
+    if (holdJudgementResolve) {
+      return new Promise((resolve) => { _pendingJudgementResolve = resolve; });
+    }
+    return Promise.resolve(mockJudgementsResolve());
+  }),
 }));
 
 vi.mock('../../services/judgements', () => ({
   getJudgement: () => null,
+  getJudgementForCollision: () => null,
 }));
 
+vi.mock('../../services/moderation', () => ({
+  flagContent: vi.fn(),
+}));
+
+vi.mock('../../services/share', async () => {
+  const actual = await vi.importActual('../../services/share');
+  return {
+    ...actual,
+    createJudgeShareLinks: vi.fn(() => Promise.resolve({
+      shareUrl: 'https://example.com/?judge=token123',
+      previewUrl: 'https://example.com/og?roundId=token123',
+    })),
+    getOgShareUrl: (token) => `https://example.com/og?roundId=${token}`,
+  };
+});
+
+const mockSetGameState = vi.fn();
 vi.mock('../../context/GameContext', () => ({
-  useGame: () => ({ setGameState: vi.fn() }),
+  useGame: () => ({ setGameState: mockSetGameState }),
 }));
 
 vi.mock('../../lib/scoreBands', () => ({
   getScoreBand: () => ({ label: 'Great', color: 'from-green-400 to-green-600' }),
 }));
 
+vi.mock('../../services/analytics', () => ({
+  trackEvent: vi.fn(),
+}));
+
+vi.mock('../../lib/haptics', () => ({
+  haptic: vi.fn(),
+}));
+
+vi.mock('../../components/SocialShareButtons', () => ({
+  default: () => <div data-testid="social-share-buttons">Share</div>,
+}));
+
 // Import after mocks
 import { Gallery } from './Gallery';
 
 describe('Gallery', () => {
-  it('renders gallery heading', () => {
-    render(<Gallery />);
-    expect(screen.getByText(/Connection Gallery/i)).toBeInTheDocument();
+  beforeEach(() => {
+    mockCollisions = baseCollisions;
+    mockJudgementsResolve = () => ({});
+    holdJudgementResolve = false;
+    _pendingJudgementResolve = null;
+    mockSetGameState.mockClear();
   });
 
-  it('shows connection entries', () => {
+  it('renders gallery heading', async () => {
     render(<Gallery />);
-    expect(screen.getByText(/No connections yet|Test connection/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Connection Gallery/i)).toBeInTheDocument();
+    });
   });
 
-  it('has a sort control', () => {
+  it('shows connection entries', async () => {
     render(<Gallery />);
-    expect(screen.getByLabelText(/Sort gallery/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByText(/Test connection/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('has a sort control', async () => {
+    render(<Gallery />);
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Sort gallery/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows the empty state when no collisions are stored', async () => {
+    mockCollisions = [];
+    render(<Gallery />);
+    await waitFor(() => {
+      expect(screen.getByText(/No connections yet/i)).toBeInTheDocument();
+    });
+  });
+
+  it('clicking Back to Lobby sets game state to LOBBY', async () => {
+    const user = userEvent.setup();
+    render(<Gallery />);
+    const backButton = await screen.findByRole('button', { name: /back to lobby/i });
+    await user.click(backButton);
+    expect(mockSetGameState).toHaveBeenCalledWith('LOBBY');
+  });
+
+  it('shows the loading indicator while judgements are loading and hides it after resolve', async () => {
+    mockCollisions = [
+      { id: '1', submission: 'Pending one', score: 7, timestamp: Date.now(), imageUrl: 'https://example.com/p.jpg' },
+    ];
+    holdJudgementResolve = true;
+    render(<Gallery />);
+    const loadingEl = await screen.findByText(/Loading friend feedback\.\.\./i);
+    expect(loadingEl).toBeInTheDocument();
+    // Release the pending promise and the loading indicator should go away.
+    await act(async () => {
+      releaseJudgementResolve();
+    });
+    await waitFor(() => {
+      expect(screen.queryByText(/Loading friend feedback\.\.\./i)).not.toBeInTheDocument();
+    });
+  });
+
+  it('displays friend judgements on matching cards when backend returns them', async () => {
+    mockCollisions = [
+      {
+        id: 'abc',
+        submission: 'Witty take',
+        score: 9,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/j.jpg',
+        assets: { left: { label: 'Comet' }, right: { label: 'Pancake' } },
+        judgeMode: 'ai',
+        isDailyChallenge: true,
+      },
+    ];
+    mockJudgementsResolve = () => ({
+      abc: { judgeName: 'Alice', score: 10, commentary: 'Brilliant!' },
+    });
+    render(<Gallery />);
+    await waitFor(() => {
+      expect(screen.getByText(/Judged by Alice: 10\/10/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Brilliant!/)).toBeInTheDocument();
+  });
+
+  it('includes friend judgement details in copied gallery share text', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    mockCollisions = [
+      {
+        id: 'abc',
+        submission: 'Witty take',
+        score: 9,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/j.jpg',
+        assets: { left: { label: 'Comet' }, right: { label: 'Pancake' } },
+        judgeMode: 'ai',
+        isDailyChallenge: true,
+      },
+    ];
+    mockJudgementsResolve = () => ({
+      abc: { judgeName: 'Alice', score: 10, commentary: 'Brilliant!' },
+    });
+
+    render(<Gallery />);
+
+    const copyButton = await screen.findByRole('button', { name: /Copy share/i });
+    await user.click(copyButton);
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Friend Judge: Alice gave it 10/10'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Brilliant!'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Prompt pair: Comet x Pancake'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('AI Judge result'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Daily Venn'));
+  });
+
+  it('changing sort select reorders collision items', async () => {
+    const user = userEvent.setup();
+    // Two collisions with different scores + timestamps so sort orders differ.
+    mockCollisions = [
+      { id: 'low', submission: 'Low score one', score: 2, timestamp: Date.now(), imageUrl: 'https://example.com/low.jpg' },
+      { id: 'high', submission: 'High score one', score: 10, timestamp: Date.now() - 10_000, imageUrl: 'https://example.com/high.jpg' },
+    ];
+    render(<Gallery />);
+    const list = await screen.findByRole('list', { name: /your connection gallery/i });
+    // Each LazyImage renders an <article>; collect them in DOM order.
+    let items = within(list).getAllByRole('article');
+    // Default sort is 'newest' — "Low score one" has the newer timestamp, so it appears first.
+    expect(items[0].getAttribute('aria-label')).toMatch(/Low score one/);
+
+    // Switch to "Highest score" — "High score one" should move to position 0.
+    const sortSelect = screen.getByLabelText(/Sort gallery/i);
+    await user.selectOptions(sortSelect, 'score-high');
+    items = within(list).getAllByRole('article');
+    expect(items[0].getAttribute('aria-label')).toMatch(/High score one/);
+  });
+
+  it('renders LazyImage cards as accessible articles with IntersectionObserver triggering image load', async () => {
+    mockCollisions = [
+      { id: 'lazy1', submission: 'Lazy thing', score: 6, timestamp: Date.now(), imageUrl: 'https://example.com/lazy.jpg' },
+    ];
+    render(<Gallery />);
+    // The mocked IntersectionObserver fires isIntersecting=true immediately,
+    // so the <img> should be present (rather than only the placeholder).
+    const card = await screen.findByRole('article');
+    expect(card).toHaveAttribute('aria-label', expect.stringContaining('Lazy thing'));
+    const img = await within(card).findByAltText('Lazy thing');
+    expect(img).toHaveAttribute('src', 'https://example.com/lazy.jpg');
+  });
+
+  it('opens detail modal when a gallery tile is clicked', async () => {
+    const user = userEvent.setup();
+    mockCollisions = [
+      {
+        id: 'tap1',
+        submission: 'Tap me open',
+        score: 8,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/tap.jpg',
+        assets: { left: { label: 'Left' }, right: { label: 'Right' } },
+      },
+    ];
+    render(<Gallery />);
+    const card = await screen.findByRole('article');
+    await user.click(card);
+    expect(await screen.findByRole('dialog', { name: /connection details/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Connection details/i })).toBeInTheDocument();
+  });
+
+  it('asks a friend to judge from the detail modal via navigator.share', async () => {
+    const user = userEvent.setup();
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: share,
+    });
+    const { createJudgeShareLinks } = await import('../../services/share');
+    mockCollisions = [
+      {
+        id: 'judge1',
+        submission: 'Needs a friend score',
+        score: 6,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/judge.jpg',
+        assets: {
+          left: { id: 'a', label: 'Left', type: 'image', url: 'https://example.com/a.jpg' },
+          right: { id: 'b', label: 'Right', type: 'image', url: 'https://example.com/b.jpg' },
+        },
+      },
+    ];
+    render(<Gallery />);
+    await user.click(await screen.findByRole('article'));
+    await user.click(await screen.findByRole('button', { name: /Ask a friend to judge/i }));
+
+    await waitFor(() => {
+      expect(createJudgeShareLinks).toHaveBeenCalledWith(expect.objectContaining({
+        submission: 'Needs a friend score',
+        collisionId: 'judge1',
+        judgeMode: 'friend',
+      }));
+      expect(share).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Judge my Venn connection',
+        url: 'https://example.com/?judge=token123',
+      }));
+    });
+  });
+
+  it('opens detail modal when Enter is pressed on a focused tile', async () => {
+    const user = userEvent.setup();
+    mockCollisions = [
+      {
+        id: 'key1',
+        submission: 'Keyboard open',
+        score: 7,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/key.jpg',
+      },
+    ];
+    render(<Gallery />);
+    const card = await screen.findByRole('article');
+    card.focus();
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('filters gallery by media type', async () => {
+    const user = userEvent.setup();
+    mockCollisions = [
+      {
+        id: 'img1',
+        submission: 'Image round',
+        score: 7,
+        timestamp: Date.now(),
+        imageUrl: 'https://example.com/img.jpg',
+        mediaType: 'image',
+        assets: { left: { label: 'A', type: 'image' }, right: { label: 'B', type: 'image' } },
+      },
+      {
+        id: 'mv1',
+        submission: 'Meme video round',
+        score: 9,
+        timestamp: Date.now() - 5000,
+        imageUrl: 'https://example.com/mv.jpg',
+        mediaType: 'memes_videos',
+        assets: { left: { label: 'Meme', type: 'meme' }, right: { label: 'Clip', type: 'video' } },
+      },
+    ];
+    render(<Gallery />);
+    const list = await screen.findByRole('list', { name: /your connection gallery/i });
+    expect(within(list).getAllByRole('article')).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: /Memes & Videos/i }));
+    await waitFor(() => {
+      expect(within(list).getAllByRole('article')).toHaveLength(1);
+    });
+    expect(within(list).getByRole('article').getAttribute('aria-label')).toMatch(/Meme video round/);
   });
 });

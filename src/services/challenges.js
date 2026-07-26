@@ -47,6 +47,9 @@ export function createChallenge(roundData) {
 
         const challenges = getChallenges();
         challenges.unshift(challenge);
+        // Cap stored challenges to prevent unbounded localStorage growth.
+        // Matches the 30-entry convention used by dailyChallenge.js.
+        if (challenges.length > 30) challenges.length = 30;
         saveChallenges(challenges);
 
         return challenge;

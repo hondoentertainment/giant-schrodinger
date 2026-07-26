@@ -2,8 +2,17 @@ const QUEUE_KEY = 'venn_matchmaking_queue';
 const RATING_RANGE = 150;
 const QUEUE_TIMEOUT = 30000;
 
+function generateMatchId() {
+  // Prefer crypto.randomUUID (Node 18+, modern browsers, jsdom).
+  // Fall back to a Date.now()+random suffix for very old environments.
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `match-${crypto.randomUUID()}`;
+  }
+  return `match-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function joinMatchmakingQueue(playerName, rating) {
-  const entry = { playerName, rating, joinedAt: Date.now(), id: `match-${Date.now()}` };
+  const entry = { playerName, rating, joinedAt: Date.now(), id: generateMatchId() };
   // In production: insert into Supabase matchmaking_queue table
   // For now: localStorage simulation
   const queue = getQueue();

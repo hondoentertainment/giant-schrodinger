@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { saveJudgement, getJudgement } from './judgements';
+import { saveJudgement, getJudgement, getJudgementForCollision } from './judgements';
 
 describe('judgements service', () => {
     beforeEach(() => {
@@ -38,5 +38,19 @@ describe('judgements service', () => {
         saveJudgement('r2', { score: 9 });
         expect(getJudgement('r1').score).toBe(7);
         expect(getJudgement('r2').score).toBe(9);
+    });
+
+    it('stores a collision-aware judgement record when collisionId is provided', () => {
+        saveJudgement({
+            roundId: 'round-123',
+            collisionId: 'collision-abc',
+            backendId: 'backend-123',
+            judgeMode: 'friend',
+            judgement: { score: 10, commentary: 'Perfect', judgeName: 'Sam' },
+        });
+
+        expect(getJudgement('round-123')?.backendId).toBe('backend-123');
+        expect(getJudgementForCollision('collision-abc')?.score).toBe(10);
+        expect(getJudgementForCollision('collision-abc')?.judgeName).toBe('Sam');
     });
 });

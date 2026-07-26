@@ -1,5 +1,7 @@
 # Discord Bot Setup for Venn with Friends
 
+Standalone Node package notes: [discord-bot/README.md](discord-bot/README.md). Prefer the Supabase Edge Function path below for production.
+
 ## Overview
 
 The Venn with Friends Discord bot lets users start challenges directly from Discord servers. It runs as a Supabase Edge Function that handles Discord interactions.
@@ -41,8 +43,12 @@ Replace `YOUR_APP_ID` and `YOUR_BOT_TOKEN` with your actual values.
 ### 3. Deploy the Supabase Edge Function
 
 ```bash
-supabase functions deploy discord-bot --no-verify-jwt
+npm run configure:edge-secrets   # sets APP_URL (+ DISCORD_PUBLIC_KEY if present)
+npm run deploy:edge-functions    # includes discord-bot
+# or: npx supabase functions deploy discord-bot --project-ref fnjshhjwoximddoggdrk --no-verify-jwt
 ```
+
+Play links in the bot now point at `https://giant-schrodinger.vercel.app` (or `APP_URL`).
 
 ### 4. Configure the Interactions Endpoint
 

@@ -40,6 +40,27 @@ export function saveCollision(collision) {
 }
 
 /**
+ * Updates an existing collision by ID
+ * @param {string} id
+ * @param {Object} patch
+ * @returns {Object|null} Updated collision
+ */
+export function updateCollision(id, patch) {
+  try {
+    const collisions = getCollisions();
+    const index = collisions.findIndex((entry) => entry.id === id);
+    if (index === -1) return null;
+    const updated = { ...collisions[index], ...patch, id };
+    collisions[index] = updated;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(collisions));
+    return updated;
+  } catch (error) {
+    console.warn('Failed to update collision:', error);
+    return null;
+  }
+}
+
+/**
  * Deletes a collision by ID
  * @param {string} id - The collision ID to delete
  * @returns {boolean} Success status

@@ -25,15 +25,20 @@ vi.mock('../../services/share', () => ({
     clearJudgeFromUrl: vi.fn(),
 }));
 
+vi.mock('../../services/sounds', () => ({
+    playSubmitSound: vi.fn(),
+}));
+
+vi.mock('../../lib/haptics', () => ({
+    haptic: vi.fn(),
+}));
+
 vi.mock('../../hooks/useFocusTrap', () => ({
     useFocusTrap: vi.fn(),
 }));
 
-// Mock JudgeCalibration to skip calibration gate
-vi.mock('./JudgeCalibration', () => ({
-    JudgeCalibration: ({ onComplete }) => (
-        <button data-testid="skip-calibration" onClick={onComplete}>Skip Calibration</button>
-    ),
+vi.mock('../../services/assetSelection', () => ({
+    loadSelectedAssets: async (assets) => assets,
 }));
 
 // Mock VennDiagram to simplify rendering
@@ -53,6 +58,7 @@ describe('JudgeRound', () => {
             right: { id: 'dog', label: 'Dog', type: 'image', url: 'https://example.com/dog.jpg' },
         },
         submission: 'They both have fur',
+        imageUrl: 'https://example.com/fusion.jpg',
         shareFrom: 'Alice',
         collisionId: 'test-collision-1',
         roundId: 'round-1',
@@ -61,58 +67,36 @@ describe('JudgeRound', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        // Mark judge as calibrated so calibration gate is skipped
-        localStorage.setItem('venn_judge_calibrated', 'true');
     });
 
-    it('shows quick judge buttons (Fire, Solid, Meh)', () => {
+    it('shows the score pills and optional commentary', () => {
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
-        expect(screen.getByText('Fire')).toBeInTheDocument();
-        expect(screen.getByText('Solid')).toBeInTheDocument();
-        expect(screen.getByText('Meh')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: '10', pressed: false })).toBeInTheDocument();
+        expect(screen.getByDisplayValue('Highly Logical')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Share your verdict/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Submit Judgement/i })).toBeDisabled();
     });
 
-    it('quick judge buttons submit appropriate scores', async () => {
+    it('submits a score through score pills', async () => {
         const { saveJudgement } = await import('../../services/judgements');
         const user = userEvent.setup();
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
 
-        const fireBtn = screen.getByText('Fire').closest('button');
-        await user.click(fireBtn);
+        await user.click(screen.getByRole('button', { name: '10' }));
+        expect(screen.getByRole('button', { name: '10', pressed: true })).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: /Submit Judgement/i }));
 
         expect(saveJudgement).toHaveBeenCalledWith(
-            'round-1',
-            expect.objectContaining({ score: 10 })
+            expect.objectContaining({
+                roundId: 'round-1',
+                collisionId: 'test-collision-1',
+                judgement: expect.objectContaining({ score: 10 }),
+            })
         );
         expect(mockToast.success).toHaveBeenCalledWith('Judgement submitted!');
-    });
-
-    it('Solid button submits score of 8', async () => {
-        const { saveJudgement } = await import('../../services/judgements');
-        const user = userEvent.setup();
-        render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
-
-        const solidBtn = screen.getByText('Solid').closest('button');
-        await user.click(solidBtn);
-
-        expect(saveJudgement).toHaveBeenCalledWith(
-            'round-1',
-            expect.objectContaining({ score: 8 })
-        );
-    });
-
-    it('Meh button submits score of 5', async () => {
-        const { saveJudgement } = await import('../../services/judgements');
-        const user = userEvent.setup();
-        render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
-
-        const mehBtn = screen.getByText('Meh').closest('button');
-        await user.click(mehBtn);
-
-        expect(saveJudgement).toHaveBeenCalledWith(
-            'round-1',
-            expect.objectContaining({ score: 5 })
-        );
+        expect(await screen.findByText(/Thanks for judging/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Try today's Venn/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Make your own connection/i })).toBeInTheDocument();
     });
 
     it('shows the submission text being judged', () => {
@@ -123,5 +107,11 @@ describe('JudgeRound', () => {
     it('shows the judge heading', () => {
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
         expect(screen.getByText(/Judge a Friend/)).toBeInTheDocument();
+    });
+
+    it('shows shared fusion image context when available', () => {
+        render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
+        expect(screen.getByAltText(/Fusion created from this connection/i)).toHaveAttribute('src', mockPayload.imageUrl);
+        expect(screen.getByText(/Alice made a Venn connection/i)).toBeInTheDocument();
     });
 });

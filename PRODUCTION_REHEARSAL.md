@@ -1,0 +1,101 @@
+# Production Rehearsal
+
+**Last updated:** July 14, 2026  
+**Companions:** [SETUP_BACKEND.md](SETUP_BACKEND.md) · [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md) · [PRD.md](PRD.md)
+
+Run this once before the first public launch and again before any major release.
+
+## 1. Backend migration
+
+1. Apply `supabase/schema.sql` in the Supabase SQL editor.
+2. Confirm the new RPCs exist:
+   - `create_room_session`
+   - `join_room_session`
+   - `create_shared_round`
+   - `submit_round_judgement`
+   - `cast_room_vote`
+   - `finalize_room_votes`
+   - `report_content` (moderation)
+3. Confirm the old anonymous write policies are gone and only read policies remain.
+
+## 2. Secrets and hosting
+
+1. Copy `.env.example` to `.env.local` and fill in production values locally for preflight scripts.
+2. Deploy Supabase edge functions (`npm run deploy:edge-functions` prints commands):
+   - `resolve-image`, `resolve-meme`, `score-submission`, `og-tags`
+   - Set secrets: `PEXELS_API_KEY`, `GIPHY_API_KEY`, `GEMINI_API_KEY`, `APP_URL`
+3. Run automated preflight:
+   ```bash
+   npm run rehearsal:preflight
+   ```
+   Or skip the long verify step during iteration:
+   ```bash
+   npm run rehearsal:preflight:fast
+   ```
+4. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the target host.
+5. Set `VITE_GEMINI_API_KEY` if live AI judging is part of the launch.
+6. Deploy a fresh build from `main`.
+7. Smoke the deployed URL:
+   ```bash
+   npm run smoke:production
+   PRODUCTION_URL=https://your-site npm run test:e2e:rehearsal
+   ```
+
+## 3. Core smoke test
+
+1. Run `npm run verify:release`
+2. Run `npm run check:supabase-rpcs` (loads `.env.local`, probes launch-gate RPCs)
+3. Open the deployed site and confirm the runtime status card reflects the expected services.
+
+## 4. Live product rehearsal
+
+1. Solo flow with Gemini enabled:
+   - Complete a round and confirm live AI scoring and image generation.
+2. Solo flow without Gemini:
+   - Confirm mock scoring and curated image fallback messaging.
+3. Friend judging:
+   - Generate a share link.
+   - Open it in another browser.
+   - Submit a judgement.
+   - Confirm feedback appears back in the original session/gallery.
+4. Multiplayer with at least two browsers:
+   - Create room.
+   - Join room.
+   - Start round.
+   - Submit answers from both players.
+   - Vote from both players in manual mode.
+   - Finalize results and confirm both browsers show the same winner.
+   - Refresh or join from a third browser during results and confirm it hydrates the current round instead of dropping into the lobby.
+   - Advance to the next round and confirm room sync still works.
+5. Memes & videos:
+   - Select Memes & Videos in profile settings.
+   - Complete a round with stock meme/video assets.
+   - Optionally upload custom meme + video and enable "Use my memes & videos".
+   - Confirm gallery filter shows the saved memes/videos round.
+
+## 5. Observability check
+
+Run `npm run rehearsal:telemetry` for the full browser validation script.
+
+1. Add a temporary sink in the browser console:
+   ```js
+   window.__VWF_TELEMETRY__ = [];
+   ```
+2. Exercise solo, judging, and multiplayer flows.
+3. Confirm structured entries appear for:
+   - `multiplayer_room_created`
+   - `multiplayer_room_joined`
+   - `multiplayer_votes_finalized`
+   - `ai_mock_score_fallback` when Gemini is unavailable
+   - `fusion_image_fallback` when image generation falls back
+4. If you wire a production monitor later, point it at the `vwf:telemetry` browser event or `window.__VWF_TELEMETRY__` sink.
+
+## 6. Launch gate
+
+Do not ship if any of these fail:
+
+- Secure Supabase RPCs are missing
+- Multiplayer manual voting produces different winners across browsers
+- Friend judging links fail to resolve
+- Lint, tests, e2e, or build are red
+- Runtime status card disagrees with the deployed environment

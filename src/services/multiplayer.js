@@ -1,21 +1,72 @@
 import { supabase, isBackendEnabled } from '../lib/supabase';
 
-// Generate a short room code (4 uppercase alphanumeric characters)
 function generateRoomCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed ambiguous chars (0/O, 1/I)
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
         code += chars[Math.floor(Math.random() * chars.length)];
     }
     return code;
 }
 
-// ============================================================
-// Room CRUD
-// ============================================================
+function isRpcUnavailable(error) {
+    const message = `${error?.message || ''} ${error?.details || ''}`.toLowerCase();
+    return error?.code === 'PGRST202'
+        || message.includes('could not find the function')
+        || message.includes('does not exist');
+}
 
-export async function createRoom({ hostName, themeId, totalRounds, scoringMode }) {
+async function callRpc(name, params) {
+    const { data, error } = await supabase.rpc(name, params);
+    if (error) throw error;
+    return data;
+}
+
+function buildFallbackSession({ playerName, isHost }) {
+    return {
+        hostToken: null,
+        playerToken: null,
+        playerName,
+        playerId: null,
+        isHost,
+        secureMode: false,
+    };
+}
+
+function normalizeRoomSession(data) {
+    if (!data?.room) return null;
+    return {
+        room: data.room,
+        session: {
+            hostToken: data.session?.hostToken || null,
+            playerToken: data.session?.playerToken || null,
+            playerName: data.session?.playerName || null,
+            playerId: data.session?.playerId || null,
+            isHost: Boolean(data.session?.isHost),
+            secureMode: data.session?.secureMode !== false,
+        },
+    };
+}
+
+export async function createRoom({ hostName, themeId, totalRounds, scoringMode, avatar }) {
     if (!isBackendEnabled()) return null;
+    try {
+        const rpcData = await callRpc('create_room_session', {
+            p_host_name: hostName,
+            p_theme_id: themeId || 'neon',
+            p_total_rounds: totalRounds || 3,
+            p_scoring_mode: scoringMode || 'ai',
+            p_avatar: avatar || null,
+        });
+        const normalized = normalizeRoomSession(rpcData);
+        if (normalized) return normalized;
+    } catch (err) {
+        if (!isRpcUnavailable(err)) {
+            console.warn('createRoom failed:', err);
+            return null;
+        }
+    }
+
     try {
         const code = generateRoomCode();
         const { data, error } = await supabase
@@ -33,14 +84,17 @@ export async function createRoom({ hostName, themeId, totalRounds, scoringMode }
             .single();
         if (error) throw error;
 
-        // Also insert the host as a player
         await supabase.from('room_players').insert({
             room_id: data.id,
             player_name: hostName,
+            avatar: avatar || null,
             is_host: true,
         });
 
-        return data;
+        return {
+            room: data,
+            session: buildFallbackSession({ playerName: hostName, isHost: true }),
+        };
     } catch (err) {
         console.warn('createRoom failed:', err);
         return null;
@@ -50,7 +104,21 @@ export async function createRoom({ hostName, themeId, totalRounds, scoringMode }
 export async function joinRoom(code, playerName, avatar) {
     if (!isBackendEnabled()) return null;
     try {
-        // Find the room
+        const rpcData = await callRpc('join_room_session', {
+            p_code: code.toUpperCase().trim(),
+            p_player_name: playerName,
+            p_avatar: avatar || null,
+        });
+        const normalized = normalizeRoomSession(rpcData);
+        if (normalized) return normalized;
+    } catch (err) {
+        if (!isRpcUnavailable(err)) {
+            console.warn('joinRoom failed:', err);
+            return { error: err.message || 'Failed to join room' };
+        }
+    }
+
+    try {
         const { data: room, error: roomError } = await supabase
             .from('rooms')
             .select('*')
@@ -59,7 +127,6 @@ export async function joinRoom(code, playerName, avatar) {
         if (roomError || !room) return { error: 'Room not found' };
         if (room.status !== 'waiting') return { error: 'Game already in progress' };
 
-        // Check if player name already exists in room
         const { data: existing } = await supabase
             .from('room_players')
             .select('id')
@@ -69,7 +136,6 @@ export async function joinRoom(code, playerName, avatar) {
 
         if (existing) return { error: 'Name already taken in this room' };
 
-        // Add player
         const { error: playerError } = await supabase
             .from('room_players')
             .insert({
@@ -80,7 +146,10 @@ export async function joinRoom(code, playerName, avatar) {
             });
         if (playerError) throw playerError;
 
-        return { room };
+        return {
+            room,
+            session: buildFallbackSession({ playerName, isHost: false }),
+        };
     } catch (err) {
         console.warn('joinRoom failed:', err);
         return { error: 'Failed to join room' };
@@ -94,6 +163,21 @@ export async function getRoomByCode(code) {
             .from('rooms')
             .select('*')
             .eq('code', code.toUpperCase().trim())
+            .single();
+        if (error || !data) return null;
+        return data;
+    } catch {
+        return null;
+    }
+}
+
+export async function getRoomById(roomId) {
+    if (!isBackendEnabled() || !roomId) return null;
+    try {
+        const { data, error } = await supabase
+            .from('rooms')
+            .select('*')
+            .eq('id', roomId)
             .single();
         if (error || !data) return null;
         return data;
@@ -117,25 +201,55 @@ export async function getRoomPlayers(roomId) {
     }
 }
 
-export async function leaveRoom(roomId, playerName) {
-    if (!isBackendEnabled()) return;
+export async function leaveRoom(roomId, playerName, auth = {}) {
+    if (!isBackendEnabled()) return false;
+    if (auth?.playerToken) {
+        try {
+            const data = await callRpc('leave_room_session', {
+                p_room_id: roomId,
+                p_player_token: auth.playerToken,
+            });
+            return Boolean(data);
+        } catch (err) {
+            if (!isRpcUnavailable(err)) {
+                console.warn('leaveRoom failed:', err);
+                return false;
+            }
+        }
+    }
+
     try {
         await supabase
             .from('room_players')
             .delete()
             .eq('room_id', roomId)
             .eq('player_name', playerName);
+        return true;
     } catch (err) {
         console.warn('leaveRoom failed:', err);
+        return false;
     }
 }
 
-// ============================================================
-// Room state changes (host only)
-// ============================================================
-
-export async function startRound(roomId, roundNumber, assets) {
+export async function startRound(roomId, roundNumber, assets, auth = {}) {
     if (!isBackendEnabled()) return false;
+    if (auth?.hostToken) {
+        try {
+            const data = await callRpc('start_room_round', {
+                p_room_id: roomId,
+                p_host_token: auth.hostToken,
+                p_round_number: roundNumber,
+                p_assets: assets,
+            });
+            return Boolean(data);
+        } catch (err) {
+            if (!isRpcUnavailable(err)) {
+                console.warn('startRound failed:', err);
+                return false;
+            }
+        }
+    }
+
     try {
         const { error } = await supabase
             .from('rooms')
@@ -153,8 +267,24 @@ export async function startRound(roomId, roundNumber, assets) {
     }
 }
 
-export async function setRoomStatus(roomId, status) {
+export async function setRoomStatus(roomId, status, auth = {}) {
     if (!isBackendEnabled()) return false;
+    if (auth?.hostToken) {
+        try {
+            const data = await callRpc('set_room_status_secure', {
+                p_room_id: roomId,
+                p_host_token: auth.hostToken,
+                p_status: status,
+            });
+            return Boolean(data);
+        } catch (err) {
+            if (!isRpcUnavailable(err)) {
+                console.warn('setRoomStatus failed:', err);
+                return false;
+            }
+        }
+    }
+
     try {
         const { error } = await supabase
             .from('rooms')
@@ -168,12 +298,25 @@ export async function setRoomStatus(roomId, status) {
     }
 }
 
-// ============================================================
-// Submissions
-// ============================================================
-
-export async function submitAnswer(roomId, roundNumber, playerName, submission) {
+export async function submitAnswer(roomId, roundNumber, playerName, submission, auth = {}) {
     if (!isBackendEnabled()) return false;
+    if (auth?.playerToken) {
+        try {
+            const data = await callRpc('submit_room_answer', {
+                p_room_id: roomId,
+                p_round_number: roundNumber,
+                p_player_token: auth.playerToken,
+                p_submission: submission,
+            });
+            return Boolean(data);
+        } catch (err) {
+            if (!isRpcUnavailable(err)) {
+                console.warn('submitAnswer failed:', err);
+                return false;
+            }
+        }
+    }
+
     try {
         const { error } = await supabase
             .from('room_submissions')
@@ -226,8 +369,40 @@ export async function getRoomSubmissions(roomId) {
     }
 }
 
-export async function updateSubmissionScore(submissionId, score) {
+export async function getRoundVotes(roomId, roundNumber) {
+    if (!isBackendEnabled()) return [];
+    try {
+        const { data, error } = await supabase
+            .from('room_votes')
+            .select('*')
+            .eq('room_id', roomId)
+            .eq('round_number', roundNumber)
+            .order('created_at', { ascending: true });
+        if (error) return [];
+        return data || [];
+    } catch {
+        return [];
+    }
+}
+
+export async function updateSubmissionScore(submissionId, score, auth = {}) {
     if (!isBackendEnabled()) return false;
+    if (auth?.hostToken) {
+        try {
+            const data = await callRpc('score_room_submission', {
+                p_submission_id: submissionId,
+                p_host_token: auth.hostToken,
+                p_score: score,
+            });
+            return Boolean(data);
+        } catch (err) {
+            if (!isRpcUnavailable(err)) {
+                console.warn('updateSubmissionScore failed:', err);
+                return false;
+            }
+        }
+    }
+
     try {
         const { error } = await supabase
             .from('room_submissions')
@@ -241,46 +416,100 @@ export async function updateSubmissionScore(submissionId, score) {
     }
 }
 
-// ============================================================
-// Room state fetching (for reconnection)
-// ============================================================
+export async function castVote(roomId, roundNumber, submissionId, auth = {}) {
+    if (!isBackendEnabled()) return { ok: false, error: 'Backend unavailable' };
+    if (auth?.playerToken) {
+        try {
+            const data = await callRpc('cast_room_vote', {
+                p_room_id: roomId,
+                p_round_number: roundNumber,
+                p_player_token: auth.playerToken,
+                p_submission_id: submissionId,
+            });
+            return { ok: Boolean(data?.ok), data };
+        } catch (err) {
+            if (!isRpcUnavailable(err)) {
+                console.warn('castVote failed:', err);
+                return { ok: false, error: err.message || 'Failed to record vote' };
+            }
+        }
+    }
 
-export async function fetchRoomState(roomCode) {
-    if (!isBackendEnabled()) return null;
+    if (!auth?.playerName) {
+        return { ok: false, error: 'Player session missing' };
+    }
+
     try {
-        const { data: room, error } = await supabase
-            .from('rooms')
-            .select('*')
-            .eq('code', roomCode.toUpperCase().trim())
+        const { data, error } = await supabase
+            .from('room_votes')
+            .insert({
+                room_id: roomId,
+                round_number: roundNumber,
+                voter_name: auth.playerName,
+                submission_id: submissionId,
+            })
+            .select('id')
             .single();
-        if (error || !room) return null;
-
-        const players = await getRoomPlayers(room.id);
-        const submissions = await getRoundSubmissions(room.id, room.round_number);
-
-        return { room, players, submissions };
-    } catch {
-        return null;
+        if (error) throw error;
+        return { ok: Boolean(data?.id), data };
+    } catch (err) {
+        console.warn('castVote failed:', err);
+        return { ok: false, error: 'Failed to record vote' };
     }
 }
 
-// ============================================================
-// Realtime subscriptions
-// ============================================================
+export async function finalizeRoomVoting(roomId, roundNumber, auth = {}) {
+    if (!isBackendEnabled()) return { ok: false, error: 'Backend unavailable' };
+    if (auth?.hostToken) {
+        try {
+            const data = await callRpc('finalize_room_votes', {
+                p_room_id: roomId,
+                p_round_number: roundNumber,
+                p_host_token: auth.hostToken,
+            });
+            return { ok: Boolean(data?.ok), data };
+        } catch (err) {
+            if (!isRpcUnavailable(err)) {
+                console.warn('finalizeRoomVoting failed:', err);
+                return { ok: false, error: err.message || 'Failed to finalize votes' };
+            }
+        }
+    }
+
+    return { ok: false, error: 'Secure voting RPC is not available' };
+}
+
+export async function advanceRoom(roomId, auth = {}) {
+    if (!isBackendEnabled()) return { ok: false, error: 'Backend unavailable' };
+    if (auth?.hostToken) {
+        try {
+            const data = await callRpc('advance_room_state', {
+                p_room_id: roomId,
+                p_host_token: auth.hostToken,
+            });
+            return { ok: Boolean(data?.ok), data };
+        } catch (err) {
+            if (!isRpcUnavailable(err)) {
+                console.warn('advanceRoom failed:', err);
+                return { ok: false, error: err.message || 'Failed to advance room' };
+            }
+        }
+    }
+
+    return { ok: false, error: 'Secure advance RPC is not available' };
+}
 
 export function subscribeToRoom(roomId, callbacks) {
     if (!isBackendEnabled() || !supabase) return null;
 
     const channel = supabase.channel(`room:${roomId}`);
 
-    // Room status changes
     channel.on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },
         (payload) => callbacks.onRoomUpdate?.(payload.new)
     );
 
-    // Player joins/leaves
     channel.on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'room_players', filter: `room_id=eq.${roomId}` },
@@ -292,7 +521,6 @@ export function subscribeToRoom(roomId, callbacks) {
         (payload) => callbacks.onPlayerLeave?.(payload.old)
     );
 
-    // Submissions
     channel.on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'room_submissions', filter: `room_id=eq.${roomId}` },
@@ -304,14 +532,15 @@ export function subscribeToRoom(roomId, callbacks) {
         (payload) => callbacks.onSubmissionUpdate?.(payload.new)
     );
 
-    // Monitor channel state changes for disconnect recovery
-    channel.on('system', {}, (payload) => {
-        if (payload.event === 'disconnect' || payload.event === 'error') {
-            callbacks.onDisconnect?.();
-        }
-    });
+    channel.on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'room_votes', filter: `room_id=eq.${roomId}` },
+        (payload) => callbacks.onVote?.(payload.new)
+    );
 
-    channel.subscribe();
+    channel.subscribe((status) => {
+        callbacks.onConnectionStatus?.(status);
+    });
 
     return () => {
         supabase.removeChannel(channel);

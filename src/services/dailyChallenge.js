@@ -1,4 +1,4 @@
-import { THEMES } from '../data/themes';
+import { THEMES, MEDIA_TYPES } from '../data/themes';
 
 const DAILY_STORAGE_KEY = 'vwf_daily';
 
@@ -34,6 +34,14 @@ const DAILY_PROMPTS = [
     'Find harmony in contrast.',
     'The best answers are the ones nobody else would write.',
     'One phrase, two concepts, infinite possibilities.',
+    'Pair nostalgia with something brand new this week.',
+    'Find the shared pulse between analog and digital.',
+    'What do a memory and a meme have in common?',
+    'Connect a quiet ritual with a loud celebration.',
+    'Link something you cook with something you code.',
+    'Bridge a childhood toy and a grown-up tool.',
+    'Where do comfort food and comfort tech overlap?',
+    'Make one phrase that fits both summer heat and winter quiet.',
 ];
 
 function seededRandom(seed) {
@@ -66,6 +74,7 @@ export function getDailyChallenge() {
 
     const promptIndex = Math.floor(rng() * DAILY_PROMPTS.length);
     const prompt = DAILY_PROMPTS[promptIndex];
+    const mediaType = rng() >= 0.65 ? MEDIA_TYPES.MEMES_VIDEOS : MEDIA_TYPES.IMAGE;
 
     return {
         seed,
@@ -73,6 +82,8 @@ export function getDailyChallenge() {
         theme,
         prompt,
         date: getTodayKey(),
+        mediaType,
+        isMemesVideosDay: mediaType === MEDIA_TYPES.MEMES_VIDEOS,
     };
 }
 
@@ -112,4 +123,58 @@ export function getDailyChallengeHistory() {
     } catch {
         return [];
     }
+}
+
+export function getDailyChallengeSummary() {
+    const history = getDailyChallengeHistory();
+    if (history.length === 0) {
+        return {
+            completions: 0,
+            bestScore: null,
+            latestScore: null,
+            averageScore: null,
+            shareLine: 'Today is open. Complete the daily challenge to start your streak ritual.',
+            weeklyBest: null,
+            weeklyCompletions: 0,
+        };
+    }
+
+    const scores = history.map((entry) => Number(entry.score) || 0);
+    const bestScore = Math.max(...scores);
+    const latestScore = scores[0];
+    const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    const weekly = getWeeklyDailyLeaderboard();
+
+    return {
+        completions: history.length,
+        bestScore,
+        latestScore,
+        averageScore,
+        shareLine: `Daily Venn complete: ${latestScore}/10 today, best ${bestScore}/10 across ${history.length} day${history.length === 1 ? '' : 's'}.`,
+        weeklyBest: weekly.bestScore,
+        weeklyCompletions: weekly.completions,
+    };
+}
+
+function getWeekStartKey(date = new Date()) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function getWeeklyDailyLeaderboard() {
+    const weekStart = getWeekStartKey();
+    const history = getDailyChallengeHistory().filter((entry) => entry.date >= weekStart);
+    if (history.length === 0) {
+        return { completions: 0, bestScore: null, averageScore: null, weekStart };
+    }
+    const scores = history.map((entry) => Number(entry.score) || 0);
+    return {
+        completions: history.length,
+        bestScore: Math.max(...scores),
+        averageScore: scores.reduce((sum, score) => sum + score, 0) / scores.length,
+        weekStart,
+    };
 }

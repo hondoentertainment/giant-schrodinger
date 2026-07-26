@@ -35,7 +35,7 @@ export function ToastContainer() {
                         key={t.id}
                         role="status"
                         aria-live="polite"
-                        className={`pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl border bg-gradient-to-r ${style} backdrop-blur-xl text-white shadow-2xl animate-in slide-in-from-right-8 fade-in duration-300`}
+                        className={`pointer-events-auto flex items-start gap-3 px-4 py-3.5 rounded-2xl border bg-gradient-to-r ${style} backdrop-blur-2xl text-white shadow-game-card animate-in slide-in-from-right-8 fade-in duration-300`}
                     >
                         <Icon className="w-5 h-5 mt-0.5 shrink-0" />
                         <p className="text-sm font-medium flex-1">{t.message}</p>

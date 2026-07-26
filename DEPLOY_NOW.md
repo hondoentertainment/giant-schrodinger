@@ -3,8 +3,10 @@
 ## Prerequisites
 
 - Node.js 20+ installed
-- All 179 tests passing (`npm run test`)
+- All 688 unit tests passing (`npm run test`)
+- E2E desktop suite green (`npm run test:e2e:desktop`) — 11 specs
 - Production build succeeding (`npm run build`)
+- Prefer `npm run verify:release` before push
 - GitHub repository access
 
 ## Quick 3-Step Deployment
@@ -31,7 +33,7 @@ git push origin main
 
 1. Go to **Actions** tab at https://github.com/hondoentertainment/giant-schrodinger/actions
 2. Watch the "Deploy to GitHub Pages" workflow
-3. The workflow runs unit tests (179), E2E tests (5 specs), then builds and deploys
+3. The workflow runs unit tests (688), E2E tests (11 specs), then builds and deploys
 4. Wait for green checkmark
 
 ## Done

@@ -5,6 +5,8 @@ import {
     getMilestones,
     isAvatarUnlocked,
     isThemeUnlocked,
+    getProfileSummary,
+    getBestScore,
 } from './stats';
 
 describe('stats service', () => {
@@ -21,6 +23,9 @@ describe('stats service', () => {
                 maxStreak: 0,
                 totalRounds: 0,
                 totalCollisions: 0,
+                scores: [],
+                dailyScores: [],
+                themesPlayed: [],
                 milestonesUnlocked: [],
             });
         });
@@ -31,6 +36,13 @@ describe('stats service', () => {
             expect(s.totalRounds).toBe(1);
             expect(s.totalCollisions).toBe(1);
             expect(s.lastPlayedDate).toBeTruthy();
+        });
+
+        it('records score, daily score, and theme history when provided', () => {
+            const { stats } = recordPlay(9, { isDailyChallenge: true, themeId: 'classic' });
+            expect(stats.scores).toEqual([9]);
+            expect(stats.dailyScores).toEqual([9]);
+            expect(stats.themesPlayed).toEqual(['classic']);
         });
 
         it('handles corrupted localStorage', () => {
@@ -93,6 +105,41 @@ describe('stats service', () => {
 
         it('returns false for mystery theme before 7-day streak', () => {
             expect(isThemeUnlocked('mystery', { milestonesUnlocked: [] })).toBe(false);
+        });
+    });
+
+    describe('getProfileSummary', () => {
+        it('returns best score and next milestone from stats', () => {
+            recordPlay(9, { themeId: 'neon' });
+            recordPlay(7, { themeId: 'neon' });
+            const summary = getProfileSummary();
+            expect(getBestScore()).toBe(9);
+            expect(summary.bestScore).toBe(9);
+            expect(summary.favoriteThemeId).toBe('neon');
+            expect(summary.nextMilestone).toBeTruthy();
+            expect(summary.averageScore).toBe(8);
+            expect(summary.streakStatus).toBe('active_today');
+            expect(summary.streakAtRisk).toBe(false);
+        });
+
+        it('marks streak at risk when last play was yesterday', () => {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const key = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+            localStorage.setItem('vwf_stats', JSON.stringify({
+                lastPlayedDate: key,
+                currentStreak: 4,
+                maxStreak: 4,
+                totalRounds: 4,
+                totalCollisions: 4,
+                scores: [8],
+                dailyScores: [],
+                themesPlayed: ['neon'],
+                milestonesUnlocked: ['first_round'],
+            }));
+            const summary = getProfileSummary();
+            expect(summary.streakStatus).toBe('at_risk');
+            expect(summary.streakAtRisk).toBe(true);
         });
     });
 });

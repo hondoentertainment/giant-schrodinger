@@ -21,12 +21,12 @@ export function UnlockModal({ onClose }) {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300"
+            className="game-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-300"
             role="dialog"
             aria-modal="true"
             aria-labelledby="unlock-modal-title"
         >
-            <div ref={containerRef} className="w-full max-w-md glass-panel rounded-3xl p-8 animate-in zoom-in-95 duration-300 border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div ref={containerRef} className="w-full max-w-md wordle-card p-8 animate-spring-in max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                     <h2 id="unlock-modal-title" className="text-2xl font-display font-bold text-white">
                         How to Unlock
@@ -80,7 +80,7 @@ export function UnlockModal({ onClose }) {
                                         {!unlocked && (
                                             <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
                                                 <div
-                                                    className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                                                    className="h-full rounded-full bg-game-accent transition-all duration-500"
                                                     style={{ width: `${pct}%` }}
                                                 />
                                             </div>
@@ -139,8 +139,9 @@ export function UnlockModal({ onClose }) {
                 </div>
 
                 <button
+                    type="button"
                     onClick={onClose}
-                    className="mt-6 w-full py-3 bg-white text-black font-bold rounded-xl hover:opacity-90 transition-opacity"
+                    className="mt-6 w-full wordle-button wordle-primary"
                 >
                     Got it
                 </button>

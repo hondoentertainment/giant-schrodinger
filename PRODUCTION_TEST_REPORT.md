@@ -1,120 +1,59 @@
 # Production Test Report
 
-**Report Date**: March 28, 2026
-**Repository**: https://github.com/hondoentertainment/giant-schrodinger
-**Expected URL**: https://hondoentertainment.github.io/giant-schrodinger
+Report date: July 18, 2026
 
----
+Repository: https://github.com/hondoentertainment/giant-schrodinger
 
-## Automated Test Results
+Production URL: https://giant-schrodinger.vercel.app
 
-| Metric | Value | Status |
-|--------|-------|--------|
-| Unit/integration tests | 179 across 16 files | Pass |
-| Playwright E2E specs | 5 spec files | Pass |
-| ESLint errors | 0 | Pass |
-| Production build | Succeeds | Pass |
-| Main chunk (gzipped) | 149 KB | Within budget (< 210 KB) |
-| Lazy chunks | 13 | Code splitting active |
+**Product status:** [PRD.md](PRD.md) · [ROADMAP.md](ROADMAP.md)
 
-### Test Files
+## Deployment Status
 
-**Unit/Integration (Vitest)**:
-- `src/components/ErrorBoundary.test.jsx`
-- `src/hooks/useFocusTrap.test.jsx`
-- `src/lib/scoreBands.test.js`
-- `src/services/promptPacks.test.js`
-- `src/services/achievements.test.js`
-- `src/services/ranked.test.js`
-- `src/services/asyncPlay.test.js`
-- `src/services/customImages.test.js`
-- `src/services/judgements.test.js`
-- `src/services/gemini.test.js`
-- `src/services/storage.test.js`
-- `src/services/stats.test.js`
-- `src/services/tournaments.test.js`
-- `src/services/shop.test.js`
-- `src/services/share.test.js`
-- `src/services/share.security.test.js`
-- `src/features/round/Round.test.jsx`
-- `src/features/lobby/Lobby.test.jsx`
-- `src/features/reveal/Reveal.test.jsx`
-- `src/features/judge/JudgeRound.test.jsx`
-- `src/features/gallery/Gallery.test.jsx`
+- Vercel deployment: production alias live
+- Production alias: https://giant-schrodinger.vercel.app
+- Supabase project: `venn-with-friends` (`fnjshhjwoximddoggdrk`, us-west-2)
 
-**Playwright E2E**:
-- `e2e/solo-flow.spec.js`
-- `e2e/multiplayer-flow.spec.js`
-- `e2e/judge-share.spec.js`
-- `e2e/responsive.spec.js`
-- `e2e/accessibility.spec.js`
+## Automated Verification
 
----
+| Check | Result |
+|---|---|
+| `npm run launch:gate` (env/RPC/edge/smoke/deployed E2E) | **Passed** (July 15) |
+| Hosted two-browser multiplayer (`e2e/hosted-two-browser.spec.js`) | **Passed** |
+| Hosted friend-judge share (second browser) | **Passed** |
+| Supabase RPC probe | **Passed** |
+| Edge functions | **Passed** (`og-tags` redeployed July 18 with richer meta) |
+| `analytics_events` INSERT RLS | **Applied** July 18 (no `users` FK) |
 
-## Build Output
+## Shipped since soft-launch clear
 
-```
-Production build:
-  Main chunk:    149 KB gzipped
-  Lazy chunks:   13 code-split chunks
-  Total output:  dist/ directory
-```
+- End-user retention/share/gallery/MP polish (July 17)
+- `reportAppError` → Sentry/`logError` bridge
+- `trackRoundComplete` + session funnel events
+- Richer lobby profile summary + streak-at-risk CTA
+- `analytics_events` table + anon INSERT policy
+- OG tags: site_name, richer descriptions, challenge copy
 
----
+## Remaining (optional — needs external keys)
 
-## CI/CD Pipeline
+1. Set Vercel `VITE_SENTRY_DSN` / `VITE_POSTHOG_KEY` (code already wired)
+2. Set Supabase edge secrets via `npm run configure:edge-secrets` (`PEXELS_API_KEY` / `GIPHY_API_KEY`)
+3. Optional Sentry map upload: GitHub secrets `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT`
+4. Optional Discord: `DISCORD_PUBLIC_KEY` + interactions URL → `…/functions/v1/discord-bot`
+5. `npm run rehearsal:telemetry` to confirm sink status + browser checklist
 
-The GitHub Actions workflow (`deploy.yml`) runs on every push to `main`:
-1. Install dependencies
-2. Run 179 unit/integration tests
-3. Install Playwright and run 5 E2E specs
-4. Build production bundle
-5. Deploy to GitHub Pages
+## Known Live Limitations
 
-A separate Lighthouse CI workflow (`lighthouse.yml`) runs on pull requests.
+| Area | Status | Notes |
+|------|--------|-------|
+| Supabase schema + RPCs | **Live** | Project `fnjshhjwoximddoggdrk` |
+| Friend judging / multiplayer | **Verified live** | Two-browser Playwright rehearsal passed |
+| Server AI scoring | Edge deployed | Live Gemini path exercised in friend-judge flow |
+| OG previews | Edge redeployed | Richer title/description/site_name |
+| Analytics inserts | **Live** | Anon INSERT allowed; reads locked down |
+| Ranked / shop / tournaments | Local preview only | Product decision locked until Phase 9 |
+| Observability dashboards | Optional | Needs PostHog/Sentry project keys |
 
----
+## Current Launch Gate
 
-## Deployment Checklist
-
-- [x] `vite.config.js` has correct `base: '/giant-schrodinger/'`
-- [x] Production build succeeds with 0 errors
-- [x] All 179 tests pass
-- [x] ESLint reports 0 errors
-- [x] GitHub Actions workflows configured (deploy + Lighthouse CI)
-- [ ] GitHub Pages enabled in repository settings (Source: GitHub Actions)
-- [ ] Edge Functions deployed to Supabase (score-submission, og-tags, discord-bot)
-- [ ] Environment secrets configured in GitHub Actions
-
----
-
-## Feature Coverage
-
-The game includes 93 features across 5 phases:
-
-- **Phase 1**: Core gameplay, solo mode, multiplayer rooms, Venn diagram, AI scoring
-- **Phase 2**: Social sharing, gallery, friend judging, daily challenges, leaderboards
-- **Phase 3**: Ranked mode (Elo), spectator mode, community gallery, tournaments
-- **Phase 4**: Battle pass, story sharing, weekly events, colorblind mode, comeback celebrations
-- **Phase 5**: Achievement progress, score coaching, progressive lobby, theme sharing, PWA offline queue
-
----
-
-## Performance Targets
-
-| Metric | Target | Actual |
-|--------|--------|--------|
-| Main chunk (gzipped) | < 210 KB | 149 KB |
-| Lighthouse Performance | > 85 | Measured via CI |
-| Lighthouse Accessibility | > 90 | Measured via CI |
-| First Contentful Paint | < 2.5s on 3G | Measured via CI |
-
----
-
-## Next Steps
-
-1. Enable GitHub Pages in repository settings
-2. Deploy Supabase Edge Functions
-3. Configure production environment secrets
-4. Run Lighthouse audit on production URL
-5. See [DEPLOYMENT.md](DEPLOYMENT.md) for full instructions
+**Cleared for launch candidate.** Remaining items require third-party API keys, not more product code.

@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { MEDIA_TYPES } from '../data/themes';
+import { markDailyChallengeComplete } from '../services/dailyChallenge';
+import { trackDailyChallenge, trackRoundComplete, trackEvent } from '../services/analytics';
+import { reportAppEvent } from '../lib/telemetry';
+import { getAssetKey } from '../services/assetSelection';
+import { normalizeMediaType } from '../lib/mediaType';
 
 const GameContext = createContext();
 
@@ -65,7 +69,7 @@ export function GameProvider({ children }) {
         const saved = localStorage.getItem('vwf_user');
         if (saved) {
             const parsed = JSON.parse(saved);
-            if (!parsed.mediaType) parsed.mediaType = MEDIA_TYPES.IMAGE;
+            parsed.mediaType = normalizeMediaType(parsed.mediaType);
             if (parsed.useCustomImages === undefined) parsed.useCustomImages = false;
             return parsed;
         }
@@ -94,14 +98,21 @@ export function GameProvider({ children }) {
         }
     }, [user]);
 
-    const login = (profile) => {
-        setUser(profile);
-        setGameState('LOBBY');
-    };
-
     const logout = () => {
         setUser(null);
         localStorage.removeItem('vwf_user');
+        setGameState('LOBBY');
+    };
+
+    const login = (profile) => {
+        if (profile == null) {
+            logout();
+            return;
+        }
+        setUser({
+            ...profile,
+            mediaType: normalizeMediaType(profile?.mediaType),
+        });
         setGameState('LOBBY');
     };
 
@@ -120,7 +131,7 @@ export function GameProvider({ children }) {
     };
 
     const trackUsedAssets = (assets) => {
-        setUsedAssetIds((prev) => [...prev, ...assets.map((a) => a.id).filter(Boolean)]);
+        setUsedAssetIds((prev) => [...prev, ...assets.map(getAssetKey).filter(Boolean)]);
     };
 
     const getUsedAssetIds = () => usedAssetIds;
@@ -153,6 +164,22 @@ export function GameProvider({ children }) {
         setSessionResults((prev) => [...prev, enrichedResult]);
         setSessionScore((prev) => prev + finalScore);
         setRoundComplete(true);
+
+        const mode = isDailyChallenge ? 'daily' : 'solo';
+        trackRoundComplete(finalScore, mode, null, {
+            judgeMode: result?.judgeMode || null,
+            roundNumber,
+            totalRounds,
+            isDailyChallenge,
+            modifierId: mod?.id,
+        });
+        if (roundNumber === 1) {
+            trackEvent('first_round_complete', {
+                score: finalScore,
+                mode,
+                judgeMode: result?.judgeMode || null,
+            });
+        }
     };
 
     const advanceRound = () => {
@@ -162,6 +189,28 @@ export function GameProvider({ children }) {
 
     const nextRound = () => {
         if (roundNumber >= totalRounds) {
+            const finalTotal = sessionScore;
+            if (isDailyChallenge) {
+                const averageScore = totalRounds > 0 ? Math.round(finalTotal / totalRounds) : 0;
+                markDailyChallengeComplete(averageScore);
+                trackDailyChallenge(true);
+            }
+            trackEvent('session_complete', {
+                totalScore: finalTotal,
+                totalRounds,
+                isDailyChallenge,
+            });
+            if (totalRounds >= 3) {
+                trackEvent('three_round_session_complete', {
+                    totalScore: finalTotal,
+                    isDailyChallenge,
+                });
+            }
+            reportAppEvent('session_summary_view', {
+                totalRounds,
+                totalScore: finalTotal,
+                isDailyChallenge,
+            });
             setGameState('SESSION_SUMMARY');
             return;
         }

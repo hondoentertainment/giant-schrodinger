@@ -5,27 +5,30 @@ import { saveJudgement } from '../../services/judgements';
 import { saveJudgementToBackend, getSharedRound } from '../../services/backend';
 import { clearJudgeFromUrl } from '../../services/share';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { JudgeCalibration } from './JudgeCalibration';
+import { useResolvedRoundAssets } from '../../hooks/useResolvedRoundAssets';
+import { haptic } from '../../lib/haptics';
+import { playSubmitSound } from '../../services/sounds';
+
+const SCORE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export function JudgeRound({ payload, onDone }) {
     const { toast } = useToast();
-    const [score, setScore] = useState('');
+    const [score, setScore] = useState(null);
     const [relevance, setRelevance] = useState('Highly Logical');
     const [commentary, setCommentary] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [resolvedPayload, setResolvedPayload] = useState(payload?.backendId ? null : payload);
     const [loading, setLoading] = useState(!!payload?.backendId);
     const [error, setError] = useState(null);
-    const [errorType, setErrorType] = useState(null); // 'not_found' | 'network' | 'invalid'
+    const [errorType, setErrorType] = useState(null);
     const [judgeName, setJudgeName] = useState('');
-    const [showDetailedForm, setShowDetailedForm] = useState(false);
-    const [isCalibrated, setIsCalibrated] = useState(
-        () => localStorage.getItem('venn_judge_calibrated') === 'true'
-    );
     const formRef = useRef(null);
     const effectivePayload = resolvedPayload || payload;
     const hasValidPayload = effectivePayload?.assets?.left && effectivePayload?.assets?.right && effectivePayload?.submission;
-    useFocusTrap(!loading && !error && hasValidPayload && !submitted && isCalibrated, formRef);
+    const { assets: displayAssets, mediaLoading } = useResolvedRoundAssets(
+        hasValidPayload ? effectivePayload.assets : null,
+    );
+    useFocusTrap(!loading && !error && hasValidPayload && !submitted, formRef);
 
     useEffect(() => {
         if (!payload?.backendId) return;
@@ -37,7 +40,7 @@ export function JudgeRound({ payload, onDone }) {
                     if (!data) {
                         setError('Round not found');
                         setErrorType('not_found');
-                        toast.error('Could not load this round — it may have expired');
+                        toast.error('Could not load this round - it may have expired');
                     }
                 }
             })
@@ -45,23 +48,36 @@ export function JudgeRound({ payload, onDone }) {
                 if (!cancelled) {
                     setError('Failed to load round');
                     setErrorType('network');
-                    toast.error('Failed to load round — check your connection');
+                    toast.error('Failed to load round - check your connection');
                 }
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
             });
         return () => { cancelled = true; };
-    }, [payload?.backendId]);
+    }, [payload?.backendId, toast]);
 
-    if (!isCalibrated) {
-        return <JudgeCalibration onComplete={() => setIsCalibrated(true)} />;
-    }
+    useEffect(() => {
+        if (submitted) return undefined;
+        const onKey = (event) => {
+            if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.tagName === 'SELECT') {
+                return;
+            }
+            const digit = Number(event.key);
+            if (Number.isInteger(digit) && digit >= 1 && digit <= 9) {
+                setScore(digit);
+            } else if (event.key === '0') {
+                setScore(10);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [submitted]);
 
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                <div className="w-16 h-16 rounded-full border-4 border-t-purple-500 border-white/10 animate-spin mb-4" />
+                <div className="w-16 h-16 rounded-full border-4 border-t-game-accent border-white/10 animate-spin mb-4" />
                 <p className="text-white/60">Loading round...</p>
             </div>
         );
@@ -72,7 +88,7 @@ export function JudgeRound({ payload, onDone }) {
             errorType === 'not_found'
                 ? 'This judging link has expired or the round was removed. Ask your friend to share a fresh link.'
                 : errorType === 'network'
-                ? 'Couldn\'t load the round — check your internet connection and try again.'
+                ? 'Couldn\'t load the round - check your internet connection and try again.'
                 : 'This link is invalid or malformed. Make sure you copied the full URL from your friend.';
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md px-4">
@@ -81,7 +97,7 @@ export function JudgeRound({ payload, onDone }) {
                 <p className="text-white/60 mb-6">{errorMessage}</p>
                 <button
                     onClick={() => { clearJudgeFromUrl(); onDone?.(); }}
-                    className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform"
+                    className="wordle-button wordle-primary"
                 >
                     Play Venn
                 </button>
@@ -92,7 +108,10 @@ export function JudgeRound({ payload, onDone }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         const scoreValue = Number(score);
-        if (!Number.isFinite(scoreValue) || scoreValue < 1 || scoreValue > 10) return;
+        if (!Number.isFinite(scoreValue) || scoreValue < 1 || scoreValue > 10) {
+            toast.warn('Pick a score from 1 to 10');
+            return;
+        }
 
         const judgement = {
             score: scoreValue,
@@ -101,170 +120,168 @@ export function JudgeRound({ payload, onDone }) {
             judgeName: judgeName.trim() || 'A friend',
         };
 
-        const roundId = effectivePayload.id || effectivePayload.backendId || effectivePayload.roundId || `judge-${Date.now()}`;
-        saveJudgement(roundId, judgement);
+        const roundId = effectivePayload.id || effectivePayload.roundId || effectivePayload.backendId || `judge-${Date.now()}`;
+        const collisionId = effectivePayload.collisionId || null;
+        const backendId = effectivePayload.backendId || effectivePayload.id || null;
 
-        if (effectivePayload.id || effectivePayload.backendId) {
-            const saved = await saveJudgementToBackend(roundId, judgement);
+        saveJudgement({
+            roundId,
+            collisionId,
+            backendId,
+            judgeMode: effectivePayload.judgeMode || 'friend',
+            judgement,
+        });
+
+        if (backendId) {
+            const saved = await saveJudgementToBackend(backendId, judgement);
             if (!saved) {
-                toast.warn('Judgement saved locally — backend sync failed');
+                toast.warn('Judgement saved locally - backend sync failed');
             }
         }
 
-        toast.success('Judgement submitted!');
-        setSubmitted(true);
-        setTimeout(() => {
-            clearJudgeFromUrl();
-            onDone?.();
-        }, 2000);
-    };
-
-    const handleQuickScore = (quickScore) => {
-        const judgement = {
-            score: quickScore,
-            relevance: quickScore >= 9 ? 'Absurdly Creative' : quickScore >= 7 ? 'Highly Logical' : 'Wild Card',
-            commentary: quickScore >= 9 ? 'Absolutely fire!' : quickScore >= 7 ? 'Solid connection.' : 'Interesting take.',
-            judgeName: judgeName.trim() || 'A friend',
-        };
-        const roundId = effectivePayload.id || effectivePayload.backendId || effectivePayload.roundId || `judge-${Date.now()}`;
-        saveJudgement(roundId, judgement);
-        if (effectivePayload.id || effectivePayload.backendId) {
-            saveJudgementToBackend(roundId, judgement);
-        }
+        haptic('success');
+        playSubmitSound();
         toast.success('Judgement submitted!');
         setSubmitted(true);
     };
 
     if (submitted) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-in zoom-in-95 duration-500">
-                <div className="text-6xl mb-4">✅</div>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-in zoom-in-95 duration-500 px-4">
+                <div className="text-6xl mb-4" role="img" aria-label="Success">✓</div>
                 <h2 className="text-3xl font-display font-bold text-white mb-2">Thanks for judging!</h2>
-                <p className="text-white/60 mb-6">Your friend will see your score.</p>
-                <button
-                    onClick={() => { clearJudgeFromUrl(); onDone?.(); }}
-                    className="px-10 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_rgba(168,85,247,0.4)]"
-                >
-                    Play Venn with Friends!
-                </button>
-                <p className="text-white/40 text-sm mt-3">Try connecting concepts yourself</p>
+                <p className="text-white/60 mb-6 max-w-sm">
+                    Your friend will see your score. Want to make your own connection?
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                    <button
+                        type="button"
+                        className="wordle-button wordle-primary flex-1 min-h-[48px]"
+                        onClick={() => {
+                            clearJudgeFromUrl();
+                            onDone?.();
+                        }}
+                    >
+                        Try today&apos;s Venn
+                    </button>
+                    <button
+                        type="button"
+                        className="wordle-button flex-1 min-h-[48px]"
+                        onClick={() => {
+                            clearJudgeFromUrl();
+                            onDone?.();
+                        }}
+                    >
+                        Make your own connection
+                    </button>
+                </div>
             </div>
         );
     }
 
     return (
-        <div ref={formRef} className="w-full max-w-4xl flex flex-col items-center animate-in fade-in duration-700">
-            <div className="mb-6 text-center">
+        <div ref={formRef} className="w-full max-w-4xl flex flex-col items-center animate-spring-in">
+            <div className="wordle-card p-6 sm:p-8 w-full max-w-xl mb-6 text-center">
                 <h2 className="text-2xl font-display font-bold text-white mb-1">Judge a Friend&apos;s Connection</h2>
-                <p className="text-white/60 text-sm">Score their connection — they&apos;ll see your feedback in their gallery.</p>
-                {isCalibrated && (
-                    <span className="inline-block mt-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-semibold">
-                        &#127891; Certified Judge
-                    </span>
-                )}
+                <p className="text-white/60 text-sm">
+                    {effectivePayload.shareFrom || 'A friend'} made a Venn connection. Score the answer for wit, logic, originality, and clarity.
+                </p>
+                <p className="text-white/40 text-xs mt-2">
+                    Be generous when it is clever, be honest when it is generic. Your feedback helps make the next round better.
+                </p>
             </div>
 
-            <VennDiagram leftAsset={effectivePayload.assets.left} rightAsset={effectivePayload.assets.right} />
+            <VennDiagram
+                leftAsset={displayAssets?.left || effectivePayload.assets.left}
+                rightAsset={displayAssets?.right || effectivePayload.assets.right}
+                mediaLoading={mediaLoading}
+            />
 
-            <div className="w-full max-w-xl mt-8 mb-6 p-6 rounded-2xl bg-white/5 border border-white/10">
-                <div className="text-white/50 text-sm uppercase tracking-wider mb-2">Their answer</div>
+            {effectivePayload.imageUrl && (
+                <div className="w-full max-w-xl mt-6 rounded-[22px] overflow-hidden border border-white/10 wordle-card !p-0 relative">
+                    <img
+                        src={effectivePayload.imageUrl}
+                        alt="Fusion created from this connection"
+                        className="w-full max-h-80 object-cover"
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
+                    />
+                </div>
+            )}
+
+            <div className="w-full max-w-xl mt-8 mb-6 wordle-card p-6">
+                <div className="game-section-label mb-2">Their answer</div>
                 <p className="text-2xl font-bold text-white">&ldquo;{effectivePayload.submission}&rdquo;</p>
             </div>
 
-            {/* Quick Judge Buttons */}
-            <div className="w-full max-w-xl mb-6">
-                <div className="text-white/50 text-xs uppercase tracking-wider mb-3 text-center">Quick Score</div>
-                <div className="grid grid-cols-3 gap-3">
-                    <button
-                        onClick={() => handleQuickScore(10)}
-                        className="py-4 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 hover:from-amber-500/30 hover:to-orange-500/30 transition-all hover:scale-105 active:scale-95 text-center"
+            <form onSubmit={handleSubmit} className="w-full max-w-xl wordle-card p-6 space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-white/60 mb-2">Your name (optional)</label>
+                    <input
+                        type="text"
+                        value={judgeName}
+                        onChange={(e) => setJudgeName(e.target.value)}
+                        className="game-input"
+                        placeholder="A friend"
+                        maxLength={20}
+                    />
+                </div>
+                <div>
+                    <div className="block text-sm font-medium text-white/60 mb-2" id="judge-score-label">
+                        Score (1-10)
+                    </div>
+                    <div
+                        className="grid grid-cols-5 gap-2"
+                        role="group"
+                        aria-labelledby="judge-score-label"
                     >
-                        <div className="text-3xl mb-1">🔥</div>
-                        <div className="text-amber-300 font-bold">Fire</div>
-                        <div className="text-white/40 text-xs">9-10</div>
-                    </button>
-                    <button
-                        onClick={() => handleQuickScore(8)}
-                        className="py-4 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 hover:from-emerald-500/30 hover:to-teal-500/30 transition-all hover:scale-105 active:scale-95 text-center"
+                        {SCORE_OPTIONS.map((value) => (
+                            <button
+                                key={value}
+                                type="button"
+                                onClick={() => setScore(value)}
+                                aria-pressed={score === value}
+                                className={`game-choice min-h-[44px] py-2 text-sm font-bold tabular-nums ${
+                                    score === value ? 'game-choice-selected' : ''
+                                }`}
+                            >
+                                {value}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-white/35 text-xs mt-2">Tip: press 1–9 or 0 for 10 on a keyboard.</p>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-white/60 mb-2">Relevance</label>
+                    <select
+                        value={relevance}
+                        onChange={(e) => setRelevance(e.target.value)}
+                        className="game-input"
                     >
-                        <div className="text-3xl mb-1">👍</div>
-                        <div className="text-emerald-300 font-bold">Solid</div>
-                        <div className="text-white/40 text-xs">7-8</div>
-                    </button>
-                    <button
-                        onClick={() => handleQuickScore(5)}
-                        className="py-4 rounded-2xl bg-gradient-to-br from-slate-500/20 to-slate-600/20 border border-slate-500/30 hover:from-slate-500/30 hover:to-slate-600/30 transition-all hover:scale-105 active:scale-95 text-center"
-                    >
-                        <div className="text-3xl mb-1">😐</div>
-                        <div className="text-slate-300 font-bold">Meh</div>
-                        <div className="text-white/40 text-xs">4-6</div>
-                    </button>
+                        <option value="Highly Logical">Highly Logical</option>
+                        <option value="Absurdly Creative">Absurdly Creative</option>
+                        <option value="Wild Card">Wild Card</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-white/60 mb-2">Commentary (optional)</label>
+                    <textarea
+                        value={commentary}
+                        onChange={(e) => setCommentary(e.target.value)}
+                        rows="3"
+                        className="game-input resize-none min-h-[96px]"
+                        placeholder="Share your verdict, or skip and submit"
+                    />
                 </div>
                 <button
-                    onClick={() => setShowDetailedForm(!showDetailedForm)}
-                    className="w-full mt-3 text-sm text-white/40 hover:text-white/60 transition-colors"
+                    type="submit"
+                    disabled={!score}
+                    className="wordle-button wordle-primary w-full text-lg disabled:opacity-50"
                 >
-                    {showDetailedForm ? 'Hide detailed form' : 'Want to give detailed feedback?'}
+                    Submit Judgement
                 </button>
-            </div>
-
-            {/* Detailed Form (collapsible) */}
-            {showDetailedForm && (
-                <form onSubmit={handleSubmit} className="w-full max-w-xl space-y-4 animate-in slide-in-from-top-4 duration-300">
-                    <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Your name (optional)</label>
-                        <input
-                            type="text"
-                            value={judgeName}
-                            onChange={(e) => setJudgeName(e.target.value)}
-                            className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                            placeholder="A friend"
-                            maxLength={20}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Score (1-10)</label>
-                        <input
-                            type="number"
-                            min="1"
-                            max="10"
-                            value={score}
-                            onChange={(e) => setScore(e.target.value)}
-                            className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                            placeholder="10"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Relevance</label>
-                        <select
-                            value={relevance}
-                            onChange={(e) => setRelevance(e.target.value)}
-                            className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                        >
-                            <option value="Highly Logical">Highly Logical</option>
-                            <option value="Absurdly Creative">Absurdly Creative</option>
-                            <option value="Wild Card">Wild Card</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Commentary</label>
-                        <textarea
-                            value={commentary}
-                            onChange={(e) => setCommentary(e.target.value)}
-                            rows="3"
-                            className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                            placeholder="Share your verdict..."
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        className="w-full py-4 bg-white text-black font-bold text-lg rounded-full hover:scale-[1.01] transition-transform"
-                    >
-                        Submit Detailed Judgement
-                    </button>
-                </form>
-            )}
+            </form>
         </div>
     );
 }

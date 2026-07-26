@@ -11,6 +11,7 @@ pnpm-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.vercel*
 
 # Build outputs
 dist/
@@ -39,6 +40,11 @@ npm-shrinkwrap.json
 
 # Vite
 .vite/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
 
 # Vercel
 .vercel/

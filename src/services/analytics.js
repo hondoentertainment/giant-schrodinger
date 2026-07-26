@@ -64,6 +64,7 @@ export const ConsoleAnalyticsProvider = {
 export const SupabaseAnalyticsProvider = {
   track: async (event, props) => {
     try {
+<<<<<<< HEAD
       const { getSupabase, isBackendEnabled } = await import('../lib/supabase.js');
       if (!isBackendEnabled()) return;
       const supabase = getSupabase();
@@ -73,6 +74,22 @@ export const SupabaseAnalyticsProvider = {
         user_id: props.userId || null,
       });
     } catch { /* silent — analytics should never break the app */ }
+=======
+      const { supabase, isBackendEnabled } = await import('../lib/supabase.js');
+      if (!isBackendEnabled()) return;
+      const { error } = await supabase
+        .from('analytics_events')
+        .insert({
+          event,
+          properties: props || {},
+        });
+      if (error && import.meta.env.DEV) {
+        console.debug('[Analytics] Supabase insert failed', error);
+      }
+    } catch {
+      // Analytics should never affect gameplay.
+    }
+>>>>>>> origin/main
   },
 };
 
@@ -150,9 +167,22 @@ export function trackEvent(eventName, properties = {}) {
 
 /**
  * Track completion of a round with score, mode, and duration.
+ * @param {number} score
+ * @param {string} mode - solo | multiplayer | daily
+ * @param {number|null} duration - seconds, if known
+ * @param {object} [extras] - judgeMode, roundNumber, totalRounds, etc.
  */
-export function trackRoundComplete(score, mode, duration) {
-  trackEvent('round_complete', { score, mode, duration });
+export function trackRoundComplete(score, mode, duration = null, extras = {}) {
+  trackEvent('round_complete', {
+    score,
+    mode,
+    duration,
+    judgeMode: extras.judgeMode,
+    roundNumber: extras.roundNumber,
+    totalRounds: extras.totalRounds,
+    isDailyChallenge: extras.isDailyChallenge,
+    ...extras,
+  });
 }
 
 /**
@@ -335,6 +365,22 @@ export function getSessionMetrics() {
       d1Retention: 0,
       d7Retention: 0,
     };
+  }
+}
+
+/**
+ * Tear down analytics: drain the in-memory buffer and clear the pending
+ * flush timer. Safe to call multiple times (idempotent).
+ */
+export function teardownAnalytics() {
+  try {
+    flushBuffer();
+  } catch {
+    // ignore
+  }
+  if (_flushTimer) {
+    clearTimeout(_flushTimer);
+    _flushTimer = null;
   }
 }
 

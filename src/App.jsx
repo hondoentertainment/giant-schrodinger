@@ -1,4 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react'
+import { scrollMainToTop } from './lib/scroll'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { ToastProvider } from './context/ToastContext'
@@ -25,6 +26,8 @@ const AsyncChains = lazy(() => import('./features/challenge/AsyncChains').then(m
 const AnalyticsView = lazy(() => import('./features/analytics/AnalyticsView').then(m => ({ default: m.AnalyticsView })))
 const ModerationDashboard = lazy(() => import('./features/analytics/ModerationDashboard').then(m => ({ default: m.ModerationDashboard })))
 const RankedPanel = lazy(() => import('./features/ranked/RankedPanel'))
+const PrivacyPolicy = lazy(() => import('./features/legal/LegalPages').then(m => ({ default: m.PrivacyPolicy })))
+const TermsOfUse = lazy(() => import('./features/legal/LegalPages').then(m => ({ default: m.TermsOfUse })))
 import { RoomLobby } from './features/room/RoomLobby'
 import { MultiplayerRound } from './features/room/MultiplayerRound'
 import { MultiplayerReveal } from './features/room/MultiplayerReveal'
@@ -32,8 +35,14 @@ import { parseJudgeShareUrl } from './services/share'
 import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
 import { parseThemeFromUrl, clearThemeFromUrl, importThemeFromLink, saveSharedTheme } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
+<<<<<<< HEAD
 import { trackEvent, trackRetention, trackFunnelStep, registerAnalyticsProvider, ConsoleAnalyticsProvider, SupabaseAnalyticsProvider } from './services/analytics'
+=======
+import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider, SupabaseAnalyticsProvider, teardownAnalytics } from './services/analytics'
+>>>>>>> origin/main
 import { initErrorMonitoring } from './services/errorMonitoring'
+import { initTelemetry } from './lib/initTelemetry'
+import { initMediaHints } from './lib/initMediaHints'
 import { processOfflineQueue, getQueueCount } from './services/offlineQueue'
 import { scoreSubmission } from './services/gemini'
 import { initPWAInstall } from './lib/pwaInstall'
@@ -41,7 +50,21 @@ import { initPWAInstall } from './lib/pwaInstall'
 function LoadingFallback() {
     return (
         <div className="flex items-center justify-center min-h-[200px]">
-            <div className="text-purple-400 text-lg animate-pulse">Loading...</div>
+            <div className="flex flex-col items-center gap-3">
+                <div className="h-8 w-8 rounded-full border-2 border-white/15 border-t-game-accent animate-spin" />
+                <p className="text-sm font-medium text-white/50">Loading...</p>
+            </div>
+        </div>
+    );
+}
+
+function GameLogoMark() {
+    return (
+        <div className="game-logo-mark" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+                <circle cx="8" cy="11" r="6.5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" fill="rgba(10,132,255,0.35)" />
+                <circle cx="14" cy="11" r="6.5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" fill="rgba(191,90,242,0.35)" />
+            </svg>
         </div>
     );
 }
@@ -49,13 +72,19 @@ function LoadingFallback() {
 // Module-level analytics init (safe to run once)
 registerAnalyticsProvider(ConsoleAnalyticsProvider);
 registerAnalyticsProvider(SupabaseAnalyticsProvider);
+<<<<<<< HEAD
+=======
+initTelemetry();
+initMediaHints();
+>>>>>>> origin/main
 trackRetention();
 initPWAInstall();
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch((err) => {
+        const swPath = `${import.meta.env.BASE_URL}sw.js`;
+        navigator.serviceWorker.register(swPath).catch((err) => {
             console.error('Service worker registration failed:', err);
         });
     });
@@ -75,25 +104,28 @@ function OfflineQueueHandler() {
     return null;
 }
 
-function PhaseTransition({ children, phase }) {
+function PhaseTransition({ children, phase, screenKey }) {
     const [currentChildren, setCurrentChildren] = useState(children);
     const [animClass, setAnimClass] = useState('phase-enter-active');
 
     useEffect(() => {
         // Fade out
         setAnimClass('phase-exit-active');
+        scrollMainToTop();
         const timer = setTimeout(() => {
             setCurrentChildren(children);
             setAnimClass('phase-enter');
+            scrollMainToTop();
             // Force reflow then fade in
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     setAnimClass('phase-enter-active');
+                    scrollMainToTop();
                 });
             });
         }, 150);
         return () => clearTimeout(timer);
-    }, [phase]); // Only transition when phase changes
+    }, [phase, screenKey]);
 
     return (
         <div className={animClass}>
@@ -103,11 +135,29 @@ function PhaseTransition({ children, phase }) {
 }
 
 function GameContent() {
-    const { gameState, setGameState } = useGame();
+    const { gameState, setGameState, user } = useGame();
     const { isMultiplayer, roomPhase } = useRoom();
     const [roundData, setRoundData] = useState(null);
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
     const [challengePayload, setChallengePayload] = useState(() => parseChallengeUrl());
+    const layoutProps = {
+        onPrivacy: () => setGameState('PRIVACY'),
+        onTerms: () => setGameState('TERMS'),
+    };
+
+    const screenKey = [
+        gameState,
+        isMultiplayer ? `mp:${roomPhase || ''}` : 'solo',
+        roundData?.submission || '',
+        judgePayload ? 'judge' : '',
+        challengePayload ? 'challenge' : '',
+        user?.name || 'anon',
+    ].join('|');
+
+    // Always land at the top when entering a new screen (main is the scroll container)
+    useEffect(() => {
+        scrollMainToTop();
+    }, [screenKey]);
 
     // Handle incoming encoded theme links on mount
     useEffect(() => {
@@ -172,15 +222,21 @@ function GameContent() {
     };
 
     const headerEl = (
-        <div className="mb-8 text-center">
-            <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tight"><span className="text-gradient-vibrant">VENN</span> <span className="text-xl font-light tracking-widest text-white/60 uppercase">with Friends</span></h1>
+        <div className="wordle-topbar sticky top-0 z-30 mb-1 flex w-full justify-center">
+            <h1 className="flex items-center gap-2.5 text-center">
+                <GameLogoMark />
+                <span className="flex flex-col items-start leading-none">
+                    <span className="font-display text-lg sm:text-xl font-bold tracking-tight text-white">Venn</span>
+                    <span className="text-[0.65rem] sm:text-[0.7rem] font-medium text-white/45">with Friends</span>
+                </span>
+            </h1>
         </div>
     );
 
     // Challenge mode (external link)
     if (challengePayload) {
         return (
-            <Layout>
+            <Layout {...layoutProps}>
                 {headerEl}
                 <Suspense fallback={<LoadingFallback />}>
                     <ChallengeRound payload={challengePayload} onDone={handleChallengeDone} />
@@ -192,7 +248,7 @@ function GameContent() {
     // Judge mode (external link)
     if (judgePayload) {
         return (
-            <Layout>
+            <Layout {...layoutProps}>
                 {headerEl}
                 <JudgeRound payload={judgePayload} onDone={handleJudgeDone} />
             </Layout>
@@ -202,11 +258,12 @@ function GameContent() {
     // Multiplayer mode
     if (isMultiplayer) {
         return (
-            <Layout>
+            <Layout {...layoutProps}>
                 {headerEl}
                 {roomPhase === 'lobby' && <RoomLobby />}
                 {roomPhase === 'playing' && <MultiplayerRound />}
                 {roomPhase === 'revealing' && <MultiplayerReveal />}
+                {roomPhase === 'results' && <MultiplayerReveal />}
                 {roomPhase === 'finished' && <MultiplayerReveal />}
             </Layout>
         );
@@ -214,12 +271,14 @@ function GameContent() {
 
     // Solo mode
     return (
-        <Layout>
+        <Layout {...layoutProps}>
             {headerEl}
             <Suspense fallback={<LoadingFallback />}>
-            <PhaseTransition phase={gameState}>
+            <PhaseTransition phase={gameState} screenKey={screenKey}>
                 {gameState === 'LOBBY' && <Lobby />}
                 {gameState === 'GALLERY' && <Gallery />}
+                {gameState === 'PRIVACY' && <PrivacyPolicy onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'TERMS' && <TermsOfUse onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'LEADERBOARD' && <Leaderboard onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'ACHIEVEMENTS' && <Achievements onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'THEME_BUILDER' && <ThemeBuilder onBack={() => setGameState('LOBBY')} />}
@@ -241,7 +300,7 @@ function GameContent() {
                 {gameState === 'ANALYTICS' && <AnalyticsView onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'MODERATION' && <ModerationDashboard onBack={() => setGameState('LOBBY')} />}
                 {gameState === 'RANKED' && <RankedPanel onBack={() => setGameState('LOBBY')} />}
-                {gameState === 'SESSION_SUMMARY' && <SessionSummary onBack={() => setGameState('LOBBY')} />}
+                {gameState === 'SESSION_SUMMARY' && <SessionSummary />}
             </PhaseTransition>
             </Suspense>
         </Layout>
@@ -251,8 +310,15 @@ function GameContent() {
 function App() {
     useEffect(() => {
         const cleanup = initErrorMonitoring();
+<<<<<<< HEAD
         trackFunnelStep('page_loaded');
         return cleanup;
+=======
+        return () => {
+            if (typeof cleanup === 'function') cleanup();
+            teardownAnalytics();
+        };
+>>>>>>> origin/main
     }, []);
 
     return (

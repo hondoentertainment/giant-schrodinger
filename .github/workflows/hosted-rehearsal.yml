@@ -1,0 +1,80 @@
+name: Hosted Rehearsal
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 15 * * *'
+
+concurrency:
+  group: hosted-rehearsal-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Check required secrets
+        id: check
+        env:
+          HAS_SUPABASE: ${{ secrets.VITE_SUPABASE_URL != '' }}
+          HAS_PROD: ${{ secrets.PRODUCTION_URL != '' }}
+        run: |
+          if [ "$HAS_SUPABASE" = "true" ] && [ "$HAS_PROD" = "true" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Hosted rehearsal secrets are present."
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping hosted rehearsal — set VITE_SUPABASE_URL and PRODUCTION_URL repository secrets."
+          fi
+
+  rehearsal:
+    needs: secrets-gate
+    if: needs.secrets-gate.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+      PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Hosted preflight (env + RPC probe)
+        run: npm run rehearsal:preflight:fast
+
+      - name: Edge function probe
+        run: npm run check:edge-functions
+        continue-on-error: false
+
+      - name: Production smoke
+        run: npm run smoke:production
+
+      - name: Deployed E2E rehearsal
+        run: npm run test:e2e:rehearsal
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-rehearsal-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore

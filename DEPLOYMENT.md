@@ -1,248 +1,168 @@
-# Deploying Venn with Friends to GitHub Pages
+# Deployment Guide
 
-## Quick Deploy (Recommended)
+**Last updated:** July 14, 2026
 
-### Option 1: Using GitHub Actions (Automated)
+This repo supports static frontend deployment on **Vercel** (current primary production URL) and **GitHub Pages**. Product/launch status: [PRD.md](PRD.md) · [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md).
 
-The repository already includes two CI/CD workflows in `.github/workflows/`:
+## Current deployment assets in the repo
 
-- **deploy.yml** -- Runs on every push to `main` and on manual dispatch. It installs dependencies, runs unit tests (179 tests), installs Playwright and runs E2E tests, builds the production bundle, and deploys to GitHub Pages.
-- **lighthouse.yml** -- Runs on pull requests to `main`. It builds the app and runs Lighthouse CI against the thresholds in `lighthouse.config.js`.
+- Vercel config: `vercel.json` (primary prod: https://giant-schrodinger.vercel.app)
+- GitHub Pages workflow: `.github/workflows/deploy.yml`
+- Vite config with host-aware base path: `vite.config.js`
 
-To enable deployment:
+## Option A: Vercel (recommended for SPA routing)
 
-1. **Enable GitHub Pages**:
-   - Go to your repository on GitHub
-   - Settings > Pages
-   - Source: "GitHub Actions"
-   - Save
+Primary production alias: https://giant-schrodinger.vercel.app
 
-2. **Push to trigger deployment**:
-   ```bash
-   git push origin main
-   ```
-
-3. **Your site will be live at**: `https://hondoentertainment.github.io/giant-schrodinger`
-
----
-
-### Option 2: Manual Deploy with gh-pages Package
-
-1. **Install gh-pages**:
-   ```bash
-   npm install --save-dev gh-pages
-   ```
-
-2. **Add deploy script to package.json**:
-   ```json
-   {
-     "scripts": {
-       "deploy": "npm run build && gh-pages -d dist"
-     }
-   }
-   ```
-
-3. **Deploy**:
-   ```bash
-   npm run deploy
-   ```
-
----
-
-### Option 3: PowerShell Deploy Script
-
-Create `scripts/deploy.ps1`:
-
-```powershell
-#!/usr/bin/env pwsh
-
-Write-Host "🚀 Deploying Venn with Friends to GitHub Pages..." -ForegroundColor Cyan
-
-# Build the project
-Write-Host "`n📦 Building production bundle..." -ForegroundColor Yellow
-npm run build
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Build failed!" -ForegroundColor Red
-    exit 1
-}
-
-# Navigate to dist
-Set-Location dist
-
-# Initialize git in dist if not exists
-if (-not (Test-Path .git)) {
-    git init
-    git branch -M gh-pages
-}
-
-# Add and commit
-git add -A
-git commit -m "Deploy to GitHub Pages"
-
-# Force push to gh-pages branch
-Write-Host "`n🚀 Pushing to GitHub Pages..." -ForegroundColor Yellow
-git push -f git@github.com:HondoEntertainment/giant-schrodinger.git gh-pages
-
-Write-Host "`n✅ Deployment complete!" -ForegroundColor Green
-Write-Host "Your site should be live at: https://hondoentertainment.github.io/giant-schrodinger" -ForegroundColor Cyan
-
-# Return to root
-Set-Location ..
-```
-
-Run with:
 ```bash
-./scripts/deploy.ps1
+vercel
+vercel --prod
 ```
 
----
+See [SETUP_BACKEND.md](SETUP_BACKEND.md) for Supabase + edge secrets, and [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) for the launch gate.
 
-## Important Configuration
+## Option B: GitHub Pages
 
-### ✅ Already Configured
+### 1. Confirm repository settings
 
-Your `vite.config.js` is now correctly set with:
+- Repository Pages source should be set to `GitHub Actions`
+- Default branch should include the workflow file
 
-```javascript
-export default defineConfig({
-    plugins: [react()],
-    base: '/giant-schrodinger/', // Required for GitHub Pages
-})
+### 2. Optional secrets
+
+Add these only if you want live services in production:
+
+- `VITE_GEMINI_API_KEY`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+If no secrets are configured, the app still deploys and remains playable in local/mock mode for supported features.
+
+### 3. Workflow behavior
+
+The existing workflow currently does this on pushes to `main`:
+
+1. `npm ci`
+2. install Playwright Chromium
+3. `npm run verify:release`
+4. deploy `dist/` to GitHub Pages
+
+## Local preflight before shipping
+
+Run these locally before pushing:
+
+```bash
+npm run verify:release
+npm run preview
+npm run rehearsal:preflight:fast   # env + Supabase RPC probe (uses .env.local)
 ```
 
-### Environment Variables for Production
+Before a production deploy with live services:
 
-If you need environment variables in production:
+```bash
+npm run rehearsal:preflight        # includes full verify:release
+npm run smoke:production
+PRODUCTION_URL=https://your-site npm run test:e2e:rehearsal
+```
 
-1. **For GitHub Actions**: Add secrets in repository settings
-   - Settings > Secrets and variables > Actions
-   - Add: `VITE_GEMINI_API_KEY`, `VITE_SUPABASE_URL`, etc.
+Preview default URL:
 
-2. **Update workflow** to use secrets:
-   ```yaml
-   - name: Build
-     env:
-       VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
-       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-     run: npm run build
-   ```
+- `http://localhost:4173/`
 
----
+Playwright release verification starts its own strict preview server on `http://localhost:4174/` by default so it cannot accidentally reuse another local app on Vite's default port. Override with `PLAYWRIGHT_PORT` when needed, or set `PLAYWRIGHT_BASE_URL` to test an already-hosted environment.
+
+When built for GitHub Pages, the app uses the `/giant-schrodinger/` base path. When built on Vercel, `vite.config.js` detects `VERCEL` and uses `/` so the production alias works at the domain root.
+
+To smoke-test the Vercel production URL after deploy:
+
+```bash
+npm run smoke:production
+```
+
+Override the target with `PRODUCTION_URL` when needed.
+
+## Production-readiness checks
+
+### Functional checks
+
+- Landing/lobby loads without console errors
+- Solo round can be completed end to end
+- Reveal screen shows score and/or fallback output correctly
+- Share-for-judging link can be generated
+- Multiplayer room creation/join works if Supabase is configured
+
+### Failure-state checks
+
+- No Gemini key: mock scoring and curated image fallback still work
+- No Supabase keys: solo play still works and multiplayer is clearly marked unavailable
+- Broken/expired judging link shows a recoverable error state
+
+### Build checks
+
+- `npm run verify:release` passes
+- No missing asset errors in preview
+
+## Backend hardening for production
+
+Before you rely on Supabase in production, apply `supabase/schema.sql`. The current production path expects:
+
+- share and judgement writes to go through RPCs instead of open anonymous inserts
+- multiplayer room/session writes to go through token-validated RPCs
+- manual multiplayer scoring to persist votes and finalized results in backend state
+- content reports to go through `report_content` / `list_content_reports` RPCs
+
+Client-side Gemini scoring is disabled in production builds when Supabase is configured; use the `score-submission` edge function with `GEMINI_API_KEY` instead.
+
+Vercel serves security headers (HSTS, CSP, frame denial) via `vercel.json`. Edge functions restrict CORS to `APP_URL` / `ALLOWED_ORIGINS`.
+
+If the SQL migration has not been applied yet, the app can still fall back to older behavior, but that mode should be treated as compatibility-only rather than production-safe.
+
+### Supabase Edge Function secrets
+
+Set these in the Supabase dashboard (Project Settings → Edge Functions → Secrets) for live media lookup:
+
+- `PEXELS_API_KEY` — powers `resolve-image` for semantic stock photos
+- `GIPHY_API_KEY` — powers `resolve-meme` for GIF/meme lookup in Memes & Videos mode
+- `GEMINI_API_KEY` — powers `score-submission` for server-side AI scoring
+
+Deploy edge functions after adding secrets:
+
+```bash
+supabase functions deploy resolve-image
+supabase functions deploy resolve-meme
+supabase functions deploy score-submission
+```
+
+Without these keys, the app falls back to curated Unsplash/Picsum assets and mock scoring.
+
+## Observability
+
+The app emits structured telemetry through:
+
+- `window.__VWF_TELEMETRY__` as either an array or function sink
+- the browser event `vwf:telemetry`
+
+This keeps the frontend vendor-neutral while making it easy to plug in Sentry, PostHog, or another monitor later.
 
 ## Troubleshooting
 
-### 404 on refresh
-- This is normal for SPAs on GitHub Pages
-- Solution: Use hash routing or configure 404.html redirect
+### Assets 404 on GitHub Pages
 
-### Assets not loading (404)
-- Check `base` in `vite.config.js` matches repo name
-- Should be `/giant-schrodinger/` for your repo
+- Check that Pages is deploying from the workflow
+- Confirm repo name still matches `/giant-schrodinger/`
+- Confirm the workflow is building in CI, not from a local custom command
 
-### Changes not appearing
-- Clear browser cache (Ctrl+Shift+R)
-- Wait 1-2 minutes for GitHub Pages to update
-- Check Actions tab for deployment status
+### Workflow fails on tests
 
----
+- Run `npm run test` locally first
+- If E2E is failing, inspect Playwright configuration and environment assumptions
 
-## Verifying Deployment
+### Live app loads but multiplayer does not work
 
-1. **Check build locally first**:
-   ```bash
-   npm run build
-   npm run preview
-   ```
-   Visit: `http://localhost:4173/giant-schrodinger/`
+- Confirm `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are configured in deployment secrets
+- Confirm Supabase tables and realtime policies are set up
 
-2. **Check GitHub Actions**:
-   - Go to Actions tab in GitHub
-   - Ensure workflow completed successfully
+## Release checklist
 
-3. **Visit your site**:
-   - https://hondoentertainment.github.io/giant-schrodinger
-
-4. **Check console for errors**:
-   - F12 > Console
-   - Look for 404s or CORS errors
-
----
-
-## Supabase Backend Setup
-
-### 1. Create a Supabase Project
-
-1. Go to [supabase.com](https://supabase.com) and create a new project.
-2. Note your **Project URL** and **Anon Key** from Settings > API.
-
-### 2. Run the Database Schema
-
-1. Open the SQL Editor in your Supabase dashboard.
-2. Paste the contents of `supabase/schema.sql` and run it.
-3. This creates all tables (users, rounds, leaderboard, challenges, rooms, analytics_events) with Row Level Security policies and indexes.
-
-### 3. Configure Environment Variables
-
-Add these to your `.env` (local) or GitHub Actions secrets (production):
-
-```
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
-
-For Edge Functions (server-side scoring), set secrets via the Supabase CLI:
-
-```bash
-supabase secrets set GEMINI_API_KEY=your-gemini-api-key
-```
-
-### 4. Deploy Edge Functions
-
-Install the Supabase CLI, then deploy all three functions:
-
-```bash
-# Link to your project
-supabase link --project-ref your-project-ref
-
-# Set secrets
-supabase secrets set GEMINI_API_KEY=your-gemini-api-key
-
-# Deploy all Edge Functions
-supabase functions deploy score-submission
-supabase functions deploy og-tags
-supabase functions deploy discord-bot
-```
-
-See [DISCORD_BOT.md](DISCORD_BOT.md) for Discord bot configuration details.
-
-### 5. Enable Server-Side Scoring
-
-The `score-submission` Edge Function runs Gemini scoring server-side so the API key is never exposed to the client. To enable it:
-
-1. Deploy the function (see above).
-2. Set the `GEMINI_API_KEY` secret on your Supabase project.
-3. Update the client to call the Edge Function endpoint instead of the client-side Gemini API when `VITE_SUPABASE_URL` is configured.
-
-### 6. Dynamic OG Tags
-
-The `og-tags` Edge Function serves custom Open Graph meta tags for shared links. When a player shares a round or challenge, the link points to the Edge Function URL which returns HTML with the correct OG tags and then redirects to the app.
-
----
-
-## Mobile Deployment
-
-For deploying to iOS and Android app stores as a PWA wrapper, see [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md).
-
----
-
-## Next Steps
-
-1. Choose deployment method (GitHub Actions recommended)
-2. Set up environment variables if needed
-3. Deploy Edge Functions to Supabase (score-submission, og-tags, discord-bot)
-4. Deploy
-5. Test thoroughly using `TEST_REVIEW_CHECKLIST.md`
-6. See [DISCORD_BOT.md](DISCORD_BOT.md) for Discord integration setup
-7. See [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) for app store preparation
+Use [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) as the canonical ship/no-ship checklist.
+For a full launch rehearsal, use [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md).

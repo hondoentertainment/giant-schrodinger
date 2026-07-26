@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2d1054"/>
+      <stop offset="100%" stop-color="#1a0533"/>
+    </radialGradient>
+  </defs>
+  <!-- Full-bleed rounded background (Apple will apply its own squircle mask) -->
+  <rect x="0" y="0" width="192" height="192" fill="url(#bg)"/>
+  <!-- Left circle of Venn diagram (scaled up, no safe-zone padding) -->
+  <circle cx="70" cy="96" r="52" fill="none" stroke="#a855f7" stroke-width="5" opacity="0.85"/>
+  <circle cx="70" cy="96" r="52" fill="#a855f7" opacity="0.18"/>
+  <!-- Right circle of Venn diagram -->
+  <circle cx="122" cy="96" r="52" fill="none" stroke="#6366f1" stroke-width="5" opacity="0.85"/>
+  <circle cx="122" cy="96" r="52" fill="#6366f1" opacity="0.18"/>
+  <!-- Overlap highlight -->
+  <clipPath id="leftClip">
+    <circle cx="70" cy="96" r="52"/>
+  </clipPath>
+  <circle cx="122" cy="96" r="52" fill="#d946ef" opacity="0.35" clip-path="url(#leftClip)"/>
+  <!-- Crosshair / target in the center -->
+  <circle cx="96" cy="96" r="14" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.95"/>
+  <circle cx="96" cy="96" r="5" fill="#ffffff" opacity="0.95"/>
+  <line x1="96" y1="76" x2="96" y2="87" stroke="#ffffff" stroke-width="3" opacity="0.95"/>
+  <line x1="96" y1="105" x2="96" y2="116" stroke="#ffffff" stroke-width="3" opacity="0.95"/>
+  <line x1="76" y1="96" x2="87" y2="96" stroke="#ffffff" stroke-width="3" opacity="0.95"/>
+  <line x1="105" y1="96" x2="116" y2="96" stroke="#ffffff" stroke-width="3" opacity="0.95"/>
+</svg>

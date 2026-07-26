@@ -1,3 +1,6 @@
+import { getCollisions } from './storage';
+import { getJudgementForCollision } from './judgements';
+
 const STORAGE_KEY = 'vwf_stats';
 const MILESTONES = [
     { id: 'first_round', threshold: 1, type: 'rounds', reward: 'avatar', rewardId: '🎯', label: 'First Connection' },
@@ -33,6 +36,9 @@ export function getStats() {
             maxStreak: parsed.maxStreak ?? 0,
             totalRounds: parsed.totalRounds ?? 0,
             totalCollisions: parsed.totalCollisions ?? 0,
+            scores: Array.isArray(parsed.scores) ? parsed.scores : [],
+            dailyScores: Array.isArray(parsed.dailyScores) ? parsed.dailyScores : [],
+            themesPlayed: Array.isArray(parsed.themesPlayed) ? parsed.themesPlayed : [],
             milestonesUnlocked: Array.isArray(parsed.milestonesUnlocked) ? parsed.milestonesUnlocked : [],
         };
     } catch {
@@ -42,12 +48,15 @@ export function getStats() {
             maxStreak: 0,
             totalRounds: 0,
             totalCollisions: 0,
+            scores: [],
+            dailyScores: [],
+            themesPlayed: [],
             milestonesUnlocked: [],
         };
     }
 }
 
-export function recordPlay() {
+export function recordPlay(score = null, options = {}) {
     const today = getTodayKey();
     const stats = getStats();
     let currentStreak = stats.currentStreak;
@@ -75,6 +84,13 @@ export function recordPlay() {
         maxStreak,
         totalRounds: stats.totalRounds + 1,
         totalCollisions: stats.totalCollisions + 1,
+        scores: Number.isFinite(score) ? [...stats.scores, score].slice(-100) : stats.scores,
+        dailyScores: options.isDailyChallenge && Number.isFinite(score)
+            ? [...stats.dailyScores, score].slice(-30)
+            : stats.dailyScores,
+        themesPlayed: options.themeId
+            ? [...new Set([...stats.themesPlayed, options.themeId])]
+            : stats.themesPlayed,
     };
 
     const newlyUnlocked = checkMilestones(updated);
@@ -114,4 +130,92 @@ export function isThemeUnlocked(themeId, stats = null) {
     const milestone = MILESTONES.find((m) => m.reward === 'theme' && m.rewardId === themeId);
     if (!milestone) return true;
     return s.milestonesUnlocked.includes(milestone.id);
+}
+
+export function getBestScore(stats = null) {
+    const s = stats || getStats();
+    if (!s.scores?.length) return null;
+    return Math.max(...s.scores.filter((score) => Number.isFinite(score)));
+}
+
+export function getFavoriteThemeId(stats = null) {
+    const s = stats || getStats();
+    if (!s.themesPlayed?.length) return null;
+    const counts = s.themesPlayed.reduce((acc, themeId) => {
+        acc[themeId] = (acc[themeId] || 0) + 1;
+        return acc;
+    }, {});
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+}
+
+export function getStreakStatus(stats = null) {
+    const s = stats || getStats();
+    const today = getTodayKey();
+    if (!s.currentStreak || !s.lastPlayedDate) return 'none';
+    const days = daysBetween(s.lastPlayedDate, today);
+    if (days === 0) return 'active_today';
+    if (days === 1) return 'at_risk';
+    return 'broken';
+}
+
+export function getProfileSummary(stats = null) {
+    const s = stats || getStats();
+    const bestScore = getBestScore(s);
+    const favoriteThemeId = getFavoriteThemeId(s);
+    const nextMilestone = MILESTONES
+        .filter((m) => !s.milestonesUnlocked.includes(m.id))
+        .map((m) => {
+            const value = m.type === 'rounds' ? s.totalRounds : s.currentStreak;
+            return { ...m, remaining: Math.max(0, m.threshold - value) };
+        })
+        .sort((a, b) => a.remaining - b.remaining)[0] || null;
+
+    let savedCount = 0;
+    let friendJudgedCount = 0;
+    let highlightCount = 0;
+    let dailySavedCount = 0;
+    const judgeModeCounts = { ai: 0, human: 0, friend: 0, other: 0 };
+    const mediaCounts = {};
+
+    try {
+        const collisions = getCollisions() || [];
+        savedCount = collisions.length;
+        for (const collision of collisions) {
+            if (getJudgementForCollision(collision.id)) friendJudgedCount += 1;
+            if ((collision.score || 0) >= 8) highlightCount += 1;
+            if (collision.isDailyChallenge) dailySavedCount += 1;
+            const mode = collision.judgeMode || collision.scoringMode || 'other';
+            if (mode === 'ai' || mode === 'human' || mode === 'friend') judgeModeCounts[mode] += 1;
+            else judgeModeCounts.other += 1;
+            const media = collision.mediaType || 'image';
+            mediaCounts[media] = (mediaCounts[media] || 0) + 1;
+        }
+    } catch {
+        // Profile enrichment must never break lobby render.
+    }
+
+    const finiteScores = (s.scores || []).filter((score) => Number.isFinite(score));
+    const averageScore = finiteScores.length
+        ? finiteScores.reduce((sum, score) => sum + score, 0) / finiteScores.length
+        : null;
+    const streakStatus = getStreakStatus(s);
+    const topMediaType = Object.entries(mediaCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+    return {
+        bestScore,
+        favoriteThemeId,
+        currentStreak: s.currentStreak,
+        maxStreak: s.maxStreak,
+        totalRounds: s.totalRounds,
+        nextMilestone,
+        averageScore,
+        savedCount,
+        friendJudgedCount,
+        highlightCount,
+        dailySavedCount,
+        judgeModeCounts,
+        topMediaType,
+        streakStatus,
+        streakAtRisk: streakStatus === 'at_risk',
+    };
 }

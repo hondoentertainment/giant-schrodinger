@@ -1,7 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import {
+  buildCorsHeaders,
+  getRateLimitKey,
+  isRateLimited,
+  jsonResponse,
+  LIMITS,
+  sanitizeText,
+} from "../_shared/edgeSecurity.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const RATE_LIMIT_MAX = 12;
 
 const DIFFICULTY_CONFIGS: Record<string, { scoringStrictness: number }> = {
   easy: { scoringStrictness: 1.3 },
@@ -25,29 +35,13 @@ Score the connection from 1-10 on four criteria (each 1-10):
 Respond with ONLY valid JSON, no other text:
 {"wit": N, "logic": N, "originality": N, "clarity": N, "relevance": "Highly Logical" or "Absurdly Creative" or "Wild Card", "commentary": "One witty sentence"}`;
 
-// Simple in-memory rate limiter: userId -> timestamp[]
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const RATE_LIMIT_MAX = 12;
-
-function isRateLimited(userId: string): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(userId) || [];
-  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  rateLimitMap.set(userId, recent);
-  if (recent.length >= RATE_LIMIT_MAX) return true;
-  recent.push(now);
-  rateLimitMap.set(userId, recent);
-  return false;
-}
-
 function clamp(val: number, min = 1, max = 10): number {
   return Math.min(max, Math.max(min, Math.round(val)));
 }
 
 function applyDifficulty(
   breakdown: Record<string, number>,
-  difficulty: string
+  difficulty: string,
 ): Record<string, number> {
   const config = DIFFICULTY_CONFIGS[difficulty] || DIFFICULTY_CONFIGS.normal;
   const strictness = config.scoringStrictness;
@@ -61,39 +55,17 @@ function applyDifficulty(
 }
 
 serve(async (req: Request) => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
+    return new Response(null, { headers: buildCorsHeaders(req) });
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse(req, { error: "Method not allowed" }, 405);
   }
 
-  // Extract user identity from Authorization header (JWT sub or fallback to IP)
-  const authHeader = req.headers.get("authorization") || "";
-  const userId = authHeader.slice(0, 64) || "anonymous";
-
-  if (isRateLimited(userId)) {
-    return new Response(
-      JSON.stringify({ error: "Rate limit exceeded. Max 12 submissions per hour." }),
-      {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
+  const rateLimitKey = getRateLimitKey(req);
+  if (isRateLimited(rateLimitKey, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)) {
+    return jsonResponse(req, { error: "Rate limit exceeded. Max 12 submissions per hour." }, 429);
   }
 
   let body: {
@@ -106,43 +78,22 @@ serve(async (req: Request) => {
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-      status: 400,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
+    return jsonResponse(req, { error: "Invalid JSON body" }, 400);
   }
 
-  const { conceptLeft, conceptRight, submission, difficulty = "normal" } = body;
+  const conceptLeft = sanitizeText(body.conceptLeft, LIMITS.concept);
+  const conceptRight = sanitizeText(body.conceptRight, LIMITS.concept);
+  const submission = sanitizeText(body.submission, LIMITS.submission);
+  const difficulty = sanitizeText(body.difficulty || "normal", 20) || "normal";
 
   if (!conceptLeft || !conceptRight || !submission) {
-    return new Response(
-      JSON.stringify({
-        error: "Missing required fields: conceptLeft, conceptRight, submission",
-      }),
-      {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
+    return jsonResponse(req, {
+      error: "Missing required fields: conceptLeft, conceptRight, submission",
+    }, 400);
   }
 
   if (!GEMINI_API_KEY) {
-    return new Response(
-      JSON.stringify({ error: "Server scoring unavailable: missing API key" }),
-      {
-        status: 503,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
+    return jsonResponse(req, { error: "Server scoring unavailable: missing API key" }, 503);
   }
 
   const prompt = SCORING_PROMPT
@@ -184,43 +135,23 @@ serve(async (req: Request) => {
     const breakdown = applyDifficulty(rawBreakdown, difficulty);
     const score = clamp(
       Math.round(
-        (breakdown.wit + breakdown.logic + breakdown.originality + breakdown.clarity) / 4
-      )
+        (breakdown.wit + breakdown.logic + breakdown.originality + breakdown.clarity) / 4,
+      ),
     );
 
-    const roundId = crypto.randomUUID();
-
-    return new Response(
-      JSON.stringify({
-        score,
-        breakdown,
-        baseScore: score,
-        relevance: parsed.relevance || "Highly Logical",
-        commentary:
-          parsed.commentary ||
-          `Solid connection between ${conceptLeft} and ${conceptRight}!`,
-        roundId,
-        isMock: false,
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
+    return jsonResponse(req, {
+      score,
+      breakdown,
+      baseScore: score,
+      relevance: parsed.relevance || "Highly Logical",
+      commentary:
+        parsed.commentary ||
+        `Solid connection between ${conceptLeft} and ${conceptRight}!`,
+      roundId: crypto.randomUUID(),
+      isMock: false,
+    });
   } catch (err) {
     console.error("Gemini scoring failed:", err);
-    return new Response(
-      JSON.stringify({ error: "Scoring failed", details: String(err) }),
-      {
-        status: 502,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
+    return jsonResponse(req, { error: "Scoring failed" }, 502);
   }
 });

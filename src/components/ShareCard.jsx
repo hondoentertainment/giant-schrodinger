@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { formatAssetForShare } from '../lib/mediaType';
 
 const CARD_WIDTH = 800;
 const CARD_HEIGHT = 420;
@@ -74,8 +75,8 @@ const ShareCard = React.memo(function ShareCard({
             wrapText(ctx, quotedText, textX, 170, textWidth, 28);
 
             // Asset names
-            const leftTitle = leftAsset?.title || '???';
-            const rightTitle = rightAsset?.title || '???';
+            const leftTitle = formatAssetForShare(leftAsset) || '???';
+            const rightTitle = formatAssetForShare(rightAsset) || '???';
             ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
             ctx.font = '500 15px system-ui, sans-serif';
             ctx.fillText(`${leftTitle}  +  ${rightTitle}`, textX, 280);
