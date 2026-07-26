@@ -1,4 +1,9 @@
+<<<<<<< HEAD
+/* global process */
+import { Client, GatewayIntentBits, REST, Routes, Collection, EmbedBuilder } from 'discord.js';
+=======
 import { Client, GatewayIntentBits, REST, Routes, Collection } from 'discord.js';
+>>>>>>> origin/main
 import * as venn from './commands/venn.js';
 import * as challenge from './commands/challenge.js';
 import * as leaderboard from './commands/leaderboard.js';
@@ -108,6 +113,14 @@ client.once('ready', () => {
 // ─── Startup ────────────────────────────────────────────────────────────────
 
 if (!TOKEN) {
+<<<<<<< HEAD
+  const _startupEmbed = new EmbedBuilder()
+    .setColor(0xFEE75C)
+    .setTitle('Venn with Friends — Discord Bot')
+    .setDescription('Bot is not configured yet.');
+
+=======
+>>>>>>> origin/main
   console.log('');
   console.log('================================================');
   console.log('  Venn with Friends — Discord Bot');

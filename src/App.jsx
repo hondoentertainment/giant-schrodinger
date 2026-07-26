@@ -35,7 +35,11 @@ import { parseJudgeShareUrl } from './services/share'
 import { parseChallengeUrl, clearChallengeFromUrl } from './services/challenges'
 import { parseThemeFromUrl, clearThemeFromUrl, importThemeFromLink, saveSharedTheme } from './services/themeBuilder'
 import { initAudio } from './services/sounds'
+<<<<<<< HEAD
+import { trackEvent, trackRetention, trackFunnelStep, registerAnalyticsProvider, ConsoleAnalyticsProvider, SupabaseAnalyticsProvider } from './services/analytics'
+=======
 import { trackEvent, trackRetention, registerAnalyticsProvider, ConsoleAnalyticsProvider, SupabaseAnalyticsProvider, teardownAnalytics } from './services/analytics'
+>>>>>>> origin/main
 import { initErrorMonitoring } from './services/errorMonitoring'
 import { initTelemetry } from './lib/initTelemetry'
 import { initMediaHints } from './lib/initMediaHints'
@@ -68,8 +72,11 @@ function GameLogoMark() {
 // Module-level analytics init (safe to run once)
 registerAnalyticsProvider(ConsoleAnalyticsProvider);
 registerAnalyticsProvider(SupabaseAnalyticsProvider);
+<<<<<<< HEAD
+=======
 initTelemetry();
 initMediaHints();
+>>>>>>> origin/main
 trackRetention();
 initPWAInstall();
 
@@ -303,10 +310,15 @@ function GameContent() {
 function App() {
     useEffect(() => {
         const cleanup = initErrorMonitoring();
+<<<<<<< HEAD
+        trackFunnelStep('page_loaded');
+        return cleanup;
+=======
         return () => {
             if (typeof cleanup === 'function') cleanup();
             teardownAnalytics();
         };
+>>>>>>> origin/main
     }, []);
 
     return (

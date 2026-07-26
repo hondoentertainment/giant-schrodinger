@@ -131,4 +131,68 @@ Realtime multiplayer requires Supabase today. There is no user-facing mock multi
 
 Authoritative room voting RPCs (`cast_room_vote`, `finalize_room_votes`) are implemented in `supabase/schema.sql` and the client. Remaining work is **hosted verification** with real credentials — see [PRODUCTION_REHEARSAL.md](PRODUCTION_REHEARSAL.md) and [PRD.md](PRD.md).
 
+<<<<<<< HEAD
+## Without Env Vars
+
+The app runs without any of these env vars:
+
+- **Multiplayer**: Uses mock rooms with simulated players
+- **AI scoring**: Uses mock scores with realistic ranges
+- **Fusion images**: Uses curated theme-based images
+- **Share for judging**: Uses client-only links (base64 payload in URL)
+- **Shop**: Browsable but purchases disabled
+- **Push notifications**: Disabled (in-app banners still work)
+- **Error monitoring**: Console-only
+
+---
+
+## Production Deployment Checklist
+
+### Supabase Production Setup
+
+1. **Create production project** at [supabase.com](https://supabase.com)
+2. **Run schema**: Execute `supabase/schema.sql` in the SQL editor — creates all tables, indexes, RLS policies, and Realtime configuration
+3. **Deploy Edge Functions**:
+   ```bash
+   supabase link --project-ref your-project-ref
+   supabase secrets set GEMINI_API_KEY=your-gemini-api-key
+   supabase functions deploy score-submission
+   supabase functions deploy og-tags
+   supabase functions deploy discord-bot
+   ```
+4. **Enable Realtime** for `rooms`, `room_players`, and `room_submissions` tables
+5. **Verify RLS policies** are active on all tables
+6. **Set GitHub Actions secrets**:
+   - `VITE_SUPABASE_URL` — Your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY` — Your Supabase anonymous key
+   - `VITE_GEMINI_API_KEY` — Google Gemini API key
+   - `VITE_SENTRY_DSN` — Sentry project DSN
+   - `VITE_VAPID_PUBLIC_KEY` — VAPID public key for push notifications
+
+### GitHub Pages Activation
+
+1. Go to repository Settings > Pages
+2. Set Source to "GitHub Actions"
+3. Push to `main` to trigger the deploy workflow
+4. Verify at `https://hondoentertainment.github.io/giant-schrodinger/`
+
+### Post-Deploy Verification
+
+- [ ] App loads without console errors
+- [ ] Solo round completes with AI scoring
+- [ ] Share link generates and opens correctly
+- [ ] Judge link works from external browser
+- [ ] Multiplayer room can be created and joined
+- [ ] Leaderboard shows real data
+- [ ] Error monitoring reports to Sentry
+- [ ] Analytics events appear in Supabase analytics_events table
+
+### Production Monitoring
+
+- **Sentry Dashboard**: Monitor error rates, set up alerts for new error types
+- **Supabase Dashboard**: Monitor database size, query performance, Realtime connections
+- **GitHub Actions**: Monitor deployment success rate and test results
+- **Lighthouse CI**: Performance budgets enforced on every PR
+=======
 Judge modes: [JUDGE_MODEL.md](JUDGE_MODEL.md). Architecture: [ARCHITECTURE.md](ARCHITECTURE.md).
+>>>>>>> origin/main

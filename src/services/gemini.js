@@ -1,3 +1,27 @@
+<<<<<<< HEAD
+import { TIMINGS } from '../lib/timings';
+import { getFusionImage } from '../data/themes';
+import { getAIDifficulty, getDifficultyConfig } from './aiFeatures';
+import { createAPIRateLimiter } from '../lib/rateLimit.js';
+import { addToOfflineQueue } from './offlineQueue';
+import { scoreViaServer } from './serverScoring';
+
+const scoringLimiter = createAPIRateLimiter('scoring', { maxPerMinute: 10 });
+
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+let _ai = null;
+async function getAI() {
+    if (_ai) return _ai;
+    if (!API_KEY) return null;
+    try {
+        const { GoogleGenAI } = await import('@google/genai');
+        _ai = new GoogleGenAI({ apiKey: API_KEY });
+        return _ai;
+    } catch {
+        return null;
+    }
+}
+=======
 import { GoogleGenAI } from '@google/genai';
 import { getFusionImage } from '../data/themes';
 import { scoreViaServer } from './serverScoring';
@@ -7,6 +31,7 @@ import { isBackendEnabled } from '../lib/supabase';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const ai = API_KEY && isClientGeminiEnabled() ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+>>>>>>> origin/main
 
 const SCORING_PROMPT = `You are a witty judge for a game where players connect two concepts using a creative phrase.
 
@@ -113,9 +138,16 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
         }
     }
 
+<<<<<<< HEAD
+    const ai = await getAI();
+    if (!ai || !submission || !asset1 || !asset2) {
+        await new Promise((r) => setTimeout(r, TIMINGS.MOCK_AI_DELAY));
+        return applyDifficulty({ ...mockScore(submission, asset1, asset2), isMock: true, scoredServerSide: false });
+=======
     if (fallbackReason) {
         await new Promise((r) => setTimeout(r, 1500));
         return { ...mockScore(submission, asset1, asset2), isMock: true, errorReason: fallbackReason };
+>>>>>>> origin/main
     }
 
     if (!isClientGeminiEnabled()) {
@@ -174,7 +206,12 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
     }
 }
 
+<<<<<<< HEAD
+export async function generateFusionImage(theme, submission) {
+    const ai = await getAI();
+=======
 export async function generateFusionImage(theme, submission, asset1 = null, asset2 = null) {
+>>>>>>> origin/main
     if (!ai || !API_KEY) {
         await new Promise((r) => setTimeout(r, 1500));
         return { ...getFusionImage(theme), isFallback: true };

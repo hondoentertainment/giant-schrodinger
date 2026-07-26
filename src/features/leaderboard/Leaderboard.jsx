@@ -60,7 +60,14 @@ function LeaderboardEntry({ entry, rank }) {
 export function Leaderboard({ onBack }) {
     const { user } = useGame();
     const [activeTab, setActiveTab] = useState('daily');
+<<<<<<< HEAD
+
+    // Use a refresh key to force re-read when tab changes
+    const [refreshKey, setRefreshKey] = useState(0);
+const _refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+=======
     const [refreshKey] = useState(0);
+>>>>>>> origin/main
 
     const entries = useMemo(() => {
         return activeTab === 'daily' ? getDailyLeaderboard() : getWeeklyLeaderboard();

@@ -1,9 +1,15 @@
+<<<<<<< HEAD
+import React, { useState, useCallback } from 'react';
+import { Upload, Trash2, ImagePlus } from 'lucide-react';
+import { addCustomImage, removeCustomImage } from '../services/customImages';
+=======
 import React, { useState, useCallback, useRef } from 'react';
 import { Upload, Trash2, ImagePlus, Film, Laugh } from 'lucide-react';
 import { addCustomImage, addCustomMeme, addCustomVideo, addCustomYoutubeVideo, removeCustomImage, getStorageUsage } from '../services/customImages';
 import { getYoutubeVideoIdFromAsset } from '../lib/youtube';
 import { MEDIA_TYPES } from '../data/themes';
 import { useTranslation } from '../hooks/useTranslation';
+>>>>>>> origin/main
 
 const TYPE_BADGES = {
     image: 'Image',

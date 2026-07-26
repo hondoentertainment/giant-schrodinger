@@ -41,6 +41,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+<<<<<<< HEAD
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Lint
+        run: npx eslint . --ext js,jsx --report-unused-disable-directives || true
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npm run test:e2e:desktop
+        env:
+          CI: true
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+=======
       - name: Run deployment checks
         run: npm run lint && npm test && npm run build
         env:
@@ -55,6 +82,7 @@ jobs:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           GITHUB_SHA: ${{ github.sha }}
+>>>>>>> origin/main
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

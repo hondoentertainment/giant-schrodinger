@@ -62,6 +62,9 @@ export const LocalStorageReporter = {
 // --- Sentry DSN parsing ---
 
 /**
+<<<<<<< HEAD
+ * Sentry reporter - dynamically imports @sentry/browser to avoid main bundle bloat.
+=======
  * Parse a Sentry DSN of the form `https://<public_key>@<host>/<project_id>`.
  * Returns `{publicKey, host, projectId}` or `null` when the DSN is missing
  * or malformed.
@@ -138,8 +141,57 @@ function queueToLocalStorage(errorData, context) {
  * Sentry reporter - posts events directly to the Sentry ingestion API.
  * Falls back to a small localStorage queue when no DSN is configured so
  * developers still have local visibility.
+>>>>>>> origin/main
  */
+let _sentryModule = null;
+let _sentryInitialized = false;
+
 export const SentryReporter = {
+<<<<<<< HEAD
+    async init() {
+        const dsn = import.meta.env.VITE_SENTRY_DSN;
+        if (!dsn || _sentryInitialized) return;
+        try {
+            const sentryPkg = '@sentry/browser';
+            _sentryModule = await import(/* @vite-ignore */ sentryPkg);
+            _sentryModule.init({
+                dsn,
+                environment: import.meta.env.DEV ? 'development' : 'production',
+                sampleRate: 1.0,
+                maxBreadcrumbs: 50,
+            });
+            _sentryInitialized = true;
+            // Flush any queued errors
+            try {
+                const queue = JSON.parse(localStorage.getItem('vwf_sentry_queue') || '[]');
+                queue.forEach(err => _sentryModule.captureMessage(err.message, { extra: err }));
+                localStorage.removeItem('vwf_sentry_queue');
+            } catch { /* ignore */ }
+        } catch { /* Sentry SDK not installed — silent fallback */ }
+    },
+    report(errorData, context) {
+        if (_sentryModule && _sentryInitialized) {
+            _sentryModule.withScope(scope => {
+                scope.setUser({ id: context.userId });
+                scope.setExtra('url', context.url);
+                scope.setExtra('timestamp', context.timestamp);
+                if (errorData.source) scope.setTag('source', errorData.source);
+                if (errorData.stack) {
+                    const err = new Error(errorData.message);
+                    err.stack = errorData.stack;
+                    _sentryModule.captureException(err);
+                } else {
+                    _sentryModule.captureMessage(errorData.message, { extra: errorData });
+                }
+            });
+        } else {
+            // Queue for when Sentry initializes
+            try {
+                const queue = JSON.parse(localStorage.getItem('vwf_sentry_queue') || '[]');
+                queue.push({ ...errorData, ...context });
+                localStorage.setItem('vwf_sentry_queue', JSON.stringify(queue.slice(-MAX_ERRORS)));
+            } catch { /* silent */ }
+=======
     report: (errorData, context) => {
         const cfg = getSentryConfig();
         if (!cfg) {
@@ -190,6 +242,7 @@ export const SentryReporter = {
             }
         } catch {
             // Never let error logging break the app.
+>>>>>>> origin/main
         }
     },
 };
@@ -238,6 +291,9 @@ export function initErrorMonitoring() {
 
     // Register Sentry reporter (will only activate if DSN is configured)
     registerErrorReporter(SentryReporter);
+
+    // Initialize Sentry asynchronously
+    SentryReporter.init();
 
     return () => {
         window.removeEventListener('error', onError);

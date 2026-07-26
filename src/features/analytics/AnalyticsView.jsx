@@ -5,7 +5,10 @@ import { getSessionMetrics, getEventCount } from '../../services/analytics';
 import { getHighlightStats } from '../../services/highlights';
 import { getReferralCohorts } from '../../services/referrals';
 import { BarChart3 } from 'lucide-react';
+<<<<<<< HEAD
+=======
 import { GameScreenShell } from '../../components/GameScreenShell';
+>>>>>>> origin/main
 
 export function AnalyticsView({ onBack }) {
   const stats = useMemo(() => getStats(), []);

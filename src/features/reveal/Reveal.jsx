@@ -2,12 +2,30 @@ import React, { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { scoreSubmission, generateFusionImage } from '../../services/gemini';
+<<<<<<< HEAD
+import { saveCollision } from '../../services/storage';
+import { recordPlay, getStats } from '../../services/stats';
+import { createJudgeShareUrl } from '../../services/share';
+import { createChallenge, createChallengeUrl } from '../../services/challenges';
+import { submitScore, getPlayerRank, submitSeasonalScore } from '../../services/leaderboard';
+import { playScoreReveal, playConfetti as playConfettiSound } from '../../services/sounds';
+import { trackEvent } from '../../services/analytics';
+import { autoSaveHighlight } from '../../services/highlights';
+import { getConnectionExplanation } from '../../services/aiFeatures';
+import { ShareCardCanvas } from '../../components/ShareCardCanvas';
+import { checkAchievements } from '../../services/achievements';
+import { AchievementProgress } from '../../components/AchievementProgress';
+import { addCoins, addBattlePassXp } from '../../services/shop';
+import { addToOfflineQueue } from '../../services/offlineQueue';
+import { getThemeById, buildThemeAssets, MEDIA_TYPES } from '../../data/themes';
+=======
 import { saveCollision, updateCollision } from '../../services/storage';
 import { getMilestones, getStats, recordPlay } from '../../services/stats';
 import { createJudgeShareLinks } from '../../services/share';
 import { getThemeById } from '../../data/themes';
 import { normalizeMediaType, getCollisionMediaMode, getEffectiveRoundMediaType } from '../../lib/mediaType';
 import { getDailyChallenge } from '../../services/dailyChallenge';
+>>>>>>> origin/main
 import { getScoreBand } from '../../lib/scoreBands';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import { AchievementProgress } from '../../components/AchievementProgress';
@@ -20,7 +38,11 @@ import { checkAchievements } from '../../services/achievements';
 import { scrollMainToTop } from '../../lib/scroll';
 
 export function Reveal({ submission, assets }) {
+<<<<<<< HEAD
+    const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, sessionResults, isDailyChallenge } = useGame();
+=======
     const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, isDailyChallenge } = useGame();
+>>>>>>> origin/main
     const { toast } = useToast();
     const [result, setResult] = useState(null);
     const [fusionImage, setFusionImage] = useState(null);
@@ -43,6 +65,20 @@ export function Reveal({ submission, assets }) {
     // Friend Judge can open as soon as fusion + prompts exist (draft collision on share)
     const canShareForJudging = Boolean(fusionImage?.url && assets?.left && assets?.right);
 
+<<<<<<< HEAD
+    // Shared post-save logic for both AI and human scoring paths
+    const finalizeCollision = (collisionData, finalScore) => {
+        const collision = saveCollision(collisionData);
+        setSavedCollision(collision);
+        autoSaveHighlight(collision);
+        addCoins(finalScore, 'round_complete');
+        addBattlePassXp(finalScore * 10);
+        const { newlyUnlocked: unlocked } = recordPlay();
+        if (unlocked?.length) setNewlyUnlocked(unlocked);
+        try { checkAchievements({ score: finalScore }); } catch { /* intentionally empty */ }
+        savedRef.current = true;
+        return collision;
+=======
     // Lobby → Round → Reveal: always open this screen at the top
     useLayoutEffect(() => {
         scrollMainToTop();
@@ -74,6 +110,7 @@ export function Reveal({ submission, assets }) {
             label: assets?.right?.label || assets?.right?.title || assets?.right?.name || 'Right prompt',
             type: assets?.right?.type,
         },
+>>>>>>> origin/main
     };
 
     useEffect(() => {

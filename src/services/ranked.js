@@ -340,3 +340,42 @@ export function resetForNewSeason() {
     seasonName: season.name,
   };
 }
+
+/**
+ * Get season launch configuration for promoting ranked mode.
+ * Returns data needed for lobby banners and announcements.
+ */
+export function getSeasonLaunchConfig() {
+    const season = getCurrentSeason();
+    const data = loadJSON(STORAGE_KEY, {});
+    const rating = data.rating || STARTING_RATING;
+    const gamesPlayed = data.gamesPlayed || 0;
+    const tier = getRankTier(rating);
+
+    const daysRemaining = Math.max(0, Math.ceil(
+        (new Date(season.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    ));
+
+    const isNewSeason = daysRemaining > (SEASON_DURATION_WEEKS * 7 - 3); // First 3 days
+    const isEndingSoon = daysRemaining <= 7;
+
+    return {
+        seasonName: season.name,
+        seasonId: season.id,
+        weekNumber: season.weekNumber,
+        daysRemaining,
+        isNewSeason,
+        isEndingSoon,
+        currentTier: tier.name,
+        currentRating: rating,
+        gamesPlayed,
+        placementComplete: gamesPlayed >= PLACEMENT_TOTAL,
+        rewards: getSeasonRewards(tier.tier),
+        banner: isNewSeason
+            ? `New Season: "${season.name}" — Play placement matches to set your rank!`
+            : isEndingSoon
+                ? `Season "${season.name}" ends in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}! Climb now for rewards.`
+                : null,
+        minPlayersForMatchmaking: 50,
+    };
+}

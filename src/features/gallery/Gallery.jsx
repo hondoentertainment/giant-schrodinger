@@ -3,6 +3,11 @@ import { useGame } from '../../context/GameContext';
 import { useTranslation } from '../../hooks/useTranslation';
 import { getCollisions } from '../../services/storage';
 import { getJudgementsByCollisionIds } from '../../services/backend';
+<<<<<<< HEAD
+import { getJudgement } from '../../services/judgements';
+import { upvote, downvote, getVotes, getAllVotes, getVoteDirection } from '../../services/votes';
+import { getHighlights } from '../../services/highlights';
+=======
 import { getJudgementForCollision } from '../../services/judgements';
 import { getCollisionMediaMode, getMediaModeLabel } from '../../lib/mediaType';
 import { getHighlights } from '../../services/highlights';
@@ -10,6 +15,7 @@ import { downloadFusionImage } from '../../services/socialShare';
 import { createJudgeShareLinks, getOgShareUrl } from '../../services/share';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
+>>>>>>> origin/main
 import { flagContent } from '../../services/moderation';
 import { MEDIA_TYPES } from '../../data/themes';
 import { getJudgeModeFromCollision } from '../../lib/judgeMode';

@@ -31,6 +31,10 @@ export function JudgeCalibration({ onComplete }) {
   const [userScore, setUserScore] = useState('');
   const [feedback, setFeedback] = useState(null); // { passed, diff }
   const [passedCount, setPassedCount] = useState(0);
+<<<<<<< HEAD
+  const [, setFailedCount] = useState(0);
+=======
+>>>>>>> origin/main
   const [finished, setFinished] = useState(false);
 
   const example = CALIBRATION_EXAMPLES[currentIndex];
