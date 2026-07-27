@@ -14,6 +14,7 @@ import { flagContent } from '../../services/moderation';
 import { MEDIA_TYPES } from '../../data/themes';
 import { getJudgeModeFromCollision } from '../../lib/judgeMode';
 import { EmptyState } from '../../components/EmptyState';
+import { WeeklyRecapCard } from '../../components/WeeklyRecapCard';
 import { trackEvent } from '../../services/analytics';
 import { haptic } from '../../lib/haptics';
 
@@ -419,6 +420,7 @@ export function Gallery() {
                 />
             ) : (
                 <>
+                    <WeeklyRecapCard />
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                         <div className="game-stat-tile text-left sm:text-center">
                             <div className="game-section-label">Saved</div>

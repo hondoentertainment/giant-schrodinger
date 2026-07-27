@@ -105,6 +105,11 @@ vi.mock('../../components/SocialShareButtons', () => ({
   default: () => <div data-testid="social-share-buttons">Share</div>,
 }));
 
+// Covered by its own component test; keep Gallery queries unambiguous.
+vi.mock('../../components/WeeklyRecapCard', () => ({
+  WeeklyRecapCard: () => null,
+}));
+
 // Import after mocks
 import { Gallery } from './Gallery';
 

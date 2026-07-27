@@ -1,4 +1,4 @@
-import { THEMES, MEDIA_TYPES } from '../data/themes';
+import { getAvailableThemes, MEDIA_TYPES } from '../data/themes';
 
 const DAILY_STORAGE_KEY = 'vwf_daily';
 
@@ -69,8 +69,11 @@ export function getDailyChallenge() {
     const seed = getDaySeed();
     const rng = seededRandom(seed);
 
-    const themeIndex = Math.floor(rng() * (THEMES.length - 1));
-    const theme = THEMES[themeIndex];
+    // In-season pool keeps dailies deterministic per day while letting
+    // seasonal themes headline during their calendar window.
+    const themePool = getAvailableThemes();
+    const themeIndex = Math.floor(rng() * themePool.length);
+    const theme = themePool[themeIndex];
 
     const promptIndex = Math.floor(rng() * DAILY_PROMPTS.length);
     const prompt = DAILY_PROMPTS[promptIndex];

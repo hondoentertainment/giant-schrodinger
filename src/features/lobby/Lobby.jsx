@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useRoom } from '../../context/RoomContext';
-import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
+import { THEMES, getAvailableThemes, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { normalizeMediaType } from '../../lib/mediaType';
 import { getStats, getMilestones, isThemeUnlocked, getProfileSummary } from '../../services/stats';
 import { reportAppEvent } from '../../lib/telemetry';
@@ -896,7 +896,7 @@ export function Lobby() {
                         </button>
                     </div>
                     <div className="flex gap-2 justify-between flex-wrap" role="group">
-                        {THEMES.map((t) => {
+                        {getAvailableThemes().map((t) => {
                             const locked = !isThemeUnlocked(t.id, stats);
                             const timeLimit = t.modifier?.timeLimit || 60;
                             const mult = t.modifier?.scoreMultiplier || 1;

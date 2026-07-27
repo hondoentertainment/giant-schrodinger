@@ -31,8 +31,8 @@ function makePairings(count = 10) {
 
 describe('promptPacks service', () => {
     describe('getBuiltInPacks', () => {
-        it('returns built-in packs including Summer Heat', () => {
-            const packs = getBuiltInPacks();
+        it('includes Summer Heat during summer months', () => {
+            const packs = getBuiltInPacks({ date: new Date('2026-07-15T12:00:00') });
             expect(packs.length).toBeGreaterThanOrEqual(4);
             expect(packs.some((pack) => pack.id === 'builtin-summer-heat')).toBe(true);
             packs.forEach(pack => {
@@ -41,12 +41,33 @@ describe('promptPacks service', () => {
             });
         });
 
-        it('returns packs with expected names', () => {
-            const packs = getBuiltInPacks();
-            const names = packs.map(p => p.name);
-            expect(names).toContain('Impossible Connections');
-            expect(names).toContain('Pop Culture Mashup');
-            expect(names).toContain('Deep Thoughts');
+        it('rotates seasonal packs by calendar month', () => {
+            const autumn = getBuiltInPacks({ date: new Date('2026-10-15T12:00:00') });
+            expect(autumn.some((pack) => pack.id === 'builtin-autumn-ember')).toBe(true);
+            expect(autumn.some((pack) => pack.id === 'builtin-summer-heat')).toBe(false);
+
+            const winter = getBuiltInPacks({ date: new Date('2026-01-15T12:00:00') });
+            expect(winter.some((pack) => pack.id === 'builtin-winter-glow')).toBe(true);
+            expect(winter.some((pack) => pack.id === 'builtin-autumn-ember')).toBe(false);
+        });
+
+        it('always includes non-seasonal packs', () => {
+            for (const date of ['2026-01-15', '2026-04-15', '2026-07-15', '2026-10-15']) {
+                const names = getBuiltInPacks({ date: new Date(`${date}T12:00:00`) }).map(p => p.name);
+                expect(names).toContain('Impossible Connections');
+                expect(names).toContain('Pop Culture Mashup');
+                expect(names).toContain('Deep Thoughts');
+            }
+        });
+
+        it('lists off-season packs when includeOffSeason is set', () => {
+            const packs = getBuiltInPacks({ date: new Date('2026-07-15T12:00:00'), includeOffSeason: true });
+            expect(packs.some((pack) => pack.id === 'builtin-winter-glow')).toBe(true);
+        });
+
+        it('resolves seasonal packs by id year-round', () => {
+            expect(getPackById('builtin-winter-glow')).not.toBeNull();
+            expect(getPackById('builtin-autumn-ember')).not.toBeNull();
         });
     });
 

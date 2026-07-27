@@ -1,4 +1,5 @@
 import { loadJSON, saveJSON, generateId } from '../lib/storage';
+import { isInSeason } from './seasonalRotation';
 
 const STORAGE_KEY = 'vwf_prompt_packs';
 const STATS_KEY = 'vwf_pack_stats';
@@ -68,6 +69,7 @@ const BUILT_IN_PACKS = [
     id: 'builtin-summer-heat',
     name: 'Summer Heat',
     description: 'Sun, sweat, festivals, and the weird poetry of hot days',
+    seasonId: 'summer',
     pairings: [
       { left: 'Heat Mirages', right: 'Office Air Conditioning' },
       { left: 'Festival Wristbands', right: 'Library Silence' },
@@ -83,6 +85,48 @@ const BUILT_IN_PACKS = [
     creatorName: 'Built-in',
     isBuiltIn: true,
     createdAt: '2026-07-01T00:00:00.000Z',
+  },
+  {
+    id: 'builtin-autumn-ember',
+    name: 'Autumn Ember',
+    description: 'Falling leaves, harvest rituals, and cozy dread',
+    seasonId: 'autumn',
+    pairings: [
+      { left: 'Falling Leaves', right: 'Inbox Zero' },
+      { left: 'Pumpkin Spice', right: 'Quarterly Reports' },
+      { left: 'Corn Mazes', right: 'Career Paths' },
+      { left: 'Sweaters', right: 'Security Blankets' },
+      { left: 'Harvest Moons', right: 'Deadlines' },
+      { left: 'Haunted Houses', right: 'Open Floor Plans' },
+      { left: 'Apple Picking', right: 'Stock Picking' },
+      { left: 'First Frost', right: 'First Impressions' },
+      { left: 'Bonfires', right: 'Group Therapy' },
+      { left: 'Daylight Saving', right: 'Procrastination' },
+    ],
+    creatorName: 'Built-in',
+    isBuiltIn: true,
+    createdAt: '2026-07-26T00:00:00.000Z',
+  },
+  {
+    id: 'builtin-winter-glow',
+    name: 'Winter Glow',
+    description: 'Frost, firelight, and the strange comfort of the cold',
+    seasonId: 'winter',
+    pairings: [
+      { left: 'Snow Days', right: 'Server Outages' },
+      { left: 'Hot Cocoa', right: 'Peace Treaties' },
+      { left: 'Ice Scrapers', right: 'Small Talk' },
+      { left: 'Blizzards', right: 'Family Dinners' },
+      { left: 'Mittens', right: 'Firewalls' },
+      { left: 'Frozen Lakes', right: 'Poker Faces' },
+      { left: 'Holiday Lights', right: 'Impulse Purchases' },
+      { left: "New Year's Resolutions", right: 'Free Trials' },
+      { left: 'Fireplaces', right: 'Podcasts' },
+      { left: 'Icicles', right: 'Cliffhangers' },
+    ],
+    creatorName: 'Built-in',
+    isBuiltIn: true,
+    createdAt: '2026-07-26T00:00:00.000Z',
   },
 ];
 
@@ -102,8 +146,10 @@ function savePackStats(stats) {
   saveJSON(STATS_KEY, stats);
 }
 
-export function getBuiltInPacks() {
-  return [...BUILT_IN_PACKS];
+// Seasonal packs only surface during their calendar window; pass
+// includeOffSeason to list everything (e.g. for admin/debug views).
+export function getBuiltInPacks({ date = new Date(), includeOffSeason = false } = {}) {
+  return BUILT_IN_PACKS.filter((pack) => includeOffSeason || isInSeason(pack.seasonId, date));
 }
 
 export function createCustomPack({ name, description, pairings, creatorName }) {

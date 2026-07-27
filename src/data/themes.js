@@ -1,6 +1,7 @@
 import { getSupplementalConcepts } from '../services/conceptGenerator';
 import { getCachedImageUrl } from '../services/imageResolve';
 import { buildPicsumFallback, IMG_WIDTH } from '../lib/imageUrls';
+import { isInSeason } from '../services/seasonalRotation';
 
 const DEFAULT_KEYWORDS = ["abstract art", "texture", "colorful pattern", "surreal", "dreamscape"];
 
@@ -390,6 +391,7 @@ export const THEMES = [
         label: "Summer Heat",
         gradient: "from-amber-400 to-orange-500",
         seasonal: true,
+        seasonId: "summer",
         modifier: {
             timeLimit: 55,
             scoreMultiplier: 1.12,
@@ -415,7 +417,74 @@ export const THEMES = [
             createImage({ id: "1501785888041-af3ef285b470", label: "Heat Haze Echo", fallback: "summer haze" }),
         ],
     },
+    {
+        id: "autumn-ember",
+        label: "Autumn Ember",
+        gradient: "from-orange-600 to-amber-700",
+        seasonal: true,
+        seasonId: "autumn",
+        modifier: {
+            timeLimit: 58,
+            scoreMultiplier: 1.12,
+            hint: "Crisp air, long shadows, harvest nostalgia. Cozy but sharp.",
+        },
+        keywords: ["autumn forest", "harvest", "falling leaves", "cozy rain", "misty morning"],
+        assets: [
+            createImage({ id: "1508739773434-c26b3d09e071", label: "The Forest That Caught Fire Slowly", fallback: "autumn forest", categories: ['nature', 'emotion', 'nostalgia'] }),
+            createImage({ id: "1518495973542-4542f68e80bf", label: "Moss Keeping a Thousand Secrets", fallback: "mossy autumn", categories: ['nature', 'abstract', 'nostalgia'] }),
+            createImage({ id: "1470071459604-3b5ec3a7fe05", label: "Fog Tucking In the Valley", fallback: "autumn fog", categories: ['nature', 'abstract', 'emotion'] }),
+            createImage({ id: "1504567961542-e24d9439a724", label: "The Storm That Cleared the Orchard", fallback: "autumn storm", categories: ['nature', 'science', 'emotion'] }),
+            createImage({ id: "1504701954957-2010ec3bcec1", label: "The Harvest That Painted Itself Gold", fallback: "harvest field", categories: ['nature', 'nostalgia', 'art'] }),
+            createImage({ id: "1509316975850-ff9c5deb0cd9", label: "A Fox in a Coat of October", fallback: "fox autumn", categories: ['animal', 'nature', 'emotion'] }),
+            createImage({ id: "1516298773066-f6b860f8ea84", label: "The Mushroom Kingdom's Parliament", fallback: "mushrooms forest", categories: ['nature', 'science', 'abstract'] }),
+            createImage({ id: "1475113548554-5a36f1f523d6", label: "Roots That Remember Every Summer", fallback: "tree roots", categories: ['nature', 'nostalgia', 'abstract'] }),
+            createImage({ id: "1520262494112-9fe481d36ec2", label: "The Last Seed to Let Go", fallback: "falling seeds", categories: ['nature', 'abstract', 'emotion'] }),
+            createImage({ id: "1502680390548-bca8fcc47c11", label: "Sparks Telling Autumn Stories", fallback: "campfire autumn", categories: ['human', 'nature', 'nostalgia'] }),
+            createImage({ id: "1547592166-23ac45744acd", label: "Soup Season Spirituality", fallback: "soup", categories: ['food', 'emotion', 'nostalgia'] }),
+            createImage({ id: "1490682143684-14369e18dce8", label: "The Orchard's Lantern Parade", fallback: "lanterns autumn", categories: ['nature', 'abstract', 'nostalgia'] }),
+        ],
+        fusionImages: [
+            createImage({ id: "1508739773434-c26b3d09e071", label: "Ember Blend", fallback: "autumn abstract" }),
+            createImage({ id: "1470071459604-3b5ec3a7fe05", label: "Harvest Haze", fallback: "autumn mist" }),
+        ],
+    },
+    {
+        id: "winter-frost",
+        label: "Winter Frost",
+        gradient: "from-sky-400 to-indigo-600",
+        seasonal: true,
+        seasonId: "winter",
+        modifier: {
+            timeLimit: 55,
+            scoreMultiplier: 1.12,
+            hint: "Quiet, crystalline, close to home. Find warmth in the cold.",
+        },
+        keywords: ["snowfall", "frozen lake", "aurora", "fireplace", "winter city"],
+        assets: [
+            createImage({ id: "1518173946687-403870c84f25", label: "The Glacier's Slow Confession", fallback: "glacier", categories: ['nature', 'water', 'science'] }),
+            createImage({ id: "1509316975850-ff9c5deb0cd9", label: "A Fox Who Knows Your Name", fallback: "fox snow", categories: ['animal', 'nature', 'emotion'] }),
+            createImage({ id: "1540206395-68808572332f", label: "The Sky's Secret Light Show", fallback: "northern lights", categories: ['nature', 'space', 'abstract'] }),
+            createImage({ id: "1544027993-215b52db5e3c", label: "Time Stopped Mid-Crash", fallback: "frozen wave", categories: ['water', 'abstract', 'art'] }),
+            createImage({ id: "1519681393784-d120267933ba", label: "Stars Working the Night Shift", fallback: "winter stars", categories: ['space', 'nature', 'emotion'] }),
+            createImage({ id: "1505118380757-91f5816e5e04", label: "The Last Light Before the Snow", fallback: "lighthouse winter", categories: ['urban', 'water', 'emotion'] }),
+            createImage({ id: "1502680390548-bca8fcc47c11", label: "The Fire Everyone Gathered Around", fallback: "winter campfire", categories: ['human', 'nature', 'nostalgia'] }),
+            createImage({ id: "1504754525036-673b8c4b5c7e", label: "Steam Rising Like a Prayer", fallback: "hot drink winter", categories: ['food', 'human', 'emotion'] }),
+            createImage({ id: "1470071459604-3b5ec3a7fe05", label: "The Valley Holding Its Breath", fallback: "winter fog", categories: ['nature', 'abstract', 'emotion'] }),
+            createImage({ id: "1526374965328-7f61d4dc18c5", label: "Calling Home for the Holidays", fallback: "rotary phone", categories: ['nostalgia', 'technology', 'emotion'] }),
+            createImage({ id: "1547592166-23ac45744acd", label: "Soup That Outlasted the Storm", fallback: "warm soup", categories: ['food', 'emotion', 'nostalgia'] }),
+            createImage({ id: "1486870591958-9b9d0d1dda99", label: "Mountains Wearing Crowns of Snow", fallback: "snow mountains", categories: ['nature', 'adventure', 'emotion'] }),
+        ],
+        fusionImages: [
+            createImage({ id: "1518173946687-403870c84f25", label: "Frost Blend", fallback: "winter abstract" }),
+            createImage({ id: "1540206395-68808572332f", label: "Aurora Echo", fallback: "aurora" }),
+        ],
+    },
 ];
+
+// Seasonal themes only surface during their calendar window.
+export function getAvailableThemes(date = new Date()) {
+    return THEMES.filter((theme) => !theme.seasonal || isInSeason(theme.seasonId, date));
+}
 
 // ── Video assets (royalty-free Pexels/Pixabay hosted) ──
 const VIDEO_ASSETS = {
@@ -506,6 +575,14 @@ export const MEME_ASSETS = {
         ...DEFAULT_MEMES,
     ],
     mystery: DEFAULT_MEMES,
+    "autumn-ember": [
+        createMeme({ id: "1508739773434-c26b3d09e071", label: "Sweater Weather Supremacy", fallback: "autumn vibes", categories: ['nature', 'humor', 'nostalgia'] }),
+        ...DEFAULT_MEMES,
+    ],
+    "winter-frost": [
+        createMeme({ id: "1509316975850-ff9c5deb0cd9", label: "Cold Outside, Colder Takes", fallback: "winter reaction", categories: ['animal', 'humor', 'nature'] }),
+        ...DEFAULT_MEMES,
+    ],
     default: DEFAULT_MEMES,
 };
 
