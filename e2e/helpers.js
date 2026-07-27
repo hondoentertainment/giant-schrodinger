@@ -7,6 +7,21 @@ export async function dismissOnboarding(page) {
     }
 }
 
+// The slim Create Profile screen hides theme/scoring/media inside a
+// collapsed <details> — expand it before touching those controls.
+export async function openProfileMoreOptions(page) {
+    const summary = page.locator('summary', { hasText: 'More options' });
+    const mediaLabel = page.getByText('Media Type');
+    if (!(await mediaLabel.isVisible().catch(() => false))) {
+        await summary.click();
+    }
+}
+
+export async function selectMediaType(page, name) {
+    await openProfileMoreOptions(page);
+    await page.getByRole('button', { name }).click();
+}
+
 export async function startSoloRound(page, options = {}) {
     const { placeholder = /What connects/i } = options;
 

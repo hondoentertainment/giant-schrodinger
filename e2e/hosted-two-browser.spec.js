@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startSoloRound } from './helpers';
+import { startSoloRound, openProfileMoreOptions } from './helpers';
 
 /**
  * Live hosted two-browser rehearsal against PRODUCTION_URL.
@@ -33,8 +33,10 @@ async function joinLobby(page, name, { scoringMode } = {}) {
   await page.goto(productionUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await page.getByPlaceholder(/Enter your name/i).fill(name);
   if (scoringMode === 'human') {
+    await openProfileMoreOptions(page);
     await page.getByRole('button', { name: /Manual Judge/i }).click();
   } else if (scoringMode === 'ai') {
+    await openProfileMoreOptions(page);
     await page.getByRole('button', { name: /AI Judge/i }).click();
   }
   await page.getByRole('button', { name: /Join Lobby/i }).click();

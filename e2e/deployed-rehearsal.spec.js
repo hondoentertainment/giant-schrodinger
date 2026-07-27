@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startSoloRound } from './helpers';
+import { startSoloRound, selectMediaType } from './helpers';
 
 const productionUrl = process.env.PRODUCTION_URL;
 
@@ -18,7 +18,7 @@ test.describe('Deployed rehearsal smoke', () => {
 
     test('memes & videos mode reaches round screen', async ({ page }) => {
         await page.getByPlaceholder(/Enter your name/i).fill('RehearsalBot');
-        await page.getByRole('button', { name: /Memes & Videos/i }).click();
+        await selectMediaType(page, /Memes & Videos/i);
         await page.getByRole('button', { name: /Join Lobby/i }).click();
         await expect(page.getByText(/Hi, RehearsalBot/i)).toBeVisible({ timeout: 10000 });
 
