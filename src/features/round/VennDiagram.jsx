@@ -489,12 +489,20 @@ function ConceptCaption({ label, align = 'left', accentColor, assetType }) {
                 maxWidth: '46%',
                 background: 'rgba(255,255,255,0.06)',
                 border: '1px solid rgba(255,255,255,0.08)',
+                borderTop: `2px solid ${accentColor ? `${accentColor}99` : 'rgba(255,255,255,0.08)'}`,
             }}
         >
             <span
-                className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.12em]"
+                className={`inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.12em] ${
+                    align === 'right' ? 'flex-row-reverse' : ''
+                }`}
                 style={{ color: accentColor ? `${accentColor}cc` : 'rgba(255,255,255,0.45)' }}
             >
+                <span
+                    aria-hidden="true"
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: accentColor || 'rgba(255,255,255,0.45)' }}
+                />
                 {conceptLabel}
             </span>
             <h3 className="font-display text-sm sm:text-base md:text-lg font-semibold text-white leading-snug line-clamp-3">
@@ -521,7 +529,12 @@ function VennCircle({ asset, side, colorblindMode, colors }) {
 
     return (
         <div
-            className={`absolute ${isLeft ? 'left-0' : 'right-0'} w-[54%] aspect-square rounded-full overflow-hidden z-[1] transition-transform hover:scale-[1.015] duration-500 shadow-2xl group`}
+            className={`absolute ${isLeft ? 'left-0' : 'right-0'} w-[54%] aspect-square z-[1] ${
+                isLeft ? 'venn-circle-enter-left' : 'venn-circle-enter-right'
+            }`}
+        >
+        <div
+            className="relative w-full h-full rounded-full overflow-hidden transition-transform hover:scale-[1.015] duration-500 shadow-2xl group"
             style={{
                 border: `2px solid ${colorblindMode ? accentColor : 'rgba(255,255,255,0.18)'}`,
                 boxShadow: `0 24px 56px -16px ${accentColor}44, 0 0 0 1px rgba(255,255,255,0.06) inset`,
@@ -566,8 +579,14 @@ function VennCircle({ asset, side, colorblindMode, colors }) {
                 </div>
             )}
         </div>
+        </div>
     );
 }
+
+// Lens (vesica) where the two circles overlap, in the 200x110 viewBox used below.
+// Circles: r=54, cy=55, cx=54 (left) and cx=146 (right) -> intersection points at
+// x=100, y=55 +/- sqrt(54^2 - 46^2) ~= 28.28.
+const LENS_PATH = 'M 100 26.72 A 54 54 0 0 1 100 83.28 A 54 54 0 0 1 100 26.72 Z';
 
 // ── Main Venn Diagram ──
 export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAsset, mediaLoading = false }) {
@@ -577,6 +596,9 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
     const COLORS = colorblindMode
         ? { left: '#0ea5e9', right: '#f97316', overlap: '#10b981' }
         : { left: '#a855f7', right: '#6366f1', overlap: '#8b5cf6' };
+
+    // Re-key the stage per pairing so the collision entrance replays every round.
+    const roundKey = `${leftAsset?.id ?? leftAsset?.label ?? 'l'}|${rightAsset?.id ?? rightAsset?.label ?? 'r'}`;
 
     return (
         <div className="relative w-full max-w-2xl mx-auto my-4 sm:my-8">
@@ -603,7 +625,7 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
             )}
 
             {/* Circles */}
-            <div className="relative w-full aspect-[2/1.1] flex justify-center items-center">
+            <div key={roundKey} className="relative w-full aspect-[2/1.1] flex justify-center items-center">
                 <VennCircle
                     asset={leftAsset}
                     side="left"
@@ -617,18 +639,60 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                     colors={COLORS}
                 />
 
-                {/* Intersection highlight */}
+                {/* Glowing lens where the circles overlap */}
+                <svg
+                    className="absolute inset-0 w-full h-full pointer-events-none z-[5]"
+                    viewBox="0 0 200 110"
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                >
+                    <defs>
+                        <radialGradient
+                            id="venn-lens-fill"
+                            gradientUnits="userSpaceOnUse"
+                            cx="100"
+                            cy="55"
+                            r="34"
+                        >
+                            <stop offset="0%" stopColor={COLORS.overlap} stopOpacity="0.42" />
+                            <stop offset="65%" stopColor={COLORS.overlap} stopOpacity="0.16" />
+                            <stop offset="100%" stopColor={COLORS.overlap} stopOpacity="0.05" />
+                        </radialGradient>
+                    </defs>
+                    <g className="venn-lens-glow">
+                        <path d={LENS_PATH} fill="url(#venn-lens-fill)" />
+                        <path
+                            d={LENS_PATH}
+                            fill="none"
+                            stroke={COLORS.overlap}
+                            strokeOpacity="0.55"
+                            strokeWidth="0.9"
+                            vectorEffect="non-scaling-stroke"
+                        />
+                    </g>
+                </svg>
+
+                {/* One-shot flash as the circles collide on entry */}
+                <div
+                    className="venn-collide-flash absolute left-1/2 top-1/2 w-16 h-16 sm:w-24 sm:h-24 rounded-full pointer-events-none z-[6] blur-xl"
+                    style={{ backgroundColor: `${COLORS.overlap}66` }}
+                    aria-hidden="true"
+                />
+
+                {/* Intersection label */}
                 <div className="absolute z-10 text-center pointer-events-none flex flex-col items-center">
-                    <div className="relative px-4 py-2 rounded-full backdrop-blur-xl border border-white/12"
-                        style={{ background: 'rgba(0,0,0,0.35)' }}>
+                    <div
+                        className="relative px-4 py-2 rounded-full backdrop-blur-xl border"
+                        style={{
+                            background: 'rgba(0,0,0,0.4)',
+                            borderColor: `${COLORS.overlap}55`,
+                            boxShadow: `0 0 18px ${COLORS.overlap}33`,
+                        }}
+                    >
                         <span className="relative text-[10px] sm:text-xs font-semibold text-white/85 tracking-[0.08em]">
                             The Intersection
                         </span>
                     </div>
-                    <div
-                        className="w-5 h-5 sm:w-7 sm:h-7 mt-2 rounded-full blur-md"
-                        style={{ backgroundColor: colorblindMode ? `${COLORS.overlap}66` : 'rgba(10,132,255,0.45)' }}
-                    />
                 </div>
             </div>
 

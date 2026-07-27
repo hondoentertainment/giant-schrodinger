@@ -493,6 +493,62 @@
   text-shadow: 0 0 24px rgba(10, 132, 255, 0.35);
 }
 
+/* ── Venn diagram game visuals ── */
+@keyframes vennEnterLeft {
+  0% { transform: translateX(-34%) scale(0.94); opacity: 0; }
+  55% { opacity: 1; }
+  78% { transform: translateX(2%) scale(1.005); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes vennEnterRight {
+  0% { transform: translateX(34%) scale(0.94); opacity: 0; }
+  55% { opacity: 1; }
+  78% { transform: translateX(-2%) scale(1.005); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes vennFloatLeft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes vennFloatRight {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+
+@keyframes vennLensPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes vennCollideFlash {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  40% { opacity: 0.85; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.9); }
+}
+
+.venn-circle-enter-left {
+  animation:
+    vennEnterLeft 0.75s cubic-bezier(0.22, 1.2, 0.36, 1) both,
+    vennFloatLeft 9s ease-in-out 1.2s infinite;
+}
+
+.venn-circle-enter-right {
+  animation:
+    vennEnterRight 0.75s cubic-bezier(0.22, 1.2, 0.36, 1) both,
+    vennFloatRight 9s ease-in-out 1.2s infinite;
+}
+
+.venn-lens-glow {
+  animation: vennLensPulse 4.5s ease-in-out 0.9s infinite;
+}
+
+.venn-collide-flash {
+  animation: vennCollideFlash 0.8s ease-out 0.4s both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -508,6 +564,17 @@
   .animate-spring-in,
   .animate-ambient-drift {
     animation: none !important;
+  }
+
+  .venn-circle-enter-left,
+  .venn-circle-enter-right,
+  .venn-lens-glow,
+  .venn-collide-flash {
+    animation: none !important;
+  }
+
+  .venn-collide-flash {
+    opacity: 0;
   }
 }
 
