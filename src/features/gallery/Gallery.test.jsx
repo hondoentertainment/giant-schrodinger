@@ -1,14 +1,7 @@
-<<<<<<< HEAD
-/* global global */
-import React from 'react';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { render, screen } from '@testing-library/react';
-=======
 import React from 'react';
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen, waitFor, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
->>>>>>> origin/main
 
 beforeAll(() => {
   vi.stubGlobal('IntersectionObserver', class {

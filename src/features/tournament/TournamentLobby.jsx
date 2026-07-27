@@ -14,12 +14,9 @@ import {
 } from '../../services/tournaments';
 import { trackEvent } from '../../services/analytics';
 import { Trophy, Users, ChevronRight, Plus, Crown } from 'lucide-react';
-<<<<<<< HEAD
-=======
 import { LocalPreviewBadge } from '../../components/LocalPreviewBadge';
 import { GameScreenShell } from '../../components/GameScreenShell';
 import { EmptyState } from '../../components/EmptyState';
->>>>>>> origin/main
 
 export function TournamentLobby({ onBack }) {
     const { user } = useGame();

@@ -23,10 +23,6 @@ vi.mock('../../context/GameContext', () => ({
 }));
 
 // ── Mock theme/services ──
-<<<<<<< HEAD
-const _mockLeftAsset = { id: 'cat', label: 'Cat', type: 'image', url: 'https://example.com/cat.jpg', fallbackUrl: 'https://example.com/cat-fallback.jpg' };
-const _mockRightAsset = { id: 'dog', label: 'Dog', type: 'image', url: 'https://example.com/dog.jpg', fallbackUrl: 'https://example.com/dog-fallback.jpg' };
-=======
 vi.mock('../../data/themes', () => {
     const theme = { id: 'classic', label: 'Classic', gradient: 'from-purple-500 to-pink-500', modifier: { timeLimit: 60, scoreMultiplier: 1.0 } };
     return {
@@ -35,7 +31,6 @@ vi.mock('../../data/themes', () => {
         MEDIA_TYPES: { IMAGE: 'image', VIDEO: 'video', AUDIO: 'audio', MEME: 'meme', MEMES_VIDEOS: 'memes_videos' },
     };
 });
->>>>>>> origin/main
 
 vi.mock('./VennDiagram', () => ({
     VennDiagram: ({ leftAsset, rightAsset }) => (

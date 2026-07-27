@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-/* global clients */
-const CACHE_NAME = 'venn-v1';
-=======
 const CACHE_NAME = 'venn-v2';
 const OFFLINE_URL = 'offline.html';
->>>>>>> origin/main
 
 const CACHEABLE_EXT = /\.(js|css|woff2?|ttf|png|jpg|jpeg|svg|ico|webp|json)(\?|$)/;
 const SKIP_CACHE_PREFIXES = [

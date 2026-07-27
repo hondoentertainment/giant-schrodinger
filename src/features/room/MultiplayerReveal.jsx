@@ -4,13 +4,10 @@ import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
 import { Trophy, ArrowRight, Home, ThumbsUp, Crown, Star } from 'lucide-react';
 import { getRoomSubmissions } from '../../services/multiplayer';
-<<<<<<< HEAD
-=======
 import { ConnectionBanner } from './ConnectionBanner';
 import { playScoreReveal } from '../../services/sounds';
 import { haptic } from '../../lib/haptics';
 import { scrollMainToTop } from '../../lib/scroll';
->>>>>>> origin/main
 
 function ScoreBar({ label, value, max = 10 }) {
     const pct = Math.round((value / max) * 100);
@@ -351,11 +348,7 @@ export function MultiplayerReveal() {
                             </h2>
                         </div>
 
-<<<<<<< HEAD
-                        <div className="space-y-4">
-=======
                         <div className="space-y-3">
->>>>>>> origin/main
                             {submissions.slice(0, revealedCount).map((entry) => {
                                 const player = players.find((p) => p.player_name === entry.player_name);
                                 return (

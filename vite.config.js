@@ -46,20 +46,6 @@ const sentryPlugin = getSentryPlugin()
 
 // https://vitejs.dev/config/
 export default defineConfig({
-<<<<<<< HEAD
-    plugins: [react()],
-    base: '/giant-schrodinger/',
-    build: {
-        rollupOptions: {
-            output: {
-                manualChunks: {
-                    'vendor-react': ['react', 'react-dom'],
-                    'vendor-supabase': ['@supabase/supabase-js'],
-                    'vendor-lucide': ['lucide-react'],
-                },
-            },
-        },
-=======
     plugins: [react(), manifestPlugin(), ...(sentryPlugin ? [sentryPlugin] : [])],
     base: basePath,
     build: {
@@ -67,6 +53,5 @@ export default defineConfig({
     },
     define: {
         __SENTRY_RELEASE__: JSON.stringify(sentryRelease),
->>>>>>> origin/main
     },
 })

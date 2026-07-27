@@ -137,11 +137,6 @@ export function RoomProvider({ children }) {
         if (hydrateRequestRef.current !== requestId) {
             return;
         }
-<<<<<<< HEAD
-        return () => clearTimeout(reconnectTimerRef.current);
-    }, [connectionState]);
-=======
->>>>>>> origin/main
 
         setSubmissions(roundSubmissions);
         setVotes(roundVotes);

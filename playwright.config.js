@@ -1,4 +1,3 @@
-/* global process */
 import { defineConfig, devices } from '@playwright/test';
 
 const previewPort = process.env.PLAYWRIGHT_PORT || '4174';

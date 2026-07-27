@@ -2,25 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useRoom } from '../../context/RoomContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
-<<<<<<< HEAD
-import { getStats, getMilestones, isAvatarUnlocked, isThemeUnlocked } from '../../services/stats';
-import { getDailyChallenge, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
-import { getTimeUntilNextChallenge, formatCountdown } from '../../services/countdown';
-import { getStreakBonus } from '../../services/challenges';
-import { parseReferralFromUrl, trackReferral, generateReferralCode } from '../../services/referrals';
-import { trackEvent } from '../../services/analytics';
-import { toggleMute, isMuted, playClick } from '../../services/sounds';
-import { getCurrentSeason } from '../../services/leaderboard';
-import { ScoreHistoryChart } from '../analytics/ScoreHistoryChart';
-import { FriendProfile } from '../social/FriendProfile';
-import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
-import { validatePlayerName } from '../../lib/validation';
-=======
 import { normalizeMediaType } from '../../lib/mediaType';
 import { getStats, getMilestones, isThemeUnlocked, getProfileSummary } from '../../services/stats';
 import { reportAppEvent } from '../../lib/telemetry';
 import { getDailyChallenge, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
->>>>>>> origin/main
 import { isBackendEnabled } from '../../lib/supabase';
 import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, Laugh, CalendarDays, Zap, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
@@ -453,48 +438,7 @@ export function Lobby() {
                         </div>
                     )}
 
-<<<<<<< HEAD
-                    {/* Weekly Event Banner (Tier 2+) */}
-                    {weeklyEvent && (showAll || lobbyTier >= 2) && (
-                        <div className="w-full max-w-md mb-4 p-4 rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-purple-300 text-xs uppercase tracking-wider font-bold">This Week&apos;s Event</span>
-                                <span className="text-white/40 text-xs">Ends in {formatWeeklyCountdown(getTimeUntilNextWeek())}</span>
-                            </div>
-                            <div className="text-white font-bold text-lg">{weeklyEvent.name}</div>
-                            <div className="text-white/60 text-sm">{weeklyEvent.description}</div>
-                        </div>
-                    )}
-
-                    {/* Friends list (Tier 2+) */}
-                    {(showAll || lobbyTier >= 2) && getFriends().length > 0 && (
-                        <div className="w-full max-w-md mb-4">
-                            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Friends</label>
-                            <div className="flex flex-wrap gap-2">
-                                {getFriends().map((f) => (
-                                    <button
-                                        key={f.name}
-                                        onClick={() => setSelectedFriend(f)}
-                                        className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
-                                    >
-                                        {f.name}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Weekly Challenge Pass */}
-                    {!showMultiplayer && (
-                        <div className="w-full mb-4">
-                            <SeasonalChallengeBattlePass />
-                        </div>
-                    )}
-
-                    {/* Solo play */}
-=======
                     {/* Solo play — keep primary actions above the fold */}
->>>>>>> origin/main
                     {!showMultiplayer && (
                         <>
                             {!sessionId && !isFirstSession && (
