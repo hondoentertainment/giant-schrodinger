@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
 import { getFusionImage } from '../data/themes';
 import { scoreViaServer } from './serverScoring';
 import { uploadDataUrl } from './mediaStorage';
@@ -6,7 +5,26 @@ import { isClientGeminiEnabled } from '../lib/productionMode';
 import { isBackendEnabled } from '../lib/supabase';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const ai = API_KEY && isClientGeminiEnabled() ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+
+function isAiEnabled() {
+    return !!API_KEY && isClientGeminiEnabled();
+}
+
+// The Gemini SDK is heavy, so it stays out of the main bundle and only loads
+// the first time a round actually needs client-side AI.
+let aiClientPromise = null;
+function getAiClient() {
+    if (!isAiEnabled()) return Promise.resolve(null);
+    if (!aiClientPromise) {
+        aiClientPromise = import('@google/genai')
+            .then(({ GoogleGenAI }) => new GoogleGenAI({ apiKey: API_KEY }))
+            .catch((err) => {
+                console.warn('Failed to load Gemini SDK:', err);
+                return null;
+            });
+    }
+    return aiClientPromise;
+}
 
 const SCORING_PROMPT = `You are a witty judge for a game where players connect two concepts using a creative phrase.
 
@@ -64,7 +82,7 @@ function getFallbackReason(submission, asset1, asset2) {
         if (isBackendEnabled()) return 'Server scoring unavailable - using mock scores';
         return 'AI scoring unavailable - using mock scores';
     }
-    if (!ai) return 'AI scoring unavailable - using mock scores';
+    if (!isAiEnabled()) return 'AI scoring unavailable - using mock scores';
     return null;
 }
 
@@ -133,6 +151,9 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
     const rightLabel = getAssetLabel(asset2, 'right concept');
 
     try {
+        const ai = await getAiClient();
+        if (!ai) throw new Error('Gemini client unavailable');
+
         const prompt = SCORING_PROMPT.replace(/\{\{left\}\}/g, leftLabel)
             .replace(/\{\{right\}\}/g, rightLabel)
             .replace(/\{\{submission\}\}/g, submission.replace(/"/g, '\\"'))
@@ -175,7 +196,8 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
 }
 
 export async function generateFusionImage(theme, submission, asset1 = null, asset2 = null) {
-    if (!ai || !API_KEY) {
+    const ai = await getAiClient();
+    if (!ai) {
         await new Promise((r) => setTimeout(r, 1500));
         return { ...getFusionImage(theme), isFallback: true };
     }

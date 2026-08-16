@@ -45,6 +45,10 @@ npm-shrinkwrap.json
 test-results/
 playwright-report/
 playwright/.cache/
+.playwright-cli/
+
+# Local agent/debug artifacts
+output/
 
 # Vercel
 .vercel/
@@ -55,3 +59,5 @@ playwright/.cache/
 
 # Claude Code
 .claude/
+.vercel
+.env*.local

@@ -50,6 +50,26 @@ export default defineConfig({
     base: basePath,
     build: {
         sourcemap: 'hidden',
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    const path = id.replace(/\\/g, '/')
+                    if (!path.includes('node_modules')) return undefined
+                    if (path.includes('@supabase/')) return 'vendor-supabase'
+                    // Only loaded on demand (see services/gemini.js), but named
+                    // explicitly so the bundle budget report stays readable.
+                    if (path.includes('@google/genai')) return 'vendor-genai'
+                    if (
+                        path.includes('/react/') ||
+                        path.includes('/react-dom/') ||
+                        path.includes('/scheduler/')
+                    ) {
+                        return 'vendor-react'
+                    }
+                    return undefined
+                },
+            },
+        },
     },
     define: {
         __SENTRY_RELEASE__: JSON.stringify(sentryRelease),

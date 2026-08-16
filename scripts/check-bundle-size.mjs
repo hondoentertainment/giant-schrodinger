@@ -5,7 +5,8 @@
  * Reads `dist/assets/*.js`, measures gzipped size with Node's built-in zlib,
  * and enforces the following budgets:
  *   - Main chunk (largest `index-*.js`): <= 170 KB gzipped
- *   - Any single lazy chunk: <= 50 KB gzipped
+ *   - Vendor chunks (`vendor-*.js`, split third-party libs): <= 60 KB gzipped
+ *   - Any other lazy chunk: <= 50 KB gzipped
  *   - Total JS (sum gzipped): <= 300 KB
  *
  * Prints a table and exits 1 if any budget fails; 0 otherwise.
@@ -19,6 +20,7 @@ import { fileURLToPath } from "node:url";
 
 const KB = 1024;
 const MAIN_BUDGET = 170 * KB;
+const VENDOR_BUDGET = 60 * KB;
 const LAZY_BUDGET = 50 * KB;
 const TOTAL_BUDGET = 300 * KB;
 
@@ -77,7 +79,8 @@ let totalGz = 0;
 for (const file of jsFiles) {
   totalGz += file.gzSize;
   const isMain = file.name === mainChunk.name;
-  const budget = isMain ? MAIN_BUDGET : LAZY_BUDGET;
+  const isVendor = /^vendor-.*\.js$/.test(file.name);
+  const budget = isMain ? MAIN_BUDGET : isVendor ? VENDOR_BUDGET : LAZY_BUDGET;
   const ok = file.gzSize <= budget;
   if (!ok) failed = true;
   rows.push({
@@ -86,7 +89,7 @@ for (const file of jsFiles) {
     gzip: formatKB(file.gzSize),
     budget: formatKB(budget),
     status: ok ? "OK" : "FAIL",
-    kind: isMain ? "main" : "lazy",
+    kind: isMain ? "main" : isVendor ? "vendor" : "lazy",
   });
 }
 

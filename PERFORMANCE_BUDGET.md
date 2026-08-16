@@ -10,7 +10,8 @@ These gates are hard-failed on pull requests by `.github/workflows/bundle-budget
 | Metric | Budget | Enforcement |
 |--------|--------|-------------|
 | Main chunk (`index-*.js`) | <= 170 KB | `scripts/check-bundle-size.mjs` |
-| Any single lazy chunk | <= 50 KB | `scripts/check-bundle-size.mjs` |
+| Vendor chunk (`vendor-*.js`) | <= 60 KB | `scripts/check-bundle-size.mjs` |
+| Any other lazy chunk | <= 50 KB | `scripts/check-bundle-size.mjs` |
 | Total JS (sum gzipped) | <= 300 KB | `scripts/check-bundle-size.mjs` |
 
 ### Lighthouse (error-level assertions)
@@ -32,14 +33,16 @@ a real backend/CDN or are not meaningful against a local Vite preview build:
 `total-byte-weight`, `valid-source-maps`, `bootup-time`, `dom-size`,
 `mainthread-work-breakdown`, `server-response-time`. `tap-targets` is warn-only.
 
-## Actuals (as of commit 0d3c13fadc7db2a88400d101b4253df045f77ccb)
+## Actuals (post vendor-split, August 2026)
 
 | Metric | Value | Budget | Headroom |
 |--------|-------|--------|----------|
-| Main chunk (gzipped) | 146.42 KB | 170 KB | ~14% |
-| Largest lazy chunk (`Shop`, gzipped) | 4.85 KB | 50 KB | ~90% |
-| Total JS (gzipped) | 181.47 KB | 300 KB | ~40% |
-| Lazy-loaded chunks | 18 | n/a | n/a |
+| Main chunk (gzipped) | 103.10 KB | 170 KB | ~39% |
+| `vendor-genai` (lazy, loads on first AI call) | 51.99 KB | 60 KB | ~13% |
+| `vendor-supabase` (gzipped) | 45.62 KB | 60 KB | ~24% |
+| `vendor-react` (gzipped) | 45.44 KB | 60 KB | ~24% |
+| Largest feature lazy chunk (`Shop`, gzipped) | 4.85 KB | 50 KB | ~90% |
+| Total JS (gzipped) | 284.36 KB | 300 KB | ~5% |
 | ESLint errors | 0 | 0 | n/a |
 
 ## Lighthouse CI
@@ -66,7 +69,14 @@ violation.
 
 ## Code Splitting Strategy
 
-The build uses Vite's automatic code splitting. Each feature directory under
+Third-party libraries are split into dedicated vendor chunks (see
+`manualChunks` in `vite.config.js`):
+- `vendor-react` — react, react-dom, scheduler (loaded eagerly, cached long-term)
+- `vendor-supabase` — @supabase/supabase-js (loaded eagerly, cached long-term)
+- `vendor-genai` — @google/genai (loaded lazily, only on the first client-side
+  AI scoring or image-generation call; see `src/services/gemini.js`)
+
+The build also uses Vite's automatic code splitting. Each feature directory under
 `src/features/` is lazy-loaded, producing separate chunks for:
 - Ranked mode
 - Tournament brackets
