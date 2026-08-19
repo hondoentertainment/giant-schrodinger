@@ -1,6 +1,6 @@
 # Venn with Friends — Product Requirements Document
 
-**Last updated:** July 14, 2026  
+**Last updated:** August 19, 2026  
 **Canonical companions:** [ROADMAP.md](ROADMAP.md) · [JUDGE_MODEL.md](JUDGE_MODEL.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [README.md](README.md)
 
 ---
@@ -70,16 +70,17 @@ Repo name / GitHub Pages base path: `giant-schrodinger`. Product name in UI and 
 - Solo loop is productized (coaching, arcs, daily challenge, reveal/share CTAs)
 - Graceful fallbacks when AI or backend are absent
 - Clear judge-mode model documented in [JUDGE_MODEL.md](JUDGE_MODEL.md)
-- Strong automated coverage: **688 unit tests** (68 files) + **11 E2E specs**
+- Strong automated coverage: **732+ unit tests** + Playwright E2E (desktop + hosted rehearsal)
 - Launch automation (`verify:release`, `launch:gate`, hosted rehearsal scripts)
 
-#### 2.4 Gaps (as of July 18, 2026)
+#### 2.4 Gaps (as of August 19, 2026)
 
 - Soft-launch gate is **cleared** — see [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)
-- Optional observability: set `VITE_SENTRY_DSN` / `VITE_POSTHOG_KEY` on Vercel when ready
-- Optional media richness: `PEXELS_API_KEY` / `GIPHY_API_KEY` edge secrets
+- Observability still needs real keys: `VITE_SENTRY_DSN` / `VITE_POSTHOG_KEY` on Vercel (code already wired)
+- Media richness still needs edge secrets: `PEXELS_API_KEY` / `GIPHY_API_KEY`
 - Local-preview modes (ranked, shop, tournaments) must stay labeled until cloud sync is scoped
 - Party Mode UI and public community gallery remain non-goals
+- Custom domain skipped; canonical prod is `https://giant-schrodinger.vercel.app`
 
 #### 2.5 Verification snapshot
 
@@ -164,25 +165,21 @@ Build Venn with Friends into a replayable social creativity game that is:
 
 ### 8. Next Steps Recommendation
 
-#### Right now (next 2 weeks) — Launch gate
+#### Right now
 
-1. Create Supabase project → apply `supabase/schema.sql` (+ media / reports migrations)
-2. Configure env (`configure:supabase`, Vercel, GitHub secrets)
-3. Deploy edge functions (`score-submission`, `resolve-image`, `resolve-meme`, `og-tags`, optional `discord-bot`)
-4. Two-browser multiplayer rehearsal including vote finalization and reconnect
-5. Confirm telemetry for room create/join, vote finalize, AI fallback
+1. Add `VITE_POSTHOG_KEY` + `VITE_SENTRY_DSN` on Vercel (and GitHub secrets) — keys required
+2. Add `PEXELS_API_KEY` / `GIPHY_API_KEY` as Supabase edge secrets — keys required
+3. First-session onboarding is now one example + play (shipped)
+4. High-score reveal prompts a Friend Judge share (shipped)
 
 #### Near term (2–6 weeks)
 
-- Turn hosted rehearsal into a repeatable regression pass (`hosted-rehearsal.yml`)
-- Harden disconnect / late-join / host-exit messaging
+- Read PostHog funnels once keys land (`first_round_complete`, `high_score_share_prompt_shown`, `friend_judge_share_created`)
 - Keep gallery useful as personal archive + judged-round context
-- Decide which local-preview modes graduate vs stay experimental
+- Keep local-preview modes labeled
 
 #### Medium term (1–3 months)
 
-- Deeper daily/weekly retention framing
-- Content expansion (themes, seasonal packs)
 - Optional accounts / cloud sync (Phase 9) only after launch proof
 - Community features only if they reinforce the core share loop (Phase 10)
 
@@ -201,7 +198,7 @@ Status legend: **Done** · **In progress** · **Next** · **Later**
 | 5 | Share Loop Optimization | **Done** | Eager judge links, gallery share cards, richer og-tags |
 | 6 | Gallery & Identity | **Done** | Filters, friend chips, lobby profile + next-unlock |
 | 7 | Retention Systems | **Done** | Daily share, streak-at-risk, session best-line invite |
-| 8 | Content Expansion | **Started** | Summer Heat theme + prompt pack; Pexels/Giphy optional |
+| 8 | Content Expansion | **Shipped enough** | Seasonal theme/pack rotation + weekly recap; Pexels/Giphy optional |
 | 9 | Accounts & Cloud Persistence | **Later** | Optional sign-in, cross-device sync |
 | 10 | Platform & Community | **Partial / Later** | Spectator + moderation shipped; public gallery deferred |
 

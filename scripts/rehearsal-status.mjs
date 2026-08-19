@@ -27,6 +27,8 @@ const checks = [
     ['PRODUCTION_URL', envStatus('PRODUCTION_URL', { optional: true })],
     ['VITE_POSTHOG_KEY', envStatus('VITE_POSTHOG_KEY', { optional: true })],
     ['VITE_SENTRY_DSN', envStatus('VITE_SENTRY_DSN', { optional: true })],
+    ['PEXELS_API_KEY', envStatus('PEXELS_API_KEY', { optional: true })],
+    ['GIPHY_API_KEY', envStatus('GIPHY_API_KEY', { optional: true })],
 ];
 
 const envLocal = resolve(root, '.env.local');

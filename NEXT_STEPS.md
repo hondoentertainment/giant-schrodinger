@@ -1,8 +1,26 @@
 # Next Steps
 
-**Last updated:** July 14, 2026
+**Last updated:** August 19, 2026
 
 This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
+
+## Current (August 2026)
+
+Shipped since the July log:
+
+- Seasonal theme/pack rotation (Summer / Autumn / Winter) and weekly recap share card
+- Venn diagram collision entrance, glowing lens, and idle float
+- Vendor-split bundles + lazy Gemini SDK (main chunk ~103 KB gzipped)
+- Vercel Git auto-deploy; duplicate `giant-schrodinger-*` projects removed
+- First-session onboarding cut to one example + play
+- High-score reveal now leads with a Friend Judge share prompt (`high_score_share_prompt_shown`)
+
+Still blocked on credentials (code is wired; do not invent keys):
+
+- `VITE_POSTHOG_KEY` / `VITE_SENTRY_DSN` on Vercel + GitHub
+- `PEXELS_API_KEY` / `GIPHY_API_KEY` as Supabase edge secrets
+
+Canonical production URL: `https://giant-schrodinger.vercel.app` (custom domain skipped).
 
 This log tracks remaining work after the memes & videos mode pass and world-class implementation. The app is locally feature-complete for solo play, friend judging, gallery/history, retention, accessibility polish, and Supabase-backed multiplayer code paths.
 

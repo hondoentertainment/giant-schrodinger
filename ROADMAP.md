@@ -1,9 +1,9 @@
 # Venn with Friends Roadmap
 
-**Last updated:** July 18, 2026  
+**Last updated:** August 19, 2026  
 **Source of truth for product intent:** [PRD.md](PRD.md)
 
-This roadmap turns the PRD into an implementation plan. Soft-launch gate is cleared; code for observability/retention is shipped — enable sinks with API keys when ready.
+This roadmap turns the PRD into an implementation plan. Soft-launch gate is cleared. Seasonal content, weekly recap, Venn visuals, and vendor-split bundles are shipped. Observability/media sinks still need API keys.
 
 ## Current Product Status
 
@@ -18,7 +18,7 @@ This roadmap turns the PRD into an implementation plan. Soft-launch gate is clea
 | Moderation (lightweight) | Shipped | Content reports + dashboard |
 | Progression / retention | Shipped | Streaks, next-unlock progress, daily share CTA |
 | Ranked / shop / tournaments | Local preview | Device-only; `LocalPreviewBadge` |
-| Production readiness | Soft-launch candidate | Hosted rehearsal + launch gate passed; optional PostHog/Sentry |
+| Production readiness | Soft-launch candidate | Hosted rehearsal + launch gate passed; Vercel + Pages auto-deploy. PostHog/Sentry/Pexels/Giphy keys still missing |
 
 ## Phase status summary
 
@@ -30,7 +30,7 @@ This roadmap turns the PRD into an implementation plan. Soft-launch gate is clea
 | 4 Multiplayer Authority | **Complete enough for launch** — hosted two-browser rehearsal passed |
 | 5 Share Loop Optimization | **Complete enough for launch** |
 | 6 Gallery, Identity, Retention | **Complete enough for launch** |
-| 8 Content Expansion | **Started** — Summer Heat theme/pack; media APIs optional |
+| 8 Content Expansion | **Shipped enough for launch** — seasonal theme/pack rotation + weekly recap; media APIs optional |
 | 9–10 Accounts / Community | **Later** |
 
 ---
@@ -102,9 +102,11 @@ Shipped:
 1. Gallery daily filter + friend chips + richer share metadata
 2. Lobby next-unlock + avg/friend/highlight stats + streak-at-risk banner
 3. Daily challenge share CTA + 1.5× bonus + session best-line invite
-4. Funnel events: `round_complete`, `first_round_complete`, `session_complete`, `streak_at_risk`, etc.
+4. Funnel events: `round_complete`, `first_round_complete`, `session_complete`, `streak_at_risk`, `high_score_share_prompt_shown`, etc.
+5. Weekly recap share card in gallery
+6. Short first-session onboarding (one example + play)
 
-Next (post soft-launch): accounts, graduate local-preview modes, community surfaces only if intentional.
+Next (post soft-launch): enable PostHog/Sentry/Pexels/Giphy with real keys; accounts; graduate local-preview modes only if intentional.
 
 ---
 

@@ -257,7 +257,8 @@ describe('Reveal', () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
 
         expect(await screen.findByText(/Recommended next move/i, {}, { timeout: 3000 })).toBeInTheDocument();
-        expect(screen.getByText(/Share this standout round for friend feedback/i)).toBeInTheDocument();
+        expect(screen.getByText(/Send this 8\/10 to a friend/i)).toBeInTheDocument();
+        expect(screen.getAllByRole('button', { name: /ask a friend to judge/i }).length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText(/Saved to your gallery/i)).toBeInTheDocument();
         expect(screen.getByText(/Continue to round 2/i)).toBeInTheDocument();
     });

@@ -222,7 +222,14 @@ export function Reveal({ submission, assets }) {
             playScoreReveal(score);
             haptic('success');
         }
-    }, [result]);
+        if (Number.isFinite(score) && score >= 8) {
+            reportAppEvent('high_score_share_prompt_shown', {
+                score,
+                roundNumber,
+                scoringMode,
+            });
+        }
+    }, [result, roundNumber, scoringMode]);
 
     // Keyboard shortcut: S to share for judging
     useEffect(() => {
@@ -294,7 +301,10 @@ export function Reveal({ submission, assets }) {
             return;
         }
 
-        const shareText = 'Score my Venn connection — open the link and give it 1–10.';
+        const highlightScore = result?.finalScore ?? result?.score;
+        const shareText = Number.isFinite(highlightScore)
+            ? `Score my ${highlightScore}/10 Venn — open the link and give it 1–10.`
+            : 'Score my Venn connection — open the link and give it 1–10.';
         try {
             if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
                 await navigator.share({
@@ -552,8 +562,8 @@ export function Reveal({ submission, assets }) {
         }
         : displayScore >= 8
         ? {
-            label: 'Share this standout round for friend feedback',
-            detail: 'High-scoring connections make the best invites. Copy the judge link before moving on.',
+            label: `Send this ${displayScore}/10 to a friend`,
+            detail: 'A Friend Judge scores it in about 10 seconds while you keep playing.',
         }
         : {
             label: 'Keep momentum with the next round',
@@ -688,18 +698,30 @@ export function Reveal({ submission, assets }) {
                             </div>
                             <div className="text-white font-semibold">{recommendedNextAction.label}</div>
                             <div className="text-white/55 text-sm mt-1">{recommendedNextAction.detail}</div>
+                            {displayScore >= 8 && (
+                                <button
+                                    type="button"
+                                    onClick={handleShareForJudging}
+                                    disabled={!canShareForJudging}
+                                    className="wordle-button wordle-primary w-full mt-3 disabled:opacity-50"
+                                >
+                                    {shareCopied ? 'Link copied! Send to a friend' : 'Ask a friend to judge'}
+                                </button>
+                            )}
                         </div>
                         <ol className="space-y-2 text-sm text-white/70">
                             <li className="flex gap-3">
                                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-xs font-bold text-emerald-200">1</span>
                                 <span>{savedCollision ? 'Saved to your gallery for later sharing and review.' : 'Generated and ready to save after scoring completes.'}</span>
                             </li>
+                            {displayScore < 8 && (
+                                <li className="flex gap-3">
+                                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">2</span>
+                                    <span>Optional: copy a friend judge link if you want an outside score.</span>
+                                </li>
+                            )}
                             <li className="flex gap-3">
-                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">2</span>
-                                <span>Optional: copy a friend judge link if you want an outside score.</span>
-                            </li>
-                            <li className="flex gap-3">
-                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">3</span>
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">{displayScore >= 8 ? '2' : '3'}</span>
                                 <span>{isFinalRound ? 'Open your session summary to choose the next run.' : `Continue to round ${roundNumber + 1} when you are ready.`}</span>
                             </li>
                         </ol>
@@ -728,22 +750,12 @@ export function Reveal({ submission, assets }) {
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         {displayScore >= 8 ? (
-                            <>
-                                <button
-                                    onClick={handleShareForJudging}
-                                    disabled={!canShareForJudging}
-                                    className="wordle-button wordle-primary px-12 text-lg disabled:opacity-50"
-                                    title="High-scoring rounds make the best friend-judge invites. Press S for shortcut."
-                                >
-                                    {shareCopied ? 'Link copied! Send to a friend' : 'Ask a friend to judge'}
-                                </button>
-                                <button
-                                    onClick={handleNext}
-                                    className="wordle-button px-8"
-                                >
-                                    {isFinalRound ? 'See Results' : 'Next Round →'}
-                                </button>
-                            </>
+                            <button
+                                onClick={handleNext}
+                                className="wordle-button px-12 text-lg"
+                            >
+                                {isFinalRound ? 'See Results' : 'Next Round →'}
+                            </button>
                         ) : (
                             <>
                                 <button
