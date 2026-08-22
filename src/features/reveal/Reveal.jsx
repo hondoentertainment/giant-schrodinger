@@ -9,6 +9,7 @@ import { getThemeById } from '../../data/themes';
 import { normalizeMediaType, getCollisionMediaMode, getEffectiveRoundMediaType } from '../../lib/mediaType';
 import { getDailyChallenge } from '../../services/dailyChallenge';
 import { getScoreBand } from '../../lib/scoreBands';
+import { getScoreCoach } from '../../lib/scoreCoach';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import { AchievementProgress } from '../../components/AchievementProgress';
 import { ScoreReveal } from '../../components/ScoreReveal';
@@ -543,6 +544,11 @@ export function Reveal({ submission, assets }) {
     const displayScore = result?.finalScore || result?.score || 0;
     const isFinalRound = roundNumber >= totalRounds;
     const scoreBand = result && getScoreBand(displayScore);
+    const scoreCoach = result && getScoreCoach({
+        score: displayScore,
+        breakdown: result.breakdown,
+        isMock: result.isMock,
+    });
     const statsSnapshot = getStats();
     const nextMilestone = getMilestones()
         .filter((milestone) => !statsSnapshot.milestonesUnlocked.includes(milestone.id))
@@ -632,12 +638,23 @@ export function Reveal({ submission, assets }) {
                         </div>
                     )}
 
-                    <blockquote className="text-xl italic text-white/80 font-serif mb-8 border-l-4 border-game-accent pl-4 py-2 bg-white/[0.04] rounded-r-2xl">
+                    <blockquote className="text-xl italic text-white/80 font-serif mb-4 border-l-4 border-game-accent pl-4 py-2 bg-white/[0.04] rounded-r-2xl">
                         &ldquo;{result.commentary}&rdquo;
                         <footer className="text-xs text-white/40 not-italic mt-2">
-                            — {scoringMode === 'human' ? 'Human Judge' : 'Gemini AI Host'}
+                            — {scoringMode === 'human' ? 'Human Judge' : result.isMock ? 'Practice score' : 'Gemini AI Host'}
                         </footer>
                     </blockquote>
+                    {scoreCoach && (
+                        <div className="mb-8 rounded-[22px] border border-white/10 bg-white/[0.04] p-4 text-left" data-testid="score-coach">
+                            {scoreCoach.practice && (
+                                <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-200/80 mb-1">
+                                    Practice score
+                                </div>
+                            )}
+                            <p className="text-white font-semibold">{scoreCoach.reason}</p>
+                            <p className="text-white/55 text-sm mt-1">Try this: {scoreCoach.hint}</p>
+                        </div>
+                    )}
 
                     {/* Social sharing */}
                     {savedCollision && (

@@ -137,6 +137,17 @@ function canUseCustomPool(mediaType, useCustomImages, pool) {
 /**
  * Pick two round assets with session dedup, recent-history avoidance, and diverse pairing.
  */
+function materializeCuratedPair(pair, theme, mediaType, seed) {
+    const [left, right] = buildThemeAssets(theme, 2, mediaType, {
+        seed: seed ?? 1,
+        preferDiverse: true,
+    });
+    return [
+        { ...left, id: `${pair.id}-left`, label: pair.left },
+        { ...right, id: `${pair.id}-right`, label: pair.right },
+    ];
+}
+
 export function selectRoundAssets({
     theme,
     mediaType = MEDIA_TYPES.IMAGE,
@@ -146,6 +157,7 @@ export function selectRoundAssets({
     useCustomImages = false,
     customPool,
     isDailyChallenge = false,
+    curatedPair = null,
 }) {
     const resolvedMediaType = normalizeMediaType(mediaType);
     const recentKeys = getRecentAssetKeys();
@@ -156,6 +168,12 @@ export function selectRoundAssets({
         : seed ?? Date.now() + roundNumber * 7919;
 
     const pool = customPool ?? (useCustomImages ? getCustomImages() : null);
+
+    if (curatedPair?.left && curatedPair?.right) {
+        const picked = materializeCuratedPair(curatedPair, theme, resolvedMediaType, selectionSeed);
+        trackRecentAssets(picked);
+        return picked;
+    }
 
     let picked;
     if (canUseCustomPool(resolvedMediaType, useCustomImages, pool)) {

@@ -193,12 +193,11 @@ export function MultiplayerRound() {
                     />
                     <div className="mt-4 text-center text-white/40 text-sm space-y-1">
                         <div>Press <span className="font-semibold text-white/80">Return</span> to submit</div>
-                        <div className="text-white/30 text-xs">
-                            {room?.scoring_mode === 'human'
-                                ? 'Your friends will judge your connection'
-                                : 'Scored on Wit · Logic · Originality · Clarity'
-                            }
-                        </div>
+                        {waitingPlayers.length > 0 && (
+                            <div className="text-white/45 text-xs">
+                                Still writing: {waitingPlayers.map((p) => p.player_name).join(', ')}
+                            </div>
+                        )}
                     </div>
                 </form>
             ) : (

@@ -4,6 +4,8 @@ import { useGame } from '../../context/GameContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { selectRoundAssets, loadSelectedAssets } from '../../services/assetSelection';
 import { getDailyChallenge } from '../../services/dailyChallenge';
+import { consumeForcedPair, isForcedAssetPair } from '../../lib/forcedPair';
+import { getCuratedPairForSeed } from '../../data/curatedPairs';
 import { getEffectiveRoundMediaType, normalizeMediaType } from '../../lib/mediaType';
 import { getStats, isThemeUnlocked } from '../../services/stats';
 import { haptic } from '../../lib/haptics';
@@ -49,6 +51,27 @@ export function Round({ onSubmit }) {
                 dailyChallenge: daily,
             });
 
+            const forcedPair = consumeForcedPair();
+            if (isForcedAssetPair(forcedPair)) {
+                trackUsedAssets([forcedPair.left, forcedPair.right]);
+                if (!cancelled) {
+                    setAssets({ left: forcedPair.left, right: forcedPair.right });
+                    setTimer(timeLimit);
+                }
+                const resolved = await loadSelectedAssets([forcedPair.left, forcedPair.right]);
+                if (cancelled) return;
+                trackUsedAssets(resolved);
+                setAssets({ left: resolved[0], right: resolved[1] });
+                setMediaLoading(false);
+                return;
+            }
+
+            const curatedPair = (forcedPair && !isForcedAssetPair(forcedPair) ? forcedPair : null)
+                || daily?.pair
+                || (stats.totalRounds === 0 && roundNumber === 1
+                    ? getCuratedPairForSeed(Date.now())
+                    : null);
+
             const [left, right] = selectRoundAssets({
                 theme,
                 mediaType: effectiveMediaType,
@@ -57,6 +80,7 @@ export function Round({ onSubmit }) {
                 roundNumber,
                 useCustomImages: user?.useCustomImages,
                 isDailyChallenge,
+                curatedPair,
             });
 
             trackUsedAssets([left, right]);

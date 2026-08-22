@@ -128,7 +128,7 @@ function PhaseTransition({ children, phase, screenKey }) {
 }
 
 function GameContent() {
-    const { gameState, setGameState, user } = useGame();
+    const { gameState, setGameState, user, startSession, beginRound } = useGame();
     const { isMultiplayer, roomPhase } = useRoom();
     const [roundData, setRoundData] = useState(null);
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
@@ -205,8 +205,12 @@ function GameContent() {
         setRoundData(data);
     };
 
-    const handleJudgeDone = () => {
+    const handleJudgeDone = (result) => {
         setJudgePayload(null);
+        if (result?.playPair) {
+            startSession(1);
+            beginRound();
+        }
     };
 
     const handleChallengeDone = () => {

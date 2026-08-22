@@ -200,6 +200,9 @@ describe('Reveal', () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
         expect(await screen.findByText(/Great connection between Cat and Dog!/, {}, { timeout: 3000 })).toBeInTheDocument();
         expect(await screen.findByText(/Wit:/)).toBeInTheDocument();
+        const coach = screen.getByTestId('score-coach');
+        expect(coach).toHaveTextContent(/Practice score/i);
+        expect(coach).toHaveTextContent(/Try this:/i);
     });
 
     it('share button exists after scoring', async () => {

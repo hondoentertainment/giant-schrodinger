@@ -108,7 +108,7 @@ export function RoomLobby() {
                 <div className="game-section-label mb-4">Multiplayer room</div>
 
                 <div className="flex items-center justify-center gap-3 mb-2">
-                    <span className="text-4xl sm:text-5xl font-display font-bold tracking-[0.12em] text-gradient-vibrant">
+                    <span className="text-6xl sm:text-7xl font-display font-bold tracking-[0.16em] text-gradient-vibrant">
                         {roomCode}
                     </span>
                     <button
@@ -120,7 +120,7 @@ export function RoomLobby() {
                         <Copy className="w-5 h-5 text-white/70" />
                     </button>
                 </div>
-                <p className="text-white/50 text-sm mb-3">Share this code with friends to join</p>
+                <p className="text-white/50 text-sm mb-3">Share this code. The round starts when the host hits Go.</p>
                 <button
                     type="button"
                     onClick={shareInvite}

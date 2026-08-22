@@ -6,6 +6,7 @@ import { normalizeMediaType } from '../../lib/mediaType';
 import { getStats, getMilestones, isThemeUnlocked, getProfileSummary } from '../../services/stats';
 import { reportAppEvent } from '../../lib/telemetry';
 import { getDailyChallenge, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
+import { getDailyRitualShare } from '../../services/dailyRitualShare';
 import { isBackendEnabled } from '../../lib/supabase';
 import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, Laugh, CalendarDays, Zap, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
@@ -140,8 +141,8 @@ export function Lobby() {
         if (daysAway === 1) return `Welcome back, ${user.name}. Keep yesterday's momentum going.`;
         return `Welcome back, ${user.name}. Fresh prompts are waiting.`;
     }, [stats.lastPlayedDate, stats.totalRounds, user]);
-    const showFeatureNav = showAllFeatures || lobbyTier >= 2;
-    const showAdvancedModes = showAllFeatures || lobbyTier >= 3;
+    const showFeatureNav = showAllFeatures;
+    const showAdvancedModes = showAllFeatures;
 
     const handleShowAllFeatures = () => {
         const nextValue = !showAllFeatures;
@@ -178,7 +179,7 @@ export function Lobby() {
 
     const handleDailyShare = () => {
         const url = window.location.origin + window.location.pathname;
-        const msg = `${dailySummary.shareLine} Play today's Venn: ${url}`;
+        const msg = getDailyRitualShare({ origin: url });
         if (navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(msg);
             haptic('success');
@@ -487,16 +488,14 @@ export function Lobby() {
                                 </button>
                             </div>
 
-                            {!isFirstSession && (
-                                <button
-                                    onClick={() => setShowMultiplayer(true)}
-                                    className="wordle-button mt-3 w-full flex items-center justify-center gap-2 min-h-[48px]"
-                                >
-                                    <Users className="w-5 h-5" />
-                                    Play with Friends
-                                    {!backendReady && <WifiOff className="w-4 h-4 opacity-50" />}
-                                </button>
-                            )}
+                            <button
+                                onClick={() => setShowMultiplayer(true)}
+                                className="wordle-button mt-3 w-full flex items-center justify-center gap-2 min-h-[48px]"
+                            >
+                                <Users className="w-5 h-5" />
+                                Play with Friends
+                                {!backendReady && <WifiOff className="w-4 h-4 opacity-50" />}
+                            </button>
 
                             <details className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] text-left group">
                                 <summary className="cursor-pointer list-none px-4 py-3 text-sm text-white/70 font-semibold flex items-center justify-between min-h-[44px]">
@@ -714,14 +713,12 @@ export function Lobby() {
                                         </div>
                                     )}
 
-                                    {lobbyTier < 3 && (
-                                        <button
-                                            onClick={handleShowAllFeatures}
-                                            className="w-full text-sm text-white/40 hover:text-white underline"
-                                        >
-                                            {showAllFeatures ? 'Hide advanced features' : 'Show all features'}
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={handleShowAllFeatures}
+                                        className="w-full text-sm text-white/40 hover:text-white underline"
+                                    >
+                                        {showAllFeatures ? 'Hide extras' : 'Show extras'}
+                                    </button>
                                 </div>
                             </details>
                         </>

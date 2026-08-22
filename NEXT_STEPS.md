@@ -1,6 +1,6 @@
 # Next Steps
 
-**Last updated:** August 19, 2026
+**Last updated:** August 22, 2026
 
 This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
 
@@ -14,6 +14,11 @@ Shipped since the July log:
 - Vercel Git auto-deploy; duplicate `giant-schrodinger-*` projects removed
 - First-session onboarding cut to one example + play
 - High-score reveal now leads with a Friend Judge share prompt (`high_score_share_prompt_shown`)
+- Experimental modes (ranked/shop/tournaments/AI Battle) hidden behind **Show extras**
+- Reveal scoring now includes a plain-language reason, rewrite hint, and **Practice score** label
+- Friend Judge is a 20-second score + optional line, then **Your turn — play this pair**
+- 36 curated pairs for first rounds and the daily ritual; daily share is a Wordle-style card
+- Room codes are larger; writers still thinking are named during play
 
 Still blocked on credentials (code is wired; do not invent keys):
 

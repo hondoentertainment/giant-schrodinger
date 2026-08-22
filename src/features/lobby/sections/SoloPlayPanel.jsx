@@ -107,8 +107,8 @@ export function SoloPlayPanel({
                 </button>}
             </div>
 
-            {/* AI Battle button (Tier 3+) */}
-            {(showAll || lobbyTier >= 3) && <button
+            {/* AI Battle — extras only */}
+            {showAll && <button
                 onClick={() => {
                     if (!sessionId) startSession(sessionLength);
                     setGameState('AI_BATTLE');
@@ -118,8 +118,8 @@ export function SoloPlayPanel({
                 {`🤖 ${t('lobby.aiBattle')}`}
             </button>}
 
-            {/* Quick nav row (Tier 2+: achievements, leaderboard, gallery) */}
-            {(showAll || lobbyTier >= 2) && <div className="flex gap-2 mt-3">
+            {/* Quick nav row — extras only */}
+            {showAll && <div className="flex gap-2 mt-3">
                 <button
                     onClick={() => setGameState('ACHIEVEMENTS')}
                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
@@ -151,8 +151,8 @@ export function SoloPlayPanel({
                 </button>
             </div>}
 
-            {/* Tournament & Challenge Chains (Tier 3+) */}
-            {(showAll || lobbyTier >= 3) && <div className="flex gap-2 mt-3">
+            {/* Tournament & Challenge Chains — extras only */}
+            {showAll && <div className="flex gap-2 mt-3">
                 <button
                     onClick={() => { playClick(); haptic('light'); trackEvent('nav_tournament'); setGameState('TOURNAMENT'); }}
                     className="flex-1 py-2.5 bg-white/5 text-white/60 text-xs font-semibold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5 flex-wrap"
@@ -177,8 +177,8 @@ export function SoloPlayPanel({
                 </button>
             </div>}
 
-            {/* Ranked button (Tier 3+) */}
-            {(showAll || lobbyTier >= 3) && <button
+            {/* Ranked — extras only */}
+            {showAll && <button
                 onClick={() => { playClick(); haptic('light'); trackEvent('nav_ranked'); setGameState('RANKED'); }}
                 className="mt-3 w-full py-3 bg-gradient-to-r from-indigo-600/80 to-purple-600/80 text-white font-bold rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2 flex-wrap"
             >
@@ -187,15 +187,14 @@ export function SoloPlayPanel({
                 <LocalPreviewBadge />
             </button>}
 
-            {/* Multiplayer button (Tier 3+) */}
-            {(showAll || lobbyTier >= 3) && <button
+            <button
                 onClick={() => setShowMultiplayer(true)}
                 className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2"
             >
                 <Users className="w-5 h-5" />
                 {t('lobby.multiplayer')}
                 {!backendReady && <WifiOff className="w-4 h-4 opacity-50" />}
-            </button>}
+            </button>
         </>
     );
 }

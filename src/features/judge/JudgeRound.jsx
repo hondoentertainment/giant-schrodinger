@@ -8,13 +8,14 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResolvedRoundAssets } from '../../hooks/useResolvedRoundAssets';
 import { haptic } from '../../lib/haptics';
 import { playSubmitSound } from '../../services/sounds';
+import { setForcedPair } from '../../lib/forcedPair';
+import { trackEvent } from '../../services/analytics';
 
 const SCORE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export function JudgeRound({ payload, onDone }) {
     const { toast } = useToast();
     const [score, setScore] = useState(null);
-    const [relevance, setRelevance] = useState('Highly Logical');
     const [commentary, setCommentary] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [resolvedPayload, setResolvedPayload] = useState(payload?.backendId ? null : payload);
@@ -29,6 +30,13 @@ export function JudgeRound({ payload, onDone }) {
         hasValidPayload ? effectivePayload.assets : null,
     );
     useFocusTrap(!loading && !error && hasValidPayload && !submitted, formRef);
+
+    useEffect(() => {
+        if (!hasValidPayload) return;
+        trackEvent('friend_judge_opened', {
+            hasBackendId: Boolean(payload?.backendId),
+        });
+    }, [hasValidPayload, payload?.backendId]);
 
     useEffect(() => {
         if (!payload?.backendId) return;
@@ -115,7 +123,7 @@ export function JudgeRound({ payload, onDone }) {
 
         const judgement = {
             score: scoreValue,
-            relevance,
+            relevance: 'Highly Logical',
             commentary: commentary.trim() || 'No comment provided.',
             judgeName: judgeName.trim() || 'A friend',
         };
@@ -142,6 +150,7 @@ export function JudgeRound({ payload, onDone }) {
         haptic('success');
         playSubmitSound();
         toast.success('Judgement submitted!');
+        trackEvent('friend_judge_scored', { score: scoreValue });
         setSubmitted(true);
     };
 
@@ -158,11 +167,13 @@ export function JudgeRound({ payload, onDone }) {
                         type="button"
                         className="wordle-button wordle-primary flex-1 min-h-[48px]"
                         onClick={() => {
+                            setForcedPair(effectivePayload.assets);
+                            trackEvent('friend_judge_played', { samePair: true });
                             clearJudgeFromUrl();
-                            onDone?.();
+                            onDone?.({ playPair: true });
                         }}
                     >
-                        Try today&apos;s Venn
+                        Your turn — play this pair
                     </button>
                     <button
                         type="button"
@@ -172,7 +183,7 @@ export function JudgeRound({ payload, onDone }) {
                             onDone?.();
                         }}
                     >
-                        Make your own connection
+                        Play today&apos;s Venn
                     </button>
                 </div>
             </div>
@@ -184,10 +195,7 @@ export function JudgeRound({ payload, onDone }) {
             <div className="wordle-card p-6 sm:p-8 w-full max-w-xl mb-6 text-center">
                 <h2 className="text-2xl font-display font-bold text-white mb-1">Judge a Friend&apos;s Connection</h2>
                 <p className="text-white/60 text-sm">
-                    {effectivePayload.shareFrom || 'A friend'} made a Venn connection. Score the answer for wit, logic, originality, and clarity.
-                </p>
-                <p className="text-white/40 text-xs mt-2">
-                    Be generous when it is clever, be honest when it is generic. Your feedback helps make the next round better.
+                    {effectivePayload.shareFrom || 'A friend'} wrote one line. Give it a 1–10.
                 </p>
             </div>
 
@@ -250,22 +258,10 @@ export function JudgeRound({ payload, onDone }) {
                             </button>
                         ))}
                     </div>
-                    <p className="text-white/35 text-xs mt-2">Tip: press 1–9 or 0 for 10 on a keyboard.</p>
+                    <p className="text-white/35 text-xs mt-2">Tip: press 1–9 or 0 for 10.</p>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-white/60 mb-2">Relevance</label>
-                    <select
-                        value={relevance}
-                        onChange={(e) => setRelevance(e.target.value)}
-                        className="game-input"
-                    >
-                        <option value="Highly Logical">Highly Logical</option>
-                        <option value="Absurdly Creative">Absurdly Creative</option>
-                        <option value="Wild Card">Wild Card</option>
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-white/60 mb-2">Commentary (optional)</label>
+                    <label className="block text-sm font-medium text-white/60 mb-2">One line (optional)</label>
                     <textarea
                         value={commentary}
                         onChange={(e) => setCommentary(e.target.value)}

@@ -33,6 +33,10 @@ vi.mock('../../lib/haptics', () => ({
     haptic: vi.fn(),
 }));
 
+vi.mock('../../services/analytics', () => ({
+    trackEvent: vi.fn(),
+}));
+
 vi.mock('../../hooks/useFocusTrap', () => ({
     useFocusTrap: vi.fn(),
 }));
@@ -72,7 +76,7 @@ describe('JudgeRound', () => {
     it('shows the score pills and optional commentary', () => {
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
         expect(screen.getByRole('button', { name: '10', pressed: false })).toBeInTheDocument();
-        expect(screen.getByDisplayValue('Highly Logical')).toBeInTheDocument();
+        expect(screen.queryByDisplayValue('Highly Logical')).not.toBeInTheDocument();
         expect(screen.getByPlaceholderText(/Share your verdict/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Submit Judgement/i })).toBeDisabled();
     });
@@ -95,8 +99,8 @@ describe('JudgeRound', () => {
         );
         expect(mockToast.success).toHaveBeenCalledWith('Judgement submitted!');
         expect(await screen.findByText(/Thanks for judging/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Try today's Venn/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Make your own connection/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Your turn — play this pair/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Play today's Venn/i })).toBeInTheDocument();
     });
 
     it('shows the submission text being judged', () => {
@@ -112,6 +116,6 @@ describe('JudgeRound', () => {
     it('shows shared fusion image context when available', () => {
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
         expect(screen.getByAltText(/Fusion created from this connection/i)).toHaveAttribute('src', mockPayload.imageUrl);
-        expect(screen.getByText(/Alice made a Venn connection/i)).toBeInTheDocument();
+        expect(screen.getByText(/Alice wrote one line/i)).toBeInTheDocument();
     });
 });

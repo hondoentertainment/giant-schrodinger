@@ -1,4 +1,5 @@
 import { getAvailableThemes, MEDIA_TYPES } from '../data/themes';
+import { getCuratedPairForSeed } from '../data/curatedPairs';
 
 const DAILY_STORAGE_KEY = 'vwf_daily';
 
@@ -84,6 +85,7 @@ export function getDailyChallenge() {
         themeId: theme.id,
         theme,
         prompt,
+        pair: getCuratedPairForSeed(seed),
         date: getTodayKey(),
         mediaType,
         isMemesVideosDay: mediaType === MEDIA_TYPES.MEMES_VIDEOS,
