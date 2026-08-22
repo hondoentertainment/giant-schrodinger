@@ -21,17 +21,17 @@ export function Round({ onSubmit }) {
     const [showTimeUp, setShowTimeUp] = useState(false);
     const submittedRef = useRef(false);
     const stats = getStats();
-    const rawTheme = getThemeById(user?.themeId);
-    const theme = isThemeUnlocked(rawTheme?.id, stats)
+    const dailyChallenge = isDailyChallenge ? getDailyChallenge() : null;
+    const rawTheme = getThemeById(dailyChallenge?.themeId || user?.themeId);
+    const theme = dailyChallenge?.theme || (isThemeUnlocked(rawTheme?.id, stats)
         ? rawTheme
-        : getThemeById(THEMES.find((t) => isThemeUnlocked(t.id, stats))?.id) || rawTheme;
+        : getThemeById(THEMES.find((t) => isThemeUnlocked(t.id, stats))?.id) || rawTheme);
     const baseTimeLimit = theme?.modifier?.timeLimit || 60;
     const timeLimit = Math.round(baseTimeLimit * (currentModifier?.timeFactor || 1));
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
     const mediaType = normalizeMediaType(user?.mediaType);
     const mod = currentModifier;
     const showFirstRoundCoaching = stats.totalRounds === 0 && roundNumber === 1;
-    const dailyChallenge = isDailyChallenge ? getDailyChallenge() : null;
     const roundMediaType = getEffectiveRoundMediaType({
         userMediaType: mediaType,
         isDailyChallenge,
