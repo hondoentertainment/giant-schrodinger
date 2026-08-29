@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useRoom } from '../../context/RoomContext';
 import { THEMES, getAvailableThemes, getThemeById, MEDIA_TYPES } from '../../data/themes';
@@ -6,7 +6,8 @@ import { normalizeMediaType } from '../../lib/mediaType';
 import { getStats, getMilestones, isThemeUnlocked, getProfileSummary } from '../../services/stats';
 import { reportAppEvent } from '../../lib/telemetry';
 import { getDailyChallenge, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
-import { getDailyRitualShare } from '../../services/dailyRitualShare';
+import { getDailyRitualShareCard } from '../../services/dailyRitualShare';
+import { createShareCard, dataURLtoFile, downloadFusionImage } from '../../services/socialShare';
 import { isBackendEnabled } from '../../lib/supabase';
 import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, Laugh, CalendarDays, Zap, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
@@ -75,10 +76,11 @@ export function Lobby() {
     const [showMultiplayer, setShowMultiplayer] = useState(false);
     const [joinCode, setJoinCode] = useState('');
     const [mpLoading, setMpLoading] = useState(false);
-    const [mpLoadingAction, setMpLoadingAction] = useState(null); // 'create' | 'join'
+    const [mpLoadingAction, setMpLoadingAction] = useState(null); // 'create' | 'join' | 'spectate'
     const [dailyShareCopied, setDailyShareCopied] = useState(false);
     const [dailyRefreshKey, setDailyRefreshKey] = useState(0);
     const [dailyConflictOpen, setDailyConflictOpen] = useState(false);
+    const pendingJoinRef = useRef({ code: '', watch: false, consumed: false });
 
     const theme = getThemeById(themeId);
     const stats = getStats();
@@ -96,21 +98,45 @@ export function Lobby() {
         if (typeof window === 'undefined') return undefined;
         const params = new URLSearchParams(window.location.search || '');
         const join = (params.get('join') || '').trim().toUpperCase();
+        const watch = params.get('watch') === '1' || params.get('spectate') === '1';
         if (!join || join.length < 4) return undefined;
         setJoinCode(join);
         setShowMultiplayer(true);
-        trackEvent('join_link_opened', { codeLength: join.length });
+        pendingJoinRef.current = { code: join, watch, consumed: false };
+        trackEvent('join_link_opened', { codeLength: join.length, watch });
         // Defer URL cleanup so React Strict Mode remount can still read ?join=
         const timer = window.setTimeout(() => {
             const latest = new URLSearchParams(window.location.search || '');
             if (!latest.has('join')) return;
             latest.delete('join');
+            latest.delete('watch');
+            latest.delete('spectate');
             const next = latest.toString();
             const cleaned = `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash || ''}`;
             window.history.replaceState(null, '', cleaned);
         }, 0);
         return () => window.clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        const pending = pendingJoinRef.current;
+        if (!user?.name || !backendReady || !pending.code || pending.consumed) return undefined;
+        pending.consumed = true;
+        let cancelled = false;
+        setMpLoading(true);
+        setMpLoadingAction(pending.watch ? 'spectate' : 'join');
+        Promise.resolve(
+            joinRoomByCode(pending.code, user.name, user.avatar || avatar, { spectator: pending.watch })
+        ).finally(() => {
+            if (!cancelled) {
+                setMpLoading(false);
+                setMpLoadingAction(null);
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [avatar, backendReady, joinRoomByCode, user?.avatar, user?.name]);
 
     useEffect(() => {
         if (profileSummary.streakAtRisk) {
@@ -177,14 +203,41 @@ export function Lobby() {
     const dailySummary = useMemo(() => getDailyChallengeSummary(), [dailyRefreshKey]);
     const dailyPlayed = useMemo(() => hasDailyChallengeBeenPlayed(), [dailyRefreshKey]);
 
-    const handleDailyShare = () => {
+    const handleDailyShare = async () => {
         const url = window.location.origin + window.location.pathname;
-        const msg = getDailyRitualShare({ origin: url });
+        const card = getDailyRitualShareCard({ origin: url });
+        trackEvent('daily_challenge_share', {
+            completions: dailySummary.completions,
+            hasImage: Boolean(card.imageUrl),
+        });
+        try {
+            const shareCard = await createShareCard(card.imageUrl, card.shareData);
+            if (shareCard && typeof navigator.share === 'function') {
+                const file = dataURLtoFile(shareCard, 'venn-daily-share-card.png');
+                const payload = {
+                    title: 'Venn Daily',
+                    text: card.text,
+                    url,
+                };
+                if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+                    payload.files = [file];
+                }
+                await navigator.share(payload);
+                haptic('success');
+                setDailyShareCopied(true);
+                setTimeout(() => setDailyShareCopied(false), 2500);
+                return;
+            }
+            if (shareCard) {
+                await downloadFusionImage(card.imageUrl, card.shareData, 'venn-daily-share-card.png');
+            }
+        } catch (err) {
+            if (err?.name === 'AbortError') return;
+        }
         if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(msg);
+            await navigator.clipboard.writeText(card.text);
             haptic('success');
             setDailyShareCopied(true);
-            trackEvent('daily_challenge_share', { completions: dailySummary.completions });
             setTimeout(() => setDailyShareCopied(false), 2500);
         }
     };
@@ -282,6 +335,15 @@ export function Lobby() {
         setMpLoading(true);
         setMpLoadingAction('join');
         await joinRoomByCode(joinCode.trim(), user.name, user.avatar || avatar);
+        setMpLoading(false);
+        setMpLoadingAction(null);
+    };
+
+    const handleJoinAsSpectator = async () => {
+        if (!user?.name || !joinCode.trim()) return;
+        setMpLoading(true);
+        setMpLoadingAction('spectate');
+        await joinRoomByCode(joinCode.trim(), user.name, user.avatar || avatar, { spectator: true });
         setMpLoading(false);
         setMpLoadingAction(null);
     };
@@ -432,7 +494,7 @@ export function Lobby() {
                                     onClick={handleDailyShare}
                                     className="text-xs text-amber-100 underline min-h-[40px] px-2"
                                 >
-                                    {dailyShareCopied ? 'Copied!' : 'Share result'}
+                                    {dailyShareCopied ? 'Shared!' : 'Share card'}
                                 </button>
                             </div>
                             <p className="mt-1 text-white/55 text-xs line-clamp-2">{dailySummary.shareLine}</p>
@@ -772,6 +834,17 @@ export function Lobby() {
                                         {mpLoading && mpLoadingAction === 'join' ? 'Joining...' : 'Join'}
                                     </button>
                                 </div>
+                                {joinCode.trim().length >= 4 && (
+                                    <button
+                                        type="button"
+                                        onClick={handleJoinAsSpectator}
+                                        disabled={mpLoading || !backendReady}
+                                        className="w-full py-2 bg-amber-500/10 text-amber-300 text-sm font-semibold rounded-xl hover:bg-amber-500/20 transition-colors border border-amber-500/20 disabled:opacity-50 min-h-[44px]"
+                                        aria-busy={mpLoading && mpLoadingAction === 'spectate'}
+                                    >
+                                        {mpLoading && mpLoadingAction === 'spectate' ? 'Joining...' : 'Watch the Game'}
+                                    </button>
+                                )}
 
                                 <button
                                     onClick={() => setShowMultiplayer(false)}

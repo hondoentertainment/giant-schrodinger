@@ -11,6 +11,8 @@ const mockStartSession = vi.fn();
 const mockBeginRound = vi.fn();
 const mockAdvanceRound = vi.fn();
 const mockEndSession = vi.fn();
+const mockJoinRoomByCode = vi.fn().mockResolvedValue({ code: 'ABCD' });
+const mockHostRoom = vi.fn();
 
 let mockUser = null;
 let mockSessionId = null;
@@ -36,8 +38,8 @@ vi.mock('../../context/GameContext', () => ({
 
 vi.mock('../../context/RoomContext', () => ({
     useRoom: () => ({
-        hostRoom: vi.fn(),
-        joinRoomByCode: vi.fn(),
+        hostRoom: mockHostRoom,
+        joinRoomByCode: mockJoinRoomByCode,
     }),
 }));
 
@@ -228,7 +230,9 @@ describe('Lobby', () => {
         mockSessionId = null;
         mockBackendEnabled = false;
         globalThis.__testStreakValue = 0;
+        window.history.pushState({}, '', '/');
         vi.clearAllMocks();
+        mockJoinRoomByCode.mockResolvedValue({ code: 'ABCD' });
     });
 
     it('renders the Create Profile heading when not logged in', () => {
@@ -303,7 +307,30 @@ describe('Lobby', () => {
         expect(await screen.findByDisplayValue('ABCD')).toBeInTheDocument();
         await vi.waitFor(() => {
             expect(window.location.search).not.toContain('join=');
+            expect(mockJoinRoomByCode).toHaveBeenCalledWith('ABCD', 'TestUser', '👽', { spectator: false });
         });
+    });
+
+    it('auto-watches a room from ?join=&watch=1', async () => {
+        mockUser = loggedInUser;
+        mockBackendEnabled = true;
+        window.history.pushState({}, '', '/?join=WATCH1&watch=1');
+        render(<Lobby />);
+        await vi.waitFor(() => {
+            expect(mockJoinRoomByCode).toHaveBeenCalledWith('WATCH1', 'TestUser', '👽', { spectator: true });
+        });
+    });
+
+    it('offers Watch the Game after a room code is entered', async () => {
+        const user = userEvent.setup();
+        mockUser = loggedInUser;
+        mockBackendEnabled = true;
+        render(<Lobby />);
+        await user.click(screen.getByRole('button', { name: /Play with Friends/i }));
+        await user.type(screen.getByPlaceholderText(/Room code/i), 'ABCD12');
+        expect(screen.getByRole('button', { name: /Watch the Game/i })).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: /Watch the Game/i }));
+        expect(mockJoinRoomByCode).toHaveBeenCalledWith('ABCD12', 'TestUser', '👽', { spectator: true });
     });
 
     it('mounts the notification banner once the player has enough rounds', () => {

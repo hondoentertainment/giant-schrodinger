@@ -1,6 +1,6 @@
 # Venn with Friends — Product Requirements Document
 
-**Last updated:** August 19, 2026  
+**Last updated:** August 29, 2026  
 **Canonical companions:** [ROADMAP.md](ROADMAP.md) · [JUDGE_MODEL.md](JUDGE_MODEL.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [README.md](README.md)
 
 ---
@@ -41,7 +41,7 @@ Repo name / GitHub Pages base path: `giant-schrodinger`. Product name in UI and 
 | Unlocks / streaks / achievements | **Shipped** | None | localStorage-first |
 | Realtime multiplayer rooms | **Shipped, needs hosted proof** | Supabase + schema RPCs | Create/join, phases, reconnect |
 | Room vote scoring | **Shipped, needs hosted proof** | Supabase RPCs | `cast_room_vote` / `finalize_room_votes` |
-| Spectator mode | **Shipped** | Supabase | Join-as-spectator |
+| Spectator mode | **Shipped** | Supabase | Watch the Game on live lobby; optional `?join=CODE&watch=1` |
 | Content report / moderation dashboard | **Shipped** | Supabase for reports | Lightweight safety, not a UGC marketplace |
 | Theme builder | **Shipped** | None | Share themes via URL hash |
 | PWA / offline page | **Shipped** | None | SW v2 |
@@ -169,8 +169,8 @@ Build Venn with Friends into a replayable social creativity game that is:
 
 1. Add `VITE_POSTHOG_KEY` + `VITE_SENTRY_DSN` on Vercel (and GitHub secrets) — keys required
 2. Add `PEXELS_API_KEY` / `GIPHY_API_KEY` as Supabase edge secrets — keys required
-3. First-session onboarding is now one example + play (shipped)
-4. High-score reveal prompts a Friend Judge share (shipped)
+3. Apply `supabase/migrations/20260829000016_room_spectators.sql` on the hosted project so watchers persist in the player list
+4. First-session onboarding, Friend Judge play-this-pair, daily share card, and live Watch the Game are shipped
 
 #### Near term (2–6 weeks)
 

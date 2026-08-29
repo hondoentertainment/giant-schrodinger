@@ -81,12 +81,16 @@ function RoomProbe() {
         roomClosureReason,
         roomCode,
         isHost,
+        isSpectator,
     } = useRoom();
 
     return (
         <div>
             <button type="button" onClick={() => joinRoomByCode('ABCD12', 'Ava', 'A')}>
                 Join
+            </button>
+            <button type="button" onClick={() => joinRoomByCode('ABCD12', 'Ava', 'A', { spectator: true })}>
+                Watch
             </button>
             <button
                 type="button"
@@ -109,6 +113,7 @@ function RoomProbe() {
             <div data-testid="closure">{roomClosureReason || 'none'}</div>
             <div data-testid="code">{roomCode || ''}</div>
             <div data-testid="host">{isHost ? 'yes' : 'no'}</div>
+            <div data-testid="spectator">{isSpectator ? 'yes' : 'no'}</div>
         </div>
     );
 }
@@ -330,5 +335,42 @@ describe('RoomProvider', () => {
         expect(mocks.toast.success).toHaveBeenCalledWith(
             expect.stringMatching(/Rematch ready — new code NEW456/)
         );
+    });
+
+    it('joins as a spectator without seating a player', async () => {
+        mocks.multiplayer.joinRoom.mockResolvedValue({
+            room: {
+                id: 'room-1',
+                code: 'ABCD12',
+                status: 'playing',
+                scoring_mode: 'human',
+                round_number: 1,
+                total_rounds: 3,
+            },
+            session: {
+                playerName: 'Ava',
+                isSpectator: true,
+                role: 'spectator',
+                secureMode: true,
+            },
+        });
+        mocks.multiplayer.getRoomPlayers.mockResolvedValue([
+            { id: 'host', player_name: 'Host', is_host: true, avatar: 'H' },
+            { id: 'guest', player_name: 'Ava', is_host: false, avatar: 'A', is_spectator: true },
+        ]);
+
+        render(
+            <RoomProvider>
+                <RoomProbe />
+            </RoomProvider>
+        );
+
+        await userEvent.click(screen.getByRole('button', { name: 'Watch' }));
+
+        await waitFor(() => {
+            expect(mocks.multiplayer.joinRoom).toHaveBeenCalledWith('ABCD12', 'Ava', 'A', { spectator: true });
+            expect(screen.getByTestId('spectator')).toHaveTextContent('yes');
+        });
+        expect(mocks.toast.success).toHaveBeenCalledWith('Watching room ABCD12');
     });
 });

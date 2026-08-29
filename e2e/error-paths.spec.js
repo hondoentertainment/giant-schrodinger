@@ -5,7 +5,7 @@ import { startSoloRound as beginRound } from './helpers';
  * T5 — Error paths that the golden-path specs skip.
  *
  * Behaviours verified here were read off the source (not invented):
- *  - LobbyMultiplayerPanel.jsx: Join button is `disabled` until joinCode has
+ *  - Lobby.jsx: Join button is `disabled` until joinCode has
  *    at least 4 non-whitespace chars AND backendReady is true. With no
  *    Supabase configured the button is permanently disabled, so there is no
  *    flow that reaches a "room not found" server error from the UI.
@@ -76,6 +76,8 @@ test.describe('error paths — multiplayer join', () => {
         // Bumping to 4 chars satisfies the length rule in the e2e mock backend.
         await codeInput.fill('ABCD');
         await expect(joinBtn).toBeEnabled();
+        await expect(page.getByRole('button', { name: /Watch the Game/i })).toBeVisible();
+        await expect(page.getByRole('button', { name: /Watch the Game/i })).toBeEnabled();
     });
 
     test('join surfaces server error for non-existent room code', async ({ page }) => {

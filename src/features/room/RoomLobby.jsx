@@ -18,12 +18,15 @@ export function RoomLobby() {
     const {
         room,
         players,
+        activePlayers,
         isHost,
         isSpectator,
         roomCode,
         leaveCurrentRoom,
         startMultiplayerRound,
     } = useRoom();
+    const seatedPlayers = activePlayers || players.filter((player) => !player.is_spectator);
+    const watchers = players.filter((player) => player.is_spectator);
     const { toast } = useToast();
     const [starting, setStarting] = useState(false);
     const [countdown, setCountdown] = useState(null);
@@ -44,11 +47,11 @@ export function RoomLobby() {
     // Mid-session return to lobby (waiting) — auto-start next round for the host
     useEffect(() => {
         if (!isHost || starting || countdown !== null) return;
-        if (room?.status === 'waiting' && (room.round_number || 1) > 1 && players.length >= 2) {
+        if (room?.status === 'waiting' && (room.round_number || 1) > 1 && seatedPlayers.length >= 2) {
             setStarting(true);
             setCountdown(2);
         }
-    }, [countdown, isHost, players.length, room?.round_number, room?.status, starting]);
+    }, [countdown, isHost, seatedPlayers.length, room?.round_number, room?.status, starting]);
 
     const copyCode = () => {
         if (roomCode && navigator.clipboard?.writeText) {
@@ -87,7 +90,7 @@ export function RoomLobby() {
     };
 
     const handleStart = () => {
-        if (players.length < 2) {
+        if (seatedPlayers.length < 2) {
             toast.warn('Need at least 2 players to start');
             return;
         }
@@ -153,10 +156,10 @@ export function RoomLobby() {
             <div className="mb-8">
                 <div className="flex items-center gap-2 mb-3 text-white/55 text-sm">
                     <Users className="w-4 h-4" />
-                    <span>Players ({players.length})</span>
+                    <span>Players ({seatedPlayers.length})</span>
                 </div>
                 <div className="space-y-2" role="list" aria-label="Players in room" aria-live="polite">
-                    {players.map((p) => (
+                    {seatedPlayers.map((p) => (
                         <div key={p.id} className="game-player-row" role="listitem">
                             <span className="text-2xl">{p.avatar || '👽'}</span>
                             <span className="text-white font-semibold flex-1">{p.player_name}</span>
@@ -165,7 +168,12 @@ export function RoomLobby() {
                             )}
                         </div>
                     ))}
-                    {players.length === 1 && (
+                    {watchers.length > 0 && (
+                        <div className="text-white/40 text-xs pt-1">
+                            Watching: {watchers.map((watcher) => watcher.player_name).join(', ')}
+                        </div>
+                    )}
+                    {seatedPlayers.length === 1 && (
                         <div className="text-center py-4 text-white/35 text-sm animate-pulse">
                             Waiting for more players...
                         </div>
@@ -185,7 +193,7 @@ export function RoomLobby() {
                 {isHost && (
                     <button
                         onClick={handleStart}
-                        disabled={starting || players.length < 2}
+                        disabled={starting || seatedPlayers.length < 2}
                         className="wordle-button wordle-primary w-full text-lg flex items-center justify-center gap-2 disabled:hover:scale-100"
                     >
                         <Play className="w-5 h-5" />

@@ -22,19 +22,22 @@ async function callRpc(name, params) {
     return data;
 }
 
-function buildFallbackSession({ playerName, isHost }) {
+function buildFallbackSession({ playerName, isHost, isSpectator = false }) {
     return {
         hostToken: null,
         playerToken: null,
         playerName,
         playerId: null,
         isHost,
+        isSpectator: Boolean(isSpectator),
+        role: isSpectator ? 'spectator' : (isHost ? 'host' : 'player'),
         secureMode: false,
     };
 }
 
 function normalizeRoomSession(data) {
     if (!data?.room) return null;
+    const isSpectator = Boolean(data.session?.isSpectator || data.session?.role === 'spectator');
     return {
         room: data.room,
         session: {
@@ -43,6 +46,8 @@ function normalizeRoomSession(data) {
             playerName: data.session?.playerName || null,
             playerId: data.session?.playerId || null,
             isHost: Boolean(data.session?.isHost),
+            isSpectator,
+            role: isSpectator ? 'spectator' : data.session?.role || (data.session?.isHost ? 'host' : 'player'),
             secureMode: data.session?.secureMode !== false,
         },
     };
@@ -101,7 +106,10 @@ export async function createRoom({ hostName, themeId, totalRounds, scoringMode, 
     }
 }
 
-export async function joinRoom(code, playerName, avatar) {
+export async function joinRoom(code, playerName, avatar, options = {}) {
+    if (options.spectator) {
+        return joinRoomAsSpectator(code, playerName, avatar);
+    }
     if (!isBackendEnabled()) return null;
     try {
         const rpcData = await callRpc('join_room_session', {
@@ -153,6 +161,60 @@ export async function joinRoom(code, playerName, avatar) {
     } catch (err) {
         console.warn('joinRoom failed:', err);
         return { error: 'Failed to join room' };
+    }
+}
+
+export async function joinRoomAsSpectator(code, playerName, avatar) {
+    if (!isBackendEnabled()) return { error: 'Multiplayer requires Supabase' };
+    const trimmedCode = code.toUpperCase().trim();
+
+    try {
+        const rpcData = await callRpc('join_room_spectator', {
+            p_code: trimmedCode,
+            p_player_name: playerName,
+            p_avatar: avatar || null,
+        });
+        const normalized = normalizeRoomSession(rpcData);
+        if (normalized) return normalized;
+    } catch (err) {
+        if (!isRpcUnavailable(err)) {
+            console.warn('joinRoomAsSpectator failed:', err);
+            return { error: err.message || 'Failed to watch room' };
+        }
+    }
+
+    try {
+        const { data: room, error: roomError } = await supabase
+            .from('rooms')
+            .select('*')
+            .eq('code', trimmedCode)
+            .single();
+        if (roomError || !room) return { error: 'Room not found' };
+
+        const { error: playerError } = await supabase
+            .from('room_players')
+            .insert({
+                room_id: room.id,
+                player_name: playerName,
+                avatar: avatar || null,
+                is_host: false,
+                is_spectator: true,
+            });
+
+        if (playerError && !`${playerError.message || ''}`.toLowerCase().includes('is_spectator')) {
+            const taken = `${playerError.message || ''}`.toLowerCase().includes('duplicate')
+                || `${playerError.message || ''}`.toLowerCase().includes('unique');
+            if (taken) return { error: 'Name already taken in this room' };
+            console.warn('Spectator presence insert failed:', playerError);
+        }
+
+        return {
+            room,
+            session: buildFallbackSession({ playerName, isHost: false, isSpectator: true }),
+        };
+    } catch (err) {
+        console.warn('joinRoomAsSpectator failed:', err);
+        return { error: 'Failed to watch room' };
     }
 }
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useToast } from './ToastContext';
 import { isBackendEnabled } from '../lib/supabase';
 import {
@@ -23,6 +23,7 @@ import { selectRoundAssets, getAssetKey, loadSelectedAssets } from '../services/
 import { scoreSubmission } from '../services/gemini';
 import { useGame } from './GameContext';
 import { reportAppError, reportAppEvent } from '../lib/telemetry';
+import { getActivePlayers } from '../lib/roomPlayers';
 import { trackRoundComplete, trackEvent } from '../services/analytics';
 import { buildE2EMockRoom, isE2EMockRoomEnabled, subscribeToE2EMockRoom } from '../lib/e2eMockRoom';
 import { t } from '../lib/i18n';
@@ -72,7 +73,8 @@ export function RoomProvider({ children }) {
 
     const isMultiplayer = !!room;
     const roomCode = room?.code || null;
-    const allSubmitted = players.length > 0 && submissions.length >= players.length;
+    const activePlayers = useMemo(() => getActivePlayers(players), [players]);
+    const allSubmitted = activePlayers.length > 0 && submissions.length >= activePlayers.length;
     const isSpectator = Boolean(
         roomSession?.isSpectator
         || roomSession?.role === 'spectator'
@@ -343,7 +345,8 @@ export function RoomProvider({ children }) {
         return result.room;
     }, [setupSubscriptions, toast, user?.avatar]);
 
-    const joinRoomByCode = useCallback(async (code, name, avatar) => {
+    const joinRoomByCode = useCallback(async (code, name, avatar, options = {}) => {
+        const spectator = Boolean(options.spectator);
         if (isE2EMockRoomEnabled()) {
             if (code.toUpperCase().trim() === 'NOPE') {
                 toast.error('Room not found');
@@ -359,12 +362,18 @@ export function RoomProvider({ children }) {
             });
             setRoom(mockRoom);
             setPlayers(mockPlayers);
-            setRoomSession({ playerName: name, isHost: false, secureMode: false });
+            setRoomSession({
+                playerName: name,
+                isHost: false,
+                secureMode: false,
+                isSpectator: spectator,
+                role: spectator ? 'spectator' : 'player',
+            });
             setIsHost(false);
             setPlayerName(name);
             setRoomPhase(getRoomPhaseFromStatus(mockRoom.status));
             setupSubscriptions(mockRoom.id);
-            toast.success(`Joined room ${mockRoom.code}!`);
+            toast.success(spectator ? `Watching room ${mockRoom.code}` : `Joined room ${mockRoom.code}!`);
             return mockRoom;
         }
 
@@ -373,18 +382,22 @@ export function RoomProvider({ children }) {
             return null;
         }
 
-        const result = await joinRoom(code, name, avatar);
+        const result = await joinRoom(code, name, avatar, { spectator });
         if (result?.error) {
             toast.error(result.error);
             return null;
         }
         if (!result?.room) {
-            toast.error('Failed to join room');
+            toast.error(spectator ? 'Failed to watch room' : 'Failed to join room');
             return null;
         }
 
         setRoom(result.room);
-        setRoomSession(result.session || null);
+        setRoomSession({
+            ...(result.session || {}),
+            isSpectator: spectator || result.session?.isSpectator,
+            role: spectator || result.session?.isSpectator ? 'spectator' : result.session?.role,
+        });
         setIsHost(false);
         setPlayerName(result.session?.playerName || name);
         setRoomPhase(getRoomPhaseFromStatus(result.room.status));
@@ -394,21 +407,22 @@ export function RoomProvider({ children }) {
         await hydrateRoomState(result.room);
         setupSubscriptions(result.room.id);
 
-        toast.success(`Joined room ${result.room.code}!`);
+        toast.success(spectator ? `Watching room ${result.room.code}` : `Joined room ${result.room.code}!`);
         const midRound = ['playing', 'revealing', 'results'].includes(result.room.status);
         if (midRound) {
             setJoinedMidRound(true);
             setJoinPhase(result.room.status);
-            toast.info(t('room.joinedMidRound'));
+            if (!spectator) toast.info(t('room.joinedMidRound'));
         } else {
             setJoinedMidRound(false);
             setJoinPhase(null);
         }
-        reportAppEvent('multiplayer_room_joined', {
+        reportAppEvent(spectator ? 'multiplayer_room_spectated' : 'multiplayer_room_joined', {
             secureMode: result.session?.secureMode !== false,
             roomCode: result.room.code,
             joinedMidRound: midRound,
             joinPhase: result.room.status,
+            spectator,
         });
         return result.room;
     }, [hydrateRoomState, setupSubscriptions, toast, user?.scoringMode, user?.themeId]);
@@ -670,6 +684,7 @@ export function RoomProvider({ children }) {
     const value = {
         room,
         players,
+        activePlayers,
         submissions,
         votes,
         isHost,

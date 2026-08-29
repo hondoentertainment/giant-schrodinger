@@ -1,6 +1,6 @@
 # Venn with Friends Roadmap
 
-**Last updated:** August 19, 2026  
+**Last updated:** August 29, 2026  
 **Source of truth for product intent:** [PRD.md](PRD.md)
 
 This roadmap turns the PRD into an implementation plan. Soft-launch gate is cleared. Seasonal content, weekly recap, Venn visuals, and vendor-split bundles are shipped. Observability/media sinks still need API keys.
@@ -81,7 +81,7 @@ Shipped polish: AI / Manual / Friend / room-vote clarity in lobby + onboarding; 
 
 **Status: complete enough for launch**
 
-Shipped: RPCs, reconnect, ConnectionBanner, host-exit, pending voter names, aligned vote counts.
+Shipped: RPCs, reconnect, ConnectionBanner, host-exit, pending voter names, aligned vote counts, live Watch the Game / spectator join.
 
 ---
 
@@ -89,7 +89,7 @@ Shipped: RPCs, reconnect, ConnectionBanner, host-exit, pending voter names, alig
 
 **Status: complete enough for launch**
 
-Shipped: reveal CTAs, eager `createJudgeShareLinks`, preview URLs, daily/session share lines, gallery save-card, richer `og-tags` meta (redeployed).
+Shipped: reveal CTAs, eager `createJudgeShareLinks`, preview URLs, daily share PNG card, gallery save-card, richer `og-tags` meta (redeployed).
 
 ---
 

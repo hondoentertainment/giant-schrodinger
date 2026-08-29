@@ -99,6 +99,8 @@ describe('JudgeRound', () => {
         );
         expect(mockToast.success).toHaveBeenCalledWith('Judgement submitted!');
         expect(await screen.findByText(/Thanks for judging/i)).toBeInTheDocument();
+        expect(screen.getByTestId('venn-diagram')).toBeInTheDocument();
+        expect(screen.getByText(/They wrote/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Your turn — play this pair/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Play today's Venn/i })).toBeInTheDocument();
     });

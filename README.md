@@ -29,7 +29,7 @@ A creative party game where players connect two prompts with one witty phrase. S
 | Gallery (personal) | Yes | N/A | Optional | Local-first; enriched by backend judgements |
 | Multiplayer rooms | No | Optional | Yes | Requires Supabase + schema RPCs |
 | Room vote scoring | No | N/A | Yes | `cast_room_vote` / `finalize_room_votes` |
-| Spectator mode | No | N/A | Yes | Join-as-spectator |
+| Spectator mode | No | N/A | Yes | Watch the Game from Play with Friends, or `?join=CODE&watch=1` |
 | Content reports | No | N/A | Yes | Lightweight moderation dashboard |
 | Ranked / shop / tournaments | Local preview | N/A | N/A | Device-only until cloud sync (Phase 9) |
 

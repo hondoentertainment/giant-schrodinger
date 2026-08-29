@@ -1,10 +1,19 @@
 # Next Steps
 
-**Last updated:** August 22, 2026
+**Last updated:** August 29, 2026
 
 This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
 
-## Current (August 2026)
+## Current (August 29, 2026)
+
+Shipped this pass (no new API keys):
+
+- Daily rounds use today's theme so every player sees the same pair mood
+- Live lobby **Watch the Game** + `?join=CODE&watch=1` spectator join (apply `20260829000016_room_spectators.sql` on hosted Supabase for named watchers)
+- Unused lobby `sections/` copies removed — live lobby is only `Lobby.jsx`
+- Waiting-room invite was already one-tap; join links now auto-join when a profile exists
+- Daily complete share builds a PNG card (Web Share or download) instead of text only
+- Friend Judge thanks screen shows the pair before **Your turn — play this pair**
 
 Shipped since the July log:
 

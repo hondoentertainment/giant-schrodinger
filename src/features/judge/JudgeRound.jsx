@@ -159,8 +159,18 @@ export function JudgeRound({ payload, onDone }) {
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-in zoom-in-95 duration-500 px-4">
                 <div className="text-6xl mb-4" role="img" aria-label="Success">✓</div>
                 <h2 className="text-3xl font-display font-bold text-white mb-2">Thanks for judging!</h2>
-                <p className="text-white/60 mb-6 max-w-sm">
-                    Your friend will see your score. Want to make your own connection?
+                <p className="text-white/60 mb-4 max-w-sm">
+                    Your friend will see your {score}/10. Here is the pair if you want a turn.
+                </p>
+                <div className="w-full max-w-xl mb-4">
+                    <VennDiagram
+                        leftAsset={displayAssets?.left || effectivePayload.assets.left}
+                        rightAsset={displayAssets?.right || effectivePayload.assets.right}
+                        mediaLoading={mediaLoading}
+                    />
+                </div>
+                <p className="text-white/70 text-sm mb-6 max-w-md">
+                    They wrote “{effectivePayload.submission}”. Your line can be better — or weirder.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
                     <button

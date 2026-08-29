@@ -15,6 +15,7 @@ export function MultiplayerRound() {
     const {
         room,
         players,
+        activePlayers,
         submissions,
         isHost,
         isSpectator,
@@ -57,7 +58,7 @@ export function MultiplayerRound() {
     useEffect(() => {
         if (!submitted || scoring) return;
         const prev = prevSubmissionCountRef.current;
-        if (submissions.length > prev && submissions.length < players.length) {
+        if (submissions.length > prev && submissions.length < (activePlayers?.length || players.length)) {
             const newSub = submissions[submissions.length - 1];
             if (newSub?.player_name !== playerName) {
                 const name = newSub?.player_name || 'A player';
@@ -65,7 +66,7 @@ export function MultiplayerRound() {
             }
         }
         prevSubmissionCountRef.current = submissions.length;
-    }, [submitted, submissions, submissions.length, players.length, scoring, playerName, toast]);
+    }, [submitted, submissions, submissions.length, activePlayers?.length, players.length, scoring, playerName, toast]);
 
     useEffect(() => {
         if (submitted) return undefined;
@@ -86,7 +87,7 @@ export function MultiplayerRound() {
     }, [timer, submitted]);
 
     useEffect(() => {
-        if (isHost && submissions.length >= players.length && players.length > 0 && !scoring) {
+        if (isHost && submissions.length >= (activePlayers?.length || players.length) && (activePlayers?.length || players.length) > 0 && !scoring) {
             setScoring(true);
             const message = room?.scoring_mode === 'ai'
                 ? 'All players submitted — scoring...'
@@ -94,10 +95,11 @@ export function MultiplayerRound() {
             toast.info(message);
             scoreAllSubmissions().finally(() => setScoring(false));
         }
-    }, [isHost, players.length, room?.scoring_mode, scoreAllSubmissions, scoring, submissions.length, toast]);
+    }, [activePlayers?.length, isHost, players.length, room?.scoring_mode, scoreAllSubmissions, scoring, submissions.length, toast]);
 
+    const seatedPlayers = activePlayers || players.filter((player) => !player.is_spectator);
     const submittedPlayers = submissions.map((s) => s.player_name);
-    const waitingPlayers = players.filter((p) => !submittedPlayers.includes(p.player_name));
+    const waitingPlayers = seatedPlayers.filter((p) => !submittedPlayers.includes(p.player_name));
 
     if (!assets?.left || !assets?.right) {
         return (
@@ -140,7 +142,7 @@ export function MultiplayerRound() {
                 <div className="flex flex-wrap gap-2">
                     <div className="game-hud-chip">
                         <Users className="w-3.5 h-3.5" />
-                        <span>{submissions.length}/{players.length} submitted</span>
+                        <span>{submissions.length}/{seatedPlayers.length} submitted</span>
                     </div>
                     <div className="game-hud-chip">
                         Room: <span className="text-white font-medium">{room.code}</span>
@@ -175,7 +177,7 @@ export function MultiplayerRound() {
                     <div className="wordle-card p-6 mb-4">
                         <Users className="w-8 h-8 text-amber-300 mx-auto mb-2" />
                         <p className="text-white font-semibold text-lg mb-1">Watching the round...</p>
-                        <p className="text-white/50 text-sm">{submissions.length}/{players.length} players have submitted</p>
+                        <p className="text-white/50 text-sm">{submissions.length}/{seatedPlayers.length} players have submitted</p>
                     </div>
                 </div>
             ) : !submitted ? (
