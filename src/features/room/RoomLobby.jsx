@@ -123,7 +123,7 @@ export function RoomLobby() {
                         <Copy className="w-5 h-5 text-white/70" />
                     </button>
                 </div>
-                <p className="text-white/50 text-sm mb-3">Share this code. The round starts when the host hits Go.</p>
+                <p className="text-white/50 text-sm mb-3">Share this code. Pass one phone around, or everyone stays on their own. The round starts when the host hits Go.</p>
                 <button
                     type="button"
                     onClick={shareInvite}
@@ -174,8 +174,11 @@ export function RoomLobby() {
                         </div>
                     )}
                     {seatedPlayers.length === 1 && (
-                        <div className="text-center py-4 text-white/35 text-sm animate-pulse">
-                            Waiting for more players...
+                        <div className="text-center py-4 text-white/55 text-sm space-y-2">
+                            <p className="animate-pulse">Waiting for a second writer...</p>
+                            <p className="text-white/40 text-xs">
+                                Share the invite, or play today&apos;s Venn after and send a Friend Judge link.
+                            </p>
                         </div>
                     )}
                 </div>

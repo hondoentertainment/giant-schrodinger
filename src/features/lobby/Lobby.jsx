@@ -5,7 +5,9 @@ import { THEMES, getAvailableThemes, getThemeById, MEDIA_TYPES } from '../../dat
 import { normalizeMediaType } from '../../lib/mediaType';
 import { getStats, getMilestones, isThemeUnlocked, getProfileSummary } from '../../services/stats';
 import { reportAppEvent } from '../../lib/telemetry';
-import { getDailyChallenge, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
+import { getDailyChallenge, getDailyChallengeSummary, getDailyStampWeek, getYesterdayChallenge, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
+import { formatCountdown, getTimeUntilNextChallenge } from '../../services/countdown';
+import { getCollisions } from '../../services/storage';
 import { getDailyRitualShareCard } from '../../services/dailyRitualShare';
 import { createShareCard, dataURLtoFile, downloadFusionImage } from '../../services/socialShare';
 import { isBackendEnabled } from '../../lib/supabase';
@@ -202,6 +204,19 @@ export function Lobby() {
     const dailyChallenge = useMemo(() => getDailyChallenge(), []);
     const dailySummary = useMemo(() => getDailyChallengeSummary(), [dailyRefreshKey]);
     const dailyPlayed = useMemo(() => hasDailyChallengeBeenPlayed(), [dailyRefreshKey]);
+    const dailyStamps = useMemo(() => getDailyStampWeek(), [dailyRefreshKey]);
+    const yesterdayVenn = useMemo(() => {
+        const yesterday = getYesterdayChallenge();
+        const collision = getCollisions().find((item) => (
+            item.isDailyChallenge && String(item.timestamp || '').startsWith(yesterday.date)
+        ));
+        return {
+            pair: yesterday.pair,
+            submission: collision?.submission || null,
+            score: collision?.score ?? null,
+        };
+    }, [dailyRefreshKey]);
+    const nextDaily = useMemo(() => formatCountdown(getTimeUntilNextChallenge()), [dailyRefreshKey]);
 
     const handleDailyShare = async () => {
         const url = window.location.origin + window.location.pathname;
@@ -249,9 +264,7 @@ export function Lobby() {
 
     const startGame = () => {
         if (!sessionId && stats.totalRounds === 0) {
-            trackEvent('first_session_onboarding_opened', { source: 'solo' });
-            setOnboardingDismissCallback(() => handleOnboardingDismiss);
-            setShowOnboarding(true);
+            beginDailyChallenge();
             return;
         }
 
@@ -275,17 +288,9 @@ export function Lobby() {
     };
 
     const beginDailyChallenge = () => {
-        if (!sessionId && stats.totalRounds === 0) {
-            trackEvent('first_session_onboarding_opened', { source: 'daily' });
-            setOnboardingDismissCallback(() => {
-                setShowOnboarding(false);
-                trackEvent('first_session_onboarding_completed', { source: 'daily' });
-                startSession(3, true);
-                beginRound();
-            });
-            setShowOnboarding(true);
-            return;
-        }
+        trackEvent(stats.totalRounds === 0 ? 'first_session_daily_started' : 'daily_challenge_started', {
+            source: 'lobby',
+        });
         startSession(3, true);
         beginRound();
     };
@@ -307,13 +312,6 @@ export function Lobby() {
         setUseCustomImages(user?.useCustomImages ?? false);
         setSessionLength(totalRounds || 3);
         logout();
-    };
-
-    const handleOnboardingDismiss = () => {
-        setShowOnboarding(false);
-        trackEvent('first_session_onboarding_completed', { source: 'solo' });
-        startSession(sessionLength);
-        beginRound();
     };
 
     const handleCreateRoom = async () => {
@@ -471,7 +469,10 @@ export function Lobby() {
                                         Today&apos;s Venn
                                         <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-300/40 bg-amber-300/20 text-amber-100 font-semibold">Daily Challenge</span>
                                     </div>
-                                    <div className="text-white/50 text-sm line-clamp-1">{dailyChallenge.prompt}</div>
+                                    <div className="text-white font-semibold text-sm line-clamp-2">
+                                        {dailyChallenge.pair?.left} × {dailyChallenge.pair?.right}
+                                    </div>
+                                    <div className="text-white/45 text-xs line-clamp-1">{dailyChallenge.prompt}</div>
                                     <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-amber-200/70">
                                         <span>1.5× today</span>
                                         <span>{dailySummary.completions} daily completion{dailySummary.completions === 1 ? '' : 's'}</span>
@@ -498,13 +499,41 @@ export function Lobby() {
                                 </button>
                             </div>
                             <p className="mt-1 text-white/55 text-xs line-clamp-2">{dailySummary.shareLine}</p>
+                            <div className="mt-3 flex justify-between gap-1" aria-label="This week's daily stamps">
+                                {dailyStamps.map((stamp) => (
+                                    <div key={stamp.date} className="flex-1 text-center">
+                                        <div className={`mx-auto h-8 w-8 rounded-full border text-xs font-bold flex items-center justify-center ${
+                                            stamp.played
+                                                ? 'border-amber-300/50 bg-amber-300/20 text-amber-100'
+                                                : stamp.isToday
+                                                    ? 'border-white/25 text-white/70'
+                                                    : 'border-white/10 text-white/30'
+                                        }`}>
+                                            {stamp.played ? '✓' : stamp.label}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="mt-2 text-white/40 text-[11px]">Next pair in {nextDaily}</p>
+                            {yesterdayVenn.pair && (
+                                <p className="mt-1 text-white/45 text-[11px] line-clamp-2">
+                                    Yesterday: {yesterdayVenn.pair.left} × {yesterdayVenn.pair.right}
+                                    {yesterdayVenn.submission ? ` — “${yesterdayVenn.submission}”` : ''}
+                                </p>
+                            )}
                         </div>
                     )}
 
+                    {isFirstSession && !showMultiplayer && (
+                        <p className="text-white/40 text-xs text-center mb-3">
+                            Today&apos;s pair is the whole tutorial. One line. Then we talk settings.
+                        </p>
+                    )}
+
                     {/* Solo play — keep primary actions above the fold */}
-                    {!showMultiplayer && (
+                    {!showMultiplayer && !isFirstSession && (
                         <>
-                            {!sessionId && !isFirstSession && (
+                            {!sessionId && (
                                 <div className="mb-3 flex items-center justify-center gap-2">
                                     <span className="text-white/40 text-xs">Rounds</span>
                                     {[3, 5, 7].map((rounds) => (
@@ -890,7 +919,7 @@ export function Lobby() {
         <div className="w-full max-w-md wordle-card p-4 sm:p-5 animate-spring-in">
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
             <h2 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-white mb-1 text-center">Create Profile</h2>
-            <p className="text-white/50 text-sm text-center mb-4">Name, pick an avatar, and start playing.</p>
+            <p className="text-white/50 text-sm text-center mb-4">Name, pick an avatar, play today&apos;s pair.</p>
             {!backendReady && <ServiceStatusCard className="mb-4" />}
             <form onSubmit={handleSubmit} className="space-y-4">
                 <section aria-labelledby="profile-username">

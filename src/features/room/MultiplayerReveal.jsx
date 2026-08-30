@@ -28,6 +28,29 @@ function ScoreBar({ label, value, max = 10 }) {
     );
 }
 
+function ReactionBar({ reactions, onReact }) {
+    return (
+        <div className="mt-5 text-center">
+            <div className="flex justify-center gap-2" role="group" aria-label="React to this round">
+                {['🔥', '😂', '💀', '👑'].map((emoji) => (
+                    <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => onReact(emoji)}
+                        className="min-h-[44px] min-w-[44px] text-xl rounded-2xl bg-white/[0.06] border border-white/10"
+                        aria-label={`React ${emoji}`}
+                    >
+                        {emoji}
+                    </button>
+                ))}
+            </div>
+            {reactions.length > 0 && (
+                <p className="mt-2 text-2xl" aria-live="polite">{reactions.slice(-8).map((item) => item.emoji).join(' ')}</p>
+            )}
+        </div>
+    );
+}
+
 const REVEAL_PHASES = {
     COUNTDOWN: 'countdown',
     REVEAL: 'reveal',
@@ -65,6 +88,7 @@ export function MultiplayerReveal() {
     const [revealedCount, setRevealedCount] = useState(0);
     const [hasVoted, setHasVoted] = useState(false);
     const [selectedVoteId, setSelectedVoteId] = useState(null);
+    const [liveReactions, setLiveReactions] = useState([]);
 
     const theme = getThemeById(room?.theme_id);
     const multiplier = theme?.modifier?.scoreMultiplier || 1;
@@ -137,7 +161,10 @@ export function MultiplayerReveal() {
             return () => clearTimeout(moveToNext);
         }
 
-        const timer = setTimeout(() => setRevealedCount((count) => count + 1), 600);
+        const timer = setTimeout(() => {
+            haptic('medium');
+            setRevealedCount((count) => count + 1);
+        }, 900);
         return () => clearTimeout(timer);
     }, [isResultsReady, revealPhase, revealedCount, scoringMode, submissions.length]);
 
@@ -154,6 +181,11 @@ export function MultiplayerReveal() {
         setHasVoted(true);
         setSelectedVoteId(existingVote.submission_id);
     }, [playerName, votes]);
+
+    const sendReaction = useCallback((emoji) => {
+        haptic('light');
+        setLiveReactions((current) => [...current.slice(-7), { emoji, id: Date.now() }]);
+    }, []);
 
     const handleVote = useCallback(async (submissionId) => {
         if (hasVoted) return;
@@ -346,6 +378,9 @@ export function MultiplayerReveal() {
                             <h2 className="text-2xl font-display font-bold tracking-tight text-white">
                                 And the connections are...
                             </h2>
+                            {isHost && (
+                                <p className="text-amber-200/80 text-sm mt-2">Read this one out loud.</p>
+                            )}
                         </div>
 
                         <div className="space-y-3">
@@ -373,6 +408,7 @@ export function MultiplayerReveal() {
                                 Revealing answers...
                             </div>
                         )}
+                        <ReactionBar reactions={liveReactions} onReact={sendReaction} />
                 </div>
             </div>
         );
@@ -392,7 +428,7 @@ export function MultiplayerReveal() {
                             <p className="text-white/45 text-sm">
                                 {hasVoted
                                     ? 'Your vote is locked in. Waiting for everyone else, then the host reveals results.'
-                                    : 'Tap one connection to cast your vote. You cannot vote for yourself.'}
+                                    : 'Ten seconds. Vote with your face, then tap the line that won the room.'}
                             </p>
                             <p className="text-white/30 text-xs mt-2 tabular-nums">
                                 Votes locked in: {currentVoteCount}/{expectedVoteCount || submissions.length}
@@ -477,7 +513,11 @@ export function MultiplayerReveal() {
                             {isFinished ? 'Final standings' : `Round ${room?.round_number} results`}
                         </div>
                         <h2 className="text-3xl font-display font-bold tracking-tight text-white">
-                            {isFinished ? 'Game over' : 'The results are in'}
+                            {isFinished
+                                ? 'Game over'
+                                : scored[0]
+                                    ? `${scored[0].player_name} takes it — ${scored[0].finalScore || scored[0].voteCount}/10`
+                                    : 'The results are in'}
                         </h2>
                         {isFinished && (
                             <p className="text-white/45 text-sm mt-2 max-w-md mx-auto">
@@ -606,6 +646,8 @@ export function MultiplayerReveal() {
                             </p>
                         </div>
                     )}
+
+                    <ReactionBar reactions={liveReactions} onReact={sendReaction} />
 
                     {!isFinished && multiplier !== 1 && (
                         <div className="text-center text-sm text-white/40 mb-6">

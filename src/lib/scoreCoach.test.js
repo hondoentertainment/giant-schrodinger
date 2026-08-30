@@ -8,13 +8,17 @@ describe('getScoreCoach', () => {
         expect(coach.reason).toMatch(/clear/i);
     });
 
-    it('hints at the weakest axis', () => {
+    it('rewrites their actual line on the weak axis', () => {
         const coach = getScoreCoach({
             score: 5,
             breakdown: { wit: 8, logic: 3, originality: 7, clarity: 6 },
+            submission: 'they both wait',
+            leftLabel: 'A lighthouse',
+            rightLabel: 'An inbox',
         });
         expect(coach.weakAxis).toBe('logic');
-        expect(coach.hint).toMatch(/Name both concepts/i);
+        expect(coach.hint).toMatch(/they both wait/i);
+        expect(coach.hint).toMatch(/lighthouse/i);
     });
 
     it('calls out generic low scores', () => {

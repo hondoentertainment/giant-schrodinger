@@ -27,10 +27,10 @@ export function ScoreReveal({ score, max = 10, label, className = '' }) {
             frame += 1;
             const next = Math.min(target, Math.round((frame / steps) * target));
             setDisplay(next);
+            haptic(next >= target ? 'success' : 'light');
             if (next >= target) {
                 clearInterval(interval);
                 setDone(true);
-                haptic('success');
             }
         }, 55);
 
@@ -38,7 +38,7 @@ export function ScoreReveal({ score, max = 10, label, className = '' }) {
     }, [target]);
 
     return (
-        <div className={`score-reveal ${done ? 'score-reveal--done' : ''} ${className}`.trim()}>
+        <div className={`score-reveal ${done ? 'score-reveal--done' : ''} ${target >= 9 ? 'score-reveal--hot' : ''} ${className}`.trim()}>
             <div className="text-4xl font-bold tabular-nums text-white">
                 {display}/{max}
             </div>

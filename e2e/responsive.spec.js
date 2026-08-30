@@ -36,7 +36,7 @@ test.describe('Responsive design', () => {
         });
         await page.reload();
         await page.getByRole('button', { name: /View connection gallery/i }).click();
-        await expect(page.getByRole('heading', { name: /Connection Gallery/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Your best lines|Connection Gallery/i })).toBeVisible();
         const backButton = page.getByRole('button', { name: /Back to Lobby/i });
         const box = await backButton.boundingBox();
         expect(Math.round(box?.height ?? 0)).toBeGreaterThanOrEqual(44);

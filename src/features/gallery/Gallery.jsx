@@ -226,7 +226,7 @@ export function Gallery() {
     const [collisions, setCollisions] = useState([]);
     const [friendJudgements, setFriendJudgements] = useState({});
     const [loadingJudgements, setLoadingJudgements] = useState(true);
-    const [sortBy, setSortBy] = useState('newest');
+    const [sortBy, setSortBy] = useState('score-high');
     const [feedbackFilter, setFeedbackFilter] = useState('all');
     const [mediaFilter, setMediaFilter] = useState('all');
     const [selectedCollision, setSelectedCollision] = useState(null);
@@ -380,8 +380,8 @@ export function Gallery() {
         <div className="w-full max-w-6xl animate-spring-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <div>
-                    <div className="game-section-label mb-1">Your archive</div>
-                    <h2 className="text-3xl sm:text-4xl font-display font-bold tracking-tight text-white">Connection Gallery</h2>
+                    <div className="game-section-label mb-1">Trophy case</div>
+                    <h2 className="text-3xl sm:text-4xl font-display font-bold tracking-tight text-white">Your best lines</h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2">
@@ -415,8 +415,8 @@ export function Gallery() {
             {collisions.length === 0 ? (
                 <EmptyState
                     icon="🖼️"
-                    title="No connections yet"
-                    description="Play a round and your best fusions will show up here."
+                    title="No trophies yet"
+                    description="Write one line. The keepers live here like trading cards."
                 />
             ) : (
                 <>

@@ -26,9 +26,14 @@ export async function startSoloRound(page, options = {}) {
     const { placeholder = /What connects/i } = options;
 
     await dismissOnboarding(page);
-    await page.getByRole('button', {
-        name: /Start First Round|Start solo session|Practice Run|Solo Session|Start Round/i,
-    }).first().click();
+    const daily = page.getByRole('button', { name: /Start today's Venn daily puzzle/i });
+    if (await daily.isVisible().catch(() => false)) {
+        await daily.click();
+    } else {
+        await page.getByRole('button', {
+            name: /Start First Round|Start solo session|Practice Run|Solo Session|Start Round|Play today's/i,
+        }).first().click();
+    }
     await dismissOnboarding(page);
 
     const roundInput = page.getByPlaceholder(placeholder);

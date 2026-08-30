@@ -548,6 +548,10 @@ export function Reveal({ submission, assets }) {
         score: displayScore,
         breakdown: result.breakdown,
         isMock: result.isMock,
+        submission,
+        leftLabel: assets?.left?.label,
+        rightLabel: assets?.right?.label,
+        rewrite: result.rewrite,
     });
     const statsSnapshot = getStats();
     const nextMilestone = getMilestones()

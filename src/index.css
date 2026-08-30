@@ -493,6 +493,10 @@
   text-shadow: 0 0 24px rgba(10, 132, 255, 0.35);
 }
 
+.score-reveal--hot.score-reveal--done {
+  text-shadow: 0 0 28px rgba(255, 214, 10, 0.55), 0 0 48px rgba(255, 79, 216, 0.28);
+}
+
 /* ── Venn diagram game visuals ── */
 @keyframes vennEnterLeft {
   0% { transform: translateX(-34%) scale(0.94); opacity: 0; }

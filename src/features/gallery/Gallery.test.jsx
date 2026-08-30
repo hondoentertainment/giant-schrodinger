@@ -125,7 +125,7 @@ describe('Gallery', () => {
   it('renders gallery heading', async () => {
     render(<Gallery />);
     await waitFor(() => {
-      expect(screen.getByText(/Connection Gallery/i)).toBeInTheDocument();
+      expect(screen.getByText(/Your best lines/i)).toBeInTheDocument();
     });
   });
 
@@ -147,7 +147,7 @@ describe('Gallery', () => {
     mockCollisions = [];
     render(<Gallery />);
     await waitFor(() => {
-      expect(screen.getByText(/No connections yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/No trophies yet/i)).toBeInTheDocument();
     });
   });
 
@@ -245,14 +245,12 @@ describe('Gallery', () => {
     const list = await screen.findByRole('list', { name: /your connection gallery/i });
     // Each LazyImage renders an <article>; collect them in DOM order.
     let items = within(list).getAllByRole('article');
-    // Default sort is 'newest' — "Low score one" has the newer timestamp, so it appears first.
-    expect(items[0].getAttribute('aria-label')).toMatch(/Low score one/);
-
-    // Switch to "Highest score" — "High score one" should move to position 0.
-    const sortSelect = screen.getByLabelText(/Sort gallery/i);
-    await user.selectOptions(sortSelect, 'score-high');
-    items = within(list).getAllByRole('article');
     expect(items[0].getAttribute('aria-label')).toMatch(/High score one/);
+
+    const sortSelect = screen.getByLabelText(/Sort gallery/i);
+    await user.selectOptions(sortSelect, 'newest');
+    items = within(list).getAllByRole('article');
+    expect(items[0].getAttribute('aria-label')).toMatch(/Low score one/);
   });
 
   it('renders LazyImage cards as accessible articles with IntersectionObserver triggering image load', async () => {

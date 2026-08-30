@@ -49,6 +49,6 @@ test.describe('Multiplayer Flow', () => {
   test('gallery shows past rounds', async ({ page }) => {
     await createProfile(page);
     await page.getByRole('button', { name: /View connection gallery|Gallery/i }).click();
-    await expect(page.getByText(/Connection Gallery/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Your best lines|Connection Gallery/i)).toBeVisible({ timeout: 5000 });
   });
 });

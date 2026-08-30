@@ -1,10 +1,18 @@
 # Next Steps
 
-**Last updated:** August 29, 2026
+**Last updated:** August 29, 2026 (world-class game pass)
 
 This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
 
 ## Current (August 29, 2026)
+
+World-class game pass (still no invented keys):
+
+- 180+ curated pairs with vibe tags; first round and daily never use leftover random pairs
+- First session lobby is today's pair only — no onboarding detour, no settings before the first line
+- Host-voice scoring + a rewrite of the player's actual line
+- Daily stamps, tomorrow countdown, yesterday's pair; share cards lock to "Beat this."
+- Room reveal is slower and louder; reactions; one-player Friend Judge backup; gallery is a trophy case
 
 Shipped this pass (no new API keys):
 

@@ -32,8 +32,10 @@ Score the connection from 1-10 on four criteria (each 1-10):
 - originality: Surprise and freshness
 - clarity: How clear and understandable the connection is
 
+Sound like a party host slamming a card on the table — roast or toast, never a rubric recap.
+
 Respond with ONLY valid JSON, no other text:
-{"wit": N, "logic": N, "originality": N, "clarity": N, "relevance": "Highly Logical" or "Absurdly Creative" or "Wild Card", "commentary": "One witty sentence"}`;
+{"wit": N, "logic": N, "originality": N, "clarity": N, "relevance": "Highly Logical" or "Absurdly Creative" or "Wild Card", "commentary": "One roast or toast sentence", "rewrite": "One sharper version of their exact line"}`;
 
 function clamp(val: number, min = 1, max = 10): number {
   return Math.min(max, Math.max(min, Math.round(val)));
@@ -147,6 +149,7 @@ serve(async (req: Request) => {
       commentary:
         parsed.commentary ||
         `Solid connection between ${conceptLeft} and ${conceptRight}!`,
+      rewrite: typeof parsed.rewrite === "string" ? parsed.rewrite.trim() : "",
       roundId: crypto.randomUUID(),
       isMock: false,
     });

@@ -5,10 +5,13 @@ describe('curatedPairs', () => {
     it('has unique ids and two labels each', () => {
         const ids = CURATED_PAIRS.map((pair) => pair.id);
         expect(new Set(ids).size).toBe(CURATED_PAIRS.length);
-        expect(CURATED_PAIRS.length).toBeGreaterThanOrEqual(30);
+        expect(CURATED_PAIRS.length).toBeGreaterThanOrEqual(150);
         CURATED_PAIRS.forEach((pair) => {
+            expect(pair.id).toBeTruthy();
+            expect(pair.id).not.toMatch(/^\s/);
             expect(pair.left).toBeTruthy();
             expect(pair.right).toBeTruthy();
+            expect(pair.vibe).toBeTruthy();
         });
     });
 

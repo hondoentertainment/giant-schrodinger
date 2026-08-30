@@ -54,16 +54,19 @@ function seededRandom(seed) {
 }
 
 function getDaySeed() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const day = now.getDate();
-    return year * 10000 + month * 100 + day;
+    return getDaySeedForDate(new Date());
+}
+
+function formatDayKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function getTodayKey() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return formatDayKey(new Date());
+}
+
+function getDaySeedForDate(date) {
+    return date.getFullYear() * 10000 + date.getMonth() * 100 + date.getDate();
 }
 
 export function getDailyChallenge() {
@@ -167,6 +170,35 @@ function getWeekStartKey(date = new Date()) {
     const diff = day === 0 ? -6 : 1 - day;
     d.setDate(d.getDate() + diff);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function getYesterdayChallenge() {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    const seed = getDaySeedForDate(date);
+    return {
+        date: formatDayKey(date),
+        seed,
+        pair: getCuratedPairForSeed(seed),
+    };
+}
+
+export function getDailyStampWeek(now = new Date()) {
+    const history = getDailyChallengeHistory();
+    const played = new Set(history.map((entry) => entry.date));
+    const stamps = [];
+    for (let offset = 6; offset >= 0; offset -= 1) {
+        const date = new Date(now);
+        date.setDate(now.getDate() - offset);
+        const key = formatDayKey(date);
+        stamps.push({
+            date: key,
+            played: played.has(key),
+            isToday: offset === 0,
+            label: date.toLocaleDateString('en-US', { weekday: 'narrow' }),
+        });
+    }
+    return stamps;
 }
 
 export function getWeeklyDailyLeaderboard() {

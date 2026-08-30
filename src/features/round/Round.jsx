@@ -31,6 +31,7 @@ export function Round({ onSubmit }) {
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
     const mediaType = normalizeMediaType(user?.mediaType);
     const mod = currentModifier;
+    const firstPairSeedRef = useRef(Date.now());
     const showFirstRoundCoaching = stats.totalRounds === 0 && roundNumber === 1;
     const roundMediaType = getEffectiveRoundMediaType({
         userMediaType: mediaType,
@@ -68,8 +69,8 @@ export function Round({ onSubmit }) {
 
             const curatedPair = (forcedPair && !isForcedAssetPair(forcedPair) ? forcedPair : null)
                 || daily?.pair
-                || (stats.totalRounds === 0 && roundNumber === 1
-                    ? getCuratedPairForSeed(Date.now())
+                || (roundNumber === 1
+                    ? getCuratedPairForSeed(daily?.seed ?? firstPairSeedRef.current)
                     : null);
 
             const [left, right] = selectRoundAssets({

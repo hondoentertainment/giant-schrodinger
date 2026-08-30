@@ -39,8 +39,10 @@ Score the connection from 1-10 on four criteria (each 1-10):
 - originality: Surprise and freshness
 - clarity: How clear and understandable the connection is
 
+Sound like a party host slamming a card on the table — roast or toast, never a rubric recap.
+
 Respond with ONLY valid JSON, no other text:
-{"wit": N, "logic": N, "originality": N, "clarity": N, "relevance": "Highly Logical" or "Absurdly Creative" or "Wild Card", "commentary": "One witty sentence"}`;
+{"wit": N, "logic": N, "originality": N, "clarity": N, "relevance": "Highly Logical" or "Absurdly Creative" or "Wild Card", "commentary": "One roast or toast sentence", "rewrite": "One sharper version of their exact line"}`;
 
 function buildFusionPrompt(theme, submission, asset1, asset2) {
     const themeLabel = theme?.label || 'Venn with Friends';
@@ -105,7 +107,8 @@ function mockScore(submission, asset1, asset2) {
         breakdown,
         score: baseScore,
         relevance,
-        commentary: `An interesting bridge between ${leftLabel} and ${rightLabel}. '${safeSubmission}' is ${relevance.toLowerCase()}!`,
+        commentary: `'${safeSubmission}' — a host would toast that collision of ${leftLabel} and ${rightLabel}.`,
+        rewrite: `${safeSubmission} — name both ${leftLabel} and ${rightLabel} in one dare.`,
     };
 }
 
@@ -186,6 +189,7 @@ export async function scoreSubmission(submission, asset1, asset2, mediaType = 'i
             score: Math.min(10, Math.max(1, baseScore)),
             relevance: parsed.relevance || 'Highly Logical',
             commentary: parsed.commentary || `Solid connection between ${leftLabel} and ${rightLabel}!`,
+            rewrite: typeof parsed.rewrite === 'string' ? parsed.rewrite.trim() : '',
             isMock: false,
         };
     } catch (err) {

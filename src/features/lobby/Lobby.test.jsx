@@ -76,8 +76,17 @@ vi.mock('../../services/stats', () => ({
     }),
 }));
 
+vi.mock('../../services/storage', () => ({
+    getCollisions: () => [],
+}));
+
 vi.mock('../../services/dailyChallenge', () => ({
-    getDailyChallenge: () => ({ prompt: 'Test daily prompt' }),
+    getDailyChallenge: () => ({ prompt: 'Test daily prompt', pair: { left: 'Morning coffee', right: 'A robot hitting snooze' } }),
+    getDailyStampWeek: () => [
+        { date: '2026-08-23', played: true, isToday: false, label: 'S' },
+        { date: '2026-08-29', played: false, isToday: true, label: 'S' },
+    ],
+    getYesterdayChallenge: () => ({ date: '2026-08-28', pair: { left: 'A lighthouse', right: 'An inbox' } }),
     getDailyChallengeSummary: () => ({
         completions: 2,
         bestScore: 9,

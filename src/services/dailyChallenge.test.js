@@ -5,6 +5,8 @@ import {
     markDailyChallengeComplete,
     getDailyChallengeHistory,
     getDailyChallengeSummary,
+    getDailyStampWeek,
+    getYesterdayChallenge,
     getWeeklyDailyLeaderboard,
 } from './dailyChallenge';
 
@@ -141,6 +143,20 @@ describe('dailyChallenge service', () => {
             const summary = getDailyChallengeSummary();
             expect(summary.weeklyCompletions).toBeGreaterThan(0);
             expect(summary.weeklyBest).toBe(8);
+        });
+    });
+
+    describe('daily ritual helpers', () => {
+        it('builds a 7-day stamp row and a yesterday pair', () => {
+            markDailyChallengeComplete(8);
+            const stamps = getDailyStampWeek();
+            expect(stamps).toHaveLength(7);
+            expect(stamps[6].isToday).toBe(true);
+            expect(stamps[6].played).toBe(true);
+            const yesterday = getYesterdayChallenge();
+            expect(yesterday.pair.left).toBeTruthy();
+            expect(yesterday.pair.right).toBeTruthy();
+            expect(yesterday.date).not.toBe(getDailyChallenge().date);
         });
     });
 

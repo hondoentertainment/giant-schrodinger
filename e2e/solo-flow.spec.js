@@ -18,7 +18,7 @@ test.describe('Solo game flow', () => {
 
     test('can create profile and see lobby', async ({ page }) => {
         await createProfile(page);
-        await expect(page.getByRole('button', { name: /Start First Round|Start solo session|Solo Session|Start Round/i })).toBeVisible();
+        await expect(page.getByRole('button', { name: /Start today's Venn daily puzzle|Start First Round|Start solo session|Solo Session|Start Round/i })).toBeVisible();
     });
 
     test('can start solo game and see round screen', async ({ page }) => {

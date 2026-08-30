@@ -5,6 +5,18 @@ const AXIS_HINTS = {
     clarity: 'Say it in one clean sentence.',
 };
 
+export function rewriteTheirLine(submission, axis, leftLabel, rightLabel) {
+    const line = String(submission || '').trim().replace(/^["“]|["”]$/g, '');
+    const left = leftLabel || 'the left prompt';
+    const right = rightLabel || 'the right prompt';
+    if (!line) return AXIS_HINTS[axis] || AXIS_HINTS.logic;
+    if (axis === 'wit') return `${line} — the joke only ${left} and ${right} would tell.`;
+    if (axis === 'logic') return `${left} meets ${right}: ${line}.`;
+    if (axis === 'originality') return `Not just “${line}.” What’s the second thought nobody else will write?`;
+    if (axis === 'clarity') return `${line} — say it once, and name both sides.`;
+    return `Keep “${line},” but name both ${left} and ${right}.`;
+}
+
 function lowestAxis(breakdown) {
     if (!breakdown) return null;
     const axes = ['wit', 'logic', 'originality', 'clarity'];
@@ -20,7 +32,7 @@ function lowestAxis(breakdown) {
 /**
  * One-line reason + rewrite hint for a scored connection.
  */
-export function getScoreCoach({ score, breakdown, isMock } = {}) {
+export function getScoreCoach({ score, breakdown, isMock, submission, leftLabel, rightLabel, rewrite } = {}) {
     const numeric = Number(score);
     const axis = lowestAxis(breakdown);
     let reason;
@@ -38,7 +50,8 @@ export function getScoreCoach({ score, breakdown, isMock } = {}) {
         reason = 'Too generic — it could describe almost anything.';
     }
 
-    const hint = axis ? AXIS_HINTS[axis.axis] : AXIS_HINTS.logic;
+    const hint = String(rewrite || '').trim()
+        || rewriteTheirLine(submission, axis?.axis, leftLabel, rightLabel);
 
     return {
         reason,

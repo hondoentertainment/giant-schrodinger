@@ -67,10 +67,8 @@ function buildCardSubtitle(shareData) {
   return `${leftAsset}  ×  ${rightAsset}`;
 }
 
-function buildCardFooter(shareData) {
-  const commentary = clampText(shareData.commentary, 120);
-  if (commentary) return commentary;
-  return pickShareHook(shareData.score || 0, shareData.scoreBand);
+function buildCardFooter() {
+  return 'Beat this.';
 }
 
 function getJudgeLabel(judgeMode) {
@@ -272,7 +270,7 @@ export async function createShareCard(imageUrl, shareData) {
 
     ctx.fillStyle = 'rgba(255,255,255,0.42)';
     ctx.font = '600 24px Arial';
-    ctx.fillText('Play. Share. Start arguments.', 640, 1254);
+    ctx.fillText('Beat this.', 780, 1254);
 
     return canvas.toDataURL('image/png');
   } catch {
