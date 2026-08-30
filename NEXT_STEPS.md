@@ -1,6 +1,6 @@
 # Next Steps
 
-**Last updated:** August 29, 2026 (world-class game pass)
+**Last updated:** August 29, 2026 (hosted spectator + scoring deploy)
 
 This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
 
@@ -16,8 +16,9 @@ World-class game pass (still no invented keys):
 
 Shipped this pass (no new API keys):
 
+- Hosted `join_room_spectator` + `is_spectator` applied; `score-submission` redeployed with host-voice rewrite
 - Daily rounds use today's theme so every player sees the same pair mood
-- Live lobby **Watch the Game** + `?join=CODE&watch=1` spectator join (apply `20260829000016_room_spectators.sql` on hosted Supabase for named watchers)
+- Live lobby **Watch the Game** + `?join=CODE&watch=1` spectator join (`join_room_spectator` live on hosted Supabase)
 - Unused lobby `sections/` copies removed — live lobby is only `Lobby.jsx`
 - Waiting-room invite was already one-tap; join links now auto-join when a profile exists
 - Daily complete share builds a PNG card (Web Share or download) instead of text only

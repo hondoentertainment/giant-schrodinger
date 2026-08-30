@@ -169,7 +169,7 @@ Build Venn with Friends into a replayable social creativity game that is:
 
 1. Add `VITE_POSTHOG_KEY` + `VITE_SENTRY_DSN` on Vercel (and GitHub secrets) — keys required
 2. Add `PEXELS_API_KEY` / `GIPHY_API_KEY` as Supabase edge secrets — keys required
-3. Apply `supabase/migrations/20260829000016_room_spectators.sql` on the hosted project so watchers persist in the player list
+3. Spectator SQL, named watchers, and host-voice `score-submission` are live on hosted Supabase
 4. First-session onboarding, Friend Judge play-this-pair, daily share card, and live Watch the Game are shipped
 5. World-class loop: 180+ curated pairs, first session is today's pair only, host-voice rewrites, daily stamps, trophy gallery
 

@@ -15,6 +15,7 @@ const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
 const REQUIRED_RPCS = [
     'create_room_session',
     'join_room_session',
+    'join_room_spectator',
     'create_shared_round',
     'get_shared_round_by_token',
     'submit_round_judgement',
@@ -31,6 +32,7 @@ const REQUIRED_RPCS = [
 const PROBES = {
     create_room_session: { p_host_name: '' },
     join_room_session: { p_code: '0000', p_player_name: '' },
+    join_room_spectator: { p_code: '0000', p_player_name: '' },
     create_shared_round: {
         p_assets: {},
         p_submission: '',

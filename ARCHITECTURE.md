@@ -86,7 +86,7 @@ Room human ──► cast_room_vote ──► finalize_room_votes ──► shar
 | RPC | Role |
 |---|---|
 | `create_shared_round` / `get_shared_round_by_token` / `submit_round_judgement` | Friend judging |
-| `create_room_session` / `join_room_session` / `leave_room_session` | Rooms |
+| `create_room_session` / `join_room_session` / `join_room_spectator` / `leave_room_session` | Rooms |
 | `start_room_round` / `submit_room_answer` / `score_room_submission` | Round flow |
 | `cast_room_vote` / `finalize_room_votes` / `advance_room_state` | Authoritative voting |
 | `report_content` / `list_content_reports` / `update_content_report_status` | Moderation |

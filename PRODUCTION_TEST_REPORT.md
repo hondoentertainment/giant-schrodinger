@@ -22,7 +22,7 @@ Production URL: https://giant-schrodinger.vercel.app
 | Hosted two-browser multiplayer (`e2e/hosted-two-browser.spec.js`) | **Passed** |
 | Hosted friend-judge share (second browser) | **Passed** |
 | Supabase RPC probe | **Passed** |
-| Edge functions | **Passed** (`og-tags` redeployed July 18 with richer meta) |
+| Edge functions | **Passed** (`score-submission` + media/OG functions redeployed August 29 with host-voice scoring) |
 | `analytics_events` INSERT RLS | **Applied** July 18 (no `users` FK) |
 
 ## Shipped since soft-launch clear
@@ -46,7 +46,7 @@ Production URL: https://giant-schrodinger.vercel.app
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Supabase schema + RPCs | **Live** | Project `fnjshhjwoximddoggdrk` |
+| Supabase schema + RPCs | **Live** | Project `fnjshhjwoximddoggdrk`; `join_room_spectator` + `is_spectator` applied August 29 |
 | Friend judging / multiplayer | **Verified live** | Two-browser Playwright rehearsal passed |
 | Server AI scoring | Edge deployed | Live Gemini path exercised in friend-judge flow |
 | OG previews | Edge redeployed | Richer title/description/site_name |

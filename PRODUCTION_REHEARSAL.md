@@ -11,6 +11,7 @@ Run this once before the first public launch and again before any major release.
 2. Confirm the new RPCs exist:
    - `create_room_session`
    - `join_room_session`
+   - `join_room_spectator`
    - `create_shared_round`
    - `submit_round_judgement`
    - `cast_room_vote`
