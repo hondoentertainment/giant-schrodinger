@@ -10,6 +10,7 @@ import { normalizeMediaType, getCollisionMediaMode, getEffectiveRoundMediaType }
 import { getDailyChallenge } from '../../services/dailyChallenge';
 import { getScoreBand } from '../../lib/scoreBands';
 import { getScoreCoach } from '../../lib/scoreCoach';
+import { consumeJudgeChain, peekJudgeChain, setForcedLine, setForcedPair } from '../../lib/forcedPair';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import { AchievementProgress } from '../../components/AchievementProgress';
 import { ScoreReveal } from '../../components/ScoreReveal';
@@ -21,7 +22,7 @@ import { checkAchievements } from '../../services/achievements';
 import { scrollMainToTop } from '../../lib/scroll';
 
 export function Reveal({ submission, assets }) {
-    const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, isDailyChallenge } = useGame();
+    const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, replayCurrentRound, isDailyChallenge } = useGame();
     const { toast } = useToast();
     const [result, setResult] = useState(null);
     const [fusionImage, setFusionImage] = useState(null);
@@ -35,6 +36,8 @@ export function Reveal({ submission, assets }) {
     const [newlyUnlocked, setNewlyUnlocked] = useState([]);
     const [processError, setProcessError] = useState(null);
     const [retryTrigger, setRetryTrigger] = useState(0);
+    const [secondChanceUsed, setSecondChanceUsed] = useState(false);
+    const fromJudgeChain = peekJudgeChain();
     const savedRef = useRef(false);
     const scoringMode = user?.scoringMode || 'human';
     const theme = getThemeById(user?.themeId);
@@ -657,6 +660,20 @@ export function Reveal({ submission, assets }) {
                             )}
                             <p className="text-white font-semibold">{scoreCoach.reason}</p>
                             <p className="text-white/55 text-sm mt-1">Try this: {scoreCoach.hint}</p>
+                            {!secondChanceUsed && scoreCoach.hint && (
+                                <button
+                                    type="button"
+                                    className="wordle-button wordle-primary w-full mt-3 min-h-[44px]"
+                                    onClick={() => {
+                                        setForcedPair(assets);
+                                        setForcedLine(scoreCoach.hint);
+                                        setSecondChanceUsed(true);
+                                        replayCurrentRound?.();
+                                    }}
+                                >
+                                    Say it like that
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -719,14 +736,21 @@ export function Reveal({ submission, assets }) {
                             </div>
                             <div className="text-white font-semibold">{recommendedNextAction.label}</div>
                             <div className="text-white/55 text-sm mt-1">{recommendedNextAction.detail}</div>
-                            {displayScore >= 8 && (
+                            {(displayScore >= 8 || fromJudgeChain) && (
                                 <button
                                     type="button"
-                                    onClick={handleShareForJudging}
+                                    onClick={() => {
+                                        consumeJudgeChain();
+                                        handleShareForJudging();
+                                    }}
                                     disabled={!canShareForJudging}
                                     className="wordle-button wordle-primary w-full mt-3 disabled:opacity-50"
                                 >
-                                    {shareCopied ? 'Link copied! Send to a friend' : 'Ask a friend to judge'}
+                                    {shareCopied
+                                        ? 'Link copied! Send to a friend'
+                                        : fromJudgeChain
+                                            ? 'Send this pair to someone else'
+                                            : 'Ask a friend to judge'}
                                 </button>
                             )}
                         </div>

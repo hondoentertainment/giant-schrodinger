@@ -187,6 +187,16 @@ export function GameProvider({ children }) {
         setRoundComplete(false);
     };
 
+    const replayCurrentRound = () => {
+        const last = sessionResults[sessionResults.length - 1];
+        if (last?.roundNumber === roundNumber) {
+            setSessionResults((prev) => prev.slice(0, -1));
+            setSessionScore((prev) => Math.max(0, prev - (Number(last.score) || 0)));
+        }
+        setRoundComplete(false);
+        setGameState('ROUND');
+    };
+
     const nextRound = () => {
         if (roundNumber >= totalRounds) {
             const finalTotal = sessionScore;
@@ -253,6 +263,7 @@ export function GameProvider({ children }) {
                 completeRound,
                 advanceRound,
                 nextRound,
+                replayCurrentRound,
                 endSession,
                 trackUsedAssets,
                 getUsedAssetIds,

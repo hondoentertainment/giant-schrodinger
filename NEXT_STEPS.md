@@ -1,6 +1,6 @@
 # Next Steps
 
-**Last updated:** August 29, 2026 (hosted spectator + scoring deploy)
+**Last updated:** August 30, 2026 (room theater + daily identity)
 
 This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
 
@@ -16,6 +16,7 @@ World-class game pass (still no invented keys):
 
 Shipped this pass (no new API keys):
 
+- Synced room reactions, pass-the-phone turns, room recap cards, second-chance rewrite, Friend Judge chain, today's-pair stamp, weekly editorial drop
 - Hosted `join_room_spectator` + `is_spectator` applied; `score-submission` redeployed with host-voice rewrite
 - Daily rounds use today's theme so every player sees the same pair mood
 - Live lobby **Watch the Game** + `?join=CODE&watch=1` spectator join (`join_room_spectator` live on hosted Supabase)

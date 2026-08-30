@@ -1,5 +1,5 @@
 import { getAvailableThemes, MEDIA_TYPES } from '../data/themes';
-import { getCuratedPairForSeed } from '../data/curatedPairs';
+import { getDailyEditorialPair } from '../data/curatedPairs';
 
 const DAILY_STORAGE_KEY = 'vwf_daily';
 
@@ -69,6 +69,11 @@ function getDaySeedForDate(date) {
     return date.getFullYear() * 10000 + date.getMonth() * 100 + date.getDate();
 }
 
+export function formatDailySocialLabel(date = new Date(), vibe) {
+    const stamp = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return vibe ? `${stamp} · ${vibe}` : stamp;
+}
+
 export function getDailyChallenge() {
     const seed = getDaySeed();
     const rng = seededRandom(seed);
@@ -88,7 +93,7 @@ export function getDailyChallenge() {
         themeId: theme.id,
         theme,
         prompt,
-        pair: getCuratedPairForSeed(seed),
+        pair: getDailyEditorialPair(new Date()),
         date: getTodayKey(),
         mediaType,
         isMemesVideosDay: mediaType === MEDIA_TYPES.MEMES_VIDEOS,
@@ -179,7 +184,7 @@ export function getYesterdayChallenge() {
     return {
         date: formatDayKey(date),
         seed,
-        pair: getCuratedPairForSeed(seed),
+        pair: getDailyEditorialPair(date),
     };
 }
 

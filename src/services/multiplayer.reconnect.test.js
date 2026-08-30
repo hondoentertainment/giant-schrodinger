@@ -5,6 +5,7 @@ function makeFakeChannel() {
     const handlers = {
         postgres: [],    // { event, table, filter, cb }
         system: [],      // { cb }
+        broadcast: [],
     };
     const channel = {
         on(kind, config, cb) {
@@ -12,9 +13,12 @@ function makeFakeChannel() {
                 handlers.postgres.push({ ...config, cb });
             } else if (kind === 'system') {
                 handlers.system.push({ cb });
+            } else if (kind === 'broadcast') {
+                handlers.broadcast.push({ ...config, cb });
             }
             return channel;
         },
+        send: vi.fn(async () => 'ok'),
         subscribe: vi.fn((cb) => {
             channel.__statusCallback = cb;
             return channel;

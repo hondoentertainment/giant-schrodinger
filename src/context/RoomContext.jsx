@@ -17,6 +17,7 @@ import {
     finalizeRoomVoting,
     advanceRoom,
     subscribeToRoom,
+    broadcastRoomReaction,
 } from '../services/multiplayer';
 import { getThemeById, MEDIA_TYPES } from '../data/themes';
 import { selectRoundAssets, getAssetKey, loadSelectedAssets } from '../services/assetSelection';
@@ -63,6 +64,9 @@ export function RoomProvider({ children }) {
     const [roomClosureReason, setRoomClosureReason] = useState(null);
     const [joinedMidRound, setJoinedMidRound] = useState(false);
     const [joinPhase, setJoinPhase] = useState(null);
+    const [passThePhone, setPassThePhone] = useState(false);
+    const [couchSessions, setCouchSessions] = useState([]);
+    const [liveReactions, setLiveReactions] = useState([]);
 
     const unsubRef = useRef(null);
     const isHostRef = useRef(false);
@@ -103,6 +107,9 @@ export function RoomProvider({ children }) {
         setRoomClosureReason(null);
         setJoinedMidRound(false);
         setJoinPhase(null);
+        setPassThePhone(false);
+        setCouchSessions([]);
+        setLiveReactions([]);
         usedAssetIdsRef.current = [];
     }, []);
 
@@ -213,6 +220,18 @@ export function RoomProvider({ children }) {
                 setVotes((prev) => {
                     if (prev.some((entry) => entry.id === vote.id)) return prev;
                     return [...prev, vote];
+                });
+            },
+            onReaction: (reaction) => {
+                if (!reaction?.emoji) return;
+                setLiveReactions((current) => {
+                    const id = reaction.ts || reaction.id || Date.now();
+                    if (current.some((entry) => entry.id === id)) return current;
+                    return [...current.slice(-7), {
+                        emoji: reaction.emoji,
+                        from: reaction.from,
+                        id,
+                    }];
                 });
             },
             onConnectionStatus: (status) => {
@@ -487,20 +506,25 @@ export function RoomProvider({ children }) {
         return true;
     }, [isHost, room, roomSession, toast, user?.mediaType, user?.useCustomImages]);
 
-    const submitMultiplayerAnswer = useCallback(async (submission) => {
+    const submitMultiplayerAnswer = useCallback(async (submission, options = {}) => {
         if (!room || !playerName) return false;
 
-        const success = await submitAnswer(room.id, room.round_number, playerName, submission, {
-            ...roomSession,
-            playerName,
+        const writerName = options.asPlayer || playerName;
+        const writerSession = writerName === playerName
+            ? roomSession
+            : couchSessions.find((session) => session?.playerName === writerName) || roomSession;
+
+        const success = await submitAnswer(room.id, room.round_number, writerName, submission, {
+            ...writerSession,
+            playerName: writerName,
         });
         if (!success) {
             toast.error('Failed to submit answer');
             return false;
         }
-        toast.success('Answer submitted!');
+        toast.success(`${writerName === playerName ? 'Answer' : `${writerName}'s answer`} submitted!`);
         return true;
-    }, [playerName, room, roomSession, toast]);
+    }, [couchSessions, playerName, room, roomSession, toast]);
 
     const scoreAllSubmissions = useCallback(async () => {
         if (!room || !isHost) return;
@@ -672,6 +696,7 @@ export function RoomProvider({ children }) {
 
         setSubmissions([]);
         setVotes([]);
+        setLiveReactions([]);
         setRoom((prev) => (prev ? { ...prev, round_number: nextRound, assets: null, status: 'waiting' } : prev));
 
         // Skip full lobby reset — start the next round immediately
@@ -680,6 +705,62 @@ export function RoomProvider({ children }) {
             toast.info('Next round ready — host can start from the lobby');
         }
     }, [finishMultiplayerGame, isHost, room, roomSession, startMultiplayerRound, toast]);
+
+    const addCouchWriter = useCallback(async (name, avatar) => {
+        const trimmed = String(name || '').trim();
+        if (!room?.code || !trimmed) return false;
+        if (players.some((player) => player.player_name.toLowerCase() === trimmed.toLowerCase())) {
+            toast.warn('Name already in the room');
+            return false;
+        }
+
+        if (isE2EMockRoomEnabled()) {
+            const guest = {
+                id: `couch-${trimmed.toLowerCase()}`,
+                player_name: trimmed,
+                avatar: avatar || '📱',
+                is_host: false,
+            };
+            setPlayers((prev) => [...prev, guest]);
+            setCouchSessions((prev) => [...prev, { playerName: trimmed, playerToken: null }]);
+            setPassThePhone(true);
+            toast.success(`${trimmed} is on this phone`);
+            return true;
+        }
+
+        const result = await joinRoom(room.code, trimmed, avatar || null);
+        if (result?.error || !result?.room) {
+            toast.error(result?.error || 'Could not add writer');
+            return false;
+        }
+        setCouchSessions((prev) => [...prev, result.session]);
+        setPassThePhone(true);
+        const roomPlayers = await getRoomPlayers(room.id);
+        setPlayers(roomPlayers);
+        toast.success(`${trimmed} is on this phone`);
+        return true;
+    }, [players, room, toast]);
+
+    const sendRoomReaction = useCallback((emoji) => {
+        if (!emoji) return;
+        const reaction = {
+            emoji,
+            from: playerName || 'Someone',
+            ts: Date.now(),
+            roundNumber: room?.round_number,
+        };
+        setLiveReactions((current) => {
+            if (current.some((entry) => entry.id === reaction.ts)) return current;
+            return [...current.slice(-7), { ...reaction, id: reaction.ts }];
+        });
+        if (isE2EMockRoomEnabled() && typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('vwf:room-reaction', { detail: reaction }));
+            return;
+        }
+        if (room?.id) {
+            broadcastRoomReaction(room.id, reaction);
+        }
+    }, [playerName, room?.id, room?.round_number]);
 
     const value = {
         room,
@@ -698,6 +779,9 @@ export function RoomProvider({ children }) {
         joinedMidRound,
         joinPhase,
         isSpectator,
+        passThePhone,
+        couchSessions,
+        liveReactions,
         allSubmitted,
         hostRoom,
         joinRoomByCode,
@@ -711,6 +795,9 @@ export function RoomProvider({ children }) {
         advanceToNextRound,
         finishMultiplayerGame,
         attemptReconnect,
+        setPassThePhone,
+        addCouchWriter,
+        sendRoomReaction,
         cleanup,
     };
 

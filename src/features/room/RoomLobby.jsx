@@ -24,6 +24,9 @@ export function RoomLobby() {
         roomCode,
         leaveCurrentRoom,
         startMultiplayerRound,
+        passThePhone,
+        setPassThePhone,
+        addCouchWriter,
     } = useRoom();
     const seatedPlayers = activePlayers || players.filter((player) => !player.is_spectator);
     const watchers = players.filter((player) => player.is_spectator);
@@ -31,6 +34,8 @@ export function RoomLobby() {
     const [starting, setStarting] = useState(false);
     const [countdown, setCountdown] = useState(null);
     const [inviteShared, setInviteShared] = useState(false);
+    const [couchName, setCouchName] = useState('');
+    const [addingWriter, setAddingWriter] = useState(false);
 
     useEffect(() => {
         if (countdown === null) return;
@@ -123,7 +128,11 @@ export function RoomLobby() {
                         <Copy className="w-5 h-5 text-white/70" />
                     </button>
                 </div>
-                <p className="text-white/50 text-sm mb-3">Share this code. Pass one phone around, or everyone stays on their own. The round starts when the host hits Go.</p>
+                <p className="text-white/50 text-sm mb-3">
+                    {passThePhone
+                        ? 'Pass this phone. Each writer gets 30 seconds, then we reveal on this screen.'
+                        : 'Share this code. Pass one phone around, or everyone stays on their own. The round starts when the host hits Go.'}
+                </p>
                 <button
                     type="button"
                     onClick={shareInvite}
@@ -177,12 +186,60 @@ export function RoomLobby() {
                         <div className="text-center py-4 text-white/55 text-sm space-y-2">
                             <p className="animate-pulse">Waiting for a second writer...</p>
                             <p className="text-white/40 text-xs">
-                                Share the invite, or play today&apos;s Venn after and send a Friend Judge link.
+                                Add names below for one phone, or share the invite.
                             </p>
                         </div>
                     )}
                 </div>
             </div>
+
+            {isHost && (
+                <div className="mb-6 rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
+                    <label className="flex items-center justify-between gap-3 text-sm text-white/80">
+                        <span>Pass the phone</span>
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={passThePhone}
+                            onClick={() => setPassThePhone?.(!passThePhone)}
+                            className={`relative h-7 w-12 rounded-full transition-colors ${passThePhone ? 'bg-amber-400' : 'bg-white/15'}`}
+                        >
+                            <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white transition-transform ${passThePhone ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                        </button>
+                    </label>
+                    <p className="mt-2 text-white/45 text-xs">
+                        Same couch, same screen. Add each writer, then hand the phone around.
+                    </p>
+                    {passThePhone && (
+                        <form
+                            className="mt-3 flex gap-2"
+                            onSubmit={async (event) => {
+                                event.preventDefault();
+                                if (!couchName.trim() || addingWriter) return;
+                                setAddingWriter(true);
+                                const ok = await addCouchWriter?.(couchName);
+                                setAddingWriter(false);
+                                if (ok) setCouchName('');
+                            }}
+                        >
+                            <input
+                                value={couchName}
+                                onChange={(event) => setCouchName(event.target.value)}
+                                placeholder="Add a writer name"
+                                className="game-input-hero min-h-[44px] flex-1 text-sm"
+                                aria-label="Writer name"
+                            />
+                            <button
+                                type="submit"
+                                disabled={addingWriter || !couchName.trim()}
+                                className="wordle-button min-h-[44px] px-4 disabled:opacity-50"
+                            >
+                                {addingWriter ? 'Adding...' : 'Add'}
+                            </button>
+                        </form>
+                    )}
+                </div>
+            )}
 
             {countdown !== null && countdown > 0 && (
                 <div className="game-modal-overlay animate-in fade-in duration-200">

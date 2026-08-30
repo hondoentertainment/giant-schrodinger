@@ -82,6 +82,9 @@ function buildShareContext(shareData) {
   const pieces = [];
   const judgeLabel = getJudgeLabel(shareData.judgeMode);
   if (judgeLabel) pieces.push(judgeLabel);
+  if (shareData.dateStamp || shareData.vibe) {
+    pieces.push([shareData.dateStamp, shareData.vibe].filter(Boolean).join(' · '));
+  }
   if (shareData.isDailyChallenge) pieces.push('Daily Challenge');
   if (shareData.mediaLabel) pieces.push(shareData.mediaLabel);
   if (shareData.promptPair) pieces.push(shareData.promptPair);
@@ -233,6 +236,12 @@ export async function createShareCard(imageUrl, shareData) {
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.font = '700 28px Georgia, serif';
     ctx.fillText('VENN with Friends', 120, 118);
+    if (shareData.dateStamp || shareData.vibe) {
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = '600 20px Arial';
+      ctx.fillText([shareData.dateStamp, shareData.vibe].filter(Boolean).join(' · '), 120, 148);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    }
 
     roundRect(ctx, 790, 96, 170, 74, 28);
     ctx.fillStyle = 'rgba(255,255,255,0.92)';

@@ -8,6 +8,7 @@ import {
     getDailyStampWeek,
     getYesterdayChallenge,
     getWeeklyDailyLeaderboard,
+    formatDailySocialLabel,
 } from './dailyChallenge';
 
 describe('dailyChallenge service', () => {
@@ -157,6 +158,10 @@ describe('dailyChallenge service', () => {
             expect(yesterday.pair.left).toBeTruthy();
             expect(yesterday.pair.right).toBeTruthy();
             expect(yesterday.date).not.toBe(getDailyChallenge().date);
+        });
+
+        it('stamps today with a vibe', () => {
+            expect(formatDailySocialLabel(new Date('2026-08-30T12:00:00'), 'spicy')).toMatch(/Aug 30 · spicy/i);
         });
     });
 

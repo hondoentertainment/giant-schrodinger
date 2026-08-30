@@ -8,6 +8,8 @@ import { ConnectionBanner } from './ConnectionBanner';
 import { playScoreReveal } from '../../services/sounds';
 import { haptic } from '../../lib/haptics';
 import { scrollMainToTop } from '../../lib/scroll';
+import { buildRoomRecapShareData } from '../../lib/roomRecap';
+import { createShareCard, dataURLtoFile, downloadFusionImage } from '../../services/socialShare';
 
 function ScoreBar({ label, value, max = 10 }) {
     const pct = Math.round((value / max) * 100);
@@ -74,6 +76,8 @@ export function MultiplayerReveal() {
         finishMultiplayerGame,
         leaveCurrentRoom,
         rematchRoom,
+        liveReactions: syncedReactions,
+        sendRoomReaction,
     } = useRoom();
     const { toast } = useToast();
 
@@ -88,7 +92,9 @@ export function MultiplayerReveal() {
     const [revealedCount, setRevealedCount] = useState(0);
     const [hasVoted, setHasVoted] = useState(false);
     const [selectedVoteId, setSelectedVoteId] = useState(null);
-    const [liveReactions, setLiveReactions] = useState([]);
+    const [localReactions, setLocalReactions] = useState([]);
+    const [recapSharing, setRecapSharing] = useState(false);
+    const liveReactions = syncedReactions || localReactions;
 
     const theme = getThemeById(room?.theme_id);
     const multiplier = theme?.modifier?.scoreMultiplier || 1;
@@ -184,8 +190,12 @@ export function MultiplayerReveal() {
 
     const sendReaction = useCallback((emoji) => {
         haptic('light');
-        setLiveReactions((current) => [...current.slice(-7), { emoji, id: Date.now() }]);
-    }, []);
+        if (sendRoomReaction) {
+            sendRoomReaction(emoji);
+            return;
+        }
+        setLocalReactions((current) => [...current.slice(-7), { emoji, id: Date.now() }]);
+    }, [sendRoomReaction]);
 
     const handleVote = useCallback(async (submissionId) => {
         if (hasVoted) return;
@@ -213,6 +223,42 @@ export function MultiplayerReveal() {
         setFinishingVotes(false);
         setRevealPhase(REVEAL_PHASES.RESULTS);
     }, [finalizeMultiplayerVoting]);
+
+    const handleShareRecap = useCallback(async () => {
+        const recapSource = isFinished ? allSubmissions : submissions;
+        const shareData = buildRoomRecapShareData({
+            room,
+            submissions: recapSource,
+            assets: room?.assets,
+        });
+        setRecapSharing(true);
+        try {
+            const card = await createShareCard(null, shareData);
+            if (card && typeof navigator.share === 'function') {
+                const file = dataURLtoFile(card, 'venn-room-recap.png');
+                const payload = {
+                    title: 'Venn room recap',
+                    text: `${shareData.scoreBand}: “${shareData.submission}” — Beat this.`,
+                };
+                if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+                    payload.files = [file];
+                }
+                await navigator.share(payload);
+                haptic('success');
+                toast.success('Recap ready to send');
+                return;
+            }
+            if (card) {
+                await downloadFusionImage(null, shareData, 'venn-room-recap.png');
+                toast.success('Recap card downloaded');
+            }
+        } catch (err) {
+            if (err?.name === 'AbortError') return;
+            toast.error('Could not build recap card');
+        } finally {
+            setRecapSharing(false);
+        }
+    }, [allSubmissions, isFinished, room, submissions, toast]);
 
     const sourceSubmissions = isFinished ? allSubmissions : submissions;
     const scored = useMemo(() => {
@@ -656,6 +702,14 @@ export function MultiplayerReveal() {
                     )}
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                        <button
+                            type="button"
+                            onClick={handleShareRecap}
+                            disabled={recapSharing || scored.length === 0}
+                            className="wordle-button px-8 text-lg disabled:opacity-50"
+                        >
+                            {recapSharing ? 'Building recap...' : 'Share recap card'}
+                        </button>
                         {!isFinished && isHost && hasNextRound && (
                             <button
                                 onClick={handleNext}

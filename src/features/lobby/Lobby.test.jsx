@@ -81,7 +81,8 @@ vi.mock('../../services/storage', () => ({
 }));
 
 vi.mock('../../services/dailyChallenge', () => ({
-    getDailyChallenge: () => ({ prompt: 'Test daily prompt', pair: { left: 'Morning coffee', right: 'A robot hitting snooze' } }),
+    formatDailySocialLabel: (_date, vibe) => vibe ? `Aug 30 · ${vibe}` : 'Aug 30',
+    getDailyChallenge: () => ({ prompt: 'Test daily prompt', pair: { left: 'Morning coffee', right: 'A robot hitting snooze', vibe: 'chaotic' } }),
     getDailyStampWeek: () => [
         { date: '2026-08-23', played: true, isToday: false, label: 'S' },
         { date: '2026-08-29', played: false, isToday: true, label: 'S' },

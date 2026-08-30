@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
         finalizeRoomVoting: vi.fn(),
         advanceRoom: vi.fn(),
         subscribeToRoom: vi.fn(),
+        broadcastRoomReaction: vi.fn(),
     },
 }));
 
@@ -65,6 +66,7 @@ vi.mock('../services/multiplayer', () => ({
     finalizeRoomVoting: mocks.multiplayer.finalizeRoomVoting,
     advanceRoom: mocks.multiplayer.advanceRoom,
     subscribeToRoom: mocks.multiplayer.subscribeToRoom,
+    broadcastRoomReaction: mocks.multiplayer.broadcastRoomReaction,
 }));
 
 import { RoomProvider, useRoom } from './RoomContext';

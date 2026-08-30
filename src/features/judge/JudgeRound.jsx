@@ -8,7 +8,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResolvedRoundAssets } from '../../hooks/useResolvedRoundAssets';
 import { haptic } from '../../lib/haptics';
 import { playSubmitSound } from '../../services/sounds';
-import { setForcedPair } from '../../lib/forcedPair';
+import { markJudgeChain, setForcedPair } from '../../lib/forcedPair';
 import { trackEvent } from '../../services/analytics';
 
 const SCORE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -178,6 +178,7 @@ export function JudgeRound({ payload, onDone }) {
                         className="wordle-button wordle-primary flex-1 min-h-[48px]"
                         onClick={() => {
                             setForcedPair(effectivePayload.assets);
+                            markJudgeChain();
                             trackEvent('friend_judge_played', { samePair: true });
                             clearJudgeFromUrl();
                             onDone?.({ playPair: true });

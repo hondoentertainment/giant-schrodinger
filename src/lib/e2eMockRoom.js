@@ -32,13 +32,16 @@ export function buildE2EMockRoom({ code = 'MOCK42', hostName = 'Host', playerNam
 export function subscribeToE2EMockRoom(callbacks = {}) {
     const handleOffline = () => callbacks.onConnectionStatus?.('TIMED_OUT');
     const handleOnline = () => callbacks.onConnectionStatus?.('SUBSCRIBED');
+    const handleReaction = (event) => callbacks.onReaction?.(event.detail);
 
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
+    window.addEventListener('vwf:room-reaction', handleReaction);
     callbacks.onConnectionStatus?.('SUBSCRIBED');
 
     return () => {
         window.removeEventListener('offline', handleOffline);
         window.removeEventListener('online', handleOnline);
+        window.removeEventListener('vwf:room-reaction', handleReaction);
     };
 }

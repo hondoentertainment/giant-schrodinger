@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CURATED_PAIRS, getCuratedPairForSeed, getCuratedPairById } from './curatedPairs';
+import { CURATED_PAIRS, getCuratedPairForSeed, getCuratedPairById, getDailyEditorialPair, getWeeklyPairDrop } from './curatedPairs';
 
 describe('curatedPairs', () => {
     it('has unique ids and two labels each', () => {
@@ -18,5 +18,13 @@ describe('curatedPairs', () => {
     it('picks deterministically from a seed', () => {
         expect(getCuratedPairForSeed(0)).toEqual(getCuratedPairForSeed(CURATED_PAIRS.length));
         expect(getCuratedPairById('coffee-robot')?.left).toMatch(/coffee/i);
+    });
+
+    it('returns a 7-pair weekly drop and a stable daily editorial pair', () => {
+        const date = new Date('2026-08-30T12:00:00');
+        const drop = getWeeklyPairDrop(date);
+        expect(drop).toHaveLength(7);
+        expect(getDailyEditorialPair(date)).toEqual(drop[date.getDay()]);
+        expect(getDailyEditorialPair(date)).toEqual(getDailyEditorialPair(new Date('2026-08-30T18:00:00')));
     });
 });

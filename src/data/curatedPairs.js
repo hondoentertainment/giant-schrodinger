@@ -196,6 +196,27 @@ const RAW = [
     ['lighthouse-beam-ping', 'A lighthouse beam', 'A server ping', 'cosmic'],
     ['first-snow-day-off', 'A snow-day radio list', 'A calendar marked OOO', 'nostalgic'],
     ['empty-diner-seen', 'The last booth in a diner', 'Typing… then nothing', 'spicy'],
+    ['sunday-scaries-sparkler', 'Sunday scaries', 'A leftover sparkler', 'chaotic'],
+    ['voicemail-constellation', 'An unplayed voicemail', 'A new constellation', 'cosmic'],
+    ['office-plant-first-date', 'A neglected office plant', 'A first-date playlist', 'spicy'],
+    ['thrift-jacket-okrs', 'A thrift-store jacket', 'A slide deck of OKRs', 'workplace'],
+    ['porch-light-groupchat', 'A porch light left on', 'A group chat going silent', 'tender'],
+    ['cassette-for-you', 'A warped cassette', 'Your For You page', 'nostalgic'],
+    ['rain-delay-apology', 'A rain delay', 'A typed-then-deleted apology', 'tender'],
+];
+
+const WEEKLY_PACK_IDS = [
+    [
+        'sunday-scaries-sparkler',
+        'voicemail-constellation',
+        'office-plant-first-date',
+        'thrift-jacket-okrs',
+        'porch-light-groupchat',
+        'cassette-for-you',
+        'rain-delay-apology',
+    ],
+    ['coffee-robot', 'ocean-library', 'kite-deadline', 'lighthouse-inbox', 'campfire-wifi', 'subway-lullaby', 'umbrella-secret'],
+    ['museum-leftovers', 'balloon-password', 'chess-traffic', 'snowglobe-news', 'vinyl-algorithm', 'garden-notification', 'compass-playlist'],
 ];
 
 export const CURATED_PAIRS = RAW.map(([id, left, right, vibe]) => ({
@@ -216,4 +237,24 @@ export function getCuratedPairById(id) {
 
 export function getPairVibe(pair) {
     return pair?.vibe || 'classic';
+}
+
+export function getIsoWeekNumber(date = new Date()) {
+    const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const day = utc.getUTCDay() || 7;
+    utc.setUTCDate(utc.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+    return Math.ceil((((utc - yearStart) / 86400000) + 1) / 7);
+}
+
+export function getWeeklyPairDrop(date = new Date()) {
+    const pack = WEEKLY_PACK_IDS[getIsoWeekNumber(date) % WEEKLY_PACK_IDS.length] || WEEKLY_PACK_IDS[0];
+    return pack.map((id) => getCuratedPairById(id)).filter(Boolean);
+}
+
+export function getDailyEditorialPair(date = new Date()) {
+    const drop = getWeeklyPairDrop(date);
+    return drop[date.getDay()] || getCuratedPairForSeed(
+        date.getFullYear() * 10000 + date.getMonth() * 100 + date.getDate()
+    );
 }

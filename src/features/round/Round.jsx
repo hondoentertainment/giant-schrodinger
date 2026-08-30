@@ -4,7 +4,7 @@ import { useGame } from '../../context/GameContext';
 import { THEMES, getThemeById, MEDIA_TYPES } from '../../data/themes';
 import { selectRoundAssets, loadSelectedAssets } from '../../services/assetSelection';
 import { getDailyChallenge } from '../../services/dailyChallenge';
-import { consumeForcedPair, isForcedAssetPair } from '../../lib/forcedPair';
+import { consumeForcedLine, consumeForcedPair, isForcedAssetPair } from '../../lib/forcedPair';
 import { getCuratedPairForSeed } from '../../data/curatedPairs';
 import { getEffectiveRoundMediaType, normalizeMediaType } from '../../lib/mediaType';
 import { getStats, isThemeUnlocked } from '../../services/stats';
@@ -53,6 +53,10 @@ export function Round({ onSubmit }) {
             });
 
             const forcedPair = consumeForcedPair();
+            const forcedLine = consumeForcedLine();
+            if (forcedLine) {
+                setSubmission(forcedLine);
+            }
             if (isForcedAssetPair(forcedPair)) {
                 trackUsedAssets([forcedPair.left, forcedPair.right]);
                 if (!cancelled) {

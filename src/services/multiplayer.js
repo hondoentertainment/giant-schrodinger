@@ -561,10 +561,29 @@ export async function advanceRoom(roomId, auth = {}) {
     return { ok: false, error: 'Secure advance RPC is not available' };
 }
 
+const roomChannels = new Map();
+
+export async function broadcastRoomReaction(roomId, payload) {
+    const channel = roomChannels.get(roomId);
+    if (!channel?.send) return false;
+    try {
+        const status = await channel.send({
+            type: 'broadcast',
+            event: 'reaction',
+            payload,
+        });
+        return status === 'ok';
+    } catch (err) {
+        console.warn('broadcastRoomReaction failed:', err);
+        return false;
+    }
+}
+
 export function subscribeToRoom(roomId, callbacks) {
     if (!isBackendEnabled() || !supabase) return null;
 
     const channel = supabase.channel(`room:${roomId}`);
+    roomChannels.set(roomId, channel);
 
     channel.on(
         'postgres_changes',
@@ -600,11 +619,16 @@ export function subscribeToRoom(roomId, callbacks) {
         (payload) => callbacks.onVote?.(payload.new)
     );
 
+    channel.on('broadcast', { event: 'reaction' }, ({ payload }) => {
+        callbacks.onReaction?.(payload);
+    });
+
     channel.subscribe((status) => {
         callbacks.onConnectionStatus?.(status);
     });
 
     return () => {
+        roomChannels.delete(roomId);
         supabase.removeChannel(channel);
     };
 }

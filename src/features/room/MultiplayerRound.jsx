@@ -9,6 +9,7 @@ import { playSubmitSound, playTickSound, playUrgentTick } from '../../services/s
 import { ConnectionBanner } from './ConnectionBanner';
 import { useResolvedRoundAssets } from '../../hooks/useResolvedRoundAssets';
 import { useTranslation } from '../../hooks/useTranslation';
+import { canWriteOnThisDevice, getCurrentWriter, PASS_PHONE_SECONDS } from '../../lib/passThePhone';
 
 export function MultiplayerRound() {
     const { t } = useTranslation();
@@ -23,6 +24,8 @@ export function MultiplayerRound() {
         submitMultiplayerAnswer,
         scoreAllSubmissions,
         leaveCurrentRoom,
+        passThePhone,
+        couchSessions,
     } = useRoom();
     const { toast } = useToast();
 
@@ -32,7 +35,15 @@ export function MultiplayerRound() {
     const prevSubmissionCountRef = useRef(submissions.length);
 
     const theme = getThemeById(room?.theme_id);
-    const timeLimit = theme?.modifier?.timeLimit || 60;
+    const seatedPlayers = activePlayers || players.filter((player) => !player.is_spectator);
+    const currentWriter = getCurrentWriter(seatedPlayers, submissions);
+    const canWrite = !isSpectator && canWriteOnThisDevice({
+        passThePhone,
+        currentWriter,
+        playerName,
+        couchSessions,
+    });
+    const timeLimit = passThePhone ? PASS_PHONE_SECONDS : (theme?.modifier?.timeLimit || 60);
     const [timer, setTimer] = useState(timeLimit);
     const roomAssets = room?.assets;
     const { assets: displayAssets, mediaLoading } = useResolvedRoundAssets(roomAssets);
@@ -44,6 +55,13 @@ export function MultiplayerRound() {
         setSubmitted(false);
     }, [room?.round_number, timeLimit]);
 
+    useEffect(() => {
+        if (!passThePhone || !currentWriter) return;
+        setTimer(timeLimit);
+        setSubmission('');
+        setSubmitted(false);
+    }, [passThePhone, currentWriter?.player_name, timeLimit]);
+
     const handleSubmit = useCallback(async (e) => {
         if (e) e.preventDefault();
         if (submitted) return;
@@ -52,8 +70,12 @@ export function MultiplayerRound() {
         setSubmitted(true);
         haptic('success');
         playSubmitSound();
-        await submitMultiplayerAnswer(answer);
-    }, [submission, submitted, submitMultiplayerAnswer]);
+        if (passThePhone && currentWriter?.player_name) {
+            await submitMultiplayerAnswer(answer, { asPlayer: currentWriter.player_name });
+        } else {
+            await submitMultiplayerAnswer(answer);
+        }
+    }, [currentWriter?.player_name, passThePhone, submission, submitted, submitMultiplayerAnswer]);
 
     useEffect(() => {
         if (!submitted || scoring) return;
@@ -69,14 +91,14 @@ export function MultiplayerRound() {
     }, [submitted, submissions, submissions.length, activePlayers?.length, players.length, scoring, playerName, toast]);
 
     useEffect(() => {
-        if (submitted) return undefined;
+        if (submitted || !canWrite) return undefined;
         if (timer > 0) {
             const interval = setInterval(() => setTimer((t) => t - 1), 1000);
             return () => clearInterval(interval);
         }
         handleSubmit();
         return undefined;
-    }, [timer, submitted, handleSubmit]);
+    }, [canWrite, timer, submitted, handleSubmit]);
 
     useEffect(() => {
         if (submitted) return;
@@ -97,7 +119,6 @@ export function MultiplayerRound() {
         }
     }, [activePlayers?.length, isHost, players.length, room?.scoring_mode, scoreAllSubmissions, scoring, submissions.length, toast]);
 
-    const seatedPlayers = activePlayers || players.filter((player) => !player.is_spectator);
     const submittedPlayers = submissions.map((s) => s.player_name);
     const waitingPlayers = seatedPlayers.filter((p) => !submittedPlayers.includes(p.player_name));
 
@@ -180,10 +201,21 @@ export function MultiplayerRound() {
                         <p className="text-white/50 text-sm">{submissions.length}/{seatedPlayers.length} players have submitted</p>
                     </div>
                 </div>
+            ) : passThePhone && !canWrite && !submitted ? (
+                <div className="w-full max-w-xl mt-8 text-center animate-in fade-in duration-500">
+                    <div className="wordle-card p-6 mb-4">
+                        <p className="text-white font-semibold text-lg mb-1">
+                            Hand the phone to {currentWriter?.player_name || 'the next writer'}
+                        </p>
+                        <p className="text-white/50 text-sm">They get 30 seconds. Don&apos;t peek.</p>
+                    </div>
+                </div>
             ) : !submitted ? (
                 <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 relative z-20">
                     <p className="text-center text-white/50 text-sm mb-3">
-                        One witty phrase that connects both concepts
+                        {passThePhone
+                            ? `${currentWriter?.player_name || 'Your'} turn — one line, 30 seconds.`
+                            : 'One witty phrase that connects both concepts'}
                     </p>
                     <input
                         type="text"

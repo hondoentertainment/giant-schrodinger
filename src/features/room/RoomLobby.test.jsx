@@ -27,6 +27,9 @@ const roomState = {
     roomCode: 'ABCD',
     leaveCurrentRoom: vi.fn(),
     startMultiplayerRound: vi.fn().mockResolvedValue(true),
+    passThePhone: false,
+    setPassThePhone: vi.fn(),
+    addCouchWriter: vi.fn().mockResolvedValue(true),
 };
 
 vi.mock('../../context/RoomContext', () => ({
@@ -115,5 +118,12 @@ describe('RoomLobby', () => {
 
         expect(toast.success).not.toHaveBeenCalled();
         expect(screen.getByRole('button', { name: /Share invite/i })).toBeInTheDocument();
+    });
+
+    it('lets the host turn on pass-the-phone', async () => {
+        const user = userEvent.setup();
+        render(<RoomLobby />);
+        await user.click(screen.getByRole('switch', { name: /Pass the phone/i }));
+        expect(roomState.setPassThePhone).toHaveBeenCalledWith(true);
     });
 });

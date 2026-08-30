@@ -5,7 +5,7 @@ import { THEMES, getAvailableThemes, getThemeById, MEDIA_TYPES } from '../../dat
 import { normalizeMediaType } from '../../lib/mediaType';
 import { getStats, getMilestones, isThemeUnlocked, getProfileSummary } from '../../services/stats';
 import { reportAppEvent } from '../../lib/telemetry';
-import { getDailyChallenge, getDailyChallengeSummary, getDailyStampWeek, getYesterdayChallenge, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
+import { formatDailySocialLabel, getDailyChallenge, getDailyChallengeSummary, getDailyStampWeek, getYesterdayChallenge, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { formatCountdown, getTimeUntilNextChallenge } from '../../services/countdown';
 import { getCollisions } from '../../services/storage';
 import { getDailyRitualShareCard } from '../../services/dailyRitualShare';
@@ -471,6 +471,12 @@ export function Lobby() {
                                     </div>
                                     <div className="text-white font-semibold text-sm line-clamp-2">
                                         {dailyChallenge.pair?.left} × {dailyChallenge.pair?.right}
+                                    </div>
+                                    <div className="text-white/55 text-xs">
+                                        This is today&apos;s Venn. Same pair as everyone.
+                                    </div>
+                                    <div className="text-white/45 text-xs">
+                                        {formatDailySocialLabel(new Date(), dailyChallenge.pair?.vibe)}
                                     </div>
                                     <div className="text-white/45 text-xs line-clamp-1">{dailyChallenge.prompt}</div>
                                     <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-amber-200/70">

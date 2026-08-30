@@ -1,6 +1,6 @@
 import { getScoreBand } from '../lib/scoreBands';
 import { getCollisions } from './storage';
-import { getDailyChallenge, getDailyChallengeSummary } from './dailyChallenge';
+import { formatDailySocialLabel, getDailyChallenge, getDailyChallengeSummary } from './dailyChallenge';
 
 export function buildDailyRitualShareText({
     date,
@@ -56,6 +56,9 @@ export function getDailyRitualShareCard({ collisions = getCollisions(), origin }
             isDailyChallenge: true,
             judgeMode: latest?.judgeMode,
             url: origin,
+            dateStamp: new Date(`${today}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            vibe: daily.pair?.vibe,
+            promptPair: formatDailySocialLabel(new Date(`${today}T12:00:00`), daily.pair?.vibe),
         },
     };
 }
