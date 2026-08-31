@@ -1,10 +1,18 @@
 # Next Steps
 
-**Last updated:** August 30, 2026 (ritual rooms + named week + host voice)
+**Last updated:** August 31, 2026 (close the three drop funnels)
 
 This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
 
-## Current (August 30, 2026)
+## Current (August 31, 2026)
+
+Closed the three live drop funnels (still no invented keys):
+
+- First session: **Play today's pair** writes a name and opens today's puzzle; **Join Lobby** stays for rooms
+- Reveal: one Friend Judge CTA under the host voice; skip vs share is tracked
+- Room create: pass-the-phone on by default; add the next writer on this phone; invite is the waiting-room CTA until two people are in
+
+## Prior (August 30, 2026)
 
 World-class game pass (still no invented keys):
 

@@ -55,6 +55,10 @@ describe('RoomLobby', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        roomState.players = [
+            { id: 'p1', player_name: 'Alex', is_host: true, avatar: 'A' },
+            { id: 'p2', player_name: 'Blair', is_host: false, avatar: 'B' },
+        ];
         Object.defineProperty(navigator, 'share', {
             configurable: true,
             writable: true,
@@ -118,6 +122,14 @@ describe('RoomLobby', () => {
 
         expect(toast.success).not.toHaveBeenCalled();
         expect(screen.getByRole('button', { name: /Share invite/i })).toBeInTheDocument();
+    });
+
+    it('always shows the add-writer field so the host can start the first writer', () => {
+        roomState.players = [{ id: 'p1', player_name: 'Alex', is_host: true, avatar: 'A' }];
+        render(<RoomLobby />);
+        expect(screen.getByLabelText(/Writer name/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Share invite — get the next writer/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Need one more writer/i })).toBeDisabled();
     });
 
     it('lets the host turn on pass-the-phone', async () => {

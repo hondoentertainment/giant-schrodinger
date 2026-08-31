@@ -320,6 +320,7 @@ export function RoomProvider({ children }) {
             setIsHost(true);
             setPlayerName(hostName);
             setRoomPhase(getRoomPhaseFromStatus(mockRoom.status));
+            setPassThePhone(true);
             setupSubscriptions(mockRoom.id);
             toast.success(`Room ${mockRoom.code} created!`);
             return mockRoom;
@@ -357,10 +358,12 @@ export function RoomProvider({ children }) {
         setupSubscriptions(result.room.id);
 
         toast.success(`Room ${result.room.code} created!`);
+        setPassThePhone(true);
         reportAppEvent('multiplayer_room_created', {
             secureMode: result.session?.secureMode !== false,
             scoringMode,
             totalRounds,
+            passThePhone: true,
         });
         return result.room;
     }, [setupSubscriptions, toast, user?.avatar]);

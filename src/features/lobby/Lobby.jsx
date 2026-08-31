@@ -24,6 +24,7 @@ import { NotificationBanner } from '../../components/NotificationBanner';
 import { isE2EMockRoomEnabled } from '../../lib/e2eMockRoom';
 import { trackEvent } from '../../services/analytics';
 import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
+import { consumeAutostartDaily, markAutostartDaily, peekAutostartDaily } from '../../lib/firstSession';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
@@ -83,6 +84,7 @@ export function Lobby() {
     const [dailyRefreshKey, setDailyRefreshKey] = useState(0);
     const [dailyConflictOpen, setDailyConflictOpen] = useState(false);
     const pendingJoinRef = useRef({ code: '', watch: false, consumed: false });
+    const autostartedDailyRef = useRef(false);
 
     const theme = getThemeById(themeId);
     const stats = getStats();
@@ -189,16 +191,27 @@ export function Lobby() {
         }
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const commitProfile = (autostartDaily) => {
         const trimmedName = name.trim();
-        if (!trimmedName) return;
+        if (!trimmedName) return false;
+        if (autostartDaily) markAutostartDaily();
         trackEvent('first_session_profile_created', {
             scoringMode,
             mediaType,
             themeId,
+            autostartDaily: Boolean(autostartDaily),
         });
         login({ name: trimmedName, avatar, themeId, gradient: theme.gradient, scoringMode, mediaType, useCustomImages });
+        return true;
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        commitProfile(true);
+    };
+
+    const handleJoinLobbyOnly = () => {
+        commitProfile(false);
     };
 
     const dailyChallenge = useMemo(() => getDailyChallenge(), []);
@@ -294,6 +307,15 @@ export function Lobby() {
         startSession(3, true);
         beginRound();
     };
+
+    useEffect(() => {
+        if (autostartedDailyRef.current) return;
+        if (!user || sessionId || pendingJoinRef.current.code) return;
+        if (!peekAutostartDaily()) return;
+        autostartedDailyRef.current = true;
+        consumeAutostartDaily();
+        beginDailyChallenge();
+    }, [sessionId, user]);
 
     const startDailyChallenge = () => {
         if (sessionId) {
@@ -931,7 +953,7 @@ export function Lobby() {
         <div className="w-full max-w-md wordle-card p-4 sm:p-5 animate-spring-in">
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
             <h2 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-white mb-1 text-center">Create Profile</h2>
-            <p className="text-white/50 text-sm text-center mb-4">Name, pick an avatar, play today&apos;s pair.</p>
+            <p className="text-white/50 text-sm text-center mb-4">Type a name. Then write one line.</p>
             {!backendReady && <ServiceStatusCard className="mb-4" />}
             <form onSubmit={handleSubmit} className="space-y-4">
                 <section aria-labelledby="profile-username">
@@ -981,7 +1003,15 @@ export function Lobby() {
                 <button
                     type="submit"
                     disabled={!name.trim()}
-                    className="wordle-button wordle-primary w-full text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="wordle-button wordle-primary w-full min-h-[52px] text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Play today&apos;s pair
+                </button>
+                <button
+                    type="button"
+                    disabled={!name.trim()}
+                    onClick={handleJoinLobbyOnly}
+                    className="wordle-button w-full min-h-[44px] text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Join Lobby
                 </button>

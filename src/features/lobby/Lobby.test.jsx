@@ -243,6 +243,7 @@ describe('Lobby', () => {
         window.history.pushState({}, '', '/');
         vi.clearAllMocks();
         mockJoinRoomByCode.mockResolvedValue({ code: 'ABCD' });
+        sessionStorage.clear();
     });
 
     it('renders the Create Profile heading when not logged in', () => {
@@ -308,6 +309,26 @@ describe('Lobby', () => {
     it('shows profile form when user is not logged in', () => {
         render(<Lobby />);
         expect(screen.getByPlaceholderText('Enter your name...')).toBeInTheDocument();
+    });
+
+    it('starts today\'s pair from the profile form', async () => {
+        const user = userEvent.setup();
+        sessionStorage.clear();
+        render(<Lobby />);
+        await user.type(screen.getByPlaceholderText('Enter your name...'), 'Kyle');
+        await user.click(screen.getByRole('button', { name: /Play today's pair/i }));
+        expect(mockLogin).toHaveBeenCalled();
+        expect(sessionStorage.getItem('vwf_autostart_daily')).toBe('1');
+    });
+
+    it('keeps Join Lobby as a lobby-only path', async () => {
+        const user = userEvent.setup();
+        sessionStorage.clear();
+        render(<Lobby />);
+        await user.type(screen.getByPlaceholderText('Enter your name...'), 'Kyle');
+        await user.click(screen.getByRole('button', { name: /Join Lobby/i }));
+        expect(mockLogin).toHaveBeenCalled();
+        expect(sessionStorage.getItem('vwf_autostart_daily')).toBeNull();
     });
 
     it('prefills multiplayer join code from ?join= query param', async () => {

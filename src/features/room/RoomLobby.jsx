@@ -3,6 +3,7 @@ import { useRoom } from '../../context/RoomContext';
 import { useToast } from '../../context/ToastContext';
 import { Copy, Users, Crown, LogOut, Play, Share2 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
+import { trackEvent } from '../../services/analytics';
 import { ConnectionBanner } from './ConnectionBanner';
 
 function buildJoinInvite(code) {
@@ -36,6 +37,15 @@ export function RoomLobby() {
     const [inviteShared, setInviteShared] = useState(false);
     const [couchName, setCouchName] = useState('');
     const [addingWriter, setAddingWriter] = useState(false);
+
+    useEffect(() => {
+        if (!roomCode) return;
+        trackEvent('room_waiting_shown', {
+            playerCount: seatedPlayers.length,
+            isHost,
+            passThePhone: Boolean(passThePhone),
+        });
+    }, [roomCode]);
 
     useEffect(() => {
         if (countdown === null) return;
@@ -78,6 +88,7 @@ export function RoomLobby() {
                 });
                 haptic('success');
                 setInviteShared(true);
+                trackEvent('room_invite_shared', { method: 'share_sheet', playerCount: seatedPlayers.length });
                 toast.success('Invite shared!');
                 setTimeout(() => setInviteShared(false), 2500);
                 return;
@@ -89,6 +100,7 @@ export function RoomLobby() {
             await navigator.clipboard.writeText(text);
             haptic('success');
             setInviteShared(true);
+            trackEvent('room_invite_shared', { method: 'clipboard', playerCount: seatedPlayers.length });
             toast.success('Invite link copied!');
             setTimeout(() => setInviteShared(false), 2500);
         }
@@ -99,6 +111,10 @@ export function RoomLobby() {
             toast.warn('Need at least 2 players to start');
             return;
         }
+        trackEvent('room_first_round_started', {
+            playerCount: seatedPlayers.length,
+            passThePhone: Boolean(passThePhone),
+        });
         setStarting(true);
         setCountdown(3);
     };
@@ -136,14 +152,14 @@ export function RoomLobby() {
                 <button
                     type="button"
                     onClick={shareInvite}
-                    className="wordle-button wordle-primary min-h-[44px] px-6 inline-flex items-center gap-2"
+                    className={`wordle-button min-h-[52px] w-full px-6 inline-flex items-center justify-center gap-2 ${seatedPlayers.length < 2 ? 'wordle-primary' : ''}`}
                 >
                     <Share2 className="w-4 h-4" />
-                    {inviteShared ? 'Invite ready!' : 'Share invite'}
+                    {inviteShared ? 'Invite ready!' : seatedPlayers.length < 2 ? 'Share invite — get the next writer' : 'Share invite'}
                 </button>
                 <div className="mt-4 p-4 rounded-[22px] bg-white/[0.05] border border-white/[0.08] text-left text-sm text-white/55">
                     <div className="font-semibold text-white/80 mb-1">How to invite</div>
-                    <p>Share the invite link (includes the code) or have friends open Play with Friends, enter {roomCode || 'this code'}, then Join.</p>
+                    <p>Share the link, or add a name on this phone. The first writer starts as soon as two people are in.</p>
                 </div>
             </div>
 
@@ -184,9 +200,9 @@ export function RoomLobby() {
                     )}
                     {seatedPlayers.length === 1 && (
                         <div className="text-center py-4 text-white/55 text-sm space-y-2">
-                            <p className="animate-pulse">Waiting for a second writer...</p>
+                            <p className="animate-pulse">Waiting for the next writer...</p>
                             <p className="text-white/40 text-xs">
-                                Add names below for one phone, or share the invite.
+                                Add their name on this phone, or send the invite.
                             </p>
                         </div>
                     )}
@@ -210,34 +226,35 @@ export function RoomLobby() {
                     <p className="mt-2 text-white/45 text-xs">
                         Same couch, same screen. Add each writer, then hand the phone around.
                     </p>
-                    {passThePhone && (
-                        <form
-                            className="mt-3 flex gap-2"
-                            onSubmit={async (event) => {
-                                event.preventDefault();
-                                if (!couchName.trim() || addingWriter) return;
-                                setAddingWriter(true);
-                                const ok = await addCouchWriter?.(couchName);
-                                setAddingWriter(false);
-                                if (ok) setCouchName('');
-                            }}
+                    <form
+                        className="mt-3 flex gap-2"
+                        onSubmit={async (event) => {
+                            event.preventDefault();
+                            if (!couchName.trim() || addingWriter) return;
+                            setAddingWriter(true);
+                            const ok = await addCouchWriter?.(couchName);
+                            setAddingWriter(false);
+                            if (ok) {
+                                trackEvent('room_couch_writer_added', { playerCount: seatedPlayers.length + 1 });
+                                setCouchName('');
+                            }
+                        }}
+                    >
+                        <input
+                            value={couchName}
+                            onChange={(event) => setCouchName(event.target.value)}
+                            placeholder="Add the next writer"
+                            className="game-input-hero min-h-[44px] flex-1 text-sm"
+                            aria-label="Writer name"
+                        />
+                        <button
+                            type="submit"
+                            disabled={addingWriter || !couchName.trim()}
+                            className="wordle-button min-h-[44px] px-4 disabled:opacity-50"
                         >
-                            <input
-                                value={couchName}
-                                onChange={(event) => setCouchName(event.target.value)}
-                                placeholder="Add a writer name"
-                                className="game-input-hero min-h-[44px] flex-1 text-sm"
-                                aria-label="Writer name"
-                            />
-                            <button
-                                type="submit"
-                                disabled={addingWriter || !couchName.trim()}
-                                className="wordle-button min-h-[44px] px-4 disabled:opacity-50"
-                            >
-                                {addingWriter ? 'Adding...' : 'Add'}
-                            </button>
-                        </form>
-                    )}
+                            {addingWriter ? 'Adding...' : 'Add'}
+                        </button>
+                    </form>
                 </div>
             )}
 
@@ -254,10 +271,16 @@ export function RoomLobby() {
                     <button
                         onClick={handleStart}
                         disabled={starting || seatedPlayers.length < 2}
-                        className="wordle-button wordle-primary w-full text-lg flex items-center justify-center gap-2 disabled:hover:scale-100"
+                        className={`wordle-button w-full text-lg flex items-center justify-center gap-2 disabled:hover:scale-100 ${seatedPlayers.length >= 2 ? 'wordle-primary' : ''}`}
                     >
                         <Play className="w-5 h-5" />
-                        {starting && countdown === null ? 'Starting...' : countdown !== null && countdown > 0 ? `${countdown}...` : 'Start Game'}
+                        {starting && countdown === null
+                            ? 'Starting...'
+                            : countdown !== null && countdown > 0
+                                ? `${countdown}...`
+                                : seatedPlayers.length < 2
+                                    ? 'Need one more writer'
+                                    : 'Start Game'}
                     </button>
                 )}
                 {!isHost && !isSpectator && (

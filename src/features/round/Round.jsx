@@ -41,6 +41,14 @@ export function Round({ onSubmit }) {
     });
 
     useEffect(() => {
+        if (!isFirstSession || roundNumber !== 1) return;
+        trackEvent('first_session_pair_shown', {
+            isDailyChallenge,
+            mediaType: roundMediaType,
+        });
+    }, [isDailyChallenge, isFirstSession, roundMediaType, roundNumber]);
+
+    useEffect(() => {
         submittedRef.current = false;
         let cancelled = false;
 

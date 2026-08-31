@@ -39,6 +39,7 @@ export function Reveal({ submission, assets }) {
     const [secondChanceUsed, setSecondChanceUsed] = useState(false);
     const fromJudgeChain = peekJudgeChain();
     const savedRef = useRef(false);
+    const friendSharedRef = useRef(false);
     const scoringMode = user?.scoringMode || 'human';
     const theme = getThemeById(user?.themeId);
     const scoreMultiplier = theme?.modifier?.scoreMultiplier || 1;
@@ -215,6 +216,13 @@ export function Reveal({ submission, assets }) {
     }, [submission, assets, scoringMode, theme?.id, scoreMultiplier, retryTrigger]);
 
     const handleNext = () => {
+        if (!friendSharedRef.current) {
+            reportAppEvent('friend_judge_skipped', {
+                scoringMode,
+                roundNumber,
+                score: result?.finalScore ?? result?.score ?? null,
+            });
+        }
         haptic('light');
         nextRound();
     };
@@ -276,6 +284,10 @@ export function Reveal({ submission, assets }) {
 
     const handleShareForJudging = async () => {
         if (!canShareForJudging) return;
+        reportAppEvent('friend_judge_share_attempted', {
+            scoringMode,
+            roundNumber,
+        });
         const draft = ensureDraftCollision();
         let links = shareLinks;
         if (!links?.shareUrl) {
@@ -316,6 +328,8 @@ export function Reveal({ submission, assets }) {
                     text: shareText,
                     url,
                 });
+                friendSharedRef.current = true;
+                reportAppEvent('friend_judge_share_completed', { method: 'share_sheet' });
                 haptic('success');
                 setShareCopied(true);
                 toast.success('Share sheet opened — send it to a friend!');
@@ -323,11 +337,16 @@ export function Reveal({ submission, assets }) {
                 return;
             }
         } catch (err) {
-            if (err?.name === 'AbortError') return;
+            if (err?.name === 'AbortError') {
+                reportAppEvent('friend_judge_share_dismissed', { method: 'share_sheet' });
+                return;
+            }
         }
 
         if (navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(url);
+            friendSharedRef.current = true;
+            reportAppEvent('friend_judge_share_completed', { method: 'clipboard' });
             haptic('success');
             setShareCopied(true);
             toast.success('Link copied — send to a friend and they\'ll score your connection!');
@@ -674,6 +693,24 @@ export function Reveal({ submission, assets }) {
                                     Say it like that — your turn
                                 </button>
                             )}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    consumeJudgeChain();
+                                    handleShareForJudging();
+                                }}
+                                disabled={!canShareForJudging}
+                                className="wordle-button w-full mt-3 min-h-[52px] text-base disabled:opacity-50"
+                                aria-label={shareCopied ? 'Friend judge link copied!' : 'Ask a friend to judge'}
+                            >
+                                {shareCopied
+                                    ? "They're scoring it — keep playing"
+                                    : fromJudgeChain
+                                        ? 'Send this pair to someone else'
+                                        : displayScore >= 8
+                                            ? `Send this ${displayScore}/10 to a friend`
+                                            : 'Ask a friend to judge'}
+                            </button>
                         </div>
                     )}
 
@@ -736,23 +773,6 @@ export function Reveal({ submission, assets }) {
                             </div>
                             <div className="text-white font-semibold">{recommendedNextAction.label}</div>
                             <div className="text-white/55 text-sm mt-1">{recommendedNextAction.detail}</div>
-                            {(displayScore >= 8 || fromJudgeChain) && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        consumeJudgeChain();
-                                        handleShareForJudging();
-                                    }}
-                                    disabled={!canShareForJudging}
-                                    className="wordle-button wordle-primary w-full mt-3 disabled:opacity-50"
-                                >
-                                    {shareCopied
-                                        ? 'Link copied! Send to a friend'
-                                        : fromJudgeChain
-                                            ? 'Send this pair to someone else'
-                                            : 'Ask a friend to judge'}
-                                </button>
-                            )}
                         </div>
                         <ol className="space-y-2 text-sm text-white/70">
                             <li className="flex gap-3">
@@ -794,34 +814,12 @@ export function Reveal({ submission, assets }) {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        {displayScore >= 8 ? (
-                            <button
-                                onClick={handleNext}
-                                className="wordle-button px-12 text-lg"
-                            >
-                                {isFinalRound ? 'See Results' : 'Next Round →'}
-                            </button>
-                        ) : (
-                            <>
-                                <button
-                                    onClick={handleNext}
-                                    className="wordle-button wordle-primary px-12 text-lg"
-                                >
-                                    {isFinalRound ? 'See Results' : 'Next Round →'}
-                                </button>
-                                <div>
-                                    <button
-                                        onClick={handleShareForJudging}
-                                        disabled={!canShareForJudging}
-                                        className="wordle-button px-8 disabled:opacity-50"
-                                        title="Send this link to a friend — they'll score your connection. Press S for shortcut."
-                                    >
-                                        {shareCopied ? 'Link copied! Send to a friend' : 'Share for friend to judge'}
-                                    </button>
-                                    <p className="text-white/30 text-xs mt-1.5">Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-white/50">S</kbd> to copy link</p>
-                                </div>
-                            </>
-                        )}
+                        <button
+                            onClick={handleNext}
+                            className={`wordle-button px-12 text-lg ${displayScore >= 8 && !shareCopied ? '' : 'wordle-primary'}`}
+                        >
+                            {isFinalRound ? 'See Results' : shareCopied ? 'Keep playing →' : 'Next Round →'}
+                        </button>
                     </div>
                 </div>
             </div>
