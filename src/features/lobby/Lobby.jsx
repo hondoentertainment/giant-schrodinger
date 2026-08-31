@@ -469,6 +469,9 @@ export function Lobby() {
                                         Today&apos;s Venn
                                         <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-300/40 bg-amber-300/20 text-amber-100 font-semibold">Daily Challenge</span>
                                     </div>
+                                    {dailyChallenge.weekTitle && (
+                                        <div className="text-amber-100/80 text-xs font-semibold">{dailyChallenge.weekTitle}</div>
+                                    )}
                                     <div className="text-white font-semibold text-sm line-clamp-2">
                                         {dailyChallenge.pair?.left} × {dailyChallenge.pair?.right}
                                     </div>
@@ -504,6 +507,9 @@ export function Lobby() {
                                     {dailyShareCopied ? 'Shared!' : 'Share card'}
                                 </button>
                             </div>
+                            {dailyChallenge.weekTitle && (
+                                <p className="mt-1 text-amber-100/75 text-xs font-semibold">{dailyChallenge.weekTitle}</p>
+                            )}
                             <p className="mt-1 text-white/55 text-xs line-clamp-2">{dailySummary.shareLine}</p>
                             <div className="mt-3 flex justify-between gap-1" aria-label="This week's daily stamps">
                                 {dailyStamps.map((stamp) => (

@@ -16,6 +16,24 @@ describe('buildRoomRecapShareData', () => {
         expect(shareData.score).toBe(9);
         expect(shareData.scoreBand).toBe('Blair wins');
         expect(shareData.mediaLabel).toBe('Room recap');
+    });
+
+    it('prefers the most-reacted line for the group-chat card', () => {
+        const shareData = buildRoomRecapShareData({
+            submissions: [
+                { id: 'a', player_name: 'Alex', submission: 'quiet one', finalScore: 9 },
+                { id: 'b', player_name: 'Blair', submission: 'the roar', finalScore: 6 },
+            ],
+            assets: { left: { label: 'Coffee' }, right: { label: 'Robot' } },
+            reactions: [
+                { emoji: '🔥', entryId: 'b' },
+                { emoji: '😂', entryId: 'b' },
+                { emoji: '💀', entryId: 'b' },
+            ],
+        });
+        expect(shareData.submission).toBe('the roar');
+        expect(shareData.scoreBand).toBe('Blair won the room');
+        expect(shareData.mediaLabel).toBe('Most reacted');
         expect(shareData.promptPair).toBe('Coffee × Robot');
     });
 });

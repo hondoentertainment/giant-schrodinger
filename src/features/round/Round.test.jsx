@@ -224,6 +224,14 @@ describe('Round', () => {
         expect(screen.getByText(/Half time, 1.5x points/)).toBeInTheDocument();
     });
 
+    it('hides extra HUD chips on a first session so the pair stays on screen', () => {
+        getStats.mockReturnValue({ totalRounds: 0, currentStreak: 0, maxStreak: 0, milestonesUnlocked: [] });
+        render(<Round onSubmit={mockOnSubmit} />);
+        expect(screen.queryByText(/Time:/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Points:/i)).not.toBeInTheDocument();
+        expect(screen.getByPlaceholderText('What connects these two?')).toBeInTheDocument();
+    });
+
     it('shows memes & videos coaching and placeholder when media type is memes_videos', () => {
         getStats.mockReturnValue({ totalRounds: 0, currentStreak: 0, maxStreak: 0, milestonesUnlocked: [] });
         mockContextValue = {

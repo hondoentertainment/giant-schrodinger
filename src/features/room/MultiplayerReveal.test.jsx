@@ -34,6 +34,8 @@ const mocks = vi.hoisted(() => ({
         leaveCurrentRoom: vi.fn(),
         rematchRoom: vi.fn(),
         finishMultiplayerGame: vi.fn().mockResolvedValue(true),
+        sendRoomReaction: vi.fn(),
+        liveReactions: [],
     },
     toast: {
         success: vi.fn(),
@@ -87,6 +89,11 @@ describe('MultiplayerReveal', () => {
             theme_id: 'neon',
             scoring_mode: 'human',
         };
+        mocks.roomState.liveReactions = [];
+        mocks.roomState.submissions = [
+            { id: 'sub-1', player_name: 'Alex', submission: 'alpha' },
+            { id: 'sub-2', player_name: 'Blair', submission: 'beta' },
+        ];
         mocks.getRoomSubmissions.mockResolvedValue(mocks.roomState.submissions);
         vi.useFakeTimers();
     });
@@ -150,5 +157,24 @@ describe('MultiplayerReveal', () => {
         render(<MultiplayerReveal />);
         await user.click(await screen.findByRole('button', { name: /Rematch/i }));
         expect(mocks.roomState.rematchRoom).toHaveBeenCalled();
+    });
+
+    it('attaches a reaction to a specific scored line', async () => {
+        vi.useRealTimers();
+        const user = userEvent.setup();
+        mocks.roomState.roomPhase = 'results';
+        mocks.roomState.room = {
+            ...mocks.roomState.room,
+            status: 'results',
+            scoring_mode: 'ai',
+        };
+        mocks.roomState.submissions = [
+            { id: 'sub-1', player_name: 'Alex', submission: 'alpha', score: { finalScore: 8 } },
+            { id: 'sub-2', player_name: 'Blair', submission: 'beta', score: { finalScore: 6 } },
+        ];
+
+        render(<MultiplayerReveal />);
+        await user.click(await screen.findByRole('button', { name: /React 🔥 to Alex/i }));
+        expect(mocks.roomState.sendRoomReaction).toHaveBeenCalledWith('🔥', { entryId: 'sub-1' });
     });
 });

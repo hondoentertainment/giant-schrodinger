@@ -9,6 +9,7 @@ import { playScoreReveal } from '../../services/sounds';
 import { haptic } from '../../lib/haptics';
 import { scrollMainToTop } from '../../lib/scroll';
 import { buildRoomRecapShareData } from '../../lib/roomRecap';
+import { countReactions, getEntryReactionKey, reactionsForEntry } from '../../lib/lineReactions';
 import { createShareCard, dataURLtoFile, downloadFusionImage } from '../../services/socialShare';
 
 function ScoreBar({ label, value, max = 10 }) {
@@ -30,25 +31,26 @@ function ScoreBar({ label, value, max = 10 }) {
     );
 }
 
-function ReactionBar({ reactions, onReact }) {
+function LineReactionBar({ entry, reactions, onReact }) {
+    const key = getEntryReactionKey(entry);
+    if (!key) return null;
+    const counts = countReactions(reactionsForEntry(reactions, entry));
     return (
-        <div className="mt-5 text-center">
-            <div className="flex justify-center gap-2" role="group" aria-label="React to this round">
-                {['🔥', '😂', '💀', '👑'].map((emoji) => (
-                    <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => onReact(emoji)}
-                        className="min-h-[44px] min-w-[44px] text-xl rounded-2xl bg-white/[0.06] border border-white/10"
-                        aria-label={`React ${emoji}`}
-                    >
-                        {emoji}
-                    </button>
-                ))}
-            </div>
-            {reactions.length > 0 && (
-                <p className="mt-2 text-2xl" aria-live="polite">{reactions.slice(-8).map((item) => item.emoji).join(' ')}</p>
-            )}
+        <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label={`React to ${entry.player_name || 'this'} line`}>
+            {['🔥', '😂', '💀', '👑'].map((emoji) => (
+                <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => onReact(emoji, key)}
+                    className="min-h-[44px] min-w-[52px] px-2 text-lg rounded-2xl bg-white/[0.06] border border-white/10"
+                    aria-label={`React ${emoji} to ${entry.player_name || 'this line'}`}
+                >
+                    {emoji}
+                    {counts[emoji] > 0 && (
+                        <span className="ml-1 text-xs font-semibold tabular-nums text-white/70">{counts[emoji]}</span>
+                    )}
+                </button>
+            ))}
         </div>
     );
 }
@@ -188,13 +190,17 @@ export function MultiplayerReveal() {
         setSelectedVoteId(existingVote.submission_id);
     }, [playerName, votes]);
 
-    const sendReaction = useCallback((emoji) => {
+    const sendReaction = useCallback((emoji, entryId) => {
         haptic('light');
         if (sendRoomReaction) {
-            sendRoomReaction(emoji);
+            sendRoomReaction(emoji, { entryId });
             return;
         }
-        setLocalReactions((current) => [...current.slice(-7), { emoji, id: Date.now() }]);
+        setLocalReactions((current) => [...current.slice(-47), {
+            emoji,
+            entryId: entryId || null,
+            id: Date.now(),
+        }]);
     }, [sendRoomReaction]);
 
     const handleVote = useCallback(async (submissionId) => {
@@ -230,6 +236,7 @@ export function MultiplayerReveal() {
             room,
             submissions: recapSource,
             assets: room?.assets,
+            reactions: liveReactions,
         });
         setRecapSharing(true);
         try {
@@ -258,7 +265,7 @@ export function MultiplayerReveal() {
         } finally {
             setRecapSharing(false);
         }
-    }, [allSubmissions, isFinished, room, submissions, toast]);
+    }, [allSubmissions, isFinished, liveReactions, room, submissions, toast]);
 
     const sourceSubmissions = isFinished ? allSubmissions : submissions;
     const scored = useMemo(() => {
@@ -443,6 +450,11 @@ export function MultiplayerReveal() {
                                         </div>
                                         <div className="mt-3 pl-10">
                                             <p className="text-white/75 italic text-xl">&ldquo;{entry.submission}&rdquo;</p>
+                                            <LineReactionBar
+                                                entry={entry}
+                                                reactions={liveReactions}
+                                                onReact={sendReaction}
+                                            />
                                         </div>
                                     </div>
                                 );
@@ -454,7 +466,6 @@ export function MultiplayerReveal() {
                                 Revealing answers...
                             </div>
                         )}
-                        <ReactionBar reactions={liveReactions} onReact={sendReaction} />
                 </div>
             </div>
         );
@@ -638,6 +649,14 @@ export function MultiplayerReveal() {
                                                 &ldquo;{entry.parsedScore.commentary}&rdquo;
                                             </div>
                                         )}
+
+                                        <div className="pl-12">
+                                            <LineReactionBar
+                                                entry={entry}
+                                                reactions={liveReactions}
+                                                onReact={sendReaction}
+                                            />
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -692,8 +711,6 @@ export function MultiplayerReveal() {
                             </p>
                         </div>
                     )}
-
-                    <ReactionBar reactions={liveReactions} onReact={sendReaction} />
 
                     {!isFinished && multiplier !== 1 && (
                         <div className="text-center text-sm text-white/40 mb-6">

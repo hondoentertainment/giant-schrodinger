@@ -663,7 +663,7 @@ export function Reveal({ submission, assets }) {
                             {!secondChanceUsed && scoreCoach.hint && (
                                 <button
                                     type="button"
-                                    className="wordle-button wordle-primary w-full mt-3 min-h-[44px]"
+                                    className="wordle-button wordle-primary w-full mt-4 min-h-[52px] text-base"
                                     onClick={() => {
                                         setForcedPair(assets);
                                         setForcedLine(scoreCoach.hint);
@@ -671,7 +671,7 @@ export function Reveal({ submission, assets }) {
                                         replayCurrentRound?.();
                                     }}
                                 >
-                                    Say it like that
+                                    Say it like that — your turn
                                 </button>
                             )}
                         </div>

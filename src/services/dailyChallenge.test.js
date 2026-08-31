@@ -28,6 +28,7 @@ describe('dailyChallenge service', () => {
             expect(typeof a.seed).toBe('number');
             expect(a.mediaType).toBeDefined();
             expect(typeof a.isMemesVideosDay).toBe('boolean');
+            expect(a.weekTitle).toMatch(/^Week of /);
         });
     });
 

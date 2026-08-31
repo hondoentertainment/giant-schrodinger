@@ -3,6 +3,7 @@ import { scoreViaServer } from './serverScoring';
 import { uploadDataUrl } from './mediaStorage';
 import { isClientGeminiEnabled } from '../lib/productionMode';
 import { isBackendEnabled } from '../lib/supabase';
+import { hostCommentary, hostRewrite } from '../lib/hostVoice';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -107,8 +108,13 @@ function mockScore(submission, asset1, asset2) {
         breakdown,
         score: baseScore,
         relevance,
-        commentary: `'${safeSubmission}' — a host would toast that collision of ${leftLabel} and ${rightLabel}.`,
-        rewrite: `${safeSubmission} — name both ${leftLabel} and ${rightLabel} in one dare.`,
+        commentary: hostCommentary({
+            submission: safeSubmission,
+            leftLabel,
+            rightLabel,
+            score: baseScore,
+        }),
+        rewrite: hostRewrite(safeSubmission, leftLabel, rightLabel),
     };
 }
 

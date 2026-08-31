@@ -32,7 +32,8 @@ export function Round({ onSubmit }) {
     const mediaType = normalizeMediaType(user?.mediaType);
     const mod = currentModifier;
     const firstPairSeedRef = useRef(Date.now());
-    const showFirstRoundCoaching = stats.totalRounds === 0 && roundNumber === 1;
+    const isFirstSession = stats.totalRounds === 0;
+    const showFirstRoundCoaching = isFirstSession && roundNumber === 1;
     const roundMediaType = getEffectiveRoundMediaType({
         userMediaType: mediaType,
         isDailyChallenge,
@@ -226,21 +227,23 @@ export function Round({ onSubmit }) {
                     ))}
                 </div>
             </div>
-            <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-sm">
-                <div className="game-hud-chip">
-                    Time: <span className="text-white font-medium">{timeLimit}s</span>
-                    {mod?.timeFactor !== 1 && <span className="text-cyan-300 ml-1">({mod.timeFactor}x)</span>}
-                </div>
-                <div className="game-hud-chip">
-                    Points: <span className="text-white font-medium">x{(scoreMultiplier * (mod?.scoreFactor || 1)).toFixed(1)}</span>
-                    {mod?.scoreFactor > 1 && <span className="text-amber-300 ml-1">({mod.scoreFactor}x bonus)</span>}
-                </div>
-                {theme?.modifier?.hint && (
+            {!isFirstSession && (
+                <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-sm">
                     <div className="game-hud-chip">
-                        {theme.modifier.hint}
+                        Time: <span className="text-white font-medium">{timeLimit}s</span>
+                        {mod?.timeFactor !== 1 && <span className="text-cyan-300 ml-1">({mod.timeFactor}x)</span>}
                     </div>
-                )}
-            </div>
+                    <div className="game-hud-chip">
+                        Points: <span className="text-white font-medium">x{(scoreMultiplier * (mod?.scoreFactor || 1)).toFixed(1)}</span>
+                        {mod?.scoreFactor > 1 && <span className="text-amber-300 ml-1">({mod.scoreFactor}x bonus)</span>}
+                    </div>
+                    {theme?.modifier?.hint && (
+                        <div className="game-hud-chip">
+                            {theme.modifier.hint}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <VennDiagram leftAsset={assets.left} rightAsset={assets.right} mediaLoading={mediaLoading} />
 
@@ -279,8 +282,9 @@ export function Round({ onSubmit }) {
                     }
                     className="game-input-hero w-full"
                     autoFocus
+                    onFocus={(event) => event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' })}
                 />
-                <div className="mt-4 text-center text-white/40 text-sm space-y-3">
+                <div className="sticky bottom-0 z-30 mt-4 space-y-3 bg-gradient-to-t from-[#07070a] via-[#07070a]/95 to-transparent pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-white/40 text-sm sm:static sm:bg-none sm:pb-0">
                     <button
                         type="button"
                         onClick={handleSubmit}
@@ -289,7 +293,7 @@ export function Round({ onSubmit }) {
                     >
                         Submit connection
                     </button>
-                    <div>Press <span className="font-semibold text-white/80">Return</span> to submit</div>
+                    <div className="hidden sm:block">Press <span className="font-semibold text-white/80">Return</span> to submit</div>
                     <div className="text-white/30 text-xs">
                         Scored on Wit · Logic · Originality · Clarity
                     </div>

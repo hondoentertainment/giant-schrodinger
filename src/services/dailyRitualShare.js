@@ -58,6 +58,8 @@ export function getDailyRitualShareCard({ collisions = getCollisions(), origin }
             url: origin,
             dateStamp: new Date(`${today}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             vibe: daily.pair?.vibe,
+            weekTitle: daily.weekTitle,
+            mediaLabel: daily.weekTitle,
             promptPair: formatDailySocialLabel(new Date(`${today}T12:00:00`), daily.pair?.vibe),
         },
     };

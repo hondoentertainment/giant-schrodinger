@@ -33,7 +33,7 @@ const RAW = [
     ['beehive-office', 'A beehive', 'An open-plan office', 'workplace'],
     ['icecream-heartbreak', 'Melting ice cream', 'A polite heartbreak', 'tender'],
     ['key-invitation', 'A spare house key', 'An invitation you ignored', 'spicy'],
-    ['fog-password2', 'Morning fog', 'Incognito mode', 'spicy'],
+    ['fog-password2', 'A fogged windshield', 'Incognito mode', 'spicy'],
     ['drum-heartbeat', 'A marching drum', 'A resting heartbeat', 'tender'],
     ['origami-spreadsheet', 'A failed origami crane', 'A color-coded spreadsheet', 'workplace'],
     ['moon-streetlamp', 'A full moon', 'A buzzing streetlamp', 'cosmic'],
@@ -47,13 +47,13 @@ const RAW = [
     ['glacier-deadline2', 'A melting glacier', 'A sliding deadline', 'workplace'],
     ['arcade-401k', 'A dying arcade cabinet', 'A 401(k) login', 'nostalgic'],
     ['pigeon-influencer', 'A city pigeon', 'An influencer brand deal', 'chaotic'],
-    ['attict-cloud', 'A dusty attic', 'A full iCloud', 'nostalgic'],
+    ['attict-cloud', 'A dusty attic box', 'A full iCloud', 'nostalgic'],
     ['train-whistle-slack', 'A midnight train whistle', 'A Slack huddle', 'workplace'],
     ['candle-loading', 'A birthday candle', 'An infinite loading spinner', 'chaotic'],
-    ['first-snow-email', 'First snow of the year', 'An email marked urgent', 'workplace'],
+    ['first-snow-email', 'The first snow day', 'An email marked URGENT', 'workplace'],
     ['diner-booth-dating', 'A sticky diner booth', 'A dating-app bio', 'spicy'],
     ['library-fine-rent', 'An overdue library book', 'This month\'s rent', 'chaotic'],
-    ['kite-string-thread', 'A snapped kite string', 'A Twitter thread', 'chaotic'],
+    ['kite-string-thread', 'A snapped guitar string', 'A group-chat thread', 'chaotic'],
     ['lighthouse-keep', 'A lighthouse keeper', 'A group admin', 'workplace'],
     ['camp-song-hold', 'A campfire song', 'Please hold music', 'nostalgic'],
     ['pool-float-layoff', 'A plastic pool float', 'A quiet layoff', 'workplace'],
@@ -205,18 +205,27 @@ const RAW = [
     ['rain-delay-apology', 'A rain delay', 'A typed-then-deleted apology', 'tender'],
 ];
 
-const WEEKLY_PACK_IDS = [
-    [
-        'sunday-scaries-sparkler',
-        'voicemail-constellation',
-        'office-plant-first-date',
-        'thrift-jacket-okrs',
-        'porch-light-groupchat',
-        'cassette-for-you',
-        'rain-delay-apology',
-    ],
-    ['coffee-robot', 'ocean-library', 'kite-deadline', 'lighthouse-inbox', 'campfire-wifi', 'subway-lullaby', 'umbrella-secret'],
-    ['museum-leftovers', 'balloon-password', 'chess-traffic', 'snowglobe-news', 'vinyl-algorithm', 'garden-notification', 'compass-playlist'],
+const WEEKLY_EPISODES = [
+    {
+        title: 'Week of leftover sparklers',
+        ids: [
+            'sunday-scaries-sparkler',
+            'voicemail-constellation',
+            'office-plant-first-date',
+            'thrift-jacket-okrs',
+            'porch-light-groupchat',
+            'cassette-for-you',
+            'rain-delay-apology',
+        ],
+    },
+    {
+        title: 'Week of Monday deadlines',
+        ids: ['coffee-robot', 'ocean-library', 'kite-deadline', 'lighthouse-inbox', 'campfire-wifi', 'subway-lullaby', 'umbrella-secret'],
+    },
+    {
+        title: 'Week of forgotten passwords',
+        ids: ['museum-leftovers', 'balloon-password', 'chess-traffic', 'snowglobe-news', 'vinyl-algorithm', 'garden-notification', 'compass-playlist'],
+    },
 ];
 
 export const CURATED_PAIRS = RAW.map(([id, left, right, vibe]) => ({
@@ -247,9 +256,16 @@ export function getIsoWeekNumber(date = new Date()) {
     return Math.ceil((((utc - yearStart) / 86400000) + 1) / 7);
 }
 
+export function getWeeklyEpisode(date = new Date()) {
+    const episode = WEEKLY_EPISODES[getIsoWeekNumber(date) % WEEKLY_EPISODES.length] || WEEKLY_EPISODES[0];
+    return {
+        title: episode.title,
+        pairs: episode.ids.map((id) => getCuratedPairById(id)).filter(Boolean),
+    };
+}
+
 export function getWeeklyPairDrop(date = new Date()) {
-    const pack = WEEKLY_PACK_IDS[getIsoWeekNumber(date) % WEEKLY_PACK_IDS.length] || WEEKLY_PACK_IDS[0];
-    return pack.map((id) => getCuratedPairById(id)).filter(Boolean);
+    return getWeeklyEpisode(date).pairs;
 }
 
 export function getDailyEditorialPair(date = new Date()) {

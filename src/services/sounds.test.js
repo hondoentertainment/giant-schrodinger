@@ -99,6 +99,13 @@ describe('sounds service', () => {
         });
     });
 
+    describe('playDrumroll', () => {
+        it('plays a short roll when unmuted', () => {
+            sounds.playDrumroll();
+            expect(createOscillator).toHaveBeenCalled();
+        });
+    });
+
     describe('playScoreReveal', () => {
         it('plays 3 tones for high scores (>=9)', () => {
             sounds.playScoreReveal(10);

@@ -120,6 +120,14 @@ export function playSubmitSound() {
   playTone({ frequency: 880, duration: 0.15, type: 'sine', volume: 0.25 });
 }
 
+export function playDrumroll() {
+  if (isMuted()) return;
+  playTone({ frequency: 140, duration: 0.18, type: 'triangle', volume: 0.22 });
+  playTone({ frequency: 180, duration: 0.16, type: 'triangle', volume: 0.2, delay: 0.16 });
+  playTone({ frequency: 220, duration: 0.16, type: 'triangle', volume: 0.2, delay: 0.3 });
+  playTone({ frequency: 520, duration: 0.28, type: 'sine', volume: 0.28, delay: 0.5 });
+}
+
 export function playScoreReveal(score) {
   if (isMuted()) return;
   if (score >= 9) {

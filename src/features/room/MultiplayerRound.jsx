@@ -5,11 +5,11 @@ import { useToast } from '../../context/ToastContext';
 import { getThemeById } from '../../data/themes';
 import { CheckCircle, Clock, Users } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
-import { playSubmitSound, playTickSound, playUrgentTick } from '../../services/sounds';
+import { playDrumroll, playSubmitSound, playTickSound, playUrgentTick } from '../../services/sounds';
 import { ConnectionBanner } from './ConnectionBanner';
 import { useResolvedRoundAssets } from '../../hooks/useResolvedRoundAssets';
 import { useTranslation } from '../../hooks/useTranslation';
-import { canWriteOnThisDevice, getCurrentWriter, PASS_PHONE_SECONDS } from '../../lib/passThePhone';
+import { canWriteOnThisDevice, getCurrentWriter, PASS_PHONE_DRUMROLL_MS, PASS_PHONE_SECONDS, PASS_PHONE_STARE_MS } from '../../lib/passThePhone';
 
 export function MultiplayerRound() {
     const { t } = useTranslation();
@@ -32,7 +32,9 @@ export function MultiplayerRound() {
     const [submission, setSubmission] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [scoring, setScoring] = useState(false);
+    const [ritualPhase, setRitualPhase] = useState('write');
     const prevSubmissionCountRef = useRef(submissions.length);
+    const drumrollStartedRef = useRef(false);
 
     const theme = getThemeById(room?.theme_id);
     const seatedPlayers = activePlayers || players.filter((player) => !player.is_spectator);
@@ -53,14 +55,34 @@ export function MultiplayerRound() {
         setTimer(timeLimit);
         setSubmission('');
         setSubmitted(false);
-    }, [room?.round_number, timeLimit]);
+        drumrollStartedRef.current = false;
+        if (!passThePhone) setRitualPhase('write');
+    }, [room?.round_number, timeLimit, passThePhone]);
 
     useEffect(() => {
         if (!passThePhone || !currentWriter) return;
         setTimer(timeLimit);
         setSubmission('');
         setSubmitted(false);
+        setRitualPhase('stare');
+        const stare = setTimeout(() => setRitualPhase('write'), PASS_PHONE_STARE_MS);
+        return () => clearTimeout(stare);
     }, [passThePhone, currentWriter?.player_name, timeLimit]);
+
+    useEffect(() => {
+        if (!passThePhone || currentWriter || submissions.length === 0 || scoring) return;
+        if (drumrollStartedRef.current) return;
+        drumrollStartedRef.current = true;
+        setRitualPhase('drumroll');
+        playDrumroll();
+        haptic('medium');
+        const roll = setTimeout(() => {
+            if (!isHost) return;
+            setScoring(true);
+            scoreAllSubmissions().finally(() => setScoring(false));
+        }, PASS_PHONE_DRUMROLL_MS);
+        return () => clearTimeout(roll);
+    }, [currentWriter, isHost, passThePhone, scoreAllSubmissions, scoring, submissions.length]);
 
     const handleSubmit = useCallback(async (e) => {
         if (e) e.preventDefault();
@@ -91,14 +113,14 @@ export function MultiplayerRound() {
     }, [submitted, submissions, submissions.length, activePlayers?.length, players.length, scoring, playerName, toast]);
 
     useEffect(() => {
-        if (submitted || !canWrite) return undefined;
+        if (submitted || !canWrite || (passThePhone && ritualPhase !== 'write')) return undefined;
         if (timer > 0) {
             const interval = setInterval(() => setTimer((t) => t - 1), 1000);
             return () => clearInterval(interval);
         }
         handleSubmit();
         return undefined;
-    }, [canWrite, timer, submitted, handleSubmit]);
+    }, [canWrite, handleSubmit, passThePhone, ritualPhase, submitted, timer]);
 
     useEffect(() => {
         if (submitted) return;
@@ -109,7 +131,7 @@ export function MultiplayerRound() {
     }, [timer, submitted]);
 
     useEffect(() => {
-        if (isHost && submissions.length >= (activePlayers?.length || players.length) && (activePlayers?.length || players.length) > 0 && !scoring) {
+        if (!passThePhone && isHost && submissions.length >= (activePlayers?.length || players.length) && (activePlayers?.length || players.length) > 0 && !scoring) {
             setScoring(true);
             const message = room?.scoring_mode === 'ai'
                 ? 'All players submitted — scoring...'
@@ -117,7 +139,7 @@ export function MultiplayerRound() {
             toast.info(message);
             scoreAllSubmissions().finally(() => setScoring(false));
         }
-    }, [activePlayers?.length, isHost, players.length, room?.scoring_mode, scoreAllSubmissions, scoring, submissions.length, toast]);
+    }, [activePlayers?.length, isHost, passThePhone, players.length, room?.scoring_mode, scoreAllSubmissions, scoring, submissions.length, toast]);
 
     const submittedPlayers = submissions.map((s) => s.player_name);
     const waitingPlayers = seatedPlayers.filter((p) => !submittedPlayers.includes(p.player_name));
@@ -156,9 +178,11 @@ export function MultiplayerRound() {
                             </div>
                         </div>
                     </div>
-                    <div className={`game-timer ${timer < 10 ? 'game-timer--urgent' : ''}`}>
-                        {timer}s
-                    </div>
+                    {(!passThePhone || ritualPhase === 'write') && (
+                        <div className={`game-timer ${timer < 10 ? 'game-timer--urgent' : ''}`}>
+                            {timer}s
+                        </div>
+                    )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <div className="game-hud-chip">
@@ -201,16 +225,28 @@ export function MultiplayerRound() {
                         <p className="text-white/50 text-sm">{submissions.length}/{seatedPlayers.length} players have submitted</p>
                     </div>
                 </div>
-            ) : passThePhone && !canWrite && !submitted ? (
+            ) : passThePhone && ritualPhase === 'drumroll' ? (
                 <div className="w-full max-w-xl mt-8 text-center animate-in fade-in duration-500">
-                    <div className="wordle-card p-6 mb-4">
-                        <p className="text-white font-semibold text-lg mb-1">
-                            Hand the phone to {currentWriter?.player_name || 'the next writer'}
-                        </p>
-                        <p className="text-white/50 text-sm">They get 30 seconds. Don&apos;t peek.</p>
+                    <div className="wordle-card p-8 mb-4">
+                        <p className="text-4xl font-display font-bold text-white mb-2">Drumroll</p>
+                        <p className="text-white/50 text-sm">Nobody peeks. The host slams the card.</p>
                     </div>
                 </div>
-            ) : !submitted ? (
+            ) : passThePhone && (ritualPhase === 'stare' || !canWrite) && !submitted ? (
+                <div className="w-full max-w-xl mt-8 text-center animate-in fade-in duration-500">
+                    <div className="wordle-card p-8 mb-4">
+                        <p className="text-white/45 text-xs uppercase tracking-[0.2em] mb-3">Pass the phone</p>
+                        <p className="text-4xl sm:text-5xl font-display font-bold text-white leading-tight">
+                            Hand the phone to {currentWriter?.player_name || 'the next writer'}
+                        </p>
+                        <p className="text-white/55 text-sm mt-4">
+                            {ritualPhase === 'stare'
+                                ? 'Look at the pair. Three seconds. Then write.'
+                                : 'They get 30 seconds. Don\'t peek the last line.'}
+                        </p>
+                    </div>
+                </div>
+            ) : !submitted && (!passThePhone || ritualPhase === 'write') ? (
                 <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 relative z-20">
                     <p className="text-center text-white/50 text-sm mb-3">
                         {passThePhone
@@ -221,12 +257,21 @@ export function MultiplayerRound() {
                         type="text"
                         value={submission}
                         onChange={(e) => setSubmission(e.target.value)}
+                        onFocus={(event) => event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' })}
                         placeholder="What connects these two?"
                         className="game-input-hero w-full"
                         autoFocus
                     />
-                    <div className="mt-4 text-center text-white/40 text-sm space-y-1">
-                        <div>Press <span className="font-semibold text-white/80">Return</span> to submit</div>
+                    <div className="sticky bottom-0 z-30 mt-4 space-y-3 bg-gradient-to-t from-[#07070a] via-[#07070a]/95 to-transparent pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-white/40 text-sm sm:static sm:bg-none sm:pb-0">
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={!submission.trim()}
+                            className="wordle-button wordle-primary w-full min-h-[52px] text-lg disabled:opacity-50 sm:hidden"
+                        >
+                            Submit connection
+                        </button>
+                        <div className="hidden sm:block">Press <span className="font-semibold text-white/80">Return</span> to submit</div>
                         {waitingPlayers.length > 0 && (
                             <div className="text-white/45 text-xs">
                                 Still writing: {waitingPlayers.map((p) => p.player_name).join(', ')}
@@ -238,8 +283,12 @@ export function MultiplayerRound() {
                 <div className="w-full max-w-xl mt-8 text-center animate-in fade-in duration-500">
                     <div className="wordle-card p-6 mb-4">
                         <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-                        <p className="text-white font-semibold text-lg mb-1">Answer submitted</p>
-                        <p className="text-white/55 italic">&ldquo;{submission || '(no answer)'}&rdquo;</p>
+                        <p className="text-white font-semibold text-lg mb-1">
+                            {passThePhone ? 'Locked in. Pass the phone.' : 'Answer submitted'}
+                        </p>
+                        {!passThePhone && (
+                            <p className="text-white/55 italic">&ldquo;{submission || '(no answer)'}&rdquo;</p>
+                        )}
                     </div>
 
                     {waitingPlayers.length > 0 && (

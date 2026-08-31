@@ -227,9 +227,10 @@ export function RoomProvider({ children }) {
                 setLiveReactions((current) => {
                     const id = reaction.ts || reaction.id || Date.now();
                     if (current.some((entry) => entry.id === id)) return current;
-                    return [...current.slice(-7), {
+                    return [...current.slice(-47), {
                         emoji: reaction.emoji,
                         from: reaction.from,
+                        entryId: reaction.entryId || null,
                         id,
                     }];
                 });
@@ -696,7 +697,6 @@ export function RoomProvider({ children }) {
 
         setSubmissions([]);
         setVotes([]);
-        setLiveReactions([]);
         setRoom((prev) => (prev ? { ...prev, round_number: nextRound, assets: null, status: 'waiting' } : prev));
 
         // Skip full lobby reset — start the next round immediately
@@ -741,17 +741,18 @@ export function RoomProvider({ children }) {
         return true;
     }, [players, room, toast]);
 
-    const sendRoomReaction = useCallback((emoji) => {
+    const sendRoomReaction = useCallback((emoji, options = {}) => {
         if (!emoji) return;
         const reaction = {
             emoji,
             from: playerName || 'Someone',
             ts: Date.now(),
             roundNumber: room?.round_number,
+            entryId: options.entryId || null,
         };
         setLiveReactions((current) => {
             if (current.some((entry) => entry.id === reaction.ts)) return current;
-            return [...current.slice(-7), { ...reaction, id: reaction.ts }];
+            return [...current.slice(-47), { ...reaction, id: reaction.ts }];
         });
         if (isE2EMockRoomEnabled() && typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('vwf:room-reaction', { detail: reaction }));

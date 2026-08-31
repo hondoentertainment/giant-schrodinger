@@ -82,7 +82,7 @@ vi.mock('../../services/storage', () => ({
 
 vi.mock('../../services/dailyChallenge', () => ({
     formatDailySocialLabel: (_date, vibe) => vibe ? `Aug 30 · ${vibe}` : 'Aug 30',
-    getDailyChallenge: () => ({ prompt: 'Test daily prompt', pair: { left: 'Morning coffee', right: 'A robot hitting snooze', vibe: 'chaotic' } }),
+    getDailyChallenge: () => ({ prompt: 'Test daily prompt', weekTitle: 'Week of leftover sparklers', pair: { left: 'Morning coffee', right: 'A robot hitting snooze', vibe: 'chaotic' } }),
     getDailyStampWeek: () => [
         { date: '2026-08-23', played: true, isToday: false, label: 'S' },
         { date: '2026-08-29', played: false, isToday: true, label: 'S' },
@@ -266,6 +266,7 @@ describe('Lobby', () => {
     it('shows daily challenge ritual context in the lobby', () => {
         mockUser = loggedInUser;
         render(<Lobby />);
+        expect(screen.getByText(/Week of leftover sparklers/i)).toBeInTheDocument();
         expect(screen.getByText(/Test daily prompt/i)).toBeInTheDocument();
         expect(screen.getByText(/2 daily completions/i)).toBeInTheDocument();
         expect(screen.getByText(/Best daily: 9\/10/i)).toBeInTheDocument();

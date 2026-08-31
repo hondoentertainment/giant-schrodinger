@@ -5,7 +5,7 @@ describe('getScoreCoach', () => {
     it('labels mock scores as practice', () => {
         const coach = getScoreCoach({ score: 8, isMock: true, breakdown: { wit: 8, logic: 8, originality: 8, clarity: 8 } });
         expect(coach.practice).toBe(true);
-        expect(coach.reason).toMatch(/clear/i);
+        expect(coach.reason).toMatch(/room heard it|collide/i);
     });
 
     it('rewrites their actual line on the weak axis', () => {
@@ -23,6 +23,6 @@ describe('getScoreCoach', () => {
 
     it('calls out generic low scores', () => {
         const coach = getScoreCoach({ score: 2 });
-        expect(coach.reason).toMatch(/generic/i);
+        expect(coach.reason).toMatch(/too safe/i);
     });
 });

@@ -7,6 +7,7 @@ const soundMocks = vi.hoisted(() => ({
     playSubmitSound: vi.fn(),
     playTickSound: vi.fn(),
     playUrgentTick: vi.fn(),
+    playDrumroll: vi.fn(),
 }));
 
 const roomMocks = vi.hoisted(() => ({
@@ -33,6 +34,8 @@ const roomMocks = vi.hoisted(() => ({
         isHost: true,
         isSpectator: false,
         playerName: 'Alex',
+        passThePhone: false,
+        couchSessions: [],
     },
 }));
 
@@ -87,6 +90,7 @@ describe('MultiplayerRound', () => {
         vi.clearAllMocks();
         roomMocks.roomState.submissions = [];
         roomMocks.roomState.isSpectator = false;
+        roomMocks.roomState.passThePhone = false;
         vi.useFakeTimers({ shouldAdvanceTime: true });
     });
 
@@ -116,5 +120,17 @@ describe('MultiplayerRound', () => {
             vi.advanceTimersByTime(5_000);
         });
         expect(soundMocks.playUrgentTick).toHaveBeenCalled();
+    });
+
+    it('stares at the pair for three seconds before the keyboard in pass-the-phone', async () => {
+        roomMocks.roomState.passThePhone = true;
+        render(<MultiplayerRound />);
+        expect(screen.getByText(/Hand the phone to Alex/i)).toBeInTheDocument();
+        expect(screen.queryByPlaceholderText('What connects these two?')).not.toBeInTheDocument();
+
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(3000);
+        });
+        expect(screen.getByPlaceholderText('What connects these two?')).toBeInTheDocument();
     });
 });

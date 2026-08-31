@@ -1,4 +1,6 @@
 export const PASS_PHONE_SECONDS = 30;
+export const PASS_PHONE_STARE_MS = 3000;
+export const PASS_PHONE_DRUMROLL_MS = 1800;
 
 export function getCurrentWriter(seatedPlayers = [], submissions = []) {
     const submitted = new Set(

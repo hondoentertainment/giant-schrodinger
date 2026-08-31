@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canWriteOnThisDevice, getCurrentWriter, PASS_PHONE_SECONDS } from './passThePhone';
+import { canWriteOnThisDevice, getCurrentWriter, PASS_PHONE_DRUMROLL_MS, PASS_PHONE_SECONDS, PASS_PHONE_STARE_MS } from './passThePhone';
 
 describe('passThePhone', () => {
     const players = [
@@ -9,6 +9,8 @@ describe('passThePhone', () => {
 
     it('uses a 30-second turn', () => {
         expect(PASS_PHONE_SECONDS).toBe(30);
+        expect(PASS_PHONE_STARE_MS).toBe(3000);
+        expect(PASS_PHONE_DRUMROLL_MS).toBe(1800);
     });
 
     it('picks the first writer without a submission', () => {

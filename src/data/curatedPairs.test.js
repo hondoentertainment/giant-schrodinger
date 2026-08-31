@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CURATED_PAIRS, getCuratedPairForSeed, getCuratedPairById, getDailyEditorialPair, getWeeklyPairDrop } from './curatedPairs';
+import { CURATED_PAIRS, getCuratedPairForSeed, getCuratedPairById, getDailyEditorialPair, getWeeklyEpisode, getWeeklyPairDrop } from './curatedPairs';
 
 describe('curatedPairs', () => {
     it('has unique ids and two labels each', () => {
@@ -26,5 +26,6 @@ describe('curatedPairs', () => {
         expect(drop).toHaveLength(7);
         expect(getDailyEditorialPair(date)).toEqual(drop[date.getDay()]);
         expect(getDailyEditorialPair(date)).toEqual(getDailyEditorialPair(new Date('2026-08-30T18:00:00')));
+        expect(getWeeklyEpisode(date).title).toMatch(/^Week of /);
     });
 });
