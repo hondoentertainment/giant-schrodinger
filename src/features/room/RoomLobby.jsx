@@ -3,14 +3,13 @@ import { useRoom } from '../../context/RoomContext';
 import { useToast } from '../../context/ToastContext';
 import { Copy, Users, Crown, LogOut, Play, Share2 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
+import { getShareAppBase } from '../../lib/siteIdentity';
 import { trackEvent } from '../../services/analytics';
 import { ConnectionBanner } from './ConnectionBanner';
 
 function buildJoinInvite(code) {
-    const origin = typeof window !== 'undefined'
-        ? `${window.location.origin}${window.location.pathname}`
-        : '';
-    const joinUrl = `${origin}?join=${encodeURIComponent(code)}`;
+    const origin = getShareAppBase().replace(/\/$/, '');
+    const joinUrl = `${origin}/?join=${encodeURIComponent(code)}`;
     const text = `Join my Venn with Friends room! Code ${code}: ${joinUrl}`;
     return { joinUrl, text };
 }

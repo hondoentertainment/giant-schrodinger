@@ -14,6 +14,9 @@ test.describe('Solo game flow', () => {
         await expect(page.getByRole('heading', { name: /VENN/i })).toBeVisible();
         await expect(page.getByRole('heading', { name: /Create Profile/i })).toBeVisible();
         await expect(page.getByRole('button', { name: /Join Lobby/i })).toBeVisible();
+        await expect(page.getByRole('button', { name: /Play today's pair/i })).toBeVisible();
+        await expect(page.getByText(/Today's pair. Same one as everyone/i)).toBeVisible();
+        await expect(page.getByText('Media Type')).toHaveCount(0);
     });
 
     test('can create profile and see lobby', async ({ page }) => {

@@ -15,6 +15,7 @@ describe('buildDailyRitualShareText', () => {
         expect(text).toContain('Morning coffee × A robot hitting snooze');
         expect(text).toContain('Both need a jolt to start the day');
         expect(text).toContain('8/10');
+        expect(text).toContain('Beat this.');
         expect(text).toContain('https://example.com');
     });
 });

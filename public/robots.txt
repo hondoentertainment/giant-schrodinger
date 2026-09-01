@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://giant-schrodinger.vercel.app/sitemap.xml

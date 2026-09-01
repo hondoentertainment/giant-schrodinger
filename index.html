@@ -2,11 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.svg" />
+    <link rel="icon" type="image/png" href="./icon-192.png" />
+    <link rel="icon" type="image/svg+xml" href="./icon-192.svg" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Connect two concepts with one witty phrase. Play solo or with friends. AI or human scoring. Venn with Friends is a creative word game that challenges your wit, logic, and originality." />
     <meta name="theme-color" content="#07070a" />
+    <link rel="canonical" href="https://giant-schrodinger.vercel.app/" />
 
     <!-- Media CDN preconnect (runtime adds Supabase when configured) -->
     <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
@@ -16,16 +18,21 @@
 
     <!-- Open Graph / Social Sharing -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Venn with Friends" />
     <meta property="og:title" content="Venn with Friends — Can You Beat My Score?" />
-    <meta property="og:description" content="Connect two random concepts with one witty phrase. Score points for wit, logic, originality, and clarity. Challenge your friends!" />
-    <meta property="og:image" content="https://hondoentertainment.github.io/giant-schrodinger/og-image.png" />
-    <meta property="og:url" content="https://hondoentertainment.github.io/giant-schrodinger/" />
+    <meta property="og:description" content="Connect two random concepts with one witty phrase. Score points for wit, logic, originality, and clarity. Beat this." />
+    <meta property="og:image" content="https://giant-schrodinger.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Venn with Friends — overlapping prompts, one connecting line" />
+    <meta property="og:url" content="https://giant-schrodinger.vercel.app/" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Venn with Friends — Can You Beat My Score?" />
-    <meta name="twitter:description" content="Connect two random concepts with one witty phrase. Challenge your friends!" />
-    <meta name="twitter:image" content="https://hondoentertainment.github.io/giant-schrodinger/og-image.png" />
+    <meta name="twitter:description" content="Connect two random concepts with one witty phrase. Beat this." />
+    <meta name="twitter:image" content="https://giant-schrodinger.vercel.app/og-image.png" />
+    <meta name="twitter:image:alt" content="Venn with Friends — overlapping prompts, one connecting line" />
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="./manifest.json" />
@@ -38,6 +45,8 @@
       "@type": "WebApplication",
       "name": "Venn with Friends",
       "alternateName": "Venn",
+      "url": "https://giant-schrodinger.vercel.app/",
+      "image": "https://giant-schrodinger.vercel.app/og-image.png",
       "description": "Connect two random concepts with one witty phrase. Play solo or with friends. AI or human scoring.",
       "applicationCategory": "GameApplication",
       "operatingSystem": "Web",

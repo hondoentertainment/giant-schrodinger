@@ -1,10 +1,19 @@
 # Next Steps
 
-**Last updated:** August 31, 2026 (close the three drop funnels)
+**Last updated:** September 1, 2026 (one public face)
 
 This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
 
-## Current (August 31, 2026)
+## Current (September 1, 2026)
+
+One public face (still no invented keys):
+
+- Canonical URL, OG, Twitter, JSON-LD, robots, and sitemap point at `https://giant-schrodinger.vercel.app`
+- Real `og-image.png` + home-screen PNGs; install shortcuts are **Today's pair** and **Play with friends**
+- Landing shows today's pair mood; More options stay out of the first paint
+- GitHub Pages share links rewrite to Vercel; OG copy ends with **Beat this.**
+
+## Prior (August 31, 2026)
 
 Closed the three live drop funnels (still no invented keys):
 

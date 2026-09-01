@@ -144,4 +144,20 @@ describe('share service', () => {
             expect(url).toContain('?judge=abc123');
         });
     });
+
+    it('rewrites GitHub Pages judge links to the canonical Vercel app', async () => {
+        Object.defineProperty(window, 'location', {
+            value: {
+                hostname: 'hondoentertainment.github.io',
+                origin: 'https://hondoentertainment.github.io',
+                pathname: '/giant-schrodinger/',
+                hash: '',
+                search: '',
+            },
+            writable: true,
+        });
+        const url = await createJudgeShareUrl({ backendId: 'round-1' });
+        expect(url).toBe('https://giant-schrodinger.vercel.app/?judge=round-1');
+        expect(url).not.toContain('github.io');
+    });
 });

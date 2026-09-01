@@ -85,6 +85,7 @@ export function Lobby() {
     const [dailyConflictOpen, setDailyConflictOpen] = useState(false);
     const pendingJoinRef = useRef({ code: '', watch: false, consumed: false });
     const autostartedDailyRef = useRef(false);
+    const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
 
     const theme = getThemeById(themeId);
     const stats = getStats();
@@ -120,6 +121,12 @@ export function Lobby() {
             window.history.replaceState(null, '', cleaned);
         }, 0);
         return () => window.clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const hash = (window.location.hash || '').replace(/^#/, '');
+        if (hash === 'friends') setShowMultiplayer(true);
     }, []);
 
     useEffect(() => {
@@ -954,6 +961,19 @@ export function Lobby() {
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
             <h2 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-white mb-1 text-center">Create Profile</h2>
             <p className="text-white/50 text-sm text-center mb-4">Type a name. Then write one line.</p>
+            {(dailyChallenge.weekTitle || dailyChallenge.pair) && (
+                <div className="mb-4 rounded-[22px] border border-amber-400/20 bg-amber-500/10 p-3 text-left">
+                    {dailyChallenge.weekTitle && (
+                        <p className="text-amber-100/80 text-xs font-semibold">{dailyChallenge.weekTitle}</p>
+                    )}
+                    {dailyChallenge.pair && (
+                        <p className="text-white font-semibold text-sm">
+                            {dailyChallenge.pair.left} × {dailyChallenge.pair.right}
+                        </p>
+                    )}
+                    <p className="text-white/45 text-xs mt-1">Today&apos;s pair. Same one as everyone.</p>
+                </div>
+            )}
             {!backendReady && <ServiceStatusCard className="mb-4" />}
             <form onSubmit={handleSubmit} className="space-y-4">
                 <section aria-labelledby="profile-username">
@@ -1016,11 +1036,15 @@ export function Lobby() {
                     Join Lobby
                 </button>
 
-                <details className="rounded-2xl border border-white/10 bg-white/[0.03] text-left">
+                <details
+                    className="rounded-2xl border border-white/10 bg-white/[0.03] text-left"
+                    onToggle={(event) => setMoreOptionsOpen(event.currentTarget.open)}
+                >
                     <summary className="cursor-pointer list-none px-4 py-3 text-sm text-white/60 font-semibold min-h-[44px] flex items-center justify-between">
                         <span>More options</span>
                         <span className="text-white/35 text-xs">Theme, scoring, media</span>
                     </summary>
+                    {moreOptionsOpen && (
                     <div className="px-4 pb-4 space-y-4 border-t border-white/10 pt-3">
 
                 <section aria-labelledby="profile-theme">
@@ -1225,6 +1249,7 @@ export function Lobby() {
                     </div>
                 </section>
                     </div>
+                    )}
                 </details>
             </form>
         </div>

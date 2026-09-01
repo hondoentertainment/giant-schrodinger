@@ -1,9 +1,11 @@
+import { getShareAppBase } from '../lib/siteIdentity';
+
 const SHARE_HASH_PREFIX = 'judge=';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SHARE_TOKEN_REGEX = /^[A-Za-z0-9_-]{20,120}$/;
 
 export async function createJudgeShareUrl(round) {
-    const baseUrl = window.location.origin + window.location.pathname;
+    const baseUrl = getShareAppBase();
 
     if (round?.backendId) {
         return `${baseUrl}?judge=${round.backendId}`;
@@ -106,7 +108,7 @@ export function parseJudgeShareUrl() {
 
 export function clearJudgeFromUrl() {
     if (window.history.replaceState) {
-        const clean = window.location.origin + window.location.pathname;
+        const clean = getShareAppBase();
         window.history.replaceState(null, '', clean);
     }
 }
@@ -150,6 +152,6 @@ export function getOgShareUrl(publicToken, options = {}) {
         const fnBase = `${base.replace(/\/$/, '')}/functions/v1/og-tags`;
         return `${fnBase}?roundId=${encodeURIComponent(publicToken)}`;
     }
-    const appBase = window.location.origin + window.location.pathname;
+    const appBase = getShareAppBase();
     return `${appBase}?judge=${encodeURIComponent(publicToken || '')}`;
 }

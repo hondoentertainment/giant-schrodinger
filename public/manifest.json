@@ -2,41 +2,47 @@
   "name": "Venn with Friends",
   "short_name": "Venn",
   "description": "Connect two concepts with one witty phrase. Challenge your friends!",
-  "start_url": "/giant-schrodinger/",
-  "scope": "/giant-schrodinger/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0a0118",
-  "theme_color": "#1a0533",
+  "theme_color": "#07070a",
   "orientation": "portrait",
   "lang": "en",
   "dir": "ltr",
   "categories": ["games", "entertainment", "social"],
   "icons": [
     {
-      "src": "icon-192.svg",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.svg",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
     {
-      "name": "Daily Challenge",
-      "short_name": "Daily",
-      "url": "/giant-schrodinger/#daily",
-      "icons": [{ "src": "icon-192.svg", "sizes": "192x192" }]
+      "name": "Today's pair",
+      "short_name": "Today",
+      "url": "/#daily",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Ranked",
-      "short_name": "Ranked",
-      "url": "/giant-schrodinger/#ranked",
-      "icons": [{ "src": "icon-192.svg", "sizes": "192x192" }]
+      "name": "Play with friends",
+      "short_name": "Friends",
+      "url": "/#friends",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "related_applications": [],

@@ -6,7 +6,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
 const DEFAULT_APP_URL = Deno.env.get('APP_URL') || 'https://giant-schrodinger.vercel.app';
-const DEFAULT_IMAGE = `${DEFAULT_APP_URL.replace(/\/$/, '')}/og-image.svg`;
+const DEFAULT_IMAGE = `${DEFAULT_APP_URL.replace(/\/$/, '')}/og-image.png`;
 
 function escapeHtml(value: string) {
   return value
@@ -64,7 +64,7 @@ function buildRoundDescription(round: Record<string, unknown>) {
   if (left && right) parts.push(`Prompts: ${left} × ${right}`);
   if (score != null && score !== '') parts.push(`Score: ${score}/10`);
   if (judge) parts.push(`Judged via ${String(judge)}`);
-  parts.push('Play Venn with Friends and send your own connection.');
+  parts.push('Beat this.');
   return parts.join(' · ');
 }
 
@@ -74,7 +74,7 @@ serve(async (req: Request) => {
   const challengeId = url.searchParams.get('challengeId')?.trim() || '';
 
   let title = 'Venn with Friends — Can You Beat My Score?';
-  let description = 'Connect two random concepts with one witty phrase. Challenge your friends!';
+  let description = 'Connect two random concepts with one witty phrase. Beat this.';
   let image = DEFAULT_IMAGE;
   let redirectTarget = DEFAULT_APP_URL;
 

@@ -309,6 +309,17 @@ describe('Lobby', () => {
     it('shows profile form when user is not logged in', () => {
         render(<Lobby />);
         expect(screen.getByPlaceholderText('Enter your name...')).toBeInTheDocument();
+        expect(screen.getByText(/Week of leftover sparklers/i)).toBeInTheDocument();
+        expect(screen.getByText(/Morning coffee × A robot hitting snooze/i)).toBeInTheDocument();
+        expect(screen.queryByText('Media Type')).not.toBeInTheDocument();
+    });
+
+    it('keeps more options out of the first paint until opened', async () => {
+        const user = userEvent.setup();
+        render(<Lobby />);
+        expect(screen.queryByText(/Who scores solo rounds/i)).not.toBeInTheDocument();
+        await user.click(screen.getByText('More options'));
+        expect(await screen.findByText('Media Type')).toBeInTheDocument();
     });
 
     it('starts today\'s pair from the profile form', async () => {

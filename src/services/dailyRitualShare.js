@@ -15,6 +15,7 @@ export function buildDailyRitualShareText({
     if (left && right) lines.push(`${left} × ${right}`);
     if (submission) lines.push(`“${submission}”`);
     if (Number.isFinite(score)) lines.push(`${score}/10`);
+    lines.push('Beat this.');
     if (origin) lines.push(`Play today’s pair: ${origin}`);
     return lines.join('\n');
 }
