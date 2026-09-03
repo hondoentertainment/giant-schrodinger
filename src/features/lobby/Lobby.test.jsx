@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Lobby } from './Lobby';
 
@@ -330,6 +330,35 @@ describe('Lobby', () => {
         await user.click(screen.getByRole('button', { name: /Play today's pair/i }));
         expect(mockLogin).toHaveBeenCalled();
         expect(sessionStorage.getItem('vwf_autostart_daily')).toBe('1');
+    });
+
+    it('starts today\'s pair from #daily when a profile already exists', async () => {
+        mockUser = loggedInUser;
+        window.history.pushState({}, '', '/#daily');
+        render(<Lobby />);
+        await waitFor(() => {
+            expect(mockStartSession).toHaveBeenCalledWith(3, true);
+            expect(mockBeginRound).toHaveBeenCalled();
+        });
+    });
+
+    it('does not autostart today\'s pair from #daily on the profile screen', async () => {
+        const user = userEvent.setup();
+        window.history.pushState({}, '', '/#daily');
+        render(<Lobby />);
+        expect(mockStartSession).not.toHaveBeenCalled();
+        await user.type(screen.getByPlaceholderText('Enter your name...'), 'Kyle');
+        await user.click(screen.getByRole('button', { name: /Join Lobby/i }));
+        expect(mockLogin).toHaveBeenCalled();
+        expect(sessionStorage.getItem('vwf_autostart_daily')).toBeNull();
+        expect(mockStartSession).not.toHaveBeenCalled();
+    });
+
+    it('opens the room UI from #friends', () => {
+        mockUser = loggedInUser;
+        window.history.pushState({}, '', '/#friends');
+        render(<Lobby />);
+        expect(screen.getByPlaceholderText(/Room code/i)).toBeInTheDocument();
     });
 
     it('keeps Join Lobby as a lobby-only path', async () => {

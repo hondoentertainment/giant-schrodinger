@@ -25,6 +25,7 @@ import { isE2EMockRoomEnabled } from '../../lib/e2eMockRoom';
 import { trackEvent } from '../../services/analytics';
 import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
 import { consumeAutostartDaily, markAutostartDaily, peekAutostartDaily } from '../../lib/firstSession';
+import { parseSiteShortcut } from '../../lib/siteIdentity';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
@@ -85,7 +86,15 @@ export function Lobby() {
     const [dailyConflictOpen, setDailyConflictOpen] = useState(false);
     const pendingJoinRef = useRef({ code: '', watch: false, consumed: false });
     const autostartedDailyRef = useRef(false);
+    const userRef = useRef(user);
+    userRef.current = user;
     const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+    const [siteShortcut, setSiteShortcut] = useState(() => (
+        typeof window === 'undefined' ? null : parseSiteShortcut(window.location.hash)
+    ));
+    const hadProfileOnDailyShortcutRef = useRef(
+        Boolean(user) && (typeof window === 'undefined' ? null : parseSiteShortcut(window.location.hash)) === 'daily'
+    );
 
     const theme = getThemeById(themeId);
     const stats = getStats();
@@ -124,9 +133,18 @@ export function Lobby() {
     }, []);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const hash = (window.location.hash || '').replace(/^#/, '');
-        if (hash === 'friends') setShowMultiplayer(true);
+        if (typeof window === 'undefined') return undefined;
+        const applyShortcut = () => {
+            const shortcut = parseSiteShortcut(window.location.hash);
+            if (shortcut === 'daily') {
+                hadProfileOnDailyShortcutRef.current = Boolean(userRef.current);
+            }
+            setSiteShortcut(shortcut);
+            if (shortcut === 'friends') setShowMultiplayer(true);
+        };
+        applyShortcut();
+        window.addEventListener('hashchange', applyShortcut);
+        return () => window.removeEventListener('hashchange', applyShortcut);
     }, []);
 
     useEffect(() => {
@@ -307,9 +325,9 @@ export function Lobby() {
         beginRound();
     };
 
-    const beginDailyChallenge = () => {
+    const beginDailyChallenge = (source = 'lobby') => {
         trackEvent(stats.totalRounds === 0 ? 'first_session_daily_started' : 'daily_challenge_started', {
-            source: 'lobby',
+            source,
         });
         startSession(3, true);
         beginRound();
@@ -318,11 +336,14 @@ export function Lobby() {
     useEffect(() => {
         if (autostartedDailyRef.current) return;
         if (!user || sessionId || pendingJoinRef.current.code) return;
-        if (!peekAutostartDaily()) return;
+        const fromProfile = peekAutostartDaily();
+        const fromShortcut = siteShortcut === 'daily' && hadProfileOnDailyShortcutRef.current;
+        if (!fromProfile && !fromShortcut) return;
+        if (fromShortcut && !fromProfile && hasDailyChallengeBeenPlayed()) return;
         autostartedDailyRef.current = true;
         consumeAutostartDaily();
-        beginDailyChallenge();
-    }, [sessionId, user]);
+        beginDailyChallenge(fromShortcut ? 'shortcut' : 'lobby');
+    }, [sessionId, siteShortcut, user]);
 
     const startDailyChallenge = () => {
         if (sessionId) {

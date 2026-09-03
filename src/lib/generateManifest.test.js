@@ -8,6 +8,7 @@ describe('generateManifest', () => {
         expect(manifest.scope).toBe('/');
         expect(manifest.icons.some((icon) => icon.src === '/icon-192.png')).toBe(true);
         expect(manifest.shortcuts.map((item) => item.name)).toEqual(["Today's pair", 'Play with friends']);
+        expect(manifest.shortcuts.map((item) => item.url)).toEqual(['/#daily', '/#friends']);
         expect(JSON.stringify(manifest)).not.toMatch(/ranked/i);
         expect(JSON.stringify(manifest)).not.toMatch(/github\.io/);
     });

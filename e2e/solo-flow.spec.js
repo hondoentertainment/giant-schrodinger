@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startSoloRound } from './helpers';
+import { dismissOnboarding, startSoloRound } from './helpers';
 
 async function createProfile(page, name = 'TestPlayer') {
     await page.goto('/');
@@ -22,6 +22,13 @@ test.describe('Solo game flow', () => {
     test('can create profile and see lobby', async ({ page }) => {
         await createProfile(page);
         await expect(page.getByRole('button', { name: /Start today's Venn daily puzzle|Start First Round|Start solo session|Solo Session|Start Round/i })).toBeVisible();
+    });
+
+    test('#daily starts today\'s pair for a logged-in player', async ({ page }) => {
+        await createProfile(page);
+        await page.goto('/#daily');
+        await dismissOnboarding(page);
+        await expect(page.getByPlaceholder(/What connects/i)).toBeVisible({ timeout: 15000 });
     });
 
     test('can start solo game and see round screen', async ({ page }) => {

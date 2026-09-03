@@ -23,6 +23,13 @@ export function getOgImageUrl(origin = CANONICAL_ORIGIN) {
     return `${String(origin).replace(/\/$/, '')}${OG_IMAGE_PATH}`;
 }
 
+export function parseSiteShortcut(hash = '') {
+    const cleaned = String(hash || '').replace(/^#/, '').trim().toLowerCase();
+    if (cleaned === 'friends') return 'friends';
+    if (cleaned === 'daily') return 'daily';
+    return null;
+}
+
 export function getShareAppBase(location = typeof window !== 'undefined' ? window.location : null) {
     if (isLegacyPublicHost(getLocationHost(location))) {
         return getCanonicalUrl();

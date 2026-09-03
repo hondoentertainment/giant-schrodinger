@@ -1,10 +1,18 @@
 # Next Steps
 
-**Last updated:** September 1, 2026 (one public face)
+**Last updated:** September 2, 2026 (public-face leftover)
 
 This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
 
-## Current (September 1, 2026)
+## Current (September 2, 2026)
+
+Public-face leftover (still no invented keys):
+
+- `#daily` starts today's pair when a profile already exists; `#friends` still opens rooms
+- `npm run check:public-face` confirms live OG, robots, sitemap, and hosted `og-tags`
+- Hosted `og-tags` should match source: `og-image.png` + **Beat this.**
+
+## Prior (September 1, 2026)
 
 One public face (still no invented keys):
 

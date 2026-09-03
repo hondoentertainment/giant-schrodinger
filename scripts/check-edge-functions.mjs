@@ -48,6 +48,20 @@ async function main() {
         if (!ok) failures += 1;
     }
 
+    try {
+        const ogResponse = await fetch(`${base}/functions/v1/og-tags`, { headers: authHeaders });
+        const ogHtml = await ogResponse.text();
+        const ogLive = ogResponse.ok
+            && ogHtml.includes('og-image.png')
+            && ogHtml.includes('Beat this.')
+            && !ogHtml.includes('og-image.svg');
+        console.log(`${ogLive ? '✓' : '✗'} og-tags face — ${ogLive ? 'PNG + Beat this.' : 'redeploy needed'}`);
+        if (!ogLive) failures += 1;
+    } catch (err) {
+        console.log(`✗ og-tags face — ${err.message}`);
+        failures += 1;
+    }
+
     console.log(`\nAPP_URL hint: ${productionUrl}`);
     console.log(failures
         ? '\nDeploy with: npm run deploy:edge-functions'

@@ -39,6 +39,7 @@ if (envOk) {
   console.log('\n○ Skipping RPC + edge probes — set VITE_SUPABASE_* in .env.local first');
 }
 
+run('Public face', 'npm', ['run', 'check:public-face'], { env: { PRODUCTION_URL }, optional: true });
 run('Production smoke', 'npm', ['run', 'smoke:production'], { env: { PRODUCTION_URL } });
 run('Deployed E2E rehearsal', 'npm', ['run', 'test:e2e:rehearsal'], { env: { PRODUCTION_URL } });
 run('Hosted two-browser rehearsal', 'npx', ['playwright', 'test', 'e2e/hosted-two-browser.spec.js', '--project=Desktop Chrome', '--workers=1'], {

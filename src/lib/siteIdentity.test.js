@@ -5,6 +5,7 @@ import {
     getOgImageUrl,
     getShareAppBase,
     isLegacyPublicHost,
+    parseSiteShortcut,
 } from './siteIdentity';
 
 describe('siteIdentity', () => {
@@ -35,5 +36,12 @@ describe('siteIdentity', () => {
             origin: 'https://giant-schrodinger.vercel.app',
             pathname: '/',
         })).toBe('https://giant-schrodinger.vercel.app/');
+    });
+
+    it('reads install shortcuts from the hash', () => {
+        expect(parseSiteShortcut('#daily')).toBe('daily');
+        expect(parseSiteShortcut('friends')).toBe('friends');
+        expect(parseSiteShortcut('#judge=abc')).toBeNull();
+        expect(parseSiteShortcut('')).toBeNull();
     });
 });
