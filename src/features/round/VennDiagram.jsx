@@ -46,6 +46,7 @@ function VennMeme({ asset }) {
                 }}
                 loading="eager"
                 decoding="async"
+                fetchPriority="high"
                 draggable={false}
             />
             {showGiphyAttribution && (
@@ -105,6 +106,7 @@ function VennImage({ asset }) {
                 onLoad={() => setLoaded(true)}
                 loading="eager"
                 decoding="async"
+                fetchPriority="high"
                 draggable={false}
             />
         </div>
@@ -406,16 +408,30 @@ function VennAudio({ asset }) {
         }
     };
 
+    const coverBlurUrl = asset.coverUrl ? (asset.coverBlurUrl || buildBlurPlaceholderUrl(asset.coverUrl)) : null;
+
     return (
         <div className="w-full h-full relative flex flex-col items-center justify-center">
+            {coverBlurUrl && !coverLoaded && (
+                <img
+                    src={coverBlurUrl}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover scale-110 blur-md brightness-50"
+                    referrerPolicy="no-referrer"
+                />
+            )}
             {asset.coverUrl && (
                 <img
                     src={asset.coverUrl}
                     alt={asset.label}
-                    className={`absolute inset-0 w-full h-full object-cover brightness-50 transition-opacity duration-300 ${coverLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    className={`absolute inset-0 w-full h-full object-cover brightness-50 transition-opacity duration-500 ${coverLoaded ? 'opacity-100' : 'opacity-0'}`}
                     onLoad={() => setCoverLoaded(true)}
                     onError={handleCoverError}
                     referrerPolicy="no-referrer"
+                    loading="eager"
+                    decoding="async"
+                    draggable={false}
                 />
             )}
             {!asset.coverUrl && (

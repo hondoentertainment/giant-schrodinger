@@ -14,6 +14,7 @@ import { consumeJudgeChain, peekJudgeChain, setForcedLine, setForcedPair } from 
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import { AchievementProgress } from '../../components/AchievementProgress';
 import { ScoreReveal } from '../../components/ScoreReveal';
+import { FusionFrame } from '../../components/FusionFrame';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { haptic } from '../../lib/haptics';
 import { playScoreReveal } from '../../services/sounds';
@@ -460,9 +461,15 @@ export function Reveal({ submission, assets }) {
 
     if (!fusionImage) {
         return (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-in fade-in duration-500">
-                <div className="h-24 w-24 rounded-full border-2 border-t-game-accent border-white/10 animate-spin mb-8" aria-hidden="true" />
-                <h2 id="reveal-status" className="text-3xl font-display font-bold text-white mb-2 animate-pulse" role="status" aria-live="polite">
+            <div className="w-full flex flex-col items-center justify-center min-h-[60vh] text-center animate-in fade-in duration-500 px-4">
+                <FusionFrame
+                    image={null}
+                    submission={submission}
+                    leftLabel={savedAssetPair.left.label}
+                    rightLabel={savedAssetPair.right.label}
+                    className="mb-8"
+                />
+                <h2 id="reveal-status" className="text-2xl sm:text-3xl font-display font-bold text-white mb-2 animate-pulse" role="status" aria-live="polite">
                     {status}
                 </h2>
                 <p className="text-white/40 italic">&ldquo;{submission}&rdquo;</p>
@@ -480,26 +487,14 @@ export function Reveal({ submission, assets }) {
                         <p className="text-white/60 text-sm mb-6">
                             Score it yourself now, or copy a link and let a friend be the judge.
                         </p>
-                        <div className="relative aspect-square w-full max-w-sm mx-auto rounded-2xl overflow-hidden mb-8 shadow-2xl ring-1 ring-white/20">
-                            <img
-                                src={fusionImage.url}
-                                alt="Fusion"
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                                data-fallback={fusionImage.fallbackUrl}
-                                onError={(event) => {
-                                    const fallback = event.currentTarget.dataset.fallback;
-                                    if (fallback && event.currentTarget.src !== fallback) {
-                                        event.currentTarget.src = fallback;
-                                    }
-                                }}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                            <div className="absolute bottom-6 left-6 text-left">
-                                <div className="text-white/60 text-sm uppercase tracking-wider">Concept</div>
-                                <div className="text-2xl font-bold text-white">{submission}</div>
-                            </div>
-                        </div>
+                        <FusionFrame
+                            image={fusionImage}
+                            submission={submission}
+                            leftLabel={savedAssetPair.left.label}
+                            rightLabel={savedAssetPair.right.label}
+                            radiusClass="rounded-2xl"
+                            className="mb-8"
+                        />
 
                         <form onSubmit={handleHumanScore} className="space-y-4 text-left">
                             <div>
@@ -616,26 +611,13 @@ export function Reveal({ submission, assets }) {
                         Puzzle result
                     </div>
 
-                    <div className="relative aspect-square w-full max-w-sm mx-auto rounded-[28px] overflow-hidden mb-8 shadow-game-card ring-1 ring-white/15">
-                        <img
-                            src={fusionImage.url}
-                            alt="Fusion"
-                            className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
-                            data-fallback={fusionImage.fallbackUrl}
-                            onError={(event) => {
-                                const fallback = event.currentTarget.dataset.fallback;
-                                if (fallback && event.currentTarget.src !== fallback) {
-                                    event.currentTarget.src = fallback;
-                                }
-                            }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                        <div className="absolute bottom-6 left-6 text-left">
-                            <div className="text-white/60 text-sm uppercase tracking-wider">Concept</div>
-                            <div className="text-2xl font-bold text-white">{submission}</div>
-                        </div>
-                    </div>
+                    <FusionFrame
+                        image={fusionImage}
+                        submission={submission}
+                        leftLabel={savedAssetPair.left.label}
+                        rightLabel={savedAssetPair.right.label}
+                        className="mb-8 shadow-game-card"
+                    />
 
                     <div className="grid grid-cols-2 gap-3 mb-8">
                         <div className={`wordle-tile min-h-[104px] flex-col ${displayScore >= 8 ? 'wordle-tile-correct' : displayScore >= 5 ? 'wordle-tile-present' : 'wordle-tile-filled'}`}>

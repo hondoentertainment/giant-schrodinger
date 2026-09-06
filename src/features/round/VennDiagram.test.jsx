@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { VennDiagram } from './VennDiagram';
 import { MEDIA_TYPES } from '../../data/themes';
 
@@ -93,5 +93,28 @@ describe('VennDiagram', () => {
         );
 
         expect(screen.getAllByText('Concept')).toHaveLength(2);
+    });
+
+    it('loads still images with a blur shell, responsive sizes, and high fetch priority', () => {
+        render(
+            <VennDiagram
+                leftAsset={{ id: 'a', label: 'Cat', type: MEDIA_TYPES.IMAGE, url: 'https://images.unsplash.com/photo-cat?auto=format&w=1080&h=1080' }}
+                rightAsset={{ id: 'b', label: 'Dog', type: MEDIA_TYPES.IMAGE, url: 'https://example.com/dog.jpg', fallbackUrl: 'https://picsum.photos/seed/dog/1080/1080' }}
+            />
+        );
+
+        const cat = screen.getByAltText('Cat');
+        expect(cat).toHaveAttribute('fetchpriority', 'high');
+        expect(cat).toHaveAttribute('decoding', 'async');
+        expect(cat).toHaveAttribute('srcset', expect.stringContaining('400w'));
+        expect(cat).toHaveAttribute('sizes');
+        expect(screen.getAllByRole('status', { name: /Loading (Cat|Dog)/ })).toHaveLength(2);
+
+        const dog = screen.getByAltText('Dog');
+        fireEvent.error(dog);
+        expect(screen.getByAltText('Dog')).toHaveAttribute('src', 'https://picsum.photos/seed/dog/1080/1080');
+        fireEvent.error(screen.getByAltText('Dog'));
+        expect(screen.queryByAltText('Dog')).not.toBeInTheDocument();
+        expect(screen.getByText('Dog', { selector: 'div' })).toBeInTheDocument();
     });
 });

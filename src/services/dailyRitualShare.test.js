@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildDailyRitualShareText, getDailyRitualShareCard } from './dailyRitualShare';
+import { buildDailyRitualShareText } from './dailyRitualShare';
 
 describe('buildDailyRitualShareText', () => {
     it('formats a Wordle-style daily card', () => {

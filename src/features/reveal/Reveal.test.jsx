@@ -282,4 +282,15 @@ describe('Reveal', () => {
         expect(screen.getByText(`\u201c${mockSubmission}\u201d`)).toBeInTheDocument();
         expect(await screen.findByText(/Great connection between Cat and Dog!/, {}, { timeout: 3000 })).toBeInTheDocument();
     });
+
+    it('holds the fusion frame while rendering, then mounts the labelled image', async () => {
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+        expect(screen.getByTestId('fusion-frame')).toHaveAttribute('data-state', 'rendering');
+        expect(screen.getByTestId('fusion-rendering')).toBeInTheDocument();
+
+        const img = await screen.findByAltText(`Fusion of Cat and Dog: "${mockSubmission}"`, {}, { timeout: 3000 });
+        expect(img).toHaveAttribute('src', 'https://example.com/fusion.jpg');
+        expect(img).toHaveAttribute('fetchpriority', 'high');
+        expect(screen.getByTestId('fusion-source')).toHaveTextContent('AI render');
+    });
 });

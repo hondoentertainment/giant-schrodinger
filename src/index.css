@@ -554,6 +554,70 @@
   animation: vennCollideFlash 0.8s ease-out 0.4s both;
 }
 
+/* ── Fusion frame (reveal hero) ── */
+@keyframes fusionGhostLeft {
+  0%, 100% { transform: translateX(-30%) scale(0.96); opacity: 0.55; }
+  50% { transform: translateX(-12%) scale(1); opacity: 0.9; }
+}
+
+@keyframes fusionGhostRight {
+  0%, 100% { transform: translateX(30%) scale(0.96); opacity: 0.55; }
+  50% { transform: translateX(12%) scale(1); opacity: 0.9; }
+}
+
+@keyframes fusionLensBreathe {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50% { opacity: 0.9; transform: scale(1.25); }
+}
+
+@keyframes fusionShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.fusion-ghost-left {
+  animation: fusionGhostLeft 2.6s ease-in-out infinite;
+}
+
+.fusion-ghost-right {
+  animation: fusionGhostRight 2.6s ease-in-out infinite;
+}
+
+.fusion-lens {
+  animation: fusionLensBreathe 2.6s ease-in-out infinite;
+}
+
+.fusion-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.06) 50%, transparent 80%);
+  animation: fusionShimmer 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fusion-ghost-left,
+  .fusion-ghost-right,
+  .fusion-lens,
+  .fusion-shimmer::after {
+    animation: none !important;
+  }
+
+  .fusion-ghost-left {
+    transform: translateX(-16%);
+    opacity: 0.8;
+  }
+
+  .fusion-ghost-right {
+    transform: translateX(16%);
+    opacity: 0.8;
+  }
+
+  .fusion-lens {
+    opacity: 0.7;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
