@@ -157,7 +157,13 @@
     "time": "Tiempo",
     "points": "Puntos",
     "sharpeningMedia": "Mejorando medios…",
-    "loadingRound": "Cargando ronda…"
+    "loadingRound": "Cargando ronda…",
+    "sideLeft": "Izquierda",
+    "sideRight": "Derecha",
+    "spotlightHint": "Destacar este lado",
+    "spotlightClearHint": "Quitar el foco",
+    "spotlightOn": "Foco en {{label}} ({{side}})",
+    "spotlightOff": "Foco quitado"
   },
   "reveal": {
     "yourScore": "TU PUNTUACI\u00d3N",

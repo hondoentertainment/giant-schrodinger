@@ -9,6 +9,7 @@ A creative party game where players connect two prompts with one witty phrase. S
 ### Core loops
 
 - Solo sessions with 3, 5, or 7 rounds
+- Tap a Venn circle (or its caption) to spotlight that side; `←` `→` `Esc` on the keyboard
 - Daily challenge mode
 - AI judge and manual judge options
 - Share a round for friend judging
@@ -56,7 +57,7 @@ Full registry: [PRD.md §2](PRD.md).
 
 4. Validate:
    ```bash
-   npm run test              # 688 unit tests
+   npm run test              # 798 unit tests
    npm run test:e2e:desktop  # 11 Playwright specs
    npm run build
    npm run verify:release    # lint + unit + e2e + build

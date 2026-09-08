@@ -157,7 +157,13 @@
     "time": "Time",
     "points": "Points",
     "sharpeningMedia": "Sharpening media…",
-    "loadingRound": "Loading round…"
+    "loadingRound": "Loading round…",
+    "sideLeft": "Left",
+    "sideRight": "Right",
+    "spotlightHint": "Spotlight this side",
+    "spotlightClearHint": "Clear spotlight",
+    "spotlightOn": "Spotlight on {{label}} ({{side}})",
+    "spotlightOff": "Spotlight cleared"
   },
   "reveal": {
     "yourScore": "YOUR SCORE",

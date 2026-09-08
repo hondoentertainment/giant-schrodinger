@@ -554,6 +554,51 @@
   animation: vennCollideFlash 0.8s ease-out 0.4s both;
 }
 
+/* Side selection ("spotlight"): the picked circle comes forward with an accent
+   ring, the other settles back, and the lens softens so the media reads clean. */
+.venn-circle {
+  transition:
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s ease,
+    border-color 0.3s ease,
+    opacity 0.4s ease,
+    filter 0.4s ease;
+}
+
+.venn-circle--dimmed {
+  opacity: 0.66;
+  filter: saturate(0.65) brightness(0.85);
+}
+
+.venn-lens-glow {
+  transition: opacity 0.4s ease;
+}
+
+.venn-lens-glow--soft {
+  animation: none !important;
+  opacity: 0.2;
+}
+
+.venn-caption {
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.venn-caption:hover {
+  transform: translateY(-1px);
+}
+
+.venn-caption--selected {
+  transform: translateY(-2px);
+}
+
+.venn-caption--dimmed {
+  opacity: 0.6;
+}
+
 /* ── Fusion frame (reveal hero) ── */
 @keyframes fusionGhostLeft {
   0%, 100% { transform: translateX(-30%) scale(0.96); opacity: 0.55; }
@@ -640,6 +685,12 @@
   .venn-lens-glow,
   .venn-collide-flash {
     animation: none !important;
+  }
+
+  .venn-circle,
+  .venn-lens-glow,
+  .venn-caption {
+    transition: none !important;
   }
 
   .venn-collide-flash {

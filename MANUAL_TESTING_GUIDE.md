@@ -85,6 +85,9 @@ Save all screenshots to: `screenshots/` folder in your project
 
 5. **Check the Venn Diagram**:
    - Does a Venn diagram appear?
+   - Tap a circle (or its caption): does that side come forward with a colored ring while the other dims?
+   - Tap it again: does the selection clear?
+   - Does the answer input keep focus after tapping a circle?
    - Are the two circles visible?
    - Is your answer in the middle (intersection)?
    - Do the circles have labels?

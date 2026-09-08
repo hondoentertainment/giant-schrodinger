@@ -1,10 +1,33 @@
 # Next Steps
 
-**Last updated:** September 2, 2026 (public-face leftover)
+**Last updated:** September 8, 2026 (Venn side selection)
 
 This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
 
-## Current (September 2, 2026)
+## Current (September 8, 2026)
+
+Venn diagram side selection (still no invented keys):
+
+- Tapping a circle or its caption selects ("spotlights") that side: it comes forward with an accent ring, the other side dims, the lens glow softens. Tap again to clear.
+- Captions are the accessible controls (`aria-pressed`, keyboard focus); the circle is a pointer-only hit-area so screen readers hear one button per side. `←` / `→` select, `Esc` clears, a polite live region announces the change.
+- A pointer tap never steals focus from the answer input (mobile keyboard stays open). Play / mute / Giphy controls sit above the hit-area and keep working.
+- Selection is scoped to the pairing, so every round opens level. Reduced motion disables the transitions.
+- Telemetry: `venn_side_selected` with `side`, `via` (`circle` | `caption` | `keyboard`), `mediaType`.
+- Strings in `round.side*` / `round.spotlight*` (EN + ES). Shared by solo, daily, friend-judge, challenge, multiplayer, and AI Battle rounds via `VennDiagram`.
+- Tests: 9 new unit cases in `VennDiagram.test.jsx`; `solo-flow.spec.js` covers pointer hit-testing, caption toggle, keyboard, and focus retention.
+
+### Recommended next (in order)
+
+1. **Ship the colorblind toggle the docs already promise.** `EXPECTED_BEHAVIORS.md §14`, `MANUAL_TESTING_GUIDE.md`, and `FAST_TRACK_CHECKLIST.md` describe a settings toggle; today only `VennDiagram` reads `localStorage.venn_colorblind` and nothing writes it. Add a "High-contrast Venn colors" switch under Create Profile → More options, make `VennDiagram` read it reactively (state + `storage` event, not a render-time `localStorage.getItem`), and cover it in `e2e/accessibility.spec.js`. Small.
+2. **Fix same-type pairs in Memes & Videos.** `buildMemesVideosAssets` flips two independent coins for left/right, so about half of "memes & videos" rounds are meme+meme or video+video, and `pickDiversePair` only runs for image mode. Bias the second pick toward the opposite type (~75%) and add a unit test alongside the existing `selectRoundAssets` mixed-type case. Small.
+3. **Peek sheet on the selected side.** At 375px each circle is still ~200px. A second tap on an already-selected circle (or long-press) could open a full-bleed sheet with the media, label, and badge, dismissed by tap or `Esc`, reusing `useFocusTrap`. Track it as `venn_side_peeked`. Medium.
+4. **High-contrast ring under forced colors.** The selected ring is alpha-blended accent color; under `forced-colors: active` (Windows High Contrast) it can vanish. Add a `@media (forced-colors: active)` rule that switches `.venn-circle--selected` to a solid `outline`. Small.
+5. **Read the new telemetry before adding more UI.** Once `VITE_POSTHOG_KEY` exists, check selection rate per round, `via` split on mobile vs desktop, and whether rounds with a selection score higher. If `caption` dominates on mobile, enlarge the circle hit-area instead of adding a hint. No code until then.
+6. **Selection-aware coaching.** When a first-session player keeps one side selected for a while, surface one line from `contextualTips.js` ("Name what they share, not what each one is"). Needs copy; the hook point is `Round.jsx`, not `VennDiagram`. Small, after (5).
+7. **Mobile Safari e2e for the hit-area.** The new spec runs on Desktop Chrome; add the same click path to the `Mobile Safari` project so touch regressions on the hit-area are caught, and consider a `visual-smoke` snapshot of the selected state. Small.
+8. **Only if it earns its place: spectator sync.** `MultiplayerRound` uses the same component, so a room could broadcast the writer's selected side to spectators as a pass-the-phone tell. Medium; skip unless the room rehearsal asks for it.
+
+## Prior (September 2, 2026)
 
 Public-face leftover (still no invented keys):
 

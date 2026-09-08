@@ -65,6 +65,13 @@ npm run verify:release    # lint + unit + e2e + build
 
 #### Venn Diagram Display
 - [ ] Venn diagram renders correctly
+- [ ] Tap a circle: it comes forward with an accent ring, the other side dims
+- [ ] Tap the same circle again: selection clears
+- [ ] Tap a caption: same side toggles; caption shows pressed state
+- [ ] Keyboard: focus a caption, `←`/`→` select, `Esc` clears
+- [ ] Tapping a circle keeps the answer input focused (mobile keyboard stays up)
+- [ ] Next round starts with no side selected
+- [ ] Video/audio play + mute buttons still work inside a selected circle
 - [ ] Left circle shows first concept
 - [ ] Right circle shows second concept
 - [ ] Intersection area is visible

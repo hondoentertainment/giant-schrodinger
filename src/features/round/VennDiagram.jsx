@@ -6,7 +6,17 @@ import { getYoutubeEmbedUrl, getYoutubeVideoIdFromAsset } from '../../lib/youtub
 import { buildResponsiveSrcSet, getGiphyPreviewUrl, buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
 import { MediaLoadingShell } from '../../components/MediaLoadingShell';
 import { useTranslation } from '../../hooks/useTranslation';
+import { haptic } from '../../lib/haptics';
+import { trackEvent } from '../../services/analytics';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+
+const SIDES = { LEFT: 'left', RIGHT: 'right' };
+
+// Selecting a side is a "peek", not a destination: keep the caret in the
+// answer input (and the mobile keyboard open) when a pointer taps a circle.
+function keepTypingFocus(event) {
+    event.preventDefault();
+}
 
 // ── Meme circle (GIFs/images with letterboxing) ──
 function VennMeme({ asset }) {
@@ -494,48 +504,70 @@ function VennMedia({ asset }) {
 }
 
 // ── Concept title caption below each circle ──
-function ConceptCaption({ label, align = 'left', accentColor, assetType }) {
+// The caption is the accessible control for selecting a side: it carries the
+// visible name, aria-pressed state, and keyboard focus. The circle itself only
+// adds a pointer hit-area (see VennCircle) so screen readers hear one button per side.
+function ConceptCaption({
+    label,
+    align = 'left',
+    accentColor,
+    assetType,
+    sideName,
+    selected = false,
+    dimmed = false,
+    onToggle,
+}) {
     const conceptLabel = getAssetMediaLabel(assetType);
+    const accent = accentColor || 'rgba(255,255,255,0.45)';
     return (
-        <div
-            className={`flex flex-col gap-1 min-w-0 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 backdrop-blur-md ${
+        <button
+            type="button"
+            aria-pressed={selected}
+            aria-label={`${sideName} ${conceptLabel.toLowerCase()}: ${label}`}
+            onClick={onToggle}
+            onMouseDown={keepTypingFocus}
+            className={`venn-caption flex flex-col gap-1 min-w-0 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 backdrop-blur-md cursor-pointer ${
                 align === 'right' ? 'items-end text-right' : 'items-start text-left'
-            }`}
+            } ${selected ? 'venn-caption--selected' : ''} ${dimmed ? 'venn-caption--dimmed' : ''}`}
             style={{
                 maxWidth: '46%',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderTop: `2px solid ${accentColor ? `${accentColor}99` : 'rgba(255,255,255,0.08)'}`,
+                background: selected && accentColor ? `${accentColor}1f` : 'rgba(255,255,255,0.06)',
+                border: `1px solid ${selected && accentColor ? `${accentColor}80` : 'rgba(255,255,255,0.08)'}`,
+                borderTop: `2px solid ${accentColor ? `${accentColor}${selected ? 'ff' : '99'}` : 'rgba(255,255,255,0.08)'}`,
+                boxShadow: selected && accentColor ? `0 10px 30px -14px ${accentColor}aa` : 'none',
             }}
         >
             <span
                 className={`inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.12em] ${
                     align === 'right' ? 'flex-row-reverse' : ''
                 }`}
-                style={{ color: accentColor ? `${accentColor}cc` : 'rgba(255,255,255,0.45)' }}
+                style={{ color: accentColor ? `${accentColor}${selected ? 'ff' : 'cc'}` : 'rgba(255,255,255,0.45)' }}
             >
                 <span
                     aria-hidden="true"
                     className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: accentColor || 'rgba(255,255,255,0.45)' }}
+                    style={{ backgroundColor: accent }}
                 />
                 {conceptLabel}
             </span>
-            <h3 className="font-display text-sm sm:text-base md:text-lg font-semibold text-white leading-snug line-clamp-3">
+            {/* A span, not a heading: button descendants are presentational to AT,
+                and a heading is not valid phrasing content inside a button. */}
+            <span className="block font-display text-sm sm:text-base md:text-lg font-semibold text-white leading-snug line-clamp-3">
                 {label}
-            </h3>
-        </div>
+            </span>
+        </button>
     );
 }
 
 // ── Single Venn circle ──
-function VennCircle({ asset, side, colorblindMode, colors }) {
+function VennCircle({ asset, side, colorblindMode, colors, selected = false, dimmed = false, onToggle, hitTitle }) {
     const assetType = asset?.type || MEDIA_TYPES.IMAGE;
     const isAudio = assetType === MEDIA_TYPES.AUDIO;
     const isMeme = assetType === MEDIA_TYPES.MEME;
-    const isLeft = side === 'left';
+    const isLeft = side === SIDES.LEFT;
     const accentColor = isLeft ? colors.left : colors.right;
     const patternId = isLeft ? 'pattern-left' : 'pattern-right';
+    const circleState = selected ? 'venn-circle--selected scale-[1.05]' : dimmed ? 'venn-circle--dimmed scale-[0.97]' : 'hover:scale-[1.015]';
 
     const sideTint = colorblindMode
         ? `linear-gradient(to ${isLeft ? 'right' : 'left'}, ${accentColor}20, transparent 55%)`
@@ -545,18 +577,36 @@ function VennCircle({ asset, side, colorblindMode, colors }) {
 
     return (
         <div
-            className={`absolute ${isLeft ? 'left-0' : 'right-0'} w-[54%] aspect-square z-[1] ${
+            className={`absolute ${isLeft ? 'left-0' : 'right-0'} w-[54%] aspect-square ${selected ? 'z-[3]' : 'z-[1]'} ${
                 isLeft ? 'venn-circle-enter-left' : 'venn-circle-enter-right'
             }`}
         >
         <div
-            className="relative w-full h-full rounded-full overflow-hidden transition-transform hover:scale-[1.015] duration-500 shadow-2xl group"
+            className={`venn-circle relative w-full h-full rounded-full overflow-hidden shadow-2xl group ${circleState}`}
+            data-side={side}
+            data-selected={selected ? 'true' : 'false'}
             style={{
-                border: `2px solid ${colorblindMode ? accentColor : 'rgba(255,255,255,0.18)'}`,
-                boxShadow: `0 24px 56px -16px ${accentColor}44, 0 0 0 1px rgba(255,255,255,0.06) inset`,
+                border: `2px solid ${selected || colorblindMode ? accentColor : 'rgba(255,255,255,0.18)'}`,
+                boxShadow: selected
+                    ? `0 0 0 3px ${accentColor}, 0 0 0 8px ${accentColor}2e, 0 28px 64px -12px ${accentColor}88`
+                    : `0 24px 56px -16px ${accentColor}44, 0 0 0 1px rgba(255,255,255,0.06) inset`,
             }}
         >
             <VennMedia asset={asset} />
+
+            {/* Pointer hit-area. Sits above the loading shell (z-10) and below the
+                media controls, badges, and attribution (z-20) so play/mute/Giphy
+                keep working. Hidden from AT: the caption below is the real button. */}
+            <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden="true"
+                data-testid={`venn-hit-${side}`}
+                title={hitTitle}
+                className="venn-circle-hit absolute inset-0 z-[15] rounded-full cursor-pointer bg-transparent focus:outline-none"
+                onClick={onToggle}
+                onMouseDown={keepTypingFocus}
+            />
 
             {/* Subtle edge vignette — keeps images visible in the center */}
             <div
@@ -616,8 +666,57 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
     // Re-key the stage per pairing so the collision entrance replays every round.
     const roundKey = `${leftAsset?.id ?? leftAsset?.label ?? 'l'}|${rightAsset?.id ?? rightAsset?.label ?? 'r'}`;
 
+    // Side selection ("spotlight") is scoped to the current pairing: a new
+    // round always opens with both sides level, without an effect-driven reset.
+    const [selection, setSelection] = useState({ key: roundKey, side: null, touched: false });
+    const selectedSide = selection.key === roundKey ? selection.side : null;
+    const selectionTouched = selection.key === roundKey && selection.touched;
+
+    const assetFor = useCallback(
+        (side) => (side === SIDES.LEFT ? leftAsset : rightAsset),
+        [leftAsset, rightAsset],
+    );
+
+    const applySelection = useCallback((side, via) => {
+        if (side === selectedSide) return;
+        setSelection({ key: roundKey, side, touched: true });
+        haptic('light');
+        if (side) {
+            trackEvent('venn_side_selected', {
+                side,
+                via,
+                mediaType: assetFor(side)?.type || MEDIA_TYPES.IMAGE,
+            });
+        }
+    }, [selectedSide, roundKey, assetFor]);
+
+    const toggleSide = useCallback((side, via) => {
+        applySelection(selectedSide === side ? null : side, via);
+    }, [applySelection, selectedSide]);
+
+    const handleKeyDown = useCallback((event) => {
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.preventDefault();
+            applySelection(event.key === 'ArrowLeft' ? SIDES.LEFT : SIDES.RIGHT, 'keyboard');
+        } else if (event.key === 'Escape' && selectedSide) {
+            event.preventDefault();
+            applySelection(null, 'keyboard');
+        }
+    }, [applySelection, selectedSide]);
+
+    const sideName = (side) => t(side === SIDES.LEFT ? 'round.sideLeft' : 'round.sideRight');
+    const hitTitle = (side) => t(selectedSide === side ? 'round.spotlightClearHint' : 'round.spotlightHint');
+    const announcement = selectedSide
+        ? t('round.spotlightOn', { label: assetFor(selectedSide)?.label ?? '', side: sideName(selectedSide) })
+        : selectionTouched
+            ? t('round.spotlightOff')
+            : '';
+
     return (
-        <div className="relative w-full max-w-2xl mx-auto my-4 sm:my-8">
+        <div className="relative w-full max-w-2xl mx-auto my-4 sm:my-8" onKeyDown={handleKeyDown}>
+            <div className="sr-only" aria-live="polite">
+                {announcement}
+            </div>
             {mediaLoading && (
                 <div
                     className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[10px] font-semibold uppercase tracking-wider text-white/70"
@@ -644,15 +743,23 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
             <div key={roundKey} className="relative w-full aspect-[2/1.1] flex justify-center items-center">
                 <VennCircle
                     asset={leftAsset}
-                    side="left"
+                    side={SIDES.LEFT}
                     colorblindMode={colorblindMode}
                     colors={COLORS}
+                    selected={selectedSide === SIDES.LEFT}
+                    dimmed={selectedSide === SIDES.RIGHT}
+                    onToggle={() => toggleSide(SIDES.LEFT, 'circle')}
+                    hitTitle={hitTitle(SIDES.LEFT)}
                 />
                 <VennCircle
                     asset={rightAsset}
-                    side="right"
+                    side={SIDES.RIGHT}
                     colorblindMode={colorblindMode}
                     colors={COLORS}
+                    selected={selectedSide === SIDES.RIGHT}
+                    dimmed={selectedSide === SIDES.LEFT}
+                    onToggle={() => toggleSide(SIDES.RIGHT, 'circle')}
+                    hitTitle={hitTitle(SIDES.RIGHT)}
                 />
 
                 {/* Glowing lens where the circles overlap */}
@@ -675,7 +782,8 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                             <stop offset="100%" stopColor={COLORS.overlap} stopOpacity="0.05" />
                         </radialGradient>
                     </defs>
-                    <g className="venn-lens-glow">
+                    {/* Soften the lens while a side is selected so its media reads untinted */}
+                    <g className={`venn-lens-glow ${selectedSide ? 'venn-lens-glow--soft' : ''}`}>
                         <path d={LENS_PATH} fill="url(#venn-lens-fill)" />
                         <path
                             d={LENS_PATH}
@@ -712,10 +820,28 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                 </div>
             </div>
 
-            {/* Concept titles below circles */}
+            {/* Concept titles below circles (also the accessible side-select controls) */}
             <div className="relative w-full flex justify-between items-start gap-4 mt-3 sm:mt-4 px-1">
-                <ConceptCaption label={leftAsset.label} align="left" accentColor={COLORS.left} assetType={leftAsset?.type} />
-                <ConceptCaption label={rightAsset.label} align="right" accentColor={COLORS.right} assetType={rightAsset?.type} />
+                <ConceptCaption
+                    label={leftAsset.label}
+                    align="left"
+                    accentColor={COLORS.left}
+                    assetType={leftAsset?.type}
+                    sideName={sideName(SIDES.LEFT)}
+                    selected={selectedSide === SIDES.LEFT}
+                    dimmed={selectedSide === SIDES.RIGHT}
+                    onToggle={() => toggleSide(SIDES.LEFT, 'caption')}
+                />
+                <ConceptCaption
+                    label={rightAsset.label}
+                    align="right"
+                    accentColor={COLORS.right}
+                    assetType={rightAsset?.type}
+                    sideName={sideName(SIDES.RIGHT)}
+                    selected={selectedSide === SIDES.RIGHT}
+                    dimmed={selectedSide === SIDES.LEFT}
+                    onToggle={() => toggleSide(SIDES.RIGHT, 'caption')}
+                />
             </div>
         </div>
     );

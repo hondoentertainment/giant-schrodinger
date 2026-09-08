@@ -110,6 +110,11 @@ Behavior depends on whether `.env` has live keys. Solo play never requires keys.
 3. **Answer Centered**: Your text fits in intersection
 4. **Responsive**: Diagram scales on mobile
 5. **Animations Smooth**: No jank or flickering
+6. **Side Selection (spotlight)**: Tapping a circle or its caption selects that side. The selected circle comes forward with an accent ring, the other side dims, and the lens glow softens. Tapping it again clears the selection.
+7. **Keyboard**: With a caption focused, `←` / `→` select a side and `Esc` clears it. Captions expose `aria-pressed`; a polite live region announces "Spotlight on … (Left/Right)".
+8. **Typing Is Not Interrupted**: Tapping a circle keeps the caret in the answer input (mobile keyboard stays open).
+9. **Per-Round Reset**: A new pair always starts with neither side selected.
+10. **Media Controls Unaffected**: Play / mute / "via Giphy" still work inside a circle and never toggle the selection.
 
 #### Potential Issues:
 - ❌ Circles overlap incorrectly
@@ -117,6 +122,9 @@ Behavior depends on whether `.env` has live keys. Solo play never requires keys.
 - ❌ Labels missing or cut off
 - ❌ Diagram too small on mobile
 - ❌ Colors too similar (hard to distinguish)
+- ❌ Tapping a circle does nothing (something is covering the hit-area)
+- ❌ Selection survives into the next round
+- ❌ Tapping a circle closes the mobile keyboard
 
 ---
 

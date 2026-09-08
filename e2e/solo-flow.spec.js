@@ -43,4 +43,39 @@ test.describe('Solo game flow', () => {
         await input.press('Enter');
         await expect(page.getByText(/YOUR SCORE|HUMAN JUDGE|Preparing|Dreaming up the fusion/i)).toBeVisible({ timeout: 15000 });
     });
+
+    test('can spotlight either side of the Venn diagram', async ({ page }) => {
+        // The circles idle-float forever; reduced motion keeps Playwright's
+        // stability check honest without skipping its hit-testing.
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await createProfile(page);
+        const input = await startSoloRound(page);
+
+        const leftCaption = page.getByRole('button', { name: /^Left (concept|meme|video|audio): / });
+        const rightCaption = page.getByRole('button', { name: /^Right (concept|meme|video|audio): / });
+        await expect(leftCaption).toHaveAttribute('aria-pressed', 'false');
+        await expect(rightCaption).toHaveAttribute('aria-pressed', 'false');
+
+        // Pointer: the circle itself is a hit-area. This click fails if the
+        // lens, badge, or loading shell ever ends up covering it.
+        await input.focus();
+        await page.getByTestId('venn-hit-left').click();
+        await expect(leftCaption).toHaveAttribute('aria-pressed', 'true');
+        await expect(rightCaption).toHaveAttribute('aria-pressed', 'false');
+        // A tap on a circle is a peek: the answer input keeps the caret.
+        await expect(input).toBeFocused();
+
+        // Captions toggle their own side.
+        await rightCaption.click();
+        await expect(rightCaption).toHaveAttribute('aria-pressed', 'true');
+        await expect(leftCaption).toHaveAttribute('aria-pressed', 'false');
+
+        // Keyboard: arrows move the selection, Escape clears it.
+        await rightCaption.focus();
+        await page.keyboard.press('ArrowLeft');
+        await expect(leftCaption).toHaveAttribute('aria-pressed', 'true');
+        await page.keyboard.press('Escape');
+        await expect(leftCaption).toHaveAttribute('aria-pressed', 'false');
+        await expect(rightCaption).toHaveAttribute('aria-pressed', 'false');
+    });
 });
