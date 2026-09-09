@@ -615,17 +615,11 @@ export function Reveal({ submission, assets }) {
                         label={scoreBand?.label || 'Final Score'}
                         className="mt-1 [&>div:first-child]:text-[72px] [&>div:first-child]:leading-none"
                     />
-                    {result.breakdown && (
-                        <p className="mt-3 text-xs text-white/55">
-                            Wit: {result.breakdown.wit}
-                            {'  ·  '}
-                            Logic: {result.breakdown.logic}
-                            {'  ·  '}
-                            Originality: {result.breakdown.originality}
-                            {'  ·  '}
-                            Clarity: {result.breakdown.clarity}
-                        </p>
-                    )}
+                    <p className="mt-3 text-xs text-white/55">
+                        {result.breakdown
+                            ? `Wit: ${result.breakdown.wit}  ·  Logic: ${result.breakdown.logic}  ·  Originality: ${result.breakdown.originality}  ·  Clarity: ${result.breakdown.clarity}`
+                            : 'Wit  ·  Logic  ·  Originality  ·  Clarity'}
+                    </p>
                     <div className="glass-panel mt-5 mb-6 px-[18px] py-[18px] text-center">
                         <p className="text-[17px] font-semibold leading-snug text-white">
                             &ldquo;{submission}&rdquo;
