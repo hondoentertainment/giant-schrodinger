@@ -40,7 +40,7 @@ async function joinLobby(page, name, { scoringMode } = {}) {
     await page.getByRole('button', { name: /AI Judge/i }).click();
   }
   await page.getByRole('button', { name: /Join Lobby/i }).click();
-  await expect(page.getByText(new RegExp(`Hi, ${name}`, 'i'))).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 15000 });
 }
 
 test.describe('Hosted two-browser rehearsal', () => {

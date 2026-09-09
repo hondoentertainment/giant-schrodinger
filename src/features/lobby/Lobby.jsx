@@ -5,13 +5,13 @@ import { THEMES, getAvailableThemes, getThemeById, MEDIA_TYPES } from '../../dat
 import { normalizeMediaType } from '../../lib/mediaType';
 import { getStats, getMilestones, isThemeUnlocked, getProfileSummary } from '../../services/stats';
 import { reportAppEvent } from '../../lib/telemetry';
-import { formatDailySocialLabel, getDailyChallenge, getDailyChallengeSummary, getDailyStampWeek, getYesterdayChallenge, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
+import { getDailyChallenge, getDailyChallengeSummary, getDailyStampWeek, getYesterdayChallenge, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { formatCountdown, getTimeUntilNextChallenge } from '../../services/countdown';
 import { getCollisions } from '../../services/storage';
 import { getDailyRitualShareCard } from '../../services/dailyRitualShare';
 import { createShareCard, dataURLtoFile, downloadFusionImage } from '../../services/socialShare';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Users, Wifi, WifiOff, HelpCircle, Image, Film, Music, Laugh, CalendarDays, Zap, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
+import { Wifi, WifiOff, HelpCircle, Image, Film, Music, Laugh, CalendarDays, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { UnlockModal } from '../../components/UnlockModal';
@@ -29,6 +29,60 @@ import { parseSiteShortcut } from '../../lib/siteIdentity';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
+
+function DailyPairCard({ dailyChallenge, dailySummary, variant = 'lobby' }) {
+    const weekTitle = dailyChallenge?.weekTitle;
+    const pair = dailyChallenge?.pair;
+    const pairLine = pair ? `${pair.left} × ${pair.right}` : null;
+
+    if (variant === 'gate') {
+        return (
+            <div className="game-daily-card game-daily-card--inset mb-4">
+                {weekTitle && (
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--game-warning)]">
+                        {weekTitle}
+                    </p>
+                )}
+                {pairLine && (
+                    <p className="mt-1.5 text-[15px] font-semibold leading-snug text-white">
+                        {pairLine}
+                    </p>
+                )}
+                <p className="mt-1.5 text-xs text-white/55">Today&apos;s pair. Same one as everyone.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="game-daily-card">
+            <div className="flex items-center justify-between gap-3 text-[var(--game-warning)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.11em]">Daily pair</p>
+                <p className="text-xs font-medium">1.5× bonus</p>
+            </div>
+            {pairLine && (
+                <p className="mt-2 text-base font-semibold text-white">
+                    {pairLine}
+                </p>
+            )}
+            {weekTitle && (
+                <p className="mt-1 text-xs font-semibold text-amber-100/80">{weekTitle}</p>
+            )}
+            <p className="mt-1.5 text-[13px] text-white/55">
+                Same prompt worldwide. Beat yesterday you.
+            </p>
+            {dailyChallenge?.prompt && (
+                <p className="mt-1 text-xs text-white/45 line-clamp-2">{dailyChallenge.prompt}</p>
+            )}
+            {dailySummary && (
+                <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-amber-200/70">
+                    <span className="sr-only">Daily Challenge</span>
+                    <span>{dailySummary.completions} daily completion{dailySummary.completions === 1 ? '' : 's'}</span>
+                    {dailySummary.bestScore !== null && <span>Best daily: {dailySummary.bestScore}/10</span>}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export function Lobby() {
     const { t: tr } = useTranslation();
@@ -438,8 +492,8 @@ export function Lobby() {
                         </div>
                     </div>
                 )}
-            <div className="w-full max-w-md space-y-4 wordle-card p-4 sm:p-5 animate-spring-in">
-                <div className="text-center">
+            <div className="w-full max-w-md space-y-4 animate-spring-in">
+                <div className="text-left">
                     {welcomeMessage && !welcomeDismissed && !isFirstSession && (
                         <div className="mb-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-2.5 text-left flex items-center gap-2">
                             <p className="text-emerald-200 text-xs sm:text-sm flex-1">{welcomeMessage}</p>
@@ -453,48 +507,26 @@ export function Lobby() {
                             </button>
                         </div>
                     )}
-                    <div className="flex items-center gap-3 text-left mb-3">
-                        <div className="relative shrink-0 group">
-                            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br ${getThemeById(user?.themeId).gradient} flex items-center justify-center text-3xl shadow-lg ring-2 ring-white/10`}>
-                                {user.avatar}
-                            </div>
-                            <button
-                                onClick={openEditProfile}
-                                className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm border border-white/20 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                                aria-label="Edit profile"
-                                title="Edit profile"
-                            >
-                                <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <h2 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-white truncate">
-                                Hi, {user.name}
+                    <div className="mb-1 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h2 className="text-2xl font-display font-bold tracking-tight text-white truncate">
+                                Hey {user.name} {user.avatar}
                             </h2>
-                            <p className="text-white/50 text-sm">
-                                {isFirstSession
-                                    ? 'Guided 3-round warmup — write one clever connection.'
-                                    : sessionId
-                                        ? `Round ${roundNumber} of ${totalRounds} · ${sessionScore} pts`
-                                        : 'Play today\'s puzzle, then practice or invite friends.'}
+                            <p className="mt-1 text-[13px] text-white/55">
+                                {sessionId
+                                    ? `Round ${roundNumber} of ${totalRounds} · ${sessionScore} pts`
+                                    : `Streak ${profileSummary.currentStreak || 0} · Best ${profileSummary.bestScore != null ? profileSummary.bestScore : '—'} · ${profileSummary.savedCount ?? profileSummary.highlightCount ?? 0} saved`}
                             </p>
                         </div>
+                        <button
+                            onClick={openEditProfile}
+                            className="shrink-0 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                            aria-label="Edit profile"
+                            title="Edit profile"
+                        >
+                            <Pencil className="w-3.5 h-3.5" />
+                        </button>
                     </div>
-                    {!isFirstSession && stats.totalRounds > 0 && (
-                        <div className="mb-3 flex flex-wrap justify-center gap-2 text-xs">
-                            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-white/70">
-                                Best <span className="text-white font-semibold">{profileSummary.bestScore != null ? `${profileSummary.bestScore}/10` : '—'}</span>
-                            </span>
-                            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-white/70">
-                                <span className="text-emerald-300 font-semibold">
-                                    {profileSummary.currentStreak > 0 ? `${profileSummary.currentStreak} days` : tr('lobby.startToday')}
-                                </span>
-                            </span>
-                            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-white/70">
-                                Solo <span className="text-white font-semibold">{scoringMode === 'human' ? 'You' : 'AI'}</span>
-                            </span>
-                        </div>
-                    )}
                     {profileSummary.streakAtRisk && (
                         <div className="mb-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-amber-100 text-xs text-left">
                             Day {profileSummary.currentStreak} streak is at risk — play today to keep it alive.
@@ -503,44 +535,15 @@ export function Lobby() {
                     {!backendReady && !isFirstSession && <ServiceStatusCard className="mb-3" />}
                     {stats.totalRounds >= 3 && <NotificationBanner />}
 
-                    {/* Daily Challenge — primary entry CTA */}
+                    {/* Daily Challenge — featured pair card */}
                     {!showMultiplayer && !dailyPlayed && (
-                        <button
-                            onClick={startDailyChallenge}
-                            aria-label="Start today's Venn daily puzzle"
-                            className="game-hero-card w-full mb-3 group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="wordle-tile wordle-tile-present h-11 w-11 shrink-0 rounded-2xl">
-                                    <CalendarDays className="w-5 h-5 text-amber-950" />
-                                </div>
-                                <div className="flex-1 text-left">
-                                    <div className="text-white font-semibold flex items-center gap-2 flex-wrap">
-                                        Today&apos;s Venn
-                                        <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-300/40 bg-amber-300/20 text-amber-100 font-semibold">Daily Challenge</span>
-                                    </div>
-                                    {dailyChallenge.weekTitle && (
-                                        <div className="text-amber-100/80 text-xs font-semibold">{dailyChallenge.weekTitle}</div>
-                                    )}
-                                    <div className="text-white font-semibold text-sm line-clamp-2">
-                                        {dailyChallenge.pair?.left} × {dailyChallenge.pair?.right}
-                                    </div>
-                                    <div className="text-white/55 text-xs">
-                                        This is today&apos;s Venn. Same pair as everyone.
-                                    </div>
-                                    <div className="text-white/45 text-xs">
-                                        {formatDailySocialLabel(new Date(), dailyChallenge.pair?.vibe)}
-                                    </div>
-                                    <div className="text-white/45 text-xs line-clamp-1">{dailyChallenge.prompt}</div>
-                                    <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-amber-200/70">
-                                        <span>1.5× today</span>
-                                        <span>{dailySummary.completions} daily completion{dailySummary.completions === 1 ? '' : 's'}</span>
-                                        {dailySummary.bestScore !== null && <span>Best daily: {dailySummary.bestScore}/10</span>}
-                                    </div>
-                                </div>
-                                <Zap className="w-5 h-5 text-amber-400 shrink-0" />
-                            </div>
-                        </button>
+                        <div className="mb-3">
+                            <DailyPairCard
+                                dailyChallenge={dailyChallenge}
+                                dailySummary={dailySummary}
+                                variant="lobby"
+                            />
+                        </div>
                     )}
                     {!showMultiplayer && dailyPlayed && (
                         <div className="w-full mb-3 p-3 rounded-xl border border-amber-400/20 bg-amber-500/10 text-left text-sm">
@@ -587,16 +590,79 @@ export function Lobby() {
                     )}
 
                     {isFirstSession && !showMultiplayer && (
-                        <p className="text-white/40 text-xs text-center mb-3">
+                        <p className="text-white/40 text-xs text-left mb-3">
                             Today&apos;s pair is the whole tutorial. One line. Then we talk settings.
                         </p>
                     )}
 
-                    {/* Solo play — keep primary actions above the fold */}
-                    {!showMultiplayer && !isFirstSession && (
-                        <>
-                            {!sessionId && (
-                                <div className="mb-3 flex items-center justify-center gap-2">
+                    {/* Primary / secondary CTAs — Redesign v2 hierarchy */}
+                    {!showMultiplayer && (
+                        <div className="flex flex-col gap-2.5 w-full">
+                            {!dailyPlayed && (
+                                <button
+                                    type="button"
+                                    onClick={startDailyChallenge}
+                                    aria-label="Start today's Venn daily puzzle"
+                                    className="wordle-button wordle-primary w-full min-h-[49px] text-base"
+                                >
+                                    Play today&apos;s pair
+                                </button>
+                            )}
+                            {sessionId && (
+                                <button
+                                    type="button"
+                                    onClick={startGame}
+                                    disabled={roundComplete && roundNumber >= totalRounds}
+                                    className={`wordle-button w-full min-h-[49px] text-base ${dailyPlayed ? 'wordle-primary' : ''}`}
+                                    aria-label={roundComplete && roundNumber === totalRounds
+                                        ? 'Session complete'
+                                        : `Start round ${roundComplete ? roundNumber + 1 : roundNumber}`}
+                                >
+                                    {roundComplete && roundNumber === totalRounds
+                                        ? 'Session Complete'
+                                        : `Start Round ${roundComplete ? roundNumber + 1 : roundNumber}`}
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setShowMultiplayer(true)}
+                                className="wordle-button w-full min-h-[49px] text-base"
+                                aria-label="Join friends room — Play with Friends"
+                            >
+                                Join friends room
+                                {!backendReady && <WifiOff className="w-4 h-4 opacity-50 ml-2" />}
+                            </button>
+                            <div className="flex gap-2 w-full" role="navigation" aria-label="Lobby shortcuts">
+                                <button
+                                    type="button"
+                                    onClick={() => setGameState('GALLERY')}
+                                    className="game-quick-chip"
+                                    aria-label="View connection gallery"
+                                >
+                                    Gallery
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setOnboardingDismissCallback(() => () => setShowOnboarding(false));
+                                        setShowOnboarding(true);
+                                    }}
+                                    className="game-quick-chip"
+                                    aria-label="How it works"
+                                >
+                                    How to
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setMoreOptionsOpen(true)}
+                                    className="game-quick-chip"
+                                    aria-label="Open settings"
+                                >
+                                    Settings
+                                </button>
+                            </div>
+                            {!isFirstSession && !sessionId && (
+                                <div className="flex items-center justify-center gap-2 pt-1">
                                     <span className="text-white/40 text-xs">Rounds</span>
                                     {[3, 5, 7].map((rounds) => (
                                         <button
@@ -612,45 +678,27 @@ export function Lobby() {
                                     ))}
                                 </div>
                             )}
-                            <div className="flex gap-3 w-full">
+                            {!isFirstSession && !sessionId && (
                                 <button
+                                    type="button"
                                     onClick={startGame}
-                                    disabled={sessionId && roundComplete && roundNumber >= totalRounds}
-                                    className="wordle-button wordle-primary flex-1 min-h-[48px] text-base"
-                                    aria-label={sessionId
-                                        ? roundComplete && roundNumber === totalRounds
-                                            ? 'Session complete'
-                                            : `Start round ${roundComplete ? roundNumber + 1 : roundNumber}`
-                                        : `Start solo session (${sessionLength} rounds)`}
+                                    className="text-sm text-white/45 hover:text-white underline min-h-[44px]"
+                                    aria-label={`Start solo session (${sessionLength} rounds)`}
                                 >
-                                    {isFirstSession
-                                        ? 'Start First Round'
-                                        : sessionId
-                                        ? roundComplete && roundNumber === totalRounds
-                                            ? 'Session Complete'
-                                            : `Start Round ${roundComplete ? roundNumber + 1 : roundNumber}`
-                                        : `Practice Run (${sessionLength} rounds)`}
+                                    Practice Run ({sessionLength} rounds)
                                 </button>
-                                <button
-                                    onClick={() => setGameState('GALLERY')}
-                                    className="wordle-button min-w-[48px] min-h-[48px] flex items-center justify-center text-xl"
-                                    aria-label="View connection gallery"
-                                    title="Connection Gallery"
-                                >
-                                    🖼️
-                                </button>
-                            </div>
+                            )}
+                        </div>
+                    )}
 
-                            <button
-                                onClick={() => setShowMultiplayer(true)}
-                                className="wordle-button mt-3 w-full flex items-center justify-center gap-2 min-h-[48px]"
+                    {!showMultiplayer && (
+                        <>
+
+                            <details
+                                className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] text-left group"
+                                open={moreOptionsOpen}
+                                onToggle={(event) => setMoreOptionsOpen(event.currentTarget.open)}
                             >
-                                <Users className="w-5 h-5" />
-                                Play with Friends
-                                {!backendReady && <WifiOff className="w-4 h-4 opacity-50" />}
-                            </button>
-
-                            <details className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] text-left group">
                                 <summary className="cursor-pointer list-none px-4 py-3 text-sm text-white/70 font-semibold flex items-center justify-between min-h-[44px]">
                                     <span>Progress &amp; settings</span>
                                     <span className="text-white/35 text-xs group-open:hidden">Show</span>
@@ -978,33 +1026,32 @@ export function Lobby() {
     // Create Profile view
     // ============================================================
     return (
-        <div className="w-full max-w-md wordle-card p-4 sm:p-5 animate-spring-in">
+        <div className="lobby-gate-split animate-spring-in">
+            <div className="lobby-gate-copy">
+                <h2 className="text-[40px] font-display font-bold leading-[1.18] tracking-tight text-white">
+                    Two prompts. One line. The overlap is the joke.
+                </h2>
+                <p className="mt-4 max-w-[480px] text-base leading-relaxed text-white/55">
+                    Start with a name and avatar, then play today&apos;s pair or jump into a friends room.
+                </p>
+            </div>
+        <div className="w-full max-w-md lg:max-w-none wordle-card p-[18px] pt-[22px] sm:p-6">
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
-            <h2 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-white mb-1 text-center">Create Profile</h2>
-            <p className="text-white/50 text-sm text-center mb-4">Type a name. Then write one line.</p>
+            <h2 className="text-[26px] font-display font-bold tracking-tight text-white">Create Profile</h2>
+            <p className="text-white/55 text-sm mt-2 mb-3.5">Type a name. Then write one line.</p>
             {(dailyChallenge.weekTitle || dailyChallenge.pair) && (
-                <div className="mb-4 rounded-[22px] border border-amber-400/20 bg-amber-500/10 p-3 text-left">
-                    {dailyChallenge.weekTitle && (
-                        <p className="text-amber-100/80 text-xs font-semibold">{dailyChallenge.weekTitle}</p>
-                    )}
-                    {dailyChallenge.pair && (
-                        <p className="text-white font-semibold text-sm">
-                            {dailyChallenge.pair.left} × {dailyChallenge.pair.right}
-                        </p>
-                    )}
-                    <p className="text-white/45 text-xs mt-1">Today&apos;s pair. Same one as everyone.</p>
-                </div>
+                <DailyPairCard dailyChallenge={dailyChallenge} variant="gate" />
             )}
             {!backendReady && <ServiceStatusCard className="mb-4" />}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5">
                 <section aria-labelledby="profile-username">
-                    <label id="profile-username" className="block text-sm font-medium text-white/60 mb-2">Username</label>
+                    <label id="profile-username" className="game-section-label mb-2 block">Username</label>
                     <div className="relative">
                         <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value.trimStart())}
-                            className="game-input text-lg pr-14"
+                            className="game-input game-input--accent text-base pr-14"
                             placeholder="Enter your name..."
                             maxLength={12}
                             aria-describedby="name-char-count"
@@ -1013,7 +1060,7 @@ export function Lobby() {
                         />
                         <span
                             id="name-char-count"
-                            className={`absolute right-4 top-1/2 -translate-y-1/2 text-sm tabular-nums ${name.length >= 10 ? 'text-amber-400' : 'text-white/40'}`}
+                            className={`absolute right-4 top-1/2 -translate-y-1/2 text-[13px] tabular-nums ${name.length >= 10 ? 'text-amber-400' : 'text-white/35'}`}
                             aria-live="polite"
                         >
                             {name.length}/12
@@ -1022,7 +1069,7 @@ export function Lobby() {
                 </section>
 
                 <section aria-labelledby="profile-avatar">
-                    <label id="profile-avatar" className="block text-sm font-medium text-white/60 mb-2">Avatar</label>
+                    <label id="profile-avatar" className="game-section-label mb-2 block">Avatar</label>
                     <div className="grid grid-cols-6 gap-2" role="group">
                         {AVATARS.slice(0, 6).map((a) => (
                             <button
@@ -1031,9 +1078,7 @@ export function Lobby() {
                                 onClick={() => setAvatar(a)}
                                 aria-pressed={avatar === a}
                                 aria-label={`Select avatar ${a}`}
-                                className={`wordle-tile aspect-square min-w-[44px] min-h-[44px] text-2xl transition-all
-                                    ${avatar === a ? 'wordle-tile-correct scale-95' : 'hover:border-[#565758]'}
-                                `}
+                                className={`game-avatar-choice aspect-square ${avatar === a ? 'game-avatar-choice--selected' : ''}`}
                             >
                                 {a}
                             </button>
@@ -1052,18 +1097,18 @@ export function Lobby() {
                     type="button"
                     disabled={!name.trim()}
                     onClick={handleJoinLobbyOnly}
-                    className="wordle-button w-full min-h-[44px] text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Join Lobby
                 </button>
 
                 <details
-                    className="rounded-2xl border border-white/10 bg-white/[0.03] text-left"
+                    className="text-left"
                     onToggle={(event) => setMoreOptionsOpen(event.currentTarget.open)}
                 >
-                    <summary className="cursor-pointer list-none px-4 py-3 text-sm text-white/60 font-semibold min-h-[44px] flex items-center justify-between">
+                    <summary className="cursor-pointer list-none px-0.5 py-2 text-[13px] text-white/55 font-semibold min-h-[44px] flex items-center justify-between">
                         <span>More options</span>
-                        <span className="text-white/35 text-xs">Theme, scoring, media</span>
+                        <span className="text-white/35 text-xs font-normal">Theme, scoring, media</span>
                     </summary>
                     {moreOptionsOpen && (
                     <div className="px-4 pb-4 space-y-4 border-t border-white/10 pt-3">
@@ -1273,6 +1318,7 @@ export function Lobby() {
                     )}
                 </details>
             </form>
+        </div>
         </div>
     );
 }

@@ -605,10 +605,34 @@ export function Reveal({ submission, assets }) {
                     onDismiss={() => setNewlyUnlocked([])}
                 />
             )}
-            <div className="wordle-card animate-spring-in">
-                <div className="p-5 sm:p-8 text-center max-w-2xl">
-                    <div className="inline-block px-4 py-1.5 text-xs font-semibold tracking-wide text-white/55 mb-6 rounded-full border border-white/10 bg-white/[0.06]">
-                        Puzzle result
+            <div className="w-full max-w-md animate-spring-in">
+                <div className="text-center max-w-2xl">
+                    <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--game-warning)]">
+                        {displayScore >= 8 ? 'Nice hit' : scoreBand?.label || 'Puzzle result'}
+                    </p>
+                    <ScoreReveal
+                        score={displayScore}
+                        label={scoreBand?.label || 'Final Score'}
+                        className="mt-1 [&>div:first-child]:text-[72px] [&>div:first-child]:leading-none"
+                    />
+                    {result.breakdown && (
+                        <p className="mt-3 text-xs text-white/55">
+                            Wit: {result.breakdown.wit}
+                            {'  ·  '}
+                            Logic: {result.breakdown.logic}
+                            {'  ·  '}
+                            Originality: {result.breakdown.originality}
+                            {'  ·  '}
+                            Clarity: {result.breakdown.clarity}
+                        </p>
+                    )}
+                    <div className="glass-panel mt-5 mb-6 px-[18px] py-[18px] text-center">
+                        <p className="text-[17px] font-semibold leading-snug text-white">
+                            &ldquo;{submission}&rdquo;
+                        </p>
+                        <p className="mt-2 text-[13px] text-white/55">
+                            {savedAssetPair.left.label} ∩ {savedAssetPair.right.label}
+                        </p>
                     </div>
 
                     <FusionFrame
@@ -619,26 +643,12 @@ export function Reveal({ submission, assets }) {
                         className="mb-8 shadow-game-card"
                     />
 
-                    <div className="grid grid-cols-2 gap-3 mb-8">
-                        <div className={`wordle-tile min-h-[104px] flex-col ${displayScore >= 8 ? 'wordle-tile-correct' : displayScore >= 5 ? 'wordle-tile-present' : 'wordle-tile-filled'}`}>
-                            <ScoreReveal score={displayScore} label={scoreBand?.label || 'Final Score'} />
-                        </div>
-                        <div className="wordle-tile wordle-tile-filled min-h-[104px] p-3">
+                    {result.relevance && (
+                        <div className="wordle-tile wordle-tile-filled min-h-[56px] p-3 mb-6">
                             <div className="text-lg font-bold text-white/90">
                                 {result.relevance}
                             </div>
                         </div>
-                    </div>
-                    {result.breakdown && (
-                        <>
-                            <p className="text-white/50 text-xs mb-2">Your connection was scored on:</p>
-                            <div className="grid grid-cols-2 gap-2 mb-4 text-sm text-white/80">
-                                <div className="wordle-tile min-h-[48px] p-2">Wit: <span className="text-white">{result.breakdown.wit}/10</span></div>
-                                <div className="wordle-tile min-h-[48px] p-2">Logic: <span className="text-white">{result.breakdown.logic}/10</span></div>
-                                <div className="wordle-tile min-h-[48px] p-2">Originality: <span className="text-white">{result.breakdown.originality}/10</span></div>
-                                <div className="wordle-tile min-h-[48px] p-2">Clarity: <span className="text-white">{result.breakdown.clarity}/10</span></div>
-                            </div>
-                        </>
                     )}
                     {scoreMultiplier !== 1 && (
                         <div className="mb-6 text-sm text-white/50">
@@ -795,12 +805,24 @@ export function Reveal({ submission, assets }) {
                         <AchievementProgress score={displayScore} stats={statsSnapshot} />
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <div className="flex flex-col gap-2.5 justify-center items-stretch">
                         <button
                             onClick={handleNext}
-                            className={`wordle-button px-12 text-lg ${displayScore >= 8 && !shareCopied ? '' : 'wordle-primary'}`}
+                            className={`wordle-button w-full min-h-[49px] text-base ${displayScore >= 8 && !shareCopied ? '' : 'wordle-primary'}`}
                         >
-                            {isFinalRound ? 'See Results' : shareCopied ? 'Keep playing →' : 'Next Round →'}
+                            {isFinalRound ? 'See Results' : shareCopied ? 'Keep playing →' : 'Next round'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                consumeJudgeChain();
+                                handleShareForJudging();
+                            }}
+                            disabled={!canShareForJudging}
+                            className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50"
+                            aria-label={shareCopied ? 'Friend judge link copied!' : 'Ask a friend to judge'}
+                        >
+                            {shareCopied ? "They're scoring it — keep playing" : 'Share with a friend'}
                         </button>
                     </div>
                 </div>

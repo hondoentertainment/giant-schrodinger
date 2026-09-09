@@ -93,6 +93,9 @@ describe('VennDiagram', () => {
         );
 
         expect(screen.getAllByText('Concept')).toHaveLength(2);
+        expect(screen.getByText('the overlap')).toBeInTheDocument();
+        expect(screen.getAllByText('Cat').length).toBeGreaterThanOrEqual(2);
+        expect(screen.getAllByText('Dog').length).toBeGreaterThanOrEqual(2);
     });
 
     it('loads still images with a blur shell, responsive sizes, and high fetch priority', () => {
