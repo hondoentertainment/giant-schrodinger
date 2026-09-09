@@ -131,7 +131,7 @@ describe('Round', () => {
 
     it('shows the round timer immediately when assets are loaded', () => {
         render(<Round onSubmit={mockOnSubmit} />);
-        expect(screen.getAllByText('60s').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('1:00').length).toBeGreaterThan(0);
     });
 
     it('text input accepts user submission', async () => {
@@ -145,7 +145,7 @@ describe('Round', () => {
 
     it('renders a mobile submit button for touch users', () => {
         render(<Round onSubmit={mockOnSubmit} />);
-        expect(screen.getByRole('button', { name: /submit connection/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /lock it in/i })).toBeInTheDocument();
     });
 
     it('submits on Enter even when input is empty', async () => {
@@ -200,11 +200,11 @@ describe('Round', () => {
 
     it('counts down the timer each second', () => {
         render(<Round onSubmit={mockOnSubmit} />);
-        expect(screen.getAllByText('60s').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('1:00').length).toBeGreaterThan(0);
         act(() => {
             vi.advanceTimersByTime(1000);
         });
-        expect(screen.getAllByText('59s').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('0:59').length).toBeGreaterThan(0);
     });
 
     it('displays the special-round modifier banner for non-normal modifiers', () => {

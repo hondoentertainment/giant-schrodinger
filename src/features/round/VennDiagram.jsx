@@ -611,7 +611,7 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
 
     const COLORS = colorblindMode
         ? { left: '#0ea5e9', right: '#f97316', overlap: '#10b981' }
-        : { left: '#a855f7', right: '#6366f1', overlap: '#8b5cf6' };
+        : { left: '#0A84FF', right: '#BF5AF2', overlap: '#FFD60A' };
 
     // Re-key the stage per pairing so the collision entrance replays every round.
     const roundKey = `${leftAsset?.id ?? leftAsset?.label ?? 'l'}|${rightAsset?.id ?? rightAsset?.label ?? 'r'}`;
@@ -639,6 +639,15 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                     </defs>
                 </svg>
             )}
+
+            <div className="relative z-10 mb-1 flex w-full items-start justify-between gap-3 px-[6%] sm:px-[8%]">
+                <p className="max-w-[46%] text-[11px] font-bold uppercase tracking-[0.06em] text-[#64d2ff] line-clamp-2">
+                    {leftAsset.label}
+                </p>
+                <p className="max-w-[46%] text-right text-[11px] font-bold uppercase tracking-[0.04em] text-[#e9d5ff] line-clamp-2">
+                    {rightAsset.label}
+                </p>
+            </div>
 
             {/* Circles */}
             <div key={roundKey} className="relative w-full aspect-[2/1.1] flex justify-center items-center">
@@ -697,18 +706,9 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
 
                 {/* Intersection label */}
                 <div className="absolute z-10 text-center pointer-events-none flex flex-col items-center">
-                    <div
-                        className="relative px-4 py-2 rounded-full backdrop-blur-xl border"
-                        style={{
-                            background: 'rgba(0,0,0,0.4)',
-                            borderColor: `${COLORS.overlap}55`,
-                            boxShadow: `0 0 18px ${COLORS.overlap}33`,
-                        }}
-                    >
-                        <span className="relative text-[10px] sm:text-xs font-semibold text-white/85 tracking-[0.08em]">
-                            The Intersection
-                        </span>
-                    </div>
+                    <span className="text-[11px] font-medium lowercase tracking-wide text-[var(--game-warning)]">
+                        the overlap
+                    </span>
                 </div>
             </div>
 

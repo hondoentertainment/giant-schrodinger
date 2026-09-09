@@ -12,6 +12,13 @@ import { haptic } from '../../lib/haptics';
 import { trackEvent } from '../../services/analytics';
 import { playSubmitSound, playTickSound, playUrgentTick } from '../../services/sounds';
 
+function formatRoundClock(totalSeconds) {
+    const safe = Math.max(0, Number(totalSeconds) || 0);
+    const minutes = Math.floor(safe / 60);
+    const seconds = safe % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function Round({ onSubmit }) {
     const { setGameState, user, roundNumber, totalRounds, currentModifier, isDailyChallenge, trackUsedAssets, getUsedAssetIds } = useGame();
     const [assets, setAssets] = useState({ left: null, right: null });
@@ -199,23 +206,23 @@ export function Round({ onSubmit }) {
                 </div>
             )}
 
-            <div className="w-full max-w-2xl flex flex-col gap-4 px-2 mb-5">
+            <div className="w-full max-w-2xl flex flex-col gap-3.5 px-2 mb-3">
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <div className="game-section-label">
                             {isDailyChallenge ? 'Daily puzzle' : 'Puzzle run'}
                         </div>
-                        <div className="text-xl font-bold tracking-tight text-white">
+                        <div className="text-[13px] font-semibold text-white/55">
                             Round {roundNumber} of {totalRounds}
                         </div>
                     </div>
                     {showTimeUp ? (
-                        <div className="game-timer game-timer--urgent min-w-[92px] text-sm" role="status" aria-live="polite">
+                        <div className="game-timer game-timer--urgent min-w-[70px] min-h-[38px] px-3.5 py-2 text-sm" role="status" aria-live="polite">
                             Time&apos;s up
                         </div>
                     ) : (
-                        <div className={`game-timer ${timer < 10 ? 'game-timer--urgent' : ''}`}>
-                            {timer}s
+                        <div className={`game-timer min-w-[70px] min-h-[38px] px-3.5 py-2 text-lg ${timer < 10 ? 'game-timer--urgent' : ''}`}>
+                            {formatRoundClock(timer)}
                         </div>
                     )}
                 </div>
@@ -266,14 +273,14 @@ export function Round({ onSubmit }) {
                         </p>
                     </div>
                 )}
-                <p className="text-center text-white/50 text-sm mb-3">
+                <p className="text-center text-white/55 text-[15px] leading-snug mb-3">
                     {roundMediaType === MEDIA_TYPES.AUDIO
-                        ? 'One witty phrase that connects both sounds'
+                        ? 'Write one phrase that lives in both sounds.'
                         : roundMediaType === MEDIA_TYPES.VIDEO
-                        ? 'One witty phrase that connects both clips'
+                        ? 'Write one phrase that lives in both clips.'
                         : roundMediaType === MEDIA_TYPES.MEMES_VIDEOS
-                        ? 'One witty phrase that connects the meme and the video'
-                        : 'One witty phrase that connects both concepts'}
+                        ? 'Write one phrase that lives in both circles.'
+                        : 'Write one phrase that lives in both circles.'}
                 </p>
                 <input
                     type="text"
@@ -297,11 +304,11 @@ export function Round({ onSubmit }) {
                         type="button"
                         onClick={handleSubmit}
                         disabled={!submission.trim()}
-                        className="wordle-button wordle-primary w-full min-h-[52px] text-lg disabled:opacity-50 sm:hidden"
+                        className="wordle-button wordle-primary w-full min-h-[49px] text-base disabled:opacity-50"
                     >
-                        Submit connection
+                        Lock it in
                     </button>
-                    <div className="hidden sm:block">Press <span className="font-semibold text-white/80">Return</span> to submit</div>
+                    <div className="hidden sm:block text-white/40">Press <span className="font-semibold text-white/80">Return</span> to submit</div>
                     <div className="text-white/30 text-xs">
                         Scored on Wit · Logic · Originality · Clarity
                     </div>

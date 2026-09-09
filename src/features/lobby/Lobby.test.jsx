@@ -71,6 +71,7 @@ vi.mock('../../services/stats', () => ({
         averageScore: 8.5,
         friendJudgedCount: 1,
         highlightCount: 2,
+        savedCount: 2,
         streakAtRisk: false,
         streakStatus: 'active_today',
     }),
@@ -261,7 +262,8 @@ describe('Lobby', () => {
         mockUser = loggedInUser;
         globalThis.__testStreakValue = 3;
         render(<Lobby />);
-        expect(screen.getByText('3 days')).toBeInTheDocument();
+        expect(screen.getByText(/Hey TestUser/)).toBeInTheDocument();
+        expect(screen.getByText(/Streak 3/)).toBeInTheDocument();
     });
 
     it('shows daily challenge ritual context in the lobby', () => {
@@ -304,6 +306,9 @@ describe('Lobby', () => {
         render(<Lobby />);
         expect(screen.getByText('Daily Challenge')).toBeInTheDocument();
         expect(screen.getByText('Test daily prompt')).toBeInTheDocument();
+        expect(screen.getByText(/Daily pair/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Play today's pair/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Join friends room/i })).toBeInTheDocument();
     });
 
     it('shows profile form when user is not logged in', () => {

@@ -5,7 +5,7 @@ async function createProfile(page, name = 'TestPlayer') {
     await page.goto('/');
     await page.getByPlaceholder(/Enter your name/i).fill(name);
     await page.getByRole('button', { name: /Join Lobby/i }).click();
-    await expect(page.getByText(new RegExp(`Hi, ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
 }
 
 test.describe('Solo game flow', () => {

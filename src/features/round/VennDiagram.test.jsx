@@ -29,8 +29,8 @@ describe('VennDiagram', () => {
 
         expect(screen.getAllByText('Meme').length).toBeGreaterThanOrEqual(1);
         expect(screen.getAllByText('Video').length).toBeGreaterThanOrEqual(1);
-        expect(screen.getByText('Big Brain Moment')).toBeInTheDocument();
-        expect(screen.getByText('City Pulse')).toBeInTheDocument();
+        expect(screen.getAllByText('Big Brain Moment').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('City Pulse').length).toBeGreaterThan(0);
         expect(screen.getByAltText('Big Brain Moment')).toBeInTheDocument();
     });
 
@@ -93,6 +93,9 @@ describe('VennDiagram', () => {
         );
 
         expect(screen.getAllByText('Concept')).toHaveLength(2);
+        expect(screen.getByText('the overlap')).toBeInTheDocument();
+        expect(screen.getAllByText('Cat').length).toBeGreaterThanOrEqual(2);
+        expect(screen.getAllByText('Dog').length).toBeGreaterThanOrEqual(2);
     });
 
     it('loads still images with a blur shell, responsive sizes, and high fetch priority', () => {

@@ -180,6 +180,78 @@
     border-color: rgba(255, 214, 10, 0.22);
   }
 
+  .game-daily-card {
+    @apply w-full p-4 text-left;
+    background: rgba(255, 214, 10, 0.1);
+    border: 1px solid rgba(255, 214, 10, 0.28);
+    border-radius: 22px;
+  }
+
+  .game-daily-card--inset {
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(255, 159, 10, 0.12);
+  }
+
+  .game-quick-chip {
+    @apply inline-flex flex-1 items-center justify-center min-h-[40px] px-3 py-3 text-[13px] font-semibold transition-colors;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    color: var(--game-text-secondary);
+  }
+
+  .game-quick-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--game-text);
+  }
+
+  .game-avatar-choice {
+    @apply flex items-center justify-center min-w-[44px] min-h-[44px] text-xl transition-all;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    color: var(--game-text);
+  }
+
+  .game-avatar-choice:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .game-avatar-choice--selected {
+    background: var(--game-success-dim);
+    border-color: rgba(48, 209, 88, 0.65);
+  }
+
+  .game-input--accent {
+    border-color: rgba(10, 132, 255, 0.55);
+  }
+
+  .lobby-gate-split {
+    @apply w-full;
+  }
+
+  @media (min-width: 1024px) {
+    .lobby-gate-split {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(20rem, 26.25rem);
+      gap: 3.5rem;
+      align-items: center;
+      max-width: 80rem;
+    }
+  }
+
+  .lobby-gate-copy {
+    display: none;
+    text-align: left;
+  }
+
+  @media (min-width: 1024px) {
+    .lobby-gate-copy {
+      display: block;
+    }
+  }
+
   .game-hero-card:hover:not(:disabled) {
     border-color: rgba(255, 214, 10, 0.38);
     transform: translateY(-1px);
@@ -250,7 +322,10 @@
   }
 
   .game-input {
-    @apply w-full px-5 py-4 text-lg font-medium transition-all duration-200;
+    @apply w-full px-5 py-4 text-lg font-medium;
+    /* Shadow-only: transition-all also animates border-color / outline-offset
+       on autofocus and fails Lighthouse non-composited-animations. */
+    transition: box-shadow 200ms ease;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid var(--game-border);
     border-radius: var(--game-radius-lg);
@@ -262,7 +337,8 @@
     color: var(--game-text-tertiary);
   }
 
-  .game-input:focus {
+  .game-input:focus,
+  .game-input:focus-visible {
     outline: none;
     border-color: rgba(10, 132, 255, 0.65);
     box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);

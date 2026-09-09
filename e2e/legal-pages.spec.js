@@ -6,7 +6,7 @@ async function enterLobby(page, name = 'LegalTest') {
     await page.goto(APP_URL);
     await page.getByPlaceholder(/Enter your name/i).fill(name);
     await page.getByRole('button', { name: /Join Lobby/i }).click();
-    await expect(page.getByText(new RegExp(`Hi, ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
 }
 
 test.describe('Legal pages', () => {
@@ -17,7 +17,7 @@ test.describe('Legal pages', () => {
         await expect(page.getByRole('heading', { name: /Privacy Policy/i })).toBeVisible();
 
         await page.getByRole('button', { name: /^Back$/i }).click();
-        await expect(page.getByText(new RegExp('Hi, LegalTest', 'i'))).toBeVisible();
+        await expect(page.getByText(new RegExp('Hey LegalTest', 'i'))).toBeVisible();
 
         await page.getByRole('button', { name: /^Terms$/i }).click();
         await expect(page.getByRole('heading', { name: /Terms of Use/i })).toBeVisible();
