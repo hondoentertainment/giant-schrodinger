@@ -602,7 +602,7 @@ export function Lobby() {
                                 <button
                                     type="button"
                                     onClick={startDailyChallenge}
-                                    aria-label="Start today's Venn daily puzzle"
+                                    aria-label="Play today's pair — Start today's Venn daily puzzle"
                                     className="wordle-button wordle-primary w-full min-h-[49px] text-base"
                                 >
                                     Play today&apos;s pair

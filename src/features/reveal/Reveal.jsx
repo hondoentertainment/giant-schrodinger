@@ -820,7 +820,6 @@ export function Reveal({ submission, assets }) {
                             }}
                             disabled={!canShareForJudging}
                             className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50"
-                            aria-label={shareCopied ? 'Friend judge link copied!' : 'Ask a friend to judge'}
                         >
                             {shareCopied ? "They're scoring it — keep playing" : 'Share with a friend'}
                         </button>
