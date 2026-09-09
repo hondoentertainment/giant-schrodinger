@@ -322,7 +322,10 @@
   }
 
   .game-input {
-    @apply w-full px-5 py-4 text-lg font-medium transition-all duration-200;
+    @apply w-full px-5 py-4 text-lg font-medium;
+    /* Shadow-only: transition-all also animates border-color / outline-offset
+       on autofocus and fails Lighthouse non-composited-animations. */
+    transition: box-shadow 200ms ease;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid var(--game-border);
     border-radius: var(--game-radius-lg);
@@ -334,7 +337,8 @@
     color: var(--game-text-tertiary);
   }
 
-  .game-input:focus {
+  .game-input:focus,
+  .game-input:focus-visible {
     outline: none;
     border-color: rgba(10, 132, 255, 0.65);
     box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);
