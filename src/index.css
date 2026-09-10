@@ -128,6 +128,10 @@
     padding-top: 0.25rem;
   }
 
+  .game-main--play {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
   .game-play-col,
   .game-play-col--wide {
     width: 100%;

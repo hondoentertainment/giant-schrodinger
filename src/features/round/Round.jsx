@@ -264,7 +264,7 @@ export function Round({ onSubmit }) {
 
             <form onSubmit={handleSubmit} className="game-play-col--wide mt-6 sm:mt-8 relative z-20">
                 {showFirstRoundCoaching && (
-                    <div className="mb-4 rounded-[22px] border border-white/10 bg-white/[0.06] p-4 text-center backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="mb-4 hidden sm:block rounded-[22px] border border-white/10 bg-white/[0.06] p-4 text-center backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <p className="text-white font-semibold">First round tip</p>
                         <p className="text-white/55 text-sm mt-1">
                             {roundMediaType === MEDIA_TYPES.MEMES_VIDEOS

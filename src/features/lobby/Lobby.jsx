@@ -588,7 +588,7 @@ export function Lobby() {
                     )}
 
                     {isFirstSession && !showMultiplayer && (
-                        <p className="text-white/40 text-xs text-left mb-3">
+                        <p className="text-white/40 text-xs text-left mb-3 max-sm:hidden">
                             Today&apos;s pair is the whole tutorial. One line. Then we talk settings.
                         </p>
                     )}

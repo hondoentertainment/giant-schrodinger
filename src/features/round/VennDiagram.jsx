@@ -545,7 +545,7 @@ function VennCircle({ asset, side, colorblindMode, colors }) {
 
     return (
         <div
-            className={`absolute ${isLeft ? 'left-0' : 'right-0'} w-[54%] aspect-square z-[1] ${
+            className={`absolute ${isLeft ? 'left-0' : 'right-0'} w-[60%] sm:w-[54%] aspect-square z-[1] ${
                 isLeft ? 'venn-circle-enter-left' : 'venn-circle-enter-right'
             }`}
         >
@@ -706,7 +706,7 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
 
                 {/* Intersection label */}
                 <div className="absolute z-10 text-center pointer-events-none flex flex-col items-center">
-                    <span className="text-[11px] font-medium lowercase tracking-wide text-[var(--game-warning)]">
+                    <span className="text-[12px] sm:text-[11px] font-medium lowercase tracking-wide text-[var(--game-warning)] drop-shadow-[0_1px_8px_rgba(0,0,0,0.55)]">
                         the overlap
                     </span>
                 </div>

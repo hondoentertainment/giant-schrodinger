@@ -804,7 +804,7 @@ export function Reveal({ submission, assets }) {
                 <div className="game-reveal-actions flex flex-col gap-2.5 justify-center items-stretch w-full">
                     <button
                         onClick={handleNext}
-                        className={`wordle-button w-full min-h-[49px] text-base ${displayScore >= 8 && !shareCopied ? '' : 'wordle-primary'}`}
+                        className="wordle-button wordle-primary w-full min-h-[49px] text-base"
                     >
                         {isFinalRound ? 'See Results' : shareCopied ? 'Keep playing →' : 'Next round'}
                     </button>

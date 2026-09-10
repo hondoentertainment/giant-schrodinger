@@ -14,7 +14,7 @@ export function Layout({ children, onPrivacy, onTerms, hideFooter = false }) {
             </a>
             <main
                 id="main-content"
-                className="game-main"
+                className={`game-main${hideFooter ? ' game-main--play' : ''}`}
                 tabIndex={-1}
             >
                 {children}
