@@ -37,10 +37,27 @@ export async function openLobbyGallery(page) {
     await gallery.click();
 }
 
+export async function returnToSoloLobby(page) {
+    const back = page.getByRole('button', { name: /Back to solo play/i });
+    if (await back.isVisible().catch(() => false)) {
+        await back.click();
+    }
+}
+
+export async function createProfile(page, name = 'TestPlayer', options = {}) {
+    const { openFriends = false } = options;
+    await page.goto('/');
+    await page.getByPlaceholder(/Enter your name/i).fill(name);
+    await page.getByRole('button', { name: /Join Lobby|Playing with friends/i }).click();
+    await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+    if (!openFriends) await returnToSoloLobby(page);
+}
+
 export async function startSoloRound(page, options = {}) {
     const { placeholder = /What connects|e\.g\. a green roommate/i } = options;
 
     await dismissOnboarding(page);
+    await returnToSoloLobby(page);
     const daily = page.getByRole('button', { name: /Start today's Venn daily puzzle/i });
     if (await daily.isVisible().catch(() => false)) {
         await daily.click();

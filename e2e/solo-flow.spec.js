@@ -1,12 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { dismissOnboarding, startSoloRound } from './helpers';
-
-async function createProfile(page, name = 'TestPlayer') {
-    await page.goto('/');
-    await page.getByPlaceholder(/Enter your name/i).fill(name);
-    await page.getByRole('button', { name: /Join Lobby/i }).click();
-    await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
-}
+import { dismissOnboarding, startSoloRound, createProfile } from './helpers';
 
 test.describe('Solo game flow', () => {
     test('landing page loads with Create Profile', async ({ page }) => {

@@ -301,7 +301,8 @@ describe('Lobby', () => {
         expect(mockStartSession).toHaveBeenCalled();
     });
 
-    it('daily challenge section renders', () => {
+    it('daily challenge section renders', async () => {
+        const user = userEvent.setup();
         mockUser = loggedInUser;
         render(<Lobby />);
         expect(screen.getByText('Daily Challenge')).toBeInTheDocument();
@@ -309,7 +310,7 @@ describe('Lobby', () => {
         expect(screen.getByText(/Daily pair/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Play today's pair/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Join friends room/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /More lobby actions/i })).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: /More lobby actions/i }));
         expect(screen.getByRole('button', { name: /View connection gallery/i })).toBeInTheDocument();
     });
 

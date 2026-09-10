@@ -21,6 +21,8 @@ test.describe('Deployed rehearsal smoke', () => {
         await selectMediaType(page, /Memes & Videos/i);
         await page.getByRole('button', { name: /Join Lobby/i }).click();
         await expect(page.getByText(/Hey RehearsalBot/i)).toBeVisible({ timeout: 10000 });
+        const backDaily = page.getByRole('button', { name: /Back to solo play/i });
+        if (await backDaily.isVisible().catch(() => false)) await backDaily.click();
 
         await startSoloRound(page, { placeholder: /What connects this meme and video|e\.g\. a green roommate/i });
     });
@@ -29,6 +31,8 @@ test.describe('Deployed rehearsal smoke', () => {
         await page.getByPlaceholder(/Enter your name/i).fill('StatusCheck');
         await page.getByRole('button', { name: /Join Lobby/i }).click();
         await expect(page.getByText(/Hey StatusCheck/i)).toBeVisible({ timeout: 10000 });
+        const backStatus = page.getByRole('button', { name: /Back to solo play/i });
+        if (await backStatus.isVisible().catch(() => false)) await backStatus.click();
 
         const statusCard = page.getByText(/Runtime Status/i);
         if (await statusCard.count()) {

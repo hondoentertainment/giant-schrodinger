@@ -28,7 +28,6 @@ export function Round({ onSubmit }) {
     const [submission, setSubmission] = useState('');
     const [timer, setTimer] = useState(60);
     const [timerArmed, setTimerArmed] = useState(false);
-    const [showGhostExample, setShowGhostExample] = useState(true);
     const [showTimeUp, setShowTimeUp] = useState(false);
     const submittedRef = useRef(false);
     const stats = getStats();
@@ -84,7 +83,6 @@ export function Round({ onSubmit }) {
                     setAssets({ left: forcedPair.left, right: forcedPair.right });
                     setTimer(timeLimit);
                     setTimerArmed(!isFirstRoundOfSession);
-                    setShowGhostExample(isFirstRoundOfSession);
                 }
                 const resolved = await loadSelectedAssets([forcedPair.left, forcedPair.right]);
                 if (cancelled) return;
@@ -116,7 +114,6 @@ export function Round({ onSubmit }) {
                 setAssets({ left, right });
                 setTimer(timeLimit);
                 setTimerArmed(!isFirstRoundOfSession);
-                setShowGhostExample(isFirstRoundOfSession);
             }
 
             const resolved = await loadSelectedAssets([left, right]);
@@ -307,7 +304,7 @@ export function Round({ onSubmit }) {
                         }
                     }}
                     placeholder={
-                        isFirstRoundOfSession && showGhostExample
+                        isFirstRoundOfSession
                             ? FIRST_ROUND_EXAMPLE
                             : roundMediaType === MEDIA_TYPES.AUDIO
                             ? 'What connects these two sounds?'
@@ -319,13 +316,7 @@ export function Round({ onSubmit }) {
                     }
                     className="game-input-hero w-full"
                     autoFocus
-                    onFocus={(event) => {
-                        if (isFirstRoundOfSession) setShowGhostExample(false);
-                        event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
-                    }}
-                    onBlur={() => {
-                        if (isFirstRoundOfSession && !submission.trim()) setShowGhostExample(true);
-                    }}
+                    onFocus={(event) => event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' })}
                 />
                 <div className="sticky bottom-0 z-30 mt-4 space-y-3 bg-gradient-to-t from-[#07070a] via-[#07070a]/95 to-transparent pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-white/40 text-sm sm:static sm:bg-none sm:pb-0">
                     <button

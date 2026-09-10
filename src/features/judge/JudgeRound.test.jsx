@@ -77,8 +77,8 @@ describe('JudgeRound', () => {
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
         expect(screen.getByRole('button', { name: '10', pressed: false })).toBeInTheDocument();
         expect(screen.queryByDisplayValue('Highly Logical')).not.toBeInTheDocument();
-        expect(screen.queryByPlaceholderText(/Share your verdict/i)).not.toBeInTheDocument();
         expect(screen.getByText(/Add a name or note/i)).toBeInTheDocument();
+        expect(screen.getByText(/Add a name or note/i).closest('details')).not.toHaveAttribute('open');
         expect(screen.getByRole('button', { name: /Submit Judgement/i })).toBeDisabled();
     });
 

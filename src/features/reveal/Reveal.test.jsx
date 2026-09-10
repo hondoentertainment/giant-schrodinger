@@ -23,7 +23,6 @@ vi.mock('../../context/GameContext', () => ({
         currentModifier: { id: 'normal', label: 'Standard Round', timeFactor: 1.0, scoreFactor: 1.0, icon: '🎯' },
         nextRound: mockNextRound,
         sessionResults: [],
-        setGameState: mockSetGameState,
     }),
 }));
 

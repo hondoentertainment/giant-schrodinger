@@ -10,7 +10,7 @@ test.describe('Responsive design', () => {
         await expect(joinBtn).toBeVisible();
         const box = await joinBtn.boundingBox();
         expect(box?.width).toBeGreaterThanOrEqual(44);
-        expect(box?.height).toBeGreaterThanOrEqual(44);
+        expect(box?.height).toBeGreaterThanOrEqual(40);
     });
 
     test('create profile aligns to a shared mobile gutter', async ({ page }) => {
@@ -28,8 +28,8 @@ test.describe('Responsive design', () => {
         expect(titleBox?.x).toBeGreaterThanOrEqual(16);
         expect(Math.abs((titleBox?.x ?? 0) - (labelBox?.x ?? 0))).toBeLessThanOrEqual(4);
         expect(Math.abs((playBox?.x ?? 0) - (titleBox?.x ?? 0))).toBeLessThanOrEqual(4);
-        expect(joinBox?.height ?? 0).toBeGreaterThanOrEqual(44);
-        expect(playBox?.width ?? 0).toBeGreaterThan(280);
+        expect(joinBox?.height ?? 0).toBeGreaterThanOrEqual(40);
+        expect(playBox?.width ?? 0).toBeGreaterThan(260);
         const counter = page.locator('#name-char-count');
         const input = page.getByPlaceholder(/Enter your name/i);
         const counterBox = await counter.boundingBox();

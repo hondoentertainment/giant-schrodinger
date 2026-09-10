@@ -58,17 +58,16 @@ function LobbyOverflowMenu({ onGallery, onHowTo, onSettings, onAchievements }) {
                 className="lobby-overflow-trigger"
                 aria-label="More lobby actions"
                 aria-expanded={open}
-                aria-haspopup="menu"
+                aria-haspopup="true"
                 onClick={() => setOpen((value) => !value)}
             >
                 ⋯
             </button>
-            <div className={`lobby-overflow-menu ${open ? 'is-open' : ''}`} role="menu" aria-label="Lobby shortcuts">
+            <div className={`lobby-overflow-menu ${open ? 'is-open' : ''}`} role="navigation" aria-label="Lobby shortcuts">
                 {items.map((item) => (
                     <button
                         key={item.label}
                         type="button"
-                        role="menuitem"
                         className="lobby-overflow-item"
                         aria-label={item.ariaLabel}
                         onClick={() => {
@@ -1168,7 +1167,8 @@ export function Lobby() {
                     type="button"
                     disabled={!name.trim()}
                     onClick={handleJoinFriends}
-                    className="w-full min-h-[44px] text-sm text-white/55 hover:text-white underline disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex w-full items-center justify-center text-sm text-white/55 hover:text-white underline disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ minHeight: 44 }}
                     aria-label="Playing with friends? — Join Lobby"
                 >
                     Playing with friends?

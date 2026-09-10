@@ -41,6 +41,8 @@ async function joinLobby(page, name, { scoringMode } = {}) {
   }
   await page.getByRole('button', { name: /Join Lobby/i }).click();
   await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 15000 });
+  const back = page.getByRole('button', { name: /Back to solo play/i });
+  if (await back.isVisible().catch(() => false)) await back.click();
 }
 
 test.describe('Hosted two-browser rehearsal', () => {

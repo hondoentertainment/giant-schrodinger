@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { returnToSoloLobby } from './helpers';
 
 const APP_URL = '/giant-schrodinger/';
 
@@ -7,6 +8,7 @@ async function enterLobby(page, name = 'LegalTest') {
     await page.getByPlaceholder(/Enter your name/i).fill(name);
     await page.getByRole('button', { name: /Join Lobby/i }).click();
     await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+    await returnToSoloLobby(page);
 }
 
 test.describe('Legal pages', () => {

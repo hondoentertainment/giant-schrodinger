@@ -40,6 +40,8 @@ async function openLobbyWithMockRoom(page, name = 'MockHost') {
     await page.getByPlaceholder(/Enter your name/i).fill(name);
     await page.getByRole('button', { name: /Join Lobby/i }).click();
     await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+    const back = page.getByRole('button', { name: /Back to solo play/i });
+    if (await back.isVisible().catch(() => false)) await back.click();
 }
 
 async function createMockRoom(page) {

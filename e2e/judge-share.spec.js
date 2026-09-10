@@ -9,8 +9,8 @@ test.describe('Judge / Share flow', () => {
         const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
         await page.goto(`/#judge=${encoded}`);
         await expect(page.getByText(/both are fluffy/i)).toBeVisible({ timeout: 5000 });
-        await expect(page.getByText('Cat')).toBeVisible();
-        await expect(page.getByText('Dog')).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Cat/ })).toBeVisible();
+        await expect(page.getByText('Dog').first()).toBeVisible();
     });
 
     test('invalid judge hash shows error or fallback', async ({ page }) => {
