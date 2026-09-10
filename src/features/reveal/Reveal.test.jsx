@@ -309,6 +309,9 @@ describe('Reveal', () => {
         const sticky = await screen.findByTestId('reveal-sticky-share');
         expect(nextBtn).toBeInTheDocument();
         expect(sticky).toBeInTheDocument();
+        expect(
+            nextBtn.compareDocumentPosition(sticky) & Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
 
         await user.click(screen.getByRole('button', { name: /Dismiss share prompt/i }));
         expect(screen.queryByTestId('reveal-sticky-share')).not.toBeInTheDocument();
