@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startSoloRound, selectMediaType } from './helpers';
+import { startSoloRound, selectMediaType, returnToSoloLobby } from './helpers';
 
 async function createProfileWithMemesVideos(page, name = 'MemePlayer') {
     await page.goto('/');
@@ -8,14 +8,15 @@ async function createProfileWithMemesVideos(page, name = 'MemePlayer') {
     await selectMediaType(page, /Memes & Videos/i);
     await page.getByRole('button', { name: /Join Lobby/i }).click();
     await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+    await returnToSoloLobby(page);
 }
 
 test.describe('Memes & Videos flow', () => {
     test('can select memes & videos mode and start a round', async ({ page }) => {
         await createProfileWithMemesVideos(page);
 
-        await startSoloRound(page, { placeholder: /What connects this meme and video/i });
-        await expect(page.getByText('The Intersection')).toBeVisible();
+        await startSoloRound(page, { placeholder: /What connects this meme and video|e\.g\. a green roommate/i });
+        await expect(page.getByText(/One phrase that fits both|Write one phrase/i)).toBeVisible();
     });
 
     test('shows YouTube URL input in memes & videos mode', async ({ page }) => {

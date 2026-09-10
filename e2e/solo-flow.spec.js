@@ -1,19 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { dismissOnboarding, startSoloRound } from './helpers';
-
-async function createProfile(page, name = 'TestPlayer') {
-    await page.goto('/');
-    await page.getByPlaceholder(/Enter your name/i).fill(name);
-    await page.getByRole('button', { name: /Join Lobby/i }).click();
-    await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
-}
+import { dismissOnboarding, startSoloRound, createProfile } from './helpers';
 
 test.describe('Solo game flow', () => {
     test('landing page loads with Create Profile', async ({ page }) => {
         await page.goto('/');
         await expect(page.getByRole('heading', { name: /VENN/i })).toBeVisible();
         await expect(page.getByRole('heading', { name: /Create Profile/i })).toBeVisible();
-        await expect(page.getByRole('button', { name: /Join Lobby/i })).toBeVisible();
+        await expect(page.getByRole('button', { name: /Playing with friends\? — Join Lobby/i })).toBeVisible();
         await expect(page.getByRole('button', { name: /Play today's pair/i })).toBeVisible();
         await expect(page.getByText(/Today's pair. Same one as everyone/i)).toBeVisible();
         await expect(page.getByText('Media Type')).toHaveCount(0);
@@ -28,7 +21,7 @@ test.describe('Solo game flow', () => {
         await createProfile(page);
         await page.goto('/#daily');
         await dismissOnboarding(page);
-        await expect(page.getByPlaceholder(/What connects/i)).toBeVisible({ timeout: 15000 });
+        await expect(page.getByPlaceholder(/What connects|e\.g\. a green roommate/i)).toBeVisible({ timeout: 15000 });
     });
 
     test('can start solo game and see round screen', async ({ page }) => {

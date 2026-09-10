@@ -26,9 +26,62 @@ import { trackEvent } from '../../services/analytics';
 import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
 import { consumeAutostartDaily, markAutostartDaily, peekAutostartDaily } from '../../lib/firstSession';
 import { parseSiteShortcut } from '../../lib/siteIdentity';
+import { extractRoomCode, normalizeJoinInput } from '../../lib/roomCode';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
+
+function LobbyOverflowMenu({ onGallery, onHowTo, onSettings, onAchievements }) {
+    const [open, setOpen] = useState(false);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const onPointerDown = (event) => {
+            if (!menuRef.current?.contains(event.target)) setOpen(false);
+        };
+        document.addEventListener('pointerdown', onPointerDown);
+        return () => document.removeEventListener('pointerdown', onPointerDown);
+    }, [open]);
+
+    const items = [
+        { label: 'Gallery', ariaLabel: 'View connection gallery', onClick: onGallery },
+        { label: 'How to', ariaLabel: 'How it works', onClick: onHowTo },
+        { label: 'Settings', ariaLabel: 'Open settings', onClick: onSettings },
+        { label: 'Achievements', ariaLabel: 'Achievements', onClick: onAchievements },
+    ];
+
+    return (
+        <div className="lobby-overflow" ref={menuRef}>
+            <button
+                type="button"
+                className="lobby-overflow-trigger"
+                aria-label="More lobby actions"
+                aria-expanded={open}
+                aria-haspopup="true"
+                onClick={() => setOpen((value) => !value)}
+            >
+                ⋯
+            </button>
+            <div className={`lobby-overflow-menu ${open ? 'is-open' : ''}`} role="navigation" aria-label="Lobby shortcuts">
+                {items.map((item) => (
+                    <button
+                        key={item.label}
+                        type="button"
+                        className="lobby-overflow-item"
+                        aria-label={item.ariaLabel}
+                        onClick={() => {
+                            setOpen(false);
+                            item.onClick();
+                        }}
+                    >
+                        {item.label}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
 
 function DailyPairCard({ dailyChallenge, dailySummary, variant = 'lobby' }) {
     const weekTitle = dailyChallenge?.weekTitle;
@@ -280,7 +333,15 @@ export function Lobby() {
             themeId,
             autostartDaily: Boolean(autostartDaily),
         });
-        login({ name: trimmedName, avatar, themeId, gradient: theme.gradient, scoringMode, mediaType, useCustomImages });
+        login({
+            name: trimmedName,
+            avatar: avatar || AVATARS[0],
+            themeId,
+            gradient: theme.gradient,
+            scoringMode,
+            mediaType,
+            useCustomImages,
+        });
         return true;
     };
 
@@ -289,8 +350,10 @@ export function Lobby() {
         commitProfile(true);
     };
 
-    const handleJoinLobbyOnly = () => {
-        commitProfile(false);
+    const handleJoinFriends = () => {
+        if (commitProfile(false)) {
+            setShowMultiplayer(true);
+        }
     };
 
     const dailyChallenge = useMemo(() => getDailyChallenge(), []);
@@ -432,20 +495,22 @@ export function Lobby() {
         setMpLoadingAction(null);
     };
 
+    const normalizedJoinCode = extractRoomCode(joinCode);
+
     const handleJoinRoom = async () => {
-        if (!user?.name || !joinCode.trim()) return;
+        if (!user?.name || !normalizedJoinCode) return;
         setMpLoading(true);
         setMpLoadingAction('join');
-        await joinRoomByCode(joinCode.trim(), user.name, user.avatar || avatar);
+        await joinRoomByCode(normalizedJoinCode, user.name, user.avatar || avatar);
         setMpLoading(false);
         setMpLoadingAction(null);
     };
 
     const handleJoinAsSpectator = async () => {
-        if (!user?.name || !joinCode.trim()) return;
+        if (!user?.name || !normalizedJoinCode) return;
         setMpLoading(true);
         setMpLoadingAction('spectate');
-        await joinRoomByCode(joinCode.trim(), user.name, user.avatar || avatar, { spectator: true });
+        await joinRoomByCode(normalizedJoinCode, user.name, user.avatar || avatar, { spectator: true });
         setMpLoading(false);
         setMpLoadingAction(null);
     };
@@ -630,35 +695,15 @@ export function Lobby() {
                                 Join friends room
                                 {!backendReady && <WifiOff className="w-4 h-4 opacity-50 ml-2" />}
                             </button>
-                            <div className="flex gap-2 w-full" role="navigation" aria-label="Lobby shortcuts">
-                                <button
-                                    type="button"
-                                    onClick={() => setGameState('GALLERY')}
-                                    className="game-quick-chip"
-                                    aria-label="View connection gallery"
-                                >
-                                    Gallery
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setOnboardingDismissCallback(() => () => setShowOnboarding(false));
-                                        setShowOnboarding(true);
-                                    }}
-                                    className="game-quick-chip"
-                                    aria-label="How it works"
-                                >
-                                    How to
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setMoreOptionsOpen(true)}
-                                    className="game-quick-chip"
-                                    aria-label="Open settings"
-                                >
-                                    Settings
-                                </button>
-                            </div>
+                            <LobbyOverflowMenu
+                                onGallery={() => setGameState('GALLERY')}
+                                onHowTo={() => {
+                                    setOnboardingDismissCallback(() => () => setShowOnboarding(false));
+                                    setShowOnboarding(true);
+                                }}
+                                onSettings={() => setMoreOptionsOpen(true)}
+                                onAchievements={() => setGameState('ACHIEVEMENTS')}
+                            />
                             {!isFirstSession && !sessionId && (
                                 <div className="flex items-center justify-center gap-2 pt-1">
                                     <span className="text-white/40 text-xs">Rounds</span>
@@ -916,10 +961,15 @@ export function Lobby() {
 
                                     <button
                                         onClick={handleShowAllFeatures}
-                                        className="w-full text-sm text-white/40 hover:text-white underline"
+                                        className="w-full text-sm text-white/40 hover:text-white underline min-h-[44px]"
                                     >
-                                        {showAllFeatures ? 'Hide extras' : 'Show extras'}
+                                        {showAllFeatures ? 'Hide Labs' : 'Labs'}
                                     </button>
+                                    {showAllFeatures && (
+                                        <p className="text-center text-[11px] text-white/35">
+                                            Local preview — not the core game.
+                                        </p>
+                                    )}
                                 </div>
                             </details>
                         </>
@@ -951,29 +1001,52 @@ export function Lobby() {
                                     disabled={mpLoading || !backendReady}
                                     className="wordle-button wordle-primary w-full text-lg disabled:hover:scale-100"
                                 >
-                                    {mpLoading && mpLoadingAction === 'create' ? 'Creating...' : 'Create Room'}
+                                    {mpLoading && mpLoadingAction === 'create' ? 'Creating...' : 'Create room'}
                                 </button>
 
-                                <div className="flex gap-2">
+                                <div className="flex items-center gap-3 py-1" aria-hidden="true">
+                                    <div className="h-px flex-1 bg-white/10" />
+                                    <span className="text-[11px] uppercase tracking-[0.14em] text-white/35">or</span>
+                                    <div className="h-px flex-1 bg-white/10" />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label htmlFor="room-code-input" className="game-section-label block">
+                                        I have a code
+                                    </label>
                                     <input
+                                        id="room-code-input"
                                         type="text"
+                                        inputMode="text"
+                                        autoComplete="off"
+                                        autoCapitalize="characters"
+                                        spellCheck={false}
                                         value={joinCode}
-                                        onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                                        placeholder="Room code"
-                                        maxLength={6}
-                                        className="game-input flex-1 text-lg text-center tracking-widest font-bold uppercase"
+                                        onChange={(e) => setJoinCode(normalizeJoinInput(e.target.value))}
+                                        onPaste={(e) => {
+                                            const pasted = e.clipboardData?.getData('text') || '';
+                                            const extracted = extractRoomCode(pasted);
+                                            if (extracted) {
+                                                e.preventDefault();
+                                                setJoinCode(extracted);
+                                            }
+                                        }}
+                                        placeholder="Paste room code or invite link"
+                                        maxLength={200}
+                                        className="game-input w-full min-h-[56px] text-xl text-center tracking-[0.2em] font-bold uppercase"
+                                        aria-label="Room code"
                                     />
                                     <button
                                         onClick={handleJoinRoom}
-                                        disabled={mpLoading || !backendReady || joinCode.trim().length < 4}
-                                        className="px-6 py-3 bg-white/20 text-white font-bold rounded-xl hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                                        disabled={mpLoading || !backendReady || normalizedJoinCode.length < 4}
+                                        className="wordle-button w-full min-h-[49px] disabled:opacity-50 disabled:cursor-not-allowed"
                                         aria-busy={mpLoading && mpLoadingAction === 'join'}
                                         aria-label={mpLoading && mpLoadingAction === 'join' ? 'Joining room...' : 'Join room'}
                                     >
-                                        {mpLoading && mpLoadingAction === 'join' ? 'Joining...' : 'Join'}
+                                        {mpLoading && mpLoadingAction === 'join' ? 'Joining...' : 'Join room'}
                                     </button>
                                 </div>
-                                {joinCode.trim().length >= 4 && (
+                                {normalizedJoinCode.length >= 4 && (
                                     <button
                                         type="button"
                                         onClick={handleJoinAsSpectator}
@@ -1032,7 +1105,7 @@ export function Lobby() {
                     Two prompts. One line. The overlap is the joke.
                 </h2>
                 <p className="mt-4 max-w-[480px] text-base leading-relaxed text-white/55">
-                    Start with a name and avatar, then play today&apos;s pair or jump into a friends room.
+                    Start with a name and avatar, then play today&apos;s pair.
                 </p>
             </div>
         <div className="w-full max-w-md lg:max-w-none wordle-card lobby-gate-card p-5 pt-[22px] sm:p-6">
@@ -1095,10 +1168,12 @@ export function Lobby() {
                 <button
                     type="button"
                     disabled={!name.trim()}
-                    onClick={handleJoinLobbyOnly}
-                    className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleJoinFriends}
+                    className="flex w-full items-center justify-center text-sm text-white/55 hover:text-white underline disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ minHeight: 44 }}
+                    aria-label="Playing with friends? — Join Lobby"
                 >
-                    Join Lobby
+                    Playing with friends?
                 </button>
 
                 <details

@@ -50,6 +50,8 @@ async function openLobbyAsLoggedInUser(page, name = 'ErrorTester') {
     await page.getByPlaceholder(/Enter your name/i).fill(name);
     await page.getByRole('button', { name: /Join Lobby/i }).click();
     await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+    const back = page.getByRole('button', { name: /Back to solo play/i });
+    if (await back.isVisible().catch(() => false)) await back.click();
 }
 
 test.describe('error paths — multiplayer join', () => {
@@ -123,6 +125,7 @@ test.describe('error paths — theme builder', () => {
     test('empty name shows error toast on Create', async ({ page }) => {
         await openLobbyAsLoggedInUser(page, 'ThemeTester');
 
+        await page.locator('summary', { hasText: 'Progress & settings' }).click();
         await page.getByRole('button', { name: /Creator/i }).click();
 
         await expect(page.getByRole('heading', { name: /Theme Builder/i })).toBeVisible({ timeout: 5000 });

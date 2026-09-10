@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startSoloRound } from './helpers';
+import { startSoloRound, returnToSoloLobby } from './helpers';
 
 const APP_URL = '/giant-schrodinger/';
 
@@ -8,6 +8,7 @@ async function createProfile(page, name = 'TestPlayer') {
   await page.getByPlaceholder(/Enter your name/i).fill(name);
   await page.getByRole('button', { name: /Join Lobby/i }).click();
     await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+  await returnToSoloLobby(page);
 }
 
 async function unlockAdvancedLobby(page) {
@@ -48,7 +49,11 @@ test.describe('Multiplayer Flow', () => {
 
   test('gallery shows past rounds', async ({ page }) => {
     await createProfile(page);
-    await page.getByRole('button', { name: /View connection gallery|Gallery/i }).click();
-    await expect(page.getByText(/Your best lines|Connection Gallery/i)).toBeVisible({ timeout: 5000 });
+    const gallery = page.getByRole('button', { name: /View connection gallery|Gallery/i });
+    if (!(await gallery.isVisible().catch(() => false))) {
+      await page.getByRole('button', { name: /More lobby actions/i }).click();
+    }
+    await gallery.click();
+    await expect(page.getByRole('heading', { name: /Your best lines|Connection Gallery/i }).first()).toBeVisible({ timeout: 5000 });
   });
 });

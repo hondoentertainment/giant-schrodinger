@@ -22,6 +22,7 @@ vi.mock('../../context/GameContext', () => ({
         totalRounds: mockTotalRounds,
         currentModifier: { id: 'normal', label: 'Standard Round', timeFactor: 1.0, scoreFactor: 1.0, icon: '🎯' },
         nextRound: mockNextRound,
+        sessionResults: [],
     }),
 }));
 
@@ -47,7 +48,7 @@ vi.mock('../../services/gemini', () => ({
         breakdown: { wit: 8, logic: 7, originality: 9, clarity: 8 },
         commentary: 'Great connection between Cat and Dog!',
         relevance: 'Highly Logical',
-        isMock: true,
+        isMock: false,
     }),
     generateFusionImage: vi.fn().mockResolvedValue({
         url: 'https://example.com/fusion.jpg',
@@ -201,13 +202,12 @@ describe('Reveal', () => {
         expect(await screen.findByText(/Great connection between Cat and Dog!/, {}, { timeout: 3000 })).toBeInTheDocument();
         expect(await screen.findByText(/Wit:/)).toBeInTheDocument();
         const coach = screen.getByTestId('score-coach');
-        expect(coach).toHaveTextContent(/Practice score/i);
         expect(coach).toHaveTextContent(/Try this:/i);
     });
 
     it('share button exists after scoring', async () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
-        const shareBtn = await screen.findByRole('button', { name: /ask a friend to judge|share for friend to judge/i }, { timeout: 3000 });
+        const shareBtn = await screen.findByRole('button', { name: /send to a friend to judge|ask a friend to judge/i }, { timeout: 3000 });
         expect(shareBtn).toBeInTheDocument();
     });
 
@@ -217,7 +217,7 @@ describe('Reveal', () => {
 
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
 
-        const friendJudgeButton = await screen.findByRole('button', { name: /ask a friend to judge/i }, { timeout: 3000 });
+        const friendJudgeButton = await screen.findByRole('button', { name: /send to a friend to judge/i }, { timeout: 3000 });
         await waitFor(() => expect(friendJudgeButton).toBeEnabled());
         createJudgeShareLinks.mockClear();
         await user.click(friendJudgeButton);
@@ -237,7 +237,7 @@ describe('Reveal', () => {
         const user = userEvent.setup();
 
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
-        const friendJudgeButton = await screen.findByRole('button', { name: /ask a friend to judge/i }, { timeout: 3000 });
+        const friendJudgeButton = await screen.findByRole('button', { name: /send to a friend to judge/i }, { timeout: 3000 });
         await waitFor(() => expect(friendJudgeButton).toBeEnabled());
         await user.click(friendJudgeButton);
 
@@ -261,7 +261,8 @@ describe('Reveal', () => {
 
         expect(await screen.findByText(/Recommended next move/i, {}, { timeout: 3000 })).toBeInTheDocument();
         expect(screen.getAllByText(/Send this 8\/10 to a friend/i).length).toBeGreaterThanOrEqual(1);
-        expect(screen.getAllByRole('button', { name: /ask a friend to judge/i }).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByRole('button', { name: /send to a friend to judge/i }).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText(/Strong line — send it to a friend to judge/i)).toBeInTheDocument();
         expect(screen.getByText(/Saved to your gallery/i)).toBeInTheDocument();
         expect(screen.getByText(/Continue to round 2/i)).toBeInTheDocument();
     });
@@ -281,6 +282,21 @@ describe('Reveal', () => {
         render(<Reveal submission={mockSubmission} assets={mockAssets} />);
         expect(screen.getByText(`\u201c${mockSubmission}\u201d`)).toBeInTheDocument();
         expect(await screen.findByText(/Great connection between Cat and Dog!/, {}, { timeout: 3000 })).toBeInTheDocument();
+    });
+
+    it('offers a quick self-score when AI scoring is offline', async () => {
+        const { scoreSubmission } = await import('../../services/gemini');
+        scoreSubmission.mockResolvedValueOnce({
+            score: 8,
+            isMock: true,
+            errorReason: 'Gemini missing',
+            commentary: 'Mock',
+        });
+
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+
+        expect(await screen.findByText(/Scoring offline — quick self-score/i, {}, { timeout: 3000 })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Submit Score/i })).toBeInTheDocument();
     });
 
     it('holds the fusion frame while rendering, then mounts the labelled image', async () => {

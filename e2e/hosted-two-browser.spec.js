@@ -41,6 +41,8 @@ async function joinLobby(page, name, { scoringMode } = {}) {
   }
   await page.getByRole('button', { name: /Join Lobby/i }).click();
   await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 15000 });
+  const back = page.getByRole('button', { name: /Back to solo play/i });
+  if (await back.isVisible().catch(() => false)) await back.click();
 }
 
 test.describe('Hosted two-browser rehearsal', () => {
@@ -68,7 +70,7 @@ test.describe('Hosted two-browser rehearsal', () => {
     await guest.getByPlaceholder(/Room code/i).fill(roomCode);
     await guest.getByRole('button', { name: /Join room/i }).scrollIntoViewIfNeeded();
     await guest.getByRole('button', { name: /Join room/i }).click();
-    await expect(guest.getByText(/Multiplayer room/i)).toBeVisible({ timeout: 20000 });
+    await expect(guest.getByText(/Friends room|Multiplayer room/i)).toBeVisible({ timeout: 20000 });
     await expect(guest.locator('.text-gradient-vibrant').filter({ hasText: roomCode })).toBeVisible();
 
     await expect(host.getByText('GuestR', { exact: true })).toBeVisible({ timeout: 15000 });

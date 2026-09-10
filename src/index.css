@@ -153,6 +153,12 @@
     border-radius: var(--game-radius-pill);
   }
 
+  .game-timer--compact.game-timer--paused {
+    min-width: 6.5rem;
+    min-height: auto;
+    padding: 0.3rem 0.7rem;
+  }
+
   .lobby-gate-card {
     width: 100%;
   }
@@ -263,6 +269,22 @@
   .game-quick-chip:hover {
     background: rgba(255, 255, 255, 0.1);
     color: var(--game-text);
+  }
+
+  .lobby-overflow {
+    @apply relative flex w-full items-center justify-center;
+  }
+
+  .lobby-overflow-trigger {
+    display: none;
+  }
+
+  .lobby-overflow-menu {
+    @apply flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-1;
+  }
+
+  .lobby-overflow-item {
+    @apply min-h-[44px] px-1 text-sm text-white/45 underline-offset-2 hover:text-white hover:underline;
   }
 
   .game-avatar-choice {
@@ -477,6 +499,26 @@
     border-color: rgba(255, 214, 10, 0.35);
     color: var(--game-warning);
     animation: timerPulse 1s ease-in-out infinite;
+  }
+
+  .game-timer--paused {
+    flex-direction: column;
+    gap: 0.1rem;
+    min-height: auto;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .game-timer-hint {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+    line-height: 1.2;
+    text-align: center;
+    max-width: 5.6rem;
   }
 
   .game-section-label {
@@ -761,18 +803,50 @@
     padding: 22px 20px 18px;
   }
 
-  .game-reveal-stack {
-    display: flex;
+  .lobby-overflow-trigger {
+    @apply inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-xl font-semibold text-white/70;
+    display: inline-flex;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .lobby-overflow-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.35rem);
+    z-index: 30;
+    width: min(16rem, calc(100vw - 2rem));
     flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0.4rem;
+    background: rgba(18, 18, 26, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   }
 
-  .game-reveal-extra {
-    order: 3;
+  .lobby-overflow-menu.is-open {
+    display: flex;
   }
 
-  .game-reveal-actions {
-    order: 2;
+  .lobby-overflow-item {
+    @apply w-full justify-start rounded-xl px-3 text-left no-underline;
   }
+}
+
+.game-reveal-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.game-reveal-actions {
+  order: 2;
+}
+
+.game-reveal-extra {
+  order: 3;
 }
 
 @media (prefers-reduced-motion: reduce) {

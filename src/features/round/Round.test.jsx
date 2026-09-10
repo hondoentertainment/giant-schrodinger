@@ -100,6 +100,8 @@ const baselineContext = {
     getUsedAssetIds: () => [],
 };
 
+const FIRST_ROUND_PLACEHOLDER = 'e.g. a green roommate that sets the vibe';
+
 describe('Round', () => {
     const mockOnSubmit = vi.fn();
 
@@ -134,11 +136,31 @@ describe('Round', () => {
         expect(screen.getAllByText('1:00').length).toBeGreaterThan(0);
     });
 
+    it('pauses the first-round timer until the first keystroke', () => {
+        render(<Round onSubmit={mockOnSubmit} />);
+        expect(screen.getByText(/Starts when you type/i)).toBeInTheDocument();
+        act(() => {
+            vi.advanceTimersByTime(3000);
+        });
+        expect(screen.getAllByText('1:00').length).toBeGreaterThan(0);
+    });
+
+    it('starts the first-round timer after the first keystroke', async () => {
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        render(<Round onSubmit={mockOnSubmit} />);
+        await user.type(screen.getByPlaceholderText(FIRST_ROUND_PLACEHOLDER), 'a');
+        expect(screen.queryByText(/Starts when you type/i)).not.toBeInTheDocument();
+        act(() => {
+            vi.advanceTimersByTime(1000);
+        });
+        expect(screen.getAllByText('0:59').length).toBeGreaterThan(0);
+    });
+
     it('text input accepts user submission', async () => {
         vi.useRealTimers();
         const user = userEvent.setup({ delay: null });
         render(<Round onSubmit={mockOnSubmit} />);
-        const input = screen.getByPlaceholderText('What connects these two?');
+        const input = screen.getByPlaceholderText(FIRST_ROUND_PLACEHOLDER);
         await user.type(input, 'They both have fur');
         expect(input).toHaveValue('They both have fur');
     });
@@ -152,7 +174,7 @@ describe('Round', () => {
         vi.useRealTimers();
         const user = userEvent.setup({ delay: null });
         render(<Round onSubmit={mockOnSubmit} />);
-        const input = screen.getByPlaceholderText('What connects these two?');
+        const input = screen.getByPlaceholderText(FIRST_ROUND_PLACEHOLDER);
         await user.type(input, '{Enter}');
         expect(mockOnSubmit).toHaveBeenCalledTimes(1);
     });
@@ -161,7 +183,7 @@ describe('Round', () => {
         vi.useRealTimers();
         const user = userEvent.setup({ delay: null });
         render(<Round onSubmit={mockOnSubmit} />);
-        const input = screen.getByPlaceholderText('What connects these two?');
+        const input = screen.getByPlaceholderText(FIRST_ROUND_PLACEHOLDER);
         await user.type(input, '   {Enter}');
         expect(mockOnSubmit).toHaveBeenCalledTimes(1);
     });
@@ -170,7 +192,7 @@ describe('Round', () => {
         vi.useRealTimers();
         const user = userEvent.setup({ delay: null });
         render(<Round onSubmit={mockOnSubmit} />);
-        const input = screen.getByPlaceholderText('What connects these two?');
+        const input = screen.getByPlaceholderText(FIRST_ROUND_PLACEHOLDER);
         await user.type(input, 'Both have whiskers{Enter}');
 
         expect(mockOnSubmit).toHaveBeenCalledTimes(1);
@@ -198,7 +220,8 @@ describe('Round', () => {
         expect(screen.getByText(/Round 1 of 3/i)).toBeInTheDocument();
     });
 
-    it('counts down the timer each second', () => {
+    it('counts down the timer each second on later rounds', () => {
+        mockContextValue = { ...baselineContext, roundNumber: 2 };
         render(<Round onSubmit={mockOnSubmit} />);
         expect(screen.getAllByText('1:00').length).toBeGreaterThan(0);
         act(() => {
@@ -229,29 +252,32 @@ describe('Round', () => {
         render(<Round onSubmit={mockOnSubmit} />);
         expect(screen.queryByText(/Time:/i)).not.toBeInTheDocument();
         expect(screen.queryByText(/Points:/i)).not.toBeInTheDocument();
-        expect(screen.getByPlaceholderText('What connects these two?')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(FIRST_ROUND_PLACEHOLDER)).toBeInTheDocument();
+        expect(screen.getByText(/One phrase that fits both/i)).toBeInTheDocument();
     });
 
-    it('shows memes & videos coaching and placeholder when media type is memes_videos', () => {
+    it('shows memes & videos coaching on a first session first round', () => {
         getStats.mockReturnValue({ totalRounds: 0, currentStreak: 0, maxStreak: 0, milestonesUnlocked: [] });
         mockContextValue = {
             ...baselineContext,
             user: { ...baselineContext.user, mediaType: 'memes_videos' },
         };
         render(<Round onSubmit={mockOnSubmit} />);
-        expect(screen.getByPlaceholderText(/What connects this meme and video/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(FIRST_ROUND_PLACEHOLDER)).toBeInTheDocument();
         expect(screen.getByText(/Connect the vibe, not just the visuals/i)).toBeInTheDocument();
+        expect(screen.getByText(/One phrase that fits both/i)).toBeInTheDocument();
     });
 
     it('plays submit sound when the player submits', async () => {
         vi.useRealTimers();
         const user = userEvent.setup({ delay: null });
         render(<Round onSubmit={mockOnSubmit} />);
-        await user.type(screen.getByPlaceholderText('What connects these two?'), 'Both pets{Enter}');
+        await user.type(screen.getByPlaceholderText(FIRST_ROUND_PLACEHOLDER), 'Both pets{Enter}');
         expect(soundMocks.playSubmitSound).toHaveBeenCalled();
     });
 
     it('plays tick sounds in the final 10 seconds and urgent ticks in the final 5', () => {
+        mockContextValue = { ...baselineContext, roundNumber: 2 };
         render(<Round onSubmit={mockOnSubmit} />);
         act(() => {
             vi.advanceTimersByTime(50_000);

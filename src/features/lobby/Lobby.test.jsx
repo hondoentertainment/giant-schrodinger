@@ -301,7 +301,8 @@ describe('Lobby', () => {
         expect(mockStartSession).toHaveBeenCalled();
     });
 
-    it('daily challenge section renders', () => {
+    it('daily challenge section renders', async () => {
+        const user = userEvent.setup();
         mockUser = loggedInUser;
         render(<Lobby />);
         expect(screen.getByText('Daily Challenge')).toBeInTheDocument();
@@ -309,6 +310,8 @@ describe('Lobby', () => {
         expect(screen.getByText(/Daily pair/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Play today's pair/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Join friends room/i })).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: /More lobby actions/i }));
+        expect(screen.getByRole('button', { name: /View connection gallery/i })).toBeInTheDocument();
     });
 
     it('shows profile form when user is not logged in', () => {
@@ -355,7 +358,7 @@ describe('Lobby', () => {
         render(<Lobby />);
         expect(mockStartSession).not.toHaveBeenCalled();
         await user.type(screen.getByPlaceholderText('Enter your name...'), 'Kyle');
-        await user.click(screen.getByRole('button', { name: /Join Lobby/i }));
+        await user.click(screen.getByRole('button', { name: /Playing with friends/i }));
         expect(mockLogin).toHaveBeenCalled();
         expect(sessionStorage.getItem('vwf_autostart_daily')).toBeNull();
         expect(mockStartSession).not.toHaveBeenCalled();
@@ -366,14 +369,18 @@ describe('Lobby', () => {
         window.history.pushState({}, '', '/#friends');
         render(<Lobby />);
         expect(screen.getByPlaceholderText(/Room code/i)).toBeInTheDocument();
+        expect(screen.getByText(/I have a code/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Create room/i })).toBeInTheDocument();
     });
 
-    it('keeps Join Lobby as a lobby-only path', async () => {
+    it('keeps Playing with friends as a lobby-only path', async () => {
         const user = userEvent.setup();
         sessionStorage.clear();
         render(<Lobby />);
+        expect(screen.getByRole('button', { name: /Playing with friends\? — Join Lobby/i })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Join Lobby$/i })).not.toBeInTheDocument();
         await user.type(screen.getByPlaceholderText('Enter your name...'), 'Kyle');
-        await user.click(screen.getByRole('button', { name: /Join Lobby/i }));
+        await user.click(screen.getByRole('button', { name: /Playing with friends/i }));
         expect(mockLogin).toHaveBeenCalled();
         expect(sessionStorage.getItem('vwf_autostart_daily')).toBeNull();
     });
@@ -398,6 +405,17 @@ describe('Lobby', () => {
         await vi.waitFor(() => {
             expect(mockJoinRoomByCode).toHaveBeenCalledWith('WATCH1', 'TestUser', '👽', { spectator: true });
         });
+    });
+
+    it('extracts a room code from a typed invite URL', async () => {
+        const user = userEvent.setup();
+        mockUser = loggedInUser;
+        mockBackendEnabled = true;
+        render(<Lobby />);
+        await user.click(screen.getByRole('button', { name: /Play with Friends/i }));
+        const input = screen.getByLabelText(/Room code/i);
+        await user.type(input, 'https://giant-schrodinger.vercel.app/?join=ABCD');
+        expect(input).toHaveValue('ABCD');
     });
 
     it('offers Watch the Game after a room code is entered', async () => {

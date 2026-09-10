@@ -40,13 +40,15 @@ async function openLobbyWithMockRoom(page, name = 'MockHost') {
     await page.getByPlaceholder(/Enter your name/i).fill(name);
     await page.getByRole('button', { name: /Join Lobby/i }).click();
     await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
+    const back = page.getByRole('button', { name: /Back to solo play/i });
+    if (await back.isVisible().catch(() => false)) await back.click();
 }
 
 async function createMockRoom(page) {
     await openLobbyWithMockRoom(page);
     await page.getByRole('button', { name: /Play with Friends/i }).click();
     await page.getByRole('button', { name: /Create Room/i }).click();
-    await expect(page.getByText(/MULTIPLAYER ROOM/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Friends room|Multiplayer room/i)).toBeVisible({ timeout: 5000 });
 }
 
 test.describe('multiplayer disconnect recovery', () => {
@@ -54,7 +56,7 @@ test.describe('multiplayer disconnect recovery', () => {
         await page.goto(APP_URL);
         await expect(page.getByRole('heading', { name: /VENN/i })).toBeVisible();
         // Banner text should not be present — there is no room yet.
-        await expect(page.getByText(/Connection lost|Reconnecting|Disconnected from the room/i)).toHaveCount(0);
+        await expect(page.getByText(/Connection lost|Reconnecting|Disconnected from the room|Room lost connection/i)).toHaveCount(0);
     });
 
     test('firing offline/online window events on landing does not crash', async ({ page, context }) => {
@@ -86,7 +88,7 @@ test.describe('multiplayer disconnect recovery', () => {
         await context.setOffline(true);
         await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
-        await expect(page.getByText(/Disconnected from the room/i)).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText(/Room lost connection|Disconnected from the room/i)).toBeVisible({ timeout: 5000 });
 
         await context.setOffline(false);
     });
@@ -96,10 +98,10 @@ test.describe('multiplayer disconnect recovery', () => {
 
         await context.setOffline(true);
         await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-        await expect(page.getByText(/Disconnected from the room/i)).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText(/Room lost connection|Disconnected from the room/i)).toBeVisible({ timeout: 5000 });
 
         await context.setOffline(false);
         await page.evaluate(() => window.dispatchEvent(new Event('online')));
-        await expect(page.getByText(/Connection lost\. Reconnecting|Disconnected from the room/i)).toHaveCount(0);
+        await expect(page.getByText(/Connection lost\. Reconnecting|Disconnected from the room|Room lost connection/i)).toHaveCount(0);
     });
 });

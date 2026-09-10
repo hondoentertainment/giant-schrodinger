@@ -236,8 +236,9 @@
     "recovered": "Room state recovered. You are back in sync with the group.",
     "waitingVotes": "Waiting for all players to vote before results can finalize.",
     "reconnecting": "Connection lost. Reconnecting…",
-    "disconnected": "Disconnected from the room.",
-    "retry": "Retry",
+    "disconnected": "Room lost connection — Rejoin.",
+    "retry": "Rejoin",
+    "rejoin": "Rejoin",
     "leaveRoom": "Leave room"
   },
   "common": {

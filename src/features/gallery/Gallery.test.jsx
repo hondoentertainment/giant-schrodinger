@@ -147,7 +147,7 @@ describe('Gallery', () => {
     mockCollisions = [];
     render(<Gallery />);
     await waitFor(() => {
-      expect(screen.getByText(/No trophies yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/Your best lines will land here after round 1/i)).toBeInTheDocument();
     });
   });
 
