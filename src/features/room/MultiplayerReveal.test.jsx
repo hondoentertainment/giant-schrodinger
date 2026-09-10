@@ -120,8 +120,8 @@ describe('MultiplayerReveal', () => {
         mocks.roomState.connectionState = 'disconnected';
         render(<MultiplayerReveal />);
 
-        expect(screen.getByText(/Disconnected from the room/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
+        expect(screen.getByText(/Room lost connection/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Rejoin/i })).toBeInTheDocument();
     });
 
     it('shows Rematch for the host when the game is finished', async () => {

@@ -12,6 +12,8 @@ import { haptic } from '../../lib/haptics';
 import { trackEvent } from '../../services/analytics';
 import { playSubmitSound, playTickSound, playUrgentTick } from '../../services/sounds';
 
+const FIRST_ROUND_EXAMPLE = 'e.g. a green roommate that sets the vibe';
+
 function formatRoundClock(totalSeconds) {
     const safe = Math.max(0, Number(totalSeconds) || 0);
     const minutes = Math.floor(safe / 60);
@@ -25,6 +27,8 @@ export function Round({ onSubmit }) {
     const [mediaLoading, setMediaLoading] = useState(true);
     const [submission, setSubmission] = useState('');
     const [timer, setTimer] = useState(60);
+    const [timerArmed, setTimerArmed] = useState(false);
+    const [showGhostExample, setShowGhostExample] = useState(true);
     const [showTimeUp, setShowTimeUp] = useState(false);
     const submittedRef = useRef(false);
     const stats = getStats();
@@ -40,7 +44,8 @@ export function Round({ onSubmit }) {
     const mod = currentModifier;
     const firstPairSeedRef = useRef(Date.now());
     const isFirstSession = stats.totalRounds === 0;
-    const showFirstRoundCoaching = isFirstSession && roundNumber === 1;
+    const isFirstRoundOfSession = roundNumber === 1;
+    const showFirstRoundCoaching = isFirstSession && isFirstRoundOfSession;
     const roundMediaType = getEffectiveRoundMediaType({
         userMediaType: mediaType,
         isDailyChallenge,
@@ -78,6 +83,8 @@ export function Round({ onSubmit }) {
                 if (!cancelled) {
                     setAssets({ left: forcedPair.left, right: forcedPair.right });
                     setTimer(timeLimit);
+                    setTimerArmed(!isFirstRoundOfSession);
+                    setShowGhostExample(isFirstRoundOfSession);
                 }
                 const resolved = await loadSelectedAssets([forcedPair.left, forcedPair.right]);
                 if (cancelled) return;
@@ -108,6 +115,8 @@ export function Round({ onSubmit }) {
             if (!cancelled) {
                 setAssets({ left, right });
                 setTimer(timeLimit);
+                setTimerArmed(!isFirstRoundOfSession);
+                setShowGhostExample(isFirstRoundOfSession);
             }
 
             const resolved = await loadSelectedAssets([left, right]);
@@ -146,13 +155,15 @@ export function Round({ onSubmit }) {
     }, [submission, assets, mod, onSubmit, setGameState, stats.totalRounds, roundNumber, mediaType, theme?.id]);
 
     useEffect(() => {
+        if (!timerArmed) return undefined;
         if (timer > 0) {
             const interval = setInterval(() => setTimer(t => t - 1), 1000);
             return () => clearInterval(interval);
         } else if (!submittedRef.current && !showTimeUp) {
             setShowTimeUp(true);
         }
-    }, [timer, showTimeUp]);
+        return undefined;
+    }, [timer, showTimeUp, timerArmed]);
 
     useEffect(() => {
         if (submittedRef.current || showTimeUp) return;
@@ -221,8 +232,11 @@ export function Round({ onSubmit }) {
                             Time&apos;s up
                         </div>
                     ) : (
-                        <div className={`game-timer game-timer--compact ${timer < 10 ? 'game-timer--urgent' : ''}`}>
+                        <div className={`game-timer game-timer--compact ${timerArmed && timer < 10 ? 'game-timer--urgent' : ''}`}>
                             {formatRoundClock(timer)}
+                            {!timerArmed && (
+                                <span className="sr-only">Timer starts when you type</span>
+                            )}
                         </div>
                     )}
                 </div>
@@ -274,20 +288,28 @@ export function Round({ onSubmit }) {
                     </div>
                 )}
                 <p className="text-center text-white/55 text-[15px] leading-snug mb-3">
-                    {roundMediaType === MEDIA_TYPES.AUDIO
+                    {isFirstRoundOfSession
+                        ? 'One phrase that fits both'
+                        : roundMediaType === MEDIA_TYPES.AUDIO
                         ? 'Write one phrase that lives in both sounds.'
                         : roundMediaType === MEDIA_TYPES.VIDEO
                         ? 'Write one phrase that lives in both clips.'
-                        : roundMediaType === MEDIA_TYPES.MEMES_VIDEOS
-                        ? 'Write one phrase that lives in both circles.'
                         : 'Write one phrase that lives in both circles.'}
                 </p>
                 <input
                     type="text"
                     value={submission}
-                    onChange={(e) => setSubmission(e.target.value)}
+                    onChange={(e) => {
+                        const next = e.target.value;
+                        setSubmission(next);
+                        if (isFirstRoundOfSession && !timerArmed && next.length > 0) {
+                            setTimerArmed(true);
+                        }
+                    }}
                     placeholder={
-                        roundMediaType === MEDIA_TYPES.AUDIO
+                        isFirstRoundOfSession && showGhostExample
+                            ? FIRST_ROUND_EXAMPLE
+                            : roundMediaType === MEDIA_TYPES.AUDIO
                             ? 'What connects these two sounds?'
                             : roundMediaType === MEDIA_TYPES.VIDEO
                             ? 'What connects these two clips?'
@@ -297,7 +319,13 @@ export function Round({ onSubmit }) {
                     }
                     className="game-input-hero w-full"
                     autoFocus
-                    onFocus={(event) => event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' })}
+                    onFocus={(event) => {
+                        if (isFirstRoundOfSession) setShowGhostExample(false);
+                        event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+                    }}
+                    onBlur={() => {
+                        if (isFirstRoundOfSession && !submission.trim()) setShowGhostExample(true);
+                    }}
                 />
                 <div className="sticky bottom-0 z-30 mt-4 space-y-3 bg-gradient-to-t from-[#07070a] via-[#07070a]/95 to-transparent pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-white/40 text-sm sm:static sm:bg-none sm:pb-0">
                     <button

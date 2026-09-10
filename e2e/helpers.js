@@ -22,8 +22,23 @@ export async function selectMediaType(page, name) {
     await page.getByRole('button', { name }).click();
 }
 
+export async function openLobbyOverflow(page) {
+    const more = page.getByRole('button', { name: /More lobby actions/i });
+    if (await more.isVisible().catch(() => false)) {
+        await more.click();
+    }
+}
+
+export async function openLobbyGallery(page) {
+    const gallery = page.getByRole('button', { name: /View connection gallery/i });
+    if (!(await gallery.isVisible().catch(() => false))) {
+        await openLobbyOverflow(page);
+    }
+    await gallery.click();
+}
+
 export async function startSoloRound(page, options = {}) {
-    const { placeholder = /What connects/i } = options;
+    const { placeholder = /What connects|e\.g\. a green roommate/i } = options;
 
     await dismissOnboarding(page);
     const daily = page.getByRole('button', { name: /Start today's Venn daily puzzle/i });

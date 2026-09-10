@@ -19,6 +19,7 @@ export function ConnectionBanner() {
         attemptReconnect,
         leaveCurrentRoom,
         room,
+        roomCode,
         votes,
         submissions,
     } = useRoom();
@@ -119,8 +120,10 @@ export function ConnectionBanner() {
                     <span>{t('room.reconnecting')} <span className="animate-pulse">●</span></span>
                 ) : (
                     <span>
-                        {t('room.disconnected')}{' '}
-                        <button type="button" onClick={() => attemptReconnect()} className="underline underline-offset-2 min-h-[44px] inline-flex items-center">{t('room.retry')}</button>
+                        {t('room.disconnected')}
+                        {(roomCode || room?.code) ? ` Code ${roomCode || room.code} is still here.` : ''}
+                        {' '}
+                        <button type="button" onClick={() => attemptReconnect()} className="underline underline-offset-2 min-h-[44px] inline-flex items-center">{t('room.rejoin')}</button>
                         {' or '}
                         <button type="button" onClick={leaveCurrentRoom} className="underline underline-offset-2 min-h-[44px] inline-flex items-center">{t('room.leaveRoom')}</button>
                     </span>

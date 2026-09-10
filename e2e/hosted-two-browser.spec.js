@@ -68,7 +68,7 @@ test.describe('Hosted two-browser rehearsal', () => {
     await guest.getByPlaceholder(/Room code/i).fill(roomCode);
     await guest.getByRole('button', { name: /Join room/i }).scrollIntoViewIfNeeded();
     await guest.getByRole('button', { name: /Join room/i }).click();
-    await expect(guest.getByText(/Multiplayer room/i)).toBeVisible({ timeout: 20000 });
+    await expect(guest.getByText(/Friends room|Multiplayer room/i)).toBeVisible({ timeout: 20000 });
     await expect(guest.locator('.text-gradient-vibrant').filter({ hasText: roomCode })).toBeVisible();
 
     await expect(host.getByText('GuestR', { exact: true })).toBeVisible({ timeout: 15000 });

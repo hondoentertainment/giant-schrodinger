@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openLobbyGallery, openLobbyOverflow } from './helpers';
 
 test.describe('Accessibility', () => {
     test('main heading is visible and has semantic structure', async ({ page }) => {
@@ -38,7 +39,8 @@ test.describe('Accessibility', () => {
             window.localStorage.setItem('vwf_stats', JSON.stringify({ totalRounds: 5, currentStreak: 1, maxStreak: 1, milestonesUnlocked: [] }));
         });
         await page.reload();
-        await page.getByRole('button', { name: /Achievements/i }).click();
+        await openLobbyOverflow(page);
+        await page.getByRole('button', { name: /^Achievements$/i }).click();
         await expect(page.getByRole('tablist', { name: /Achievement categories/i })).toBeVisible();
         await expect(page.getByRole('tab', { name: /All/i })).toHaveAttribute('aria-selected', 'true');
     });
@@ -59,7 +61,7 @@ test.describe('Accessibility', () => {
             ]));
         });
         await page.reload();
-        await page.getByRole('button', { name: /View connection gallery/i }).click();
+        await openLobbyGallery(page);
         await expect(page.getByLabel(/Sort gallery/i)).toBeVisible();
         await expect(page.getByRole('list', { name: /Your connection gallery/i })).toBeVisible();
     });

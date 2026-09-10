@@ -48,7 +48,11 @@ test.describe('Multiplayer Flow', () => {
 
   test('gallery shows past rounds', async ({ page }) => {
     await createProfile(page);
-    await page.getByRole('button', { name: /View connection gallery|Gallery/i }).click();
+    const gallery = page.getByRole('button', { name: /View connection gallery|Gallery/i });
+    if (!(await gallery.isVisible().catch(() => false))) {
+      await page.getByRole('button', { name: /More lobby actions/i }).click();
+    }
+    await gallery.click();
     await expect(page.getByText(/Your best lines|Connection Gallery/i)).toBeVisible({ timeout: 5000 });
   });
 });

@@ -14,7 +14,7 @@ test.describe('Memes & Videos flow', () => {
     test('can select memes & videos mode and start a round', async ({ page }) => {
         await createProfileWithMemesVideos(page);
 
-        await startSoloRound(page, { placeholder: /What connects this meme and video/i });
+        await startSoloRound(page, { placeholder: /What connects this meme and video|e\.g\. a green roommate/i });
         await expect(page.getByText('The Intersection')).toBeVisible();
     });
 

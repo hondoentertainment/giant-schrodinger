@@ -28,6 +28,29 @@ describe('ConnectionBanner', () => {
         expect(container).toBeEmptyDOMElement();
     });
 
+    it('shows a rejoin action and preserved code when disconnected', () => {
+        const reconnect = vi.fn();
+        useRoom.mockReturnValue({
+            connectionState: 'disconnected',
+            roomSyncState: 'idle',
+            roomClosureReason: null,
+            joinedMidRound: false,
+            joinPhase: null,
+            attemptReconnect: reconnect,
+            leaveCurrentRoom: vi.fn(),
+            room: { code: 'ABCD12', scoring_mode: 'ai' },
+            roomCode: 'ABCD12',
+            votes: [],
+            submissions: [],
+        });
+
+        render(<ConnectionBanner />);
+        expect(screen.getByText(/Room lost connection/i)).toBeInTheDocument();
+        expect(screen.getByText(/Code ABCD12 is still here/i)).toBeInTheDocument();
+        screen.getByRole('button', { name: /rejoin/i }).click();
+        expect(reconnect).toHaveBeenCalled();
+    });
+
     it('shows reconnecting message', () => {
         useRoom.mockReturnValue({
             connectionState: 'reconnecting',

@@ -128,7 +128,7 @@ export function RoomLobby() {
             )}
 
             <div className="text-center mb-8">
-                <div className="game-section-label mb-4">Multiplayer room</div>
+                <div className="game-section-label mb-4">Friends room</div>
 
                 <div className="flex items-center justify-center gap-3 mb-2">
                     <span className="text-6xl sm:text-7xl font-display font-bold tracking-[0.16em] text-gradient-vibrant">
@@ -180,13 +180,16 @@ export function RoomLobby() {
             <div className="mb-8">
                 <div className="flex items-center gap-2 mb-3 text-white/55 text-sm">
                     <Users className="w-4 h-4" />
-                    <span>Players ({seatedPlayers.length})</span>
+                    <span>{passThePhone ? "Who's writing" : "Who's here"} ({seatedPlayers.length})</span>
                 </div>
-                <div className="space-y-2" role="list" aria-label="Players in room" aria-live="polite">
+                <div className="space-y-2" role="list" aria-label="Who's here" aria-live="polite">
                     {seatedPlayers.map((p) => (
                         <div key={p.id} className="game-player-row" role="listitem">
                             <span className="text-2xl">{p.avatar || '👽'}</span>
                             <span className="text-white font-semibold flex-1">{p.player_name}</span>
+                            {p.is_host && (
+                                <span className="text-xs text-amber-200/80">Host</span>
+                            )}
                             {p.is_host && (
                                 <Crown className="w-5 h-5 text-amber-300" aria-label="Host" />
                             )}
@@ -199,7 +202,7 @@ export function RoomLobby() {
                     )}
                     {seatedPlayers.length === 1 && (
                         <div className="text-center py-4 text-white/55 text-sm space-y-2">
-                            <p className="animate-pulse">Waiting for the next writer...</p>
+                            <p className="animate-pulse">Waiting for the next person...</p>
                             <p className="text-white/40 text-xs">
                                 Add their name on this phone, or send the invite.
                             </p>
@@ -271,6 +274,7 @@ export function RoomLobby() {
                         onClick={handleStart}
                         disabled={starting || seatedPlayers.length < 2}
                         className={`wordle-button w-full text-lg flex items-center justify-center gap-2 disabled:hover:scale-100 ${seatedPlayers.length >= 2 ? 'wordle-primary' : ''}`}
+                        aria-label={seatedPlayers.length < 2 ? 'Need one more writer' : 'Start the round — Start Game'}
                     >
                         <Play className="w-5 h-5" />
                         {starting && countdown === null
@@ -279,7 +283,7 @@ export function RoomLobby() {
                                 ? `${countdown}...`
                                 : seatedPlayers.length < 2
                                     ? 'Need one more writer'
-                                    : 'Start Game'}
+                                    : 'Start the round'}
                     </button>
                 )}
                 {!isHost && !isSpectator && (

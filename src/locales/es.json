@@ -236,8 +236,9 @@
     "recovered": "Estado de la sala recuperado. Vuelves a estar sincronizado con el grupo.",
     "waitingVotes": "Esperando a que todos voten antes de finalizar los resultados.",
     "reconnecting": "Conexión perdida. Reconectando…",
-    "disconnected": "Desconectado de la sala.",
-    "retry": "Reintentar",
+    "disconnected": "La sala perdió la conexión — Volver a unirse.",
+    "retry": "Volver a unirse",
+    "rejoin": "Volver a unirse",
     "leaveRoom": "Salir de la sala"
   },
   "common": {

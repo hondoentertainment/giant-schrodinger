@@ -18,7 +18,7 @@ async function startRound(page) {
     await dismissOnboarding(page);
     await page.getByRole('button', { name: /Start First Round|Start solo session|Practice Run|Solo Session/i }).click();
     await dismissOnboarding(page);
-    const roundInput = page.getByPlaceholder(/What connects these two/i);
+    const roundInput = page.getByPlaceholder(/What connects these two|e\.g\. a green roommate/i);
     await expect(roundInput).toBeVisible({ timeout: 10000 });
     return roundInput;
 }
@@ -49,8 +49,12 @@ test.describe('Visual smoke', () => {
     test('gallery empty state snapshot', async ({ page }) => {
         await createProfile(page);
         await dismissOnboarding(page);
-        await page.getByRole('button', { name: /View connection gallery/i }).click();
-        await expect(page.getByText(/No connections yet/i)).toBeVisible({ timeout: 5000 });
+        const gallery = page.getByRole('button', { name: /View connection gallery/i });
+        if (!(await gallery.isVisible().catch(() => false))) {
+            await page.getByRole('button', { name: /More lobby actions/i }).click();
+        }
+        await gallery.click();
+        await expect(page.getByText(/Your best lines will land here after round 1|No trophies yet|No connections yet/i)).toBeVisible({ timeout: 5000 });
         await expect(page).toHaveScreenshot('gallery-empty.png', { maxDiffPixelRatio: 0.08 });
     });
 });

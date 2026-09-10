@@ -77,7 +77,8 @@ describe('JudgeRound', () => {
         render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
         expect(screen.getByRole('button', { name: '10', pressed: false })).toBeInTheDocument();
         expect(screen.queryByDisplayValue('Highly Logical')).not.toBeInTheDocument();
-        expect(screen.getByPlaceholderText(/Share your verdict/i)).toBeInTheDocument();
+        expect(screen.queryByPlaceholderText(/Share your verdict/i)).not.toBeInTheDocument();
+        expect(screen.getByText(/Add a name or note/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Submit Judgement/i })).toBeDisabled();
     });
 
@@ -101,8 +102,8 @@ describe('JudgeRound', () => {
         expect(await screen.findByText(/Thanks for judging/i)).toBeInTheDocument();
         expect(screen.getByTestId('venn-diagram')).toBeInTheDocument();
         expect(screen.getByText(/They wrote/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Your turn — play this pair/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Play today's Venn/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Write your own line for this pair/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Play today's pair/i })).toBeInTheDocument();
     });
 
     it('shows the submission text being judged', () => {

@@ -10,7 +10,7 @@ import { normalizeMediaType, getCollisionMediaMode, getEffectiveRoundMediaType }
 import { getDailyChallenge } from '../../services/dailyChallenge';
 import { getScoreBand } from '../../lib/scoreBands';
 import { getScoreCoach } from '../../lib/scoreCoach';
-import { consumeJudgeChain, peekJudgeChain, setForcedLine, setForcedPair } from '../../lib/forcedPair';
+import { consumeJudgeChain, setForcedLine, setForcedPair } from '../../lib/forcedPair';
 import { MilestoneCelebration } from '../../components/MilestoneCelebration';
 import { AchievementProgress } from '../../components/AchievementProgress';
 import { ScoreReveal } from '../../components/ScoreReveal';
@@ -23,7 +23,7 @@ import { checkAchievements } from '../../services/achievements';
 import { scrollMainToTop } from '../../lib/scroll';
 
 export function Reveal({ submission, assets }) {
-    const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, replayCurrentRound, isDailyChallenge } = useGame();
+    const { user, completeRound, roundNumber, totalRounds, currentModifier, nextRound, replayCurrentRound, isDailyChallenge, sessionResults, setGameState } = useGame();
     const { toast } = useToast();
     const [result, setResult] = useState(null);
     const [fusionImage, setFusionImage] = useState(null);
@@ -38,7 +38,7 @@ export function Reveal({ submission, assets }) {
     const [processError, setProcessError] = useState(null);
     const [retryTrigger, setRetryTrigger] = useState(0);
     const [secondChanceUsed, setSecondChanceUsed] = useState(false);
-    const fromJudgeChain = peekJudgeChain();
+    const [scoringOffline, setScoringOffline] = useState(false);
     const savedRef = useRef(false);
     const friendSharedRef = useRef(false);
     const scoringMode = user?.scoringMode || 'human';
@@ -101,7 +101,20 @@ export function Reveal({ submission, assets }) {
                             mediaType,
                             themeId: theme?.id || null,
                         });
-                        toast.warn(scoreResult.errorReason || 'AI unavailable — using mock scoring');
+                        setScoringOffline(true);
+                        setStatus("Dreaming up the fusion...");
+                        const image = await generateFusionImage(theme, submission, assets.left, assets.right);
+                        if (!mounted) return;
+                        if (image.isFallback && image.errorReason) {
+                            reportAppEvent('fusion_image_fallback', {
+                                reason: image.errorReason,
+                                themeId: theme?.id || null,
+                            });
+                            toast.info(image.errorReason);
+                        }
+                        setFusionImage(image);
+                        setStatus("Scoring offline");
+                        return;
                     }
                     const finalScore = Math.min(10, Math.max(1, Math.round(scoreResult.score * scoreMultiplier)));
                     const resultPayload = {
@@ -477,15 +490,17 @@ export function Reveal({ submission, assets }) {
         );
     }
 
-    if (scoringMode === 'human' && !result) {
+    if ((scoringMode === 'human' || scoringOffline) && !result) {
         return (
             <div className="w-full max-w-4xl flex flex-col items-center animate-spring-in">
                 <div className="wordle-card p-6 sm:p-8 text-center max-w-2xl w-full">
                         <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white/55 mb-6 border border-white/10 bg-white/[0.06]">
-                            Human judge
+                            {scoringOffline ? 'Scoring offline' : 'Human judge'}
                         </div>
                         <p className="text-white/60 text-sm mb-6">
-                            Score it yourself now, or copy a link and let a friend be the judge.
+                            {scoringOffline
+                                ? 'Scoring offline — quick self-score'
+                                : 'Score it yourself now, or copy a link and let a friend be the judge.'}
                         </p>
                         <FusionFrame
                             image={fusionImage}
@@ -550,7 +565,7 @@ export function Reveal({ submission, assets }) {
                                 disabled={!canShareForJudging}
                                 className="wordle-button w-full mt-3 disabled:opacity-50"
                             >
-                                {shareCopied ? 'Friend judge link copied!' : 'Ask a friend to judge'}
+                                {shareCopied ? 'Friend judge link copied!' : 'Send to a friend to judge'}
                             </button>
                         </div>
                 </div>
@@ -582,12 +597,17 @@ export function Reveal({ submission, assets }) {
             };
         })
         .sort((a, b) => a.remaining - b.remaining)[0];
+    const priorBest = (sessionResults || [])
+        .filter((entry) => entry.roundNumber !== roundNumber)
+        .reduce((best, entry) => Math.max(best, Number(entry.score) || 0), 0);
+    const isSessionBest = displayScore > 0 && displayScore >= priorBest;
+    const showFriendJudgePrompt = displayScore >= 8 || (isSessionBest && displayScore >= 7 && priorBest > 0);
     const recommendedNextAction = isFinalRound
         ? {
             label: 'Review your session summary',
             detail: 'Compare every round, then jump into the gallery or start a new run.',
         }
-        : displayScore >= 8
+        : showFriendJudgePrompt
         ? {
             label: `Send this ${displayScore}/10 to a friend`,
             detail: 'A Friend Judge scores it in about 10 seconds while you keep playing.',
@@ -619,13 +639,56 @@ export function Reveal({ submission, assets }) {
                             ? `Wit: ${result.breakdown.wit}  ·  Logic: ${result.breakdown.logic}  ·  Originality: ${result.breakdown.originality}  ·  Clarity: ${result.breakdown.clarity}`
                             : 'Wit  ·  Logic  ·  Originality  ·  Clarity'}
                     </p>
-                    <div className="glass-panel mt-5 mb-6 px-[18px] py-[18px] text-center">
+                    <div className="glass-panel mt-5 mb-4 px-[18px] py-[18px] text-center">
                         <p className="text-[17px] font-semibold leading-snug text-white">
                             &ldquo;{submission}&rdquo;
                         </p>
                         <p className="mt-2 text-[13px] text-white/55">
                             {savedAssetPair.left.label} ∩ {savedAssetPair.right.label}
                         </p>
+                    </div>
+                    {showFriendJudgePrompt && (
+                        <p className="mb-4 text-sm text-amber-100/90">
+                            Strong line — send it to a friend to judge.
+                        </p>
+                    )}
+                </div>
+
+                <div className="game-reveal-actions flex flex-col gap-2.5 justify-center items-stretch w-full mb-6">
+                    <button
+                        onClick={handleNext}
+                        className="wordle-button wordle-primary w-full min-h-[49px] text-base"
+                    >
+                        {isFinalRound ? 'See Results' : shareCopied ? 'Keep playing →' : 'Next round'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            consumeJudgeChain();
+                            handleShareForJudging();
+                        }}
+                        disabled={!canShareForJudging}
+                        className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50"
+                        aria-label={shareCopied ? 'Friend judge link copied!' : 'Send to a friend to judge'}
+                    >
+                        {shareCopied ? "They're scoring it — keep playing" : 'Send to a friend to judge'}
+                    </button>
+                    <div className="flex justify-center gap-5 text-sm">
+                        <button
+                            type="button"
+                            onClick={() => setGameState('GALLERY')}
+                            className="min-h-[44px] text-white/45 hover:text-white underline"
+                            aria-label="View connection gallery"
+                        >
+                            Gallery
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setGameState('LOBBY')}
+                            className="min-h-[44px] text-white/45 hover:text-white underline"
+                        >
+                            Lobby
+                        </button>
                     </div>
                 </div>
 
@@ -669,7 +732,7 @@ export function Reveal({ submission, assets }) {
                             {!secondChanceUsed && scoreCoach.hint && (
                                 <button
                                     type="button"
-                                    className="wordle-button wordle-primary w-full mt-4 min-h-[52px] text-base"
+                                    className="wordle-button w-full mt-4 min-h-[44px] text-sm"
                                     onClick={() => {
                                         setForcedPair(assets);
                                         setForcedLine(scoreCoach.hint);
@@ -680,24 +743,6 @@ export function Reveal({ submission, assets }) {
                                     Say it like that — your turn
                                 </button>
                             )}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    consumeJudgeChain();
-                                    handleShareForJudging();
-                                }}
-                                disabled={!canShareForJudging}
-                                className="wordle-button w-full mt-3 min-h-[52px] text-base disabled:opacity-50"
-                                aria-label={shareCopied ? 'Friend judge link copied!' : 'Ask a friend to judge'}
-                            >
-                                {shareCopied
-                                    ? "They're scoring it — keep playing"
-                                    : fromJudgeChain
-                                        ? 'Send this pair to someone else'
-                                        : displayScore >= 8
-                                            ? `Send this ${displayScore}/10 to a friend`
-                                            : 'Ask a friend to judge'}
-                            </button>
                         </div>
                     )}
 
@@ -799,26 +844,6 @@ export function Reveal({ submission, assets }) {
                     <div className="mb-6 flex justify-center">
                         <AchievementProgress score={displayScore} stats={statsSnapshot} />
                     </div>
-                </div>
-
-                <div className="game-reveal-actions flex flex-col gap-2.5 justify-center items-stretch w-full">
-                    <button
-                        onClick={handleNext}
-                        className="wordle-button wordle-primary w-full min-h-[49px] text-base"
-                    >
-                        {isFinalRound ? 'See Results' : shareCopied ? 'Keep playing →' : 'Next round'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            consumeJudgeChain();
-                            handleShareForJudging();
-                        }}
-                        disabled={!canShareForJudging}
-                        className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50"
-                    >
-                        {shareCopied ? "They're scoring it — keep playing" : 'Share with a friend'}
-                    </button>
                 </div>
             </div>
         </div>

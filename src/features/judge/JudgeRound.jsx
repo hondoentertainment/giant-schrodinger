@@ -172,10 +172,10 @@ export function JudgeRound({ payload, onDone }) {
                 <p className="text-white/70 text-sm mb-6 max-w-md">
                     They wrote “{effectivePayload.submission}”. Your line can be better — or weirder.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                <div className="flex flex-col gap-3 w-full max-w-md">
                     <button
                         type="button"
-                        className="wordle-button wordle-primary flex-1 min-h-[48px]"
+                        className="wordle-button wordle-primary w-full min-h-[48px]"
                         onClick={() => {
                             setForcedPair(effectivePayload.assets);
                             markJudgeChain();
@@ -184,17 +184,17 @@ export function JudgeRound({ payload, onDone }) {
                             onDone?.({ playPair: true });
                         }}
                     >
-                        Your turn — play this pair
+                        Write your own line for this pair
                     </button>
                     <button
                         type="button"
-                        className="wordle-button flex-1 min-h-[48px]"
+                        className="min-h-[44px] text-sm text-white/55 hover:text-white underline"
                         onClick={() => {
                             clearJudgeFromUrl();
                             onDone?.();
                         }}
                     >
-                        Play today&apos;s Venn
+                        Play today&apos;s pair
                     </button>
                 </div>
             </div>
@@ -236,17 +236,6 @@ export function JudgeRound({ payload, onDone }) {
 
             <form onSubmit={handleSubmit} className="w-full max-w-xl wordle-card p-6 space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-white/60 mb-2">Your name (optional)</label>
-                    <input
-                        type="text"
-                        value={judgeName}
-                        onChange={(e) => setJudgeName(e.target.value)}
-                        className="game-input"
-                        placeholder="A friend"
-                        maxLength={20}
-                    />
-                </div>
-                <div>
                     <div className="block text-sm font-medium text-white/60 mb-2" id="judge-score-label">
                         Score (1-10)
                     </div>
@@ -271,16 +260,34 @@ export function JudgeRound({ payload, onDone }) {
                     </div>
                     <p className="text-white/35 text-xs mt-2">Tip: press 1–9 or 0 for 10.</p>
                 </div>
-                <div>
-                    <label className="block text-sm font-medium text-white/60 mb-2">One line (optional)</label>
-                    <textarea
-                        value={commentary}
-                        onChange={(e) => setCommentary(e.target.value)}
-                        rows="3"
-                        className="game-input resize-none min-h-[96px]"
-                        placeholder="Share your verdict, or skip and submit"
-                    />
-                </div>
+                <details className="text-left">
+                    <summary className="cursor-pointer list-none min-h-[44px] text-sm text-white/45 hover:text-white">
+                        Add a name or note (optional)
+                    </summary>
+                    <div className="space-y-3 pt-2">
+                        <div>
+                            <label className="block text-sm font-medium text-white/60 mb-2">Your name (optional)</label>
+                            <input
+                                type="text"
+                                value={judgeName}
+                                onChange={(e) => setJudgeName(e.target.value)}
+                                className="game-input"
+                                placeholder="A friend"
+                                maxLength={20}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-white/60 mb-2">One line (optional)</label>
+                            <textarea
+                                value={commentary}
+                                onChange={(e) => setCommentary(e.target.value)}
+                                rows="3"
+                                className="game-input resize-none min-h-[96px]"
+                                placeholder="Share your verdict, or skip and submit"
+                            />
+                        </div>
+                    </div>
+                </details>
                 <button
                     type="submit"
                     disabled={!score}

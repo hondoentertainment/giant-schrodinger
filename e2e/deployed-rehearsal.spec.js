@@ -22,7 +22,7 @@ test.describe('Deployed rehearsal smoke', () => {
         await page.getByRole('button', { name: /Join Lobby/i }).click();
         await expect(page.getByText(/Hey RehearsalBot/i)).toBeVisible({ timeout: 10000 });
 
-        await startSoloRound(page, { placeholder: /What connects this meme and video/i });
+        await startSoloRound(page, { placeholder: /What connects this meme and video|e\.g\. a green roommate/i });
     });
 
     test('runtime status card reflects backend configuration when visible', async ({ page }) => {

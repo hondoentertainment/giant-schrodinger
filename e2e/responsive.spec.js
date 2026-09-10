@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openLobbyGallery } from './helpers';
 
 test.describe('Responsive design', () => {
     test('landing is usable on mobile viewport', async ({ page }) => {
@@ -27,7 +28,7 @@ test.describe('Responsive design', () => {
         expect(titleBox?.x).toBeGreaterThanOrEqual(16);
         expect(Math.abs((titleBox?.x ?? 0) - (labelBox?.x ?? 0))).toBeLessThanOrEqual(4);
         expect(Math.abs((playBox?.x ?? 0) - (titleBox?.x ?? 0))).toBeLessThanOrEqual(4);
-        expect(Math.abs((playBox?.width ?? 0) - (joinBox?.width ?? 0))).toBeLessThanOrEqual(4);
+        expect(joinBox?.height ?? 0).toBeGreaterThanOrEqual(44);
         expect(playBox?.width ?? 0).toBeGreaterThan(280);
         const counter = page.locator('#name-char-count');
         const input = page.getByPlaceholder(/Enter your name/i);
@@ -85,7 +86,7 @@ test.describe('Responsive design', () => {
             ]));
         });
         await page.reload();
-        await page.getByRole('button', { name: /View connection gallery/i }).click();
+        await openLobbyGallery(page);
         await expect(page.getByRole('heading', { name: /Your best lines|Connection Gallery/i })).toBeVisible();
         const backButton = page.getByRole('button', { name: /Back to Lobby/i });
         const box = await backButton.boundingBox();

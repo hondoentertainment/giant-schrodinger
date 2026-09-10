@@ -415,8 +415,8 @@ export function Gallery() {
             {collisions.length === 0 ? (
                 <EmptyState
                     icon="🖼️"
-                    title="No trophies yet"
-                    description="Write one line. The keepers live here like trading cards."
+                    title="Your best lines will land here after round 1"
+                    description="Play a round and the keepers show up here like trading cards."
                 />
             ) : (
                 <>
