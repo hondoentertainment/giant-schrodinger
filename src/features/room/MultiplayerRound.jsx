@@ -162,7 +162,7 @@ export function MultiplayerRound() {
                 </div>
             )}
 
-            <div className="w-full max-w-2xl flex flex-col gap-4 px-2 mb-5">
+            <div className="game-play-col--wide flex flex-col gap-4 mb-5">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                         <button

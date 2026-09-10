@@ -617,7 +617,7 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
     const roundKey = `${leftAsset?.id ?? leftAsset?.label ?? 'l'}|${rightAsset?.id ?? rightAsset?.label ?? 'r'}`;
 
     return (
-        <div className="relative w-full max-w-2xl mx-auto my-4 sm:my-8">
+        <div className="relative w-full game-play-col--wide mx-auto my-2 sm:my-8">
             {mediaLoading && (
                 <div
                     className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[10px] font-semibold uppercase tracking-wider text-white/70"
@@ -640,7 +640,7 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                 </svg>
             )}
 
-            <div className="relative z-10 mb-1 flex w-full items-start justify-between gap-3 px-[6%] sm:px-[8%]">
+            <div className="relative z-10 mb-2 flex w-full items-start justify-between gap-3 px-[8%]">
                 <p className="max-w-[46%] text-[11px] font-bold uppercase tracking-[0.06em] text-[#64d2ff] line-clamp-2">
                     {leftAsset.label}
                 </p>
@@ -712,8 +712,8 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                 </div>
             </div>
 
-            {/* Concept titles below circles */}
-            <div className="relative w-full flex justify-between items-start gap-4 mt-3 sm:mt-4 px-1">
+            {/* Concept titles below circles — desktop only; mobile uses the labels above */}
+            <div className="relative w-full hidden sm:flex justify-between items-start gap-4 mt-3 sm:mt-4 px-1">
                 <ConceptCaption label={leftAsset.label} align="left" accentColor={COLORS.left} assetType={leftAsset?.type} />
                 <ConceptCaption label={rightAsset.label} align="right" accentColor={COLORS.right} assetType={rightAsset?.type} />
             </div>

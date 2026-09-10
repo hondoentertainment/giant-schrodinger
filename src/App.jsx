@@ -133,9 +133,12 @@ function GameContent() {
     const [roundData, setRoundData] = useState(null);
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
     const [challengePayload, setChallengePayload] = useState(() => parseChallengeUrl());
+    const hidePlayFooter = gameState === 'ROUND' || gameState === 'REVEAL'
+        || (isMultiplayer && roomPhase && roomPhase !== 'lobby');
     const layoutProps = {
         onPrivacy: () => setGameState('PRIVACY'),
         onTerms: () => setGameState('TERMS'),
+        hideFooter: hidePlayFooter,
     };
 
     const screenKey = [
