@@ -25,6 +25,9 @@
   --game-radius-md: 16px;
   --game-radius-lg: 22px;
   --game-radius-xl: 28px;
+  --game-radius-pill: 9999px;
+  --game-gutter: 1.25rem;
+  --game-play-max: 28rem;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
   line-height: 1.47;
   font-weight: 400;
@@ -103,11 +106,67 @@
 
   .wordle-topbar {
     @apply sticky top-0 z-30 mb-1 flex w-full items-center justify-center;
-    padding: max(0.4rem, env(safe-area-inset-top)) 1rem 0.45rem;
+    width: calc(100% + (2 * var(--game-gutter)));
+    margin-left: calc(0px - var(--game-gutter));
+    margin-right: calc(0px - var(--game-gutter));
+    padding:
+      max(0.4rem, env(safe-area-inset-top))
+      max(var(--game-gutter), env(safe-area-inset-right))
+      0.45rem
+      max(var(--game-gutter), env(safe-area-inset-left));
     background: rgba(7, 7, 10, 0.72);
     backdrop-filter: saturate(180%) blur(20px);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .game-main {
+    @apply relative z-10 flex w-full max-w-5xl flex-1 min-h-0 flex-col items-center overflow-y-auto overflow-x-hidden;
+    padding-left: max(var(--game-gutter), env(safe-area-inset-left));
+    padding-right: max(var(--game-gutter), env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-top: 0.25rem;
+  }
+
+  .game-main--play {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
+  .game-play-col,
+  .game-play-col--wide {
+    width: 100%;
+    max-width: var(--game-play-max);
+  }
+
+  .game-input--username {
+    border-radius: var(--game-radius-pill);
+    padding-top: 0.9rem;
+    padding-bottom: 0.9rem;
+    padding-right: 3.5rem;
+  }
+
+  .game-timer--compact {
+    min-width: 4.4rem;
+    min-height: 2.25rem;
+    padding: 0.4rem 0.9rem;
+    font-size: 1.05rem;
+    border-radius: var(--game-radius-pill);
+  }
+
+  .lobby-gate-card {
+    width: 100%;
+  }
+
+  .game-score-hero .game-score-hero__value {
+    font-size: 5rem;
+    line-height: 1;
+  }
+
+  .game-score-hero .game-score-hero__max {
+    font-size: 1.25rem;
+    line-height: 1;
+    margin-bottom: 0.55rem;
+    color: rgba(255, 255, 255, 0.4);
   }
 
   .game-logo-mark {
@@ -184,7 +243,7 @@
     @apply w-full p-4 text-left;
     background: rgba(255, 214, 10, 0.1);
     border: 1px solid rgba(255, 214, 10, 0.28);
-    border-radius: 22px;
+    border-radius: var(--game-radius-xl);
   }
 
   .game-daily-card--inset {
@@ -197,7 +256,7 @@
     @apply inline-flex flex-1 items-center justify-center min-h-[40px] px-3 py-3 text-[13px] font-semibold transition-colors;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 16px;
+    border-radius: var(--game-radius-pill);
     color: var(--game-text-secondary);
   }
 
@@ -207,10 +266,10 @@
   }
 
   .game-avatar-choice {
-    @apply flex items-center justify-center min-w-[44px] min-h-[44px] text-xl transition-all;
+    @apply flex items-center justify-center min-w-[44px] min-h-[44px] h-11 w-11 shrink-0 text-xl transition-all;
     background: rgba(255, 255, 255, 0.06);
     border: 1.5px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
+    border-radius: var(--game-radius-pill);
     color: var(--game-text);
   }
 
@@ -392,7 +451,7 @@
   }
 
   .game-progress-dot {
-    @apply h-2.5 flex-1 rounded-full transition-all duration-300;
+    @apply h-1.5 sm:h-2.5 flex-1 rounded-full transition-all duration-300;
     background: rgba(255, 255, 255, 0.1);
   }
 
@@ -669,6 +728,51 @@
   inset: 0;
   background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.06) 50%, transparent 80%);
   animation: fusionShimmer 1.8s ease-in-out infinite;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --game-gutter: 1.5rem;
+  }
+
+  .game-play-col--wide {
+    max-width: 42rem;
+  }
+
+  .game-score-hero .game-score-hero__value {
+    font-size: 4.5rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .wordle-topbar {
+    margin-bottom: 0.85rem;
+    background: transparent;
+    border-bottom: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-bottom: 0.15rem;
+  }
+
+  .lobby-gate-card {
+    background: rgba(18, 18, 26, 0.94);
+    border-radius: 28px;
+    padding: 22px 20px 18px;
+  }
+
+  .game-reveal-stack {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .game-reveal-extra {
+    order: 3;
+  }
+
+  .game-reveal-actions {
+    order: 2;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

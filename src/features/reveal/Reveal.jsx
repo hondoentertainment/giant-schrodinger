@@ -605,15 +605,14 @@ export function Reveal({ submission, assets }) {
                     onDismiss={() => setNewlyUnlocked([])}
                 />
             )}
-            <div className="w-full max-w-md animate-spring-in">
-                <div className="text-center max-w-2xl">
+            <div className="game-play-col game-reveal-stack flex flex-col animate-spring-in">
+                <div className="text-center w-full">
                     <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--game-warning)]">
                         {displayScore >= 8 ? 'Nice hit' : scoreBand?.label || 'Puzzle result'}
                     </p>
                     <ScoreReveal
                         score={displayScore}
-                        label={scoreBand?.label || 'Final Score'}
-                        className="mt-1 [&>div:first-child]:text-[72px] [&>div:first-child]:leading-none"
+                        className="game-score-hero mt-1"
                     />
                     <p className="mt-3 text-xs text-white/55">
                         {result.breakdown
@@ -628,7 +627,9 @@ export function Reveal({ submission, assets }) {
                             {savedAssetPair.left.label} ∩ {savedAssetPair.right.label}
                         </p>
                     </div>
+                </div>
 
+                <div className="game-reveal-extra text-center w-full">
                     <FusionFrame
                         image={fusionImage}
                         submission={submission}
@@ -798,26 +799,26 @@ export function Reveal({ submission, assets }) {
                     <div className="mb-6 flex justify-center">
                         <AchievementProgress score={displayScore} stats={statsSnapshot} />
                     </div>
+                </div>
 
-                    <div className="flex flex-col gap-2.5 justify-center items-stretch">
-                        <button
-                            onClick={handleNext}
-                            className={`wordle-button w-full min-h-[49px] text-base ${displayScore >= 8 && !shareCopied ? '' : 'wordle-primary'}`}
-                        >
-                            {isFinalRound ? 'See Results' : shareCopied ? 'Keep playing →' : 'Next round'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                consumeJudgeChain();
-                                handleShareForJudging();
-                            }}
-                            disabled={!canShareForJudging}
-                            className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50"
-                        >
-                            {shareCopied ? "They're scoring it — keep playing" : 'Share with a friend'}
-                        </button>
-                    </div>
+                <div className="game-reveal-actions flex flex-col gap-2.5 justify-center items-stretch w-full">
+                    <button
+                        onClick={handleNext}
+                        className="wordle-button wordle-primary w-full min-h-[49px] text-base"
+                    >
+                        {isFinalRound ? 'See Results' : shareCopied ? 'Keep playing →' : 'Next round'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            consumeJudgeChain();
+                            handleShareForJudging();
+                        }}
+                        disabled={!canShareForJudging}
+                        className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50"
+                    >
+                        {shareCopied ? "They're scoring it — keep playing" : 'Share with a friend'}
+                    </button>
                 </div>
             </div>
         </div>

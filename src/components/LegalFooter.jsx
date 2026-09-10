@@ -2,7 +2,7 @@ import React from 'react';
 
 export function LegalFooter({ onPrivacy, onTerms }) {
     return (
-        <footer className="mt-auto w-full max-w-5xl pt-4 pb-2 text-center text-xs text-white/40">
+        <footer className="mt-auto w-full max-w-md pt-6 pb-1 text-center text-xs text-white/40">
             <button
                 type="button"
                 onClick={onPrivacy}

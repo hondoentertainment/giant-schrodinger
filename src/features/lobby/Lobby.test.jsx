@@ -317,6 +317,8 @@ describe('Lobby', () => {
         expect(screen.getByText(/Week of leftover sparklers/i)).toBeInTheDocument();
         expect(screen.getByText(/Morning coffee × A robot hitting snooze/i)).toBeInTheDocument();
         expect(screen.queryByText('Media Type')).not.toBeInTheDocument();
+        expect(screen.getByText('0/12')).toBeInTheDocument();
+        expect(screen.getAllByRole('button', { name: /Select avatar/i })).toHaveLength(6);
     });
 
     it('keeps more options out of the first paint until opened', async () => {

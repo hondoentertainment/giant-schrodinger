@@ -206,27 +206,27 @@ export function Round({ onSubmit }) {
                 </div>
             )}
 
-            <div className="w-full max-w-2xl flex flex-col gap-3.5 px-2 mb-3">
+            <div className="game-play-col--wide flex flex-col gap-3 mb-2 sm:mb-3">
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <div className="game-section-label">
+                        <div className="game-section-label max-sm:hidden">
                             {isDailyChallenge ? 'Daily puzzle' : 'Puzzle run'}
                         </div>
-                        <div className="text-[13px] font-semibold text-white/55">
+                        <div className="text-[15px] font-semibold text-white/80 sm:text-[13px] sm:text-white/55">
                             Round {roundNumber} of {totalRounds}
                         </div>
                     </div>
                     {showTimeUp ? (
-                        <div className="game-timer game-timer--urgent min-w-[70px] min-h-[38px] px-3.5 py-2 text-sm" role="status" aria-live="polite">
+                        <div className="game-timer game-timer--compact game-timer--urgent" role="status" aria-live="polite">
                             Time&apos;s up
                         </div>
                     ) : (
-                        <div className={`game-timer min-w-[70px] min-h-[38px] px-3.5 py-2 text-lg ${timer < 10 ? 'game-timer--urgent' : ''}`}>
+                        <div className={`game-timer game-timer--compact ${timer < 10 ? 'game-timer--urgent' : ''}`}>
                             {formatRoundClock(timer)}
                         </div>
                     )}
                 </div>
-                <div className="flex gap-2" aria-label={`Round progress: ${roundNumber} of ${totalRounds}`}>
+                <div className="flex gap-1.5 sm:gap-2" aria-label={`Round progress: ${roundNumber} of ${totalRounds}`}>
                     {Array.from({ length: totalRounds }).map((_, index) => (
                         <div
                             key={index}
@@ -243,7 +243,7 @@ export function Round({ onSubmit }) {
                 </div>
             </div>
             {!isFirstSession && (
-                <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-sm">
+                <div className="mb-6 hidden sm:flex flex-wrap items-center justify-center gap-2 text-sm">
                     <div className="game-hud-chip">
                         Time: <span className="text-white font-medium">{timeLimit}s</span>
                         {mod?.timeFactor !== 1 && <span className="text-cyan-300 ml-1">({mod.timeFactor}x)</span>}
@@ -262,9 +262,9 @@ export function Round({ onSubmit }) {
 
             <VennDiagram leftAsset={assets.left} rightAsset={assets.right} mediaLoading={mediaLoading} />
 
-            <form onSubmit={handleSubmit} className="w-full max-w-xl mt-8 relative z-20">
+            <form onSubmit={handleSubmit} className="game-play-col--wide mt-6 sm:mt-8 relative z-20">
                 {showFirstRoundCoaching && (
-                    <div className="mb-4 rounded-[22px] border border-white/10 bg-white/[0.06] p-4 text-center backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="mb-4 hidden sm:block rounded-[22px] border border-white/10 bg-white/[0.06] p-4 text-center backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <p className="text-white font-semibold">First round tip</p>
                         <p className="text-white/55 text-sm mt-1">
                             {roundMediaType === MEDIA_TYPES.MEMES_VIDEOS
@@ -309,7 +309,7 @@ export function Round({ onSubmit }) {
                         Lock it in
                     </button>
                     <div className="hidden sm:block text-white/40">Press <span className="font-semibold text-white/80">Return</span> to submit</div>
-                    <div className="text-white/30 text-xs">
+                    <div className="hidden sm:block text-white/30 text-xs">
                         Scored on Wit · Logic · Originality · Clarity
                     </div>
                 </div>

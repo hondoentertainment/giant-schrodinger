@@ -65,16 +65,16 @@ function DailyPairCard({ dailyChallenge, dailySummary, variant = 'lobby' }) {
                 </p>
             )}
             {weekTitle && (
-                <p className="mt-1 text-xs font-semibold text-amber-100/80">{weekTitle}</p>
+                <p className="mt-1 text-xs font-semibold text-amber-100/80 max-sm:hidden">{weekTitle}</p>
             )}
             <p className="mt-1.5 text-[13px] text-white/55">
                 Same prompt worldwide. Beat yesterday you.
             </p>
             {dailyChallenge?.prompt && (
-                <p className="mt-1 text-xs text-white/45 line-clamp-2">{dailyChallenge.prompt}</p>
+                <p className="mt-1 text-xs text-white/45 line-clamp-2 max-sm:hidden">{dailyChallenge.prompt}</p>
             )}
             {dailySummary && (
-                <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-amber-200/70">
+                <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-amber-200/70 max-sm:hidden">
                     <span className="sr-only">Daily Challenge</span>
                     <span>{dailySummary.completions} daily completion{dailySummary.completions === 1 ? '' : 's'}</span>
                     {dailySummary.bestScore !== null && <span>Best daily: {dailySummary.bestScore}/10</span>}
@@ -492,8 +492,8 @@ export function Lobby() {
                         </div>
                     </div>
                 )}
-            <div className="w-full max-w-md space-y-4 animate-spring-in">
-                <div className="text-left">
+            <div className="game-play-col space-y-5 animate-spring-in">
+                <div className="text-left w-full">
                     {welcomeMessage && !welcomeDismissed && !isFirstSession && (
                         <div className="mb-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-2.5 text-left flex items-center gap-2">
                             <p className="text-emerald-200 text-xs sm:text-sm flex-1">{welcomeMessage}</p>
@@ -507,12 +507,12 @@ export function Lobby() {
                             </button>
                         </div>
                     )}
-                    <div className="mb-1 flex items-start justify-between gap-3">
+                    <div className="mb-4 flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <h2 className="text-2xl font-display font-bold tracking-tight text-white truncate">
+                            <h2 className="text-[32px] leading-none font-display font-bold tracking-tight text-white truncate sm:text-2xl sm:leading-tight">
                                 Hey {user.name} {user.avatar}
                             </h2>
-                            <p className="mt-1 text-[13px] text-white/55">
+                            <p className="mt-2 text-[13px] text-white/55">
                                 {sessionId
                                     ? `Round ${roundNumber} of ${totalRounds} · ${sessionScore} pts`
                                     : `Streak ${profileSummary.currentStreak || 0} · Best ${profileSummary.bestScore != null ? profileSummary.bestScore : '—'} · ${profileSummary.savedCount ?? profileSummary.highlightCount ?? 0} saved`}
@@ -520,7 +520,7 @@ export function Lobby() {
                         </div>
                         <button
                             onClick={openEditProfile}
-                            className="shrink-0 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                            className="shrink-0 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 min-w-[40px] min-h-[40px] flex items-center justify-center max-sm:opacity-55"
                             aria-label="Edit profile"
                             title="Edit profile"
                         >
@@ -532,8 +532,6 @@ export function Lobby() {
                             Day {profileSummary.currentStreak} streak is at risk — play today to keep it alive.
                         </div>
                     )}
-                    {!backendReady && !isFirstSession && <ServiceStatusCard className="mb-3" />}
-                    {stats.totalRounds >= 3 && <NotificationBanner />}
 
                     {/* Daily Challenge — featured pair card */}
                     {!showMultiplayer && !dailyPlayed && (
@@ -590,7 +588,7 @@ export function Lobby() {
                     )}
 
                     {isFirstSession && !showMultiplayer && (
-                        <p className="text-white/40 text-xs text-left mb-3">
+                        <p className="text-white/40 text-xs text-left mb-3 max-sm:hidden">
                             Today&apos;s pair is the whole tutorial. One line. Then we talk settings.
                         </p>
                     )}
@@ -688,6 +686,8 @@ export function Lobby() {
                                     Practice Run ({sessionLength} rounds)
                                 </button>
                             )}
+                            {!backendReady && !isFirstSession && <ServiceStatusCard className="mt-1" />}
+                            {stats.totalRounds >= 3 && <NotificationBanner />}
                         </div>
                     )}
 
@@ -1035,15 +1035,14 @@ export function Lobby() {
                     Start with a name and avatar, then play today&apos;s pair or jump into a friends room.
                 </p>
             </div>
-        <div className="w-full max-w-md lg:max-w-none wordle-card p-[18px] pt-[22px] sm:p-6">
+        <div className="w-full max-w-md lg:max-w-none wordle-card lobby-gate-card p-5 pt-[22px] sm:p-6">
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
-            <h2 className="text-[26px] font-display font-bold tracking-tight text-white">Create Profile</h2>
+            <h2 className="text-[28px] font-display font-bold tracking-tight text-white">Create Profile</h2>
             <p className="text-white/55 text-sm mt-2 mb-3.5">Type a name. Then write one line.</p>
             {(dailyChallenge.weekTitle || dailyChallenge.pair) && (
                 <DailyPairCard dailyChallenge={dailyChallenge} variant="gate" />
             )}
-            {!backendReady && <ServiceStatusCard className="mb-4" />}
-            <form onSubmit={handleSubmit} className="space-y-3.5">
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <section aria-labelledby="profile-username">
                     <label id="profile-username" className="game-section-label mb-2 block">Username</label>
                     <div className="relative">
@@ -1051,7 +1050,7 @@ export function Lobby() {
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value.trimStart())}
-                            className="game-input game-input--accent text-base pr-14"
+                            className="game-input game-input--accent game-input--username text-base"
                             placeholder="Enter your name..."
                             maxLength={12}
                             aria-describedby="name-char-count"
@@ -1070,7 +1069,7 @@ export function Lobby() {
 
                 <section aria-labelledby="profile-avatar">
                     <label id="profile-avatar" className="game-section-label mb-2 block">Avatar</label>
-                    <div className="grid grid-cols-6 gap-2" role="group">
+                    <div className="flex items-center justify-between gap-1.5" role="group">
                         {AVATARS.slice(0, 6).map((a) => (
                             <button
                                 key={a}
@@ -1078,7 +1077,7 @@ export function Lobby() {
                                 onClick={() => setAvatar(a)}
                                 aria-pressed={avatar === a}
                                 aria-label={`Select avatar ${a}`}
-                                className={`game-avatar-choice aspect-square ${avatar === a ? 'game-avatar-choice--selected' : ''}`}
+                                className={`game-avatar-choice ${avatar === a ? 'game-avatar-choice--selected' : ''}`}
                             >
                                 {a}
                             </button>
@@ -1106,12 +1105,13 @@ export function Lobby() {
                     className="text-left"
                     onToggle={(event) => setMoreOptionsOpen(event.currentTarget.open)}
                 >
-                    <summary className="cursor-pointer list-none px-0.5 py-2 text-[13px] text-white/55 font-semibold min-h-[44px] flex items-center justify-between">
+                    <summary className="cursor-pointer list-none px-0.5 py-2 text-[13px] text-white/55 font-semibold min-h-[44px] flex items-center justify-between gap-3">
                         <span>More options</span>
                         <span className="text-white/35 text-xs font-normal">Theme, scoring, media</span>
                     </summary>
                     {moreOptionsOpen && (
-                    <div className="px-4 pb-4 space-y-4 border-t border-white/10 pt-3">
+                    <div className="px-0 pb-2 space-y-4 border-t border-white/10 pt-3">
+                {!backendReady && <ServiceStatusCard />}
 
                 <section aria-labelledby="profile-theme">
                     <div className="flex items-center justify-between mb-2">

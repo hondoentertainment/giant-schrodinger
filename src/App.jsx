@@ -133,9 +133,12 @@ function GameContent() {
     const [roundData, setRoundData] = useState(null);
     const [judgePayload, setJudgePayload] = useState(() => parseJudgeShareUrl());
     const [challengePayload, setChallengePayload] = useState(() => parseChallengeUrl());
+    const hidePlayFooter = gameState === 'ROUND' || gameState === 'REVEAL'
+        || (isMultiplayer && roomPhase && roomPhase !== 'lobby');
     const layoutProps = {
         onPrivacy: () => setGameState('PRIVACY'),
         onTerms: () => setGameState('TERMS'),
+        hideFooter: hidePlayFooter,
     };
 
     const screenKey = [
@@ -218,7 +221,9 @@ function GameContent() {
         setChallengePayload(null);
     };
 
-    const headerEl = (
+    const showBrandHeader = gameState !== 'ROUND' && gameState !== 'REVEAL'
+        && !(isMultiplayer && roomPhase && roomPhase !== 'lobby');
+    const headerEl = showBrandHeader ? (
         <div className="wordle-topbar sticky top-0 z-30 mb-1 flex w-full justify-center">
             <h1 className="flex items-center gap-2.5 text-center">
                 <GameLogoMark />
@@ -228,6 +233,8 @@ function GameContent() {
                 </span>
             </h1>
         </div>
+    ) : (
+        <h1 className="sr-only">Venn with Friends</h1>
     );
 
     // Challenge mode (external link)
