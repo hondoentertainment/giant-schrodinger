@@ -849,6 +849,51 @@
   order: 3;
 }
 
+.reveal-share-sticky {
+  order: 4;
+  position: sticky;
+  bottom: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  border: 1px solid rgba(255, 214, 10, 0.28);
+  border-radius: var(--game-radius-lg);
+  background: rgba(18, 18, 26, 0.94);
+  box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.35);
+}
+
+.gallery-payoff-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.gallery-payoff-filters .game-segment {
+  width: 100%;
+  min-height: 48px;
+  justify-content: center;
+}
+
+.gallery-card-share {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 30;
+  min-height: 40px;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(10, 10, 16, 0.82);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fusion-ghost-left,
   .fusion-ghost-right,

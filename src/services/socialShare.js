@@ -1,4 +1,5 @@
 import { formatAssetForShare } from '../lib/mediaType';
+import { LINK_COPIED_MESSAGE } from '../lib/shareOrCopy';
 
 const TWITTER_BASE_URL = 'https://twitter.com/intent/tweet';
 const FACEBOOK_BASE_URL = 'https://www.facebook.com/sharer/sharer.php';
@@ -341,7 +342,7 @@ export async function copyShareLink(shareData) {
 
   try {
     await navigator.clipboard.writeText(shareText);
-    return { success: true, message: 'Share caption copied!' };
+    return { success: true, message: LINK_COPIED_MESSAGE };
   } catch {
     const textArea = document.createElement('textarea');
     textArea.value = shareText;
@@ -349,7 +350,7 @@ export async function copyShareLink(shareData) {
     textArea.select();
     document.execCommand('copy');
     document.body.removeChild(textArea);
-    return { success: true, message: 'Share caption copied!' };
+    return { success: true, message: LINK_COPIED_MESSAGE };
   }
 }
 

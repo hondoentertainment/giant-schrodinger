@@ -29,6 +29,7 @@ vi.mock('../../context/GameContext', () => ({
         sessionScore: 0,
         roundComplete: false,
         sessionResults: [],
+        isDailyChallenge: false,
         startSession: mockStartSession,
         beginRound: mockBeginRound,
         advanceRound: mockAdvanceRound,
@@ -434,5 +435,30 @@ describe('Lobby', () => {
         mockUser = loggedInUser;
         render(<Lobby />);
         expect(screen.getByTestId('notification-banner')).toBeInTheDocument();
+    });
+
+    it('keeps How to in the overflow menu only', async () => {
+        const user = userEvent.setup();
+        mockUser = loggedInUser;
+        render(<Lobby />);
+        expect(screen.getAllByRole('button', { name: /How it works/i })).toHaveLength(1);
+        await user.click(screen.getByText('Progress & settings'));
+        expect(screen.getAllByRole('button', { name: /How it works/i })).toHaveLength(1);
+    });
+
+    it('keeps theme, sound, and scoring in settings and buries Labs', async () => {
+        const user = userEvent.setup();
+        mockUser = loggedInUser;
+        render(<Lobby />);
+        await user.click(screen.getByText('Progress & settings'));
+        expect(screen.getByRole('group', { name: /Theme/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Sound on|Sound muted/i })).toBeInTheDocument();
+        expect(screen.getByText(/Who scores solo rounds/i)).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Labs$/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Ranked/i })).not.toBeInTheDocument();
+        await user.click(screen.getByText('Experimental Labs'));
+        expect(screen.getByRole('button', { name: /Show Labs/i })).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: /Show Labs/i }));
+        expect(screen.getByRole('button', { name: /^Ranked/i })).toBeInTheDocument();
     });
 });

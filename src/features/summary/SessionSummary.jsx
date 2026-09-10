@@ -2,16 +2,16 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useToast } from '../../context/ToastContext';
 import { getScoreBand } from '../../lib/scoreBands';
-import { ArrowRight, Home } from 'lucide-react';
-import SocialShareButtons from '../../components/SocialShareButtons';
 import { getJudgementsByCollisionIds } from '../../services/backend';
 import { getJudgementForCollision } from '../../services/judgements';
 import { getStats, getStreakStatus } from '../../services/stats';
-import { getDailyChallengeHistory, getDailyChallengeSummary } from '../../services/dailyChallenge';
-import { AchievementProgress } from '../../components/AchievementProgress';
+import { getDailyChallengeHistory, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { PWAInstallBanner } from '../../components/PWAInstallBanner';
 import { haptic } from '../../lib/haptics';
 import { trackEvent } from '../../services/analytics';
+import { LINK_COPIED_MESSAGE, shareOrCopy } from '../../lib/shareOrCopy';
+import { markFirstSessionCelebrated, shouldCelebrateFirstSession } from '../../lib/firstSession';
+import { getSessionPlayCta, SessionNextActions } from './SessionNextActions';
 
 function RoundCard({ result, index, feedback }) {
     const mod = result.modifier;
@@ -57,15 +57,37 @@ function RoundCard({ result, index, feedback }) {
     );
 }
 
+function getRetentionCopy({ streakStatus, currentStreak, isDailyChallenge, dailyPlayed }) {
+    if (streakStatus === 'at_risk' && currentStreak > 0) {
+        return `Day ${currentStreak} streak is at risk — play today to keep it alive.`;
+    }
+    if (currentStreak > 0 && streakStatus === 'active_today') {
+        return `Day ${currentStreak} streak is alive. Come back tomorrow to keep it.`;
+    }
+    if (isDailyChallenge || dailyPlayed) {
+        return "Come back for tomorrow's pair.";
+    }
+    return null;
+}
+
 export function SessionSummary() {
-    const { sessionResults, sessionScore, totalRounds, endSession, isDailyChallenge, setGameState } = useGame();
+    const { sessionResults, sessionScore, totalRounds, endSession, isDailyChallenge, setGameState, startSession, beginRound } = useGame();
     const { toast } = useToast();
     const [feedbackByCollision, setFeedbackByCollision] = useState({});
+    const [shareCopied, setShareCopied] = useState(false);
     const [inviteCopied, setInviteCopied] = useState(false);
     const playerStats = useMemo(() => getStats(), []);
     const streakStatus = useMemo(() => getStreakStatus(playerStats), [playerStats]);
     const dailyHistory = useMemo(() => getDailyChallengeHistory(), []);
     const dailySummary = useMemo(() => getDailyChallengeSummary(), []);
+    const dailyPlayed = useMemo(() => hasDailyChallengeBeenPlayed() || isDailyChallenge, [isDailyChallenge]);
+    const isFirstSessionComplete = useMemo(
+        () => shouldCelebrateFirstSession({
+            totalRoundsPlayed: playerStats.totalRounds,
+            sessionRoundCount: sessionResults.length || totalRounds,
+        }),
+        [playerStats.totalRounds, sessionResults.length, totalRounds]
+    );
 
     useEffect(() => {
         trackEvent('session_summary_viewed', {
@@ -73,8 +95,13 @@ export function SessionSummary() {
             sessionScore,
             isDailyChallenge,
             streakStatus,
+            firstSession: isFirstSessionComplete,
         });
-    }, [totalRounds, sessionScore, isDailyChallenge, streakStatus]);
+    }, [totalRounds, sessionScore, isDailyChallenge, streakStatus, isFirstSessionComplete]);
+
+    useEffect(() => {
+        if (isFirstSessionComplete) markFirstSessionCelebrated();
+    }, [isFirstSessionComplete]);
 
     useEffect(() => {
         const collisionIds = sessionResults.map((result) => result.collisionId).filter(Boolean);
@@ -122,34 +149,64 @@ export function SessionSummary() {
         );
     }, [sessionResults]);
 
-    const feedbackCount = useMemo(
-        () => sessionResults.filter((result) => result.collisionId && feedbackByCollision[result.collisionId]).length,
-        [sessionResults, feedbackByCollision]
-    );
-
-    const overallBand = getScoreBand(Math.round(stats?.avg || 0));
+    const playCta = getSessionPlayCta({ isDailyChallenge, dailyPlayed });
+    const retentionCopy = getRetentionCopy({
+        streakStatus,
+        currentStreak: playerStats.currentStreak,
+        isDailyChallenge,
+        dailyPlayed,
+    });
+    const preferShareOnFirstSession = isFirstSessionComplete && (bestRound?.score || 0) >= 7 && Boolean(bestRound?.submission);
 
     const handlePlayAgain = () => {
+        startSession(3, playCta.startDaily);
+        beginRound();
+    };
+
+    const handleShareBestLine = async () => {
+        const url = `${window.location.origin}${window.location.pathname}`;
+        const line = bestRound?.submission
+            ? `My best Venn: "${bestRound.submission}" (${bestRound.score}/10). Play with me:`
+            : `I scored ${sessionScore} points across ${totalRounds} rounds. Play Venn with Friends:`;
+        const result = await shareOrCopy({
+            title: 'Venn with Friends',
+            text: line,
+            url,
+        });
+        if (result.method === 'dismissed' || result.method === 'failed') return;
+        haptic('success');
+        if (result.copied) {
+            setShareCopied(true);
+            toast.success(LINK_COPIED_MESSAGE);
+            setTimeout(() => setShareCopied(false), 2500);
+        }
+        trackEvent('session_summary_share', { method: result.method, firstSession: isFirstSessionComplete });
+    };
+
+    const handleInviteFriends = async () => {
+        const url = `${window.location.origin}${window.location.pathname}`;
+        const result = await shareOrCopy({
+            title: 'Venn with Friends',
+            text: 'Play a Venn room with me:',
+            url,
+        });
+        if (result.method === 'dismissed') return;
+        if (result.copied) {
+            haptic('success');
+            setInviteCopied(true);
+            toast.success(LINK_COPIED_MESSAGE);
+            setTimeout(() => setInviteCopied(false), 2500);
+        }
         endSession();
+        if (typeof window !== 'undefined') {
+            window.location.hash = 'friends';
+        }
+        setGameState('LOBBY');
     };
 
     const handleBackToLobby = () => {
         endSession();
         setGameState('LOBBY');
-    };
-
-    const handleInviteFriends = () => {
-        const url = `${window.location.origin}${window.location.pathname}`;
-        const line = bestRound?.submission
-            ? `My best Venn: "${bestRound.submission}" (${bestRound.score}/10). Play with me: ${url}`
-            : `Play Venn with Friends with me! ${url}`;
-        if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(line);
-            haptic('success');
-            setInviteCopied(true);
-            toast.success('Invite copied — send it to a friend!');
-            setTimeout(() => setInviteCopied(false), 2500);
-        }
     };
 
     if (!sessionResults.length) {
@@ -163,166 +220,106 @@ export function SessionSummary() {
         );
     }
 
+    const overallBand = getScoreBand(Math.round(stats?.avg || 0));
+
     return (
         <div className="w-full max-w-xl flex flex-col items-center animate-spring-in mx-auto">
             <div className="wordle-card p-6 sm:p-8 w-full">
-                <div className="text-center mb-8">
-                    <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-amber-200 mb-4 border border-amber-400/25 bg-amber-500/10">
-                        {isDailyChallenge ? 'Daily challenge complete' : 'Session complete'}
-                    </div>
-                    <div className="text-4xl mb-3 font-bold tracking-tight text-white/70">
-                        {stats.avg >= 9 ? 'A+' : stats.avg >= 7 ? 'A' : stats.avg >= 5 ? 'B' : 'Keep going'}
-                    </div>
-                    <div className={`text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br ${overallBand?.color || 'from-yellow-300 to-amber-600'} mb-2 tabular-nums`}>
-                        {sessionScore}
-                    </div>
-                    <div className="game-section-label normal-case tracking-normal">Total points</div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 mb-8">
-                    <div className="game-stat-tile">
-                        <div className="text-2xl font-bold text-white tabular-nums">{stats.avg.toFixed(1)}</div>
-                        <div className="game-section-label mt-1 normal-case tracking-normal text-[10px]">Avg score</div>
-                    </div>
-                    <div className="game-stat-tile">
-                        <div className="text-2xl font-bold text-emerald-300 tabular-nums">{stats.best}</div>
-                        <div className="game-section-label mt-1 normal-case tracking-normal text-[10px]">Best</div>
-                    </div>
-                    <div className="game-stat-tile">
-                        <div className="text-2xl font-bold text-white/70 tabular-nums">{totalRounds}</div>
-                        <div className="game-section-label mt-1 normal-case tracking-normal text-[10px]">Rounds</div>
-                    </div>
-                </div>
-
-                <div className="mb-8 p-4 rounded-[22px] bg-white/[0.05] border border-white/[0.08] text-center">
-                    <div className="text-lg font-semibold text-white mb-1">{overallBand?.label}</div>
-                    <div className="text-white/50 text-sm">
-                        {stats.avg >= 9
-                            ? 'Absolute genius-level connections. You see what others miss.'
-                            : stats.avg >= 7
-                            ? 'Sharp mind, clever connections. You\'ve got the gift.'
-                            : stats.avg >= 5
-                            ? 'Solid effort! Your connections are getting stronger.'
-                            : 'Keep playing — every round sharpens your creative instincts.'}
-                    </div>
-                    {feedbackCount > 0 && (
-                        <div className="mt-3 text-xs text-white/45">
-                            Friend feedback is attached to {feedbackCount} round{feedbackCount === 1 ? '' : 's'} in this session.
-                        </div>
-                    )}
-                </div>
-
-                {bestRound && (
-                    <div className="mb-8 rounded-[22px] border border-amber-400/25 bg-gradient-to-br from-amber-500/15 to-orange-500/10 p-5 text-center">
-                        <div className="game-section-label text-amber-200/70 mb-2">Best line this session</div>
-                        <p className="text-xl sm:text-2xl font-display font-bold text-white italic leading-snug">
-                            &ldquo;{bestRound.submission || 'Untitled connection'}&rdquo;
+                {isFirstSessionComplete ? (
+                    <div className="text-center mb-6">
+                        <div className="text-4xl mb-3" role="img" aria-label="Celebration">🎉</div>
+                        <h2 className="text-2xl font-display font-bold text-white mb-2">First session in the books</h2>
+                        <p className="text-white/60 text-sm">
+                            You wrote {sessionResults.length} line{sessionResults.length === 1 ? '' : 's'}. That&apos;s the whole game.
                         </p>
-                        <div className="mt-2 text-amber-200 font-bold tabular-nums">{bestRound.score}/10</div>
-                        {isDailyChallenge && (
-                            <p className="mt-3 text-white/50 text-xs">{dailySummary.shareLine}</p>
-                        )}
-                        <button
-                            type="button"
-                            onClick={handleInviteFriends}
-                            className="wordle-button wordle-primary mt-4 min-h-[44px] w-full sm:w-auto px-8"
-                        >
-                            {inviteCopied ? 'Invite copied!' : 'Invite friends'}
-                        </button>
+                    </div>
+                ) : (
+                    <div className="text-center mb-5">
+                        <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-amber-200 mb-3 border border-amber-400/25 bg-amber-500/10">
+                            {isDailyChallenge ? 'Daily challenge complete' : 'Session complete'}
+                        </div>
+                        <div className="game-section-label normal-case tracking-normal mb-1">What next</div>
                     </div>
                 )}
 
-                <div className="mb-8 rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
-                    <div className="game-section-label mb-3">Keep the run going</div>
-                    <div className="space-y-3 text-sm text-white/65">
-                        {streakStatus === 'active_today' || playerStats.currentStreak > 0 ? (
-                            <p>
-                                Day <span className="text-amber-300 font-bold">{playerStats.currentStreak}</span> streak is alive.
-                                {streakStatus === 'active_today'
-                                    ? ' Come back tomorrow to keep it.'
-                                    : ' Play again tomorrow before the window closes.'}
-                            </p>
-                        ) : (
-                            <p>Play again tomorrow to start a streak and unlock richer rewards.</p>
-                        )}
-                        {!isDailyChallenge && (
-                            <p className="text-amber-100/80">
-                                Tip: Tomorrow&apos;s Daily Venn applies a 1.5× score bonus and keeps your streak ritual sharp.
-                            </p>
-                        )}
+                <div className="mb-6 flex items-center justify-between gap-3 rounded-[22px] border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+                    <div className="text-left">
+                        <div className="game-section-label normal-case tracking-normal text-[10px]">Total</div>
+                        <div className={`text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-br ${overallBand?.color || 'from-yellow-300 to-amber-600'} tabular-nums`}>
+                            {sessionScore}
+                        </div>
+                    </div>
+                    <div className="text-right text-sm text-white/55">
+                        <div>Best <span className="text-white font-semibold tabular-nums">{stats.best}</span></div>
+                        <div>Avg <span className="text-white font-semibold tabular-nums">{stats.avg.toFixed(1)}</span></div>
+                    </div>
+                </div>
+
+                {bestRound?.submission && (
+                    <div className="mb-6 rounded-[22px] border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-center">
+                        <div className="game-section-label text-amber-200/70 mb-1">Best line</div>
+                        <p className="text-lg font-display font-semibold text-white italic leading-snug">
+                            &ldquo;{bestRound.submission}&rdquo;
+                        </p>
+                        <div className="mt-1 text-amber-200 font-bold tabular-nums text-sm">{bestRound.score}/10</div>
+                    </div>
+                )}
+
+                {retentionCopy && !isFirstSessionComplete && (
+                    <p className="mb-5 text-center text-sm text-white/60">{retentionCopy}</p>
+                )}
+
+                <SessionNextActions
+                    playLabel={playCta.label}
+                    playHint={!isFirstSessionComplete ? playCta.hint : null}
+                    shareCopied={shareCopied}
+                    inviteCopied={inviteCopied}
+                    onPlay={handlePlayAgain}
+                    onShare={handleShareBestLine}
+                    onInvite={handleInviteFriends}
+                    showShare={Boolean(bestRound?.submission)}
+                    showInvite={!isFirstSessionComplete}
+                    singleCta={isFirstSessionComplete ? preferShareOnFirstSession : false}
+                />
+
+                {!isFirstSessionComplete && (
+                    <>
                         {isDailyChallenge && dailyHistory.length > 0 && (
-                            <p>
-                                Daily challenge history: {dailyHistory.length} completion{dailyHistory.length === 1 ? '' : 's'} saved locally.
+                            <p className="mt-4 text-center text-xs text-white/40">
+                                Daily history: {dailyHistory.length} completion{dailyHistory.length === 1 ? '' : 's'}
                                 {dailySummary.weeklyCompletions > 0
-                                    ? ` This week: ${dailySummary.weeklyCompletions} daily run${dailySummary.weeklyCompletions === 1 ? '' : 's'}.`
+                                    ? ` · this week ${dailySummary.weeklyCompletions}`
                                     : ''}
                             </p>
                         )}
-                        <AchievementProgress score={Math.round(stats.avg)} stats={playerStats} />
-                    </div>
-                </div>
 
-                <div className="mb-8">
-                    <div className="game-section-label mb-3">Round breakdown</div>
-                    <div className="space-y-2">
-                        {sessionResults.map((result, idx) => (
-                            <RoundCard
-                                key={idx}
-                                result={result}
-                                index={idx}
-                                feedback={result.collisionId ? feedbackByCollision[result.collisionId] : null}
-                            />
-                        ))}
-                    </div>
-                </div>
+                        <div className="mt-8 mb-2">
+                            <div className="game-section-label mb-3">Round breakdown</div>
+                            <div className="space-y-2">
+                                {sessionResults.map((result, idx) => (
+                                    <RoundCard
+                                        key={idx}
+                                        result={result}
+                                        index={idx}
+                                        feedback={result.collisionId ? feedbackByCollision[result.collisionId] : null}
+                                    />
+                                ))}
+                            </div>
+                        </div>
 
-                <div className="mb-8">
-                    <SocialShareButtons
-                        shareData={{
-                            submission: bestRound?.submission
-                                || `I scored ${sessionScore} points across ${totalRounds} rounds!`,
-                            score: bestRound?.score ?? Math.round(stats.avg),
-                            scoreBand: overallBand?.label,
-                            commentary: isDailyChallenge
-                                ? dailySummary.shareLine
-                                : `Average: ${stats.avg.toFixed(1)}/10 | Best: ${stats.best}/10`,
-                            judgeMode: sessionResults.some((result) => result.judgeMode === 'ai') ? 'ai' : 'human',
-                            isDailyChallenge,
-                            surface: 'session_summary',
-                        }}
-                        onToast={(type, msg) => toast[type]?.(msg)}
-                    />
-                </div>
+                        <div className="mt-6">
+                            <PWAInstallBanner />
+                        </div>
 
-                <div className="mb-8">
-                    <PWAInstallBanner />
-                </div>
-
-                <div className="flex flex-col gap-3">
-                    <button
-                        onClick={handlePlayAgain}
-                        className="wordle-button wordle-primary w-full text-lg flex items-center justify-center gap-2"
-                    >
-                        <ArrowRight className="w-5 h-5" />
-                        Play Again
-                    </button>
-                    <button
-                        onClick={handleBackToLobby}
-                        className="wordle-button w-full flex items-center justify-center gap-2 text-white/75"
-                    >
-                        <Home className="w-5 h-5" />
-                        Back to Lobby
-                    </button>
-                    <button
-                        onClick={() => {
-                            endSession();
-                            setGameState('GALLERY');
-                        }}
-                        className="wordle-button w-full text-white/75"
-                    >
-                        View Saved Gallery
-                    </button>
-                </div>
+                        <button
+                            type="button"
+                            onClick={handleBackToLobby}
+                            className="mt-4 min-h-[44px] w-full text-sm text-white/45 hover:text-white underline"
+                        >
+                            Back to Lobby
+                        </button>
+                    </>
+                )}
             </div>
         </div>
     );
