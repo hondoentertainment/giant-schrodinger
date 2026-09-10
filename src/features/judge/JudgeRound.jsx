@@ -149,7 +149,7 @@ export function JudgeRound({ payload, onDone }) {
 
         haptic('success');
         playSubmitSound();
-        toast.success('Judgement submitted!');
+        toast.success('Judgment sent');
         trackEvent('friend_judge_scored', { score: scoreValue });
         setSubmitted(true);
     };
@@ -158,21 +158,22 @@ export function JudgeRound({ payload, onDone }) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-in zoom-in-95 duration-500 px-4">
                 <div className="text-6xl mb-4" role="img" aria-label="Success">✓</div>
-                <h2 className="text-3xl font-display font-bold text-white mb-2">Thanks for judging!</h2>
-                <p className="text-white/60 mb-4 max-w-sm">
-                    Your friend will see your {score}/10. Here is the pair if you want a turn.
+                <h2 className="text-3xl font-display font-bold text-white mb-2">Judgment sent</h2>
+                <p className="text-white/60 mb-6 max-w-sm">
+                    Your friend will see your {score}/10.
                 </p>
-                <div className="w-full max-w-xl mb-4">
-                    <VennDiagram
-                        leftAsset={displayAssets?.left || effectivePayload.assets.left}
-                        rightAsset={displayAssets?.right || effectivePayload.assets.right}
-                        mediaLoading={mediaLoading}
-                    />
-                </div>
-                <p className="text-white/70 text-sm mb-6 max-w-md">
-                    They wrote “{effectivePayload.submission}”. Your line can be better — or weirder.
-                </p>
-                <div className="flex flex-col gap-3 w-full max-w-md">
+                <div className="w-full max-w-md rounded-[22px] border border-white/10 bg-white/[0.04] p-4 text-left">
+                    <p className="text-white/45 text-xs uppercase tracking-wider mb-2">Want a turn?</p>
+                    <div className="w-full mb-3">
+                        <VennDiagram
+                            leftAsset={displayAssets?.left || effectivePayload.assets.left}
+                            rightAsset={displayAssets?.right || effectivePayload.assets.right}
+                            mediaLoading={mediaLoading}
+                        />
+                    </div>
+                    <p className="text-white/70 text-sm mb-4">
+                        They wrote “{effectivePayload.submission}”. Your line can be better — or weirder.
+                    </p>
                     <button
                         type="button"
                         className="wordle-button wordle-primary w-full min-h-[48px]"
@@ -188,7 +189,7 @@ export function JudgeRound({ payload, onDone }) {
                     </button>
                     <button
                         type="button"
-                        className="min-h-[44px] text-sm text-white/55 hover:text-white underline"
+                        className="mt-2 min-h-[44px] w-full text-sm text-white/55 hover:text-white underline"
                         onClick={() => {
                             clearJudgeFromUrl();
                             onDone?.();

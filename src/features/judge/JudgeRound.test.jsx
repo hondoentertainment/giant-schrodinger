@@ -98,12 +98,22 @@ describe('JudgeRound', () => {
                 judgement: expect.objectContaining({ score: 10 }),
             })
         );
-        expect(mockToast.success).toHaveBeenCalledWith('Judgement submitted!');
-        expect(await screen.findByText(/Thanks for judging/i)).toBeInTheDocument();
+        expect(mockToast.success).toHaveBeenCalledWith('Judgment sent');
+        expect(await screen.findByRole('heading', { name: /Judgment sent/i })).toBeInTheDocument();
         expect(screen.getByTestId('venn-diagram')).toBeInTheDocument();
         expect(screen.getByText(/They wrote/i)).toBeInTheDocument();
+        expect(screen.getByText(/Want a turn/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Write your own line for this pair/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Play today's pair/i })).toBeInTheDocument();
+    });
+
+    it('keeps the optional name path collapsed so scoring is two taps', async () => {
+        const user = userEvent.setup();
+        render(<JudgeRound payload={mockPayload} onDone={mockOnDone} />);
+        expect(screen.getByText(/Add a name or note/i).closest('details')).not.toHaveAttribute('open');
+        await user.click(screen.getByRole('button', { name: '8' }));
+        await user.click(screen.getByRole('button', { name: /Submit Judgement/i }));
+        expect(await screen.findByRole('heading', { name: /Judgment sent/i })).toBeInTheDocument();
     });
 
     it('shows the submission text being judged', () => {

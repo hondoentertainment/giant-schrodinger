@@ -8,6 +8,7 @@ import { getCollisionMediaMode, getMediaModeLabel } from '../../lib/mediaType';
 import { getHighlights } from '../../services/highlights';
 import { downloadFusionImage } from '../../services/socialShare';
 import { createJudgeShareLinks, getOgShareUrl } from '../../services/share';
+import { LINK_COPIED_MESSAGE, shareOrCopy } from '../../lib/shareOrCopy';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
 import { flagContent } from '../../services/moderation';
@@ -40,14 +41,6 @@ function getPromptPairLabel(collision) {
 
 function getJudgeModeLabel(collision) {
     return getJudgeModeFromCollision(collision);
-}
-
-function isWithinLastWeek(timestamp) {
-    if (!timestamp) return false;
-    const date = new Date(timestamp);
-    if (Number.isNaN(date.getTime())) return false;
-    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    return date.getTime() >= weekAgo;
 }
 
 function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyShare, onSaveCard }) {
@@ -182,13 +175,6 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
                     >
                         Details
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => onCopyShare(collision)}
-                        className="wordle-button flex-1 min-h-[44px] py-2 text-sm"
-                    >
-                        Copy share
-                    </button>
                     {onSaveCard && (
                         <button
                             type="button"
@@ -200,8 +186,16 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
                     )}
                 </div>
             </div>
-            <div className="absolute left-3 right-3 bottom-3 rounded-xl bg-black/70 p-3 text-left opacity-100 group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity md:hidden">
-                <div className="flex items-center justify-between gap-3">
+            <button
+                type="button"
+                onClick={() => onCopyShare(collision)}
+                className="gallery-card-share"
+                aria-label="Share"
+            >
+                Share
+            </button>
+            <div className="absolute left-3 right-3 bottom-3 rounded-xl bg-black/70 p-3 text-left opacity-100 group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity md:hidden pointer-events-none">
+                <div className="flex items-center justify-between gap-3 pr-16">
                     <span className="text-white font-semibold truncate">{collision.submission}</span>
                     <span className="text-yellow-300 font-bold">{collision.score}/10</span>
                 </div>
@@ -227,7 +221,7 @@ export function Gallery() {
     const [friendJudgements, setFriendJudgements] = useState({});
     const [loadingJudgements, setLoadingJudgements] = useState(true);
     const [sortBy, setSortBy] = useState('score-high');
-    const [feedbackFilter, setFeedbackFilter] = useState('all');
+    const [payoffFilter, setPayoffFilter] = useState('best');
     const [mediaFilter, setMediaFilter] = useState('all');
     const [selectedCollision, setSelectedCollision] = useState(null);
     const [shareCopiedId, setShareCopiedId] = useState(null);
@@ -261,14 +255,16 @@ export function Gallery() {
         ? collisions.reduce((sum, collision) => sum + (collision.score || 0), 0) / collisions.length
         : 0;
     const filtered = collisions.filter((collision) => {
-        if (feedbackFilter === 'judged' && !getDisplayJudgement(collision)) return false;
-        if (feedbackFilter === 'highlights' && !(highlightIds.has(collision.id) || (collision.score || 0) >= 8)) return false;
-        if (feedbackFilter === 'week' && !isWithinLastWeek(collision.timestamp)) return false;
-        if (feedbackFilter === 'daily' && !collision.isDailyChallenge) return false;
+        if (payoffFilter === 'judged' && !getDisplayJudgement(collision)) return false;
         if (mediaFilter !== 'all' && getCollisionMediaMode(collision) !== mediaFilter) return false;
         return true;
     });
-    const sorted = [...filtered].sort(sortOpt.fn);
+    const payoffSort = payoffFilter === 'recent'
+        ? SORT_OPTIONS.find((option) => option.id === 'newest')
+        : payoffFilter === 'best'
+        ? SORT_OPTIONS.find((option) => option.id === 'score-high')
+        : sortOpt;
+    const sorted = [...filtered].sort((payoffSort || sortOpt).fn);
 
     const handleCopyShare = async (collision) => {
         const judgement = getDisplayJudgement(collision);
@@ -284,13 +280,16 @@ export function Gallery() {
         const previewUrl = collision.shareToken
             ? getOgShareUrl(collision.shareToken)
             : `${window.location.origin}${window.location.pathname}`;
-        const text = `My Venn connection: "${collision.submission}" scored ${collision.score}/10.${promptLine}${mediaLine}${judgeLine}${dailyLine}${friendLine}${highlightLine} Play Venn with Friends: ${previewUrl}`;
-        if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(text);
-            trackEvent('gallery_share_copy', { hasToken: Boolean(collision.shareToken) });
-            setShareCopiedId(collision.id);
-            setTimeout(() => setShareCopiedId(null), 2000);
-        }
+        const text = `My Venn connection: "${collision.submission}" scored ${collision.score}/10.${promptLine}${mediaLine}${judgeLine}${dailyLine}${friendLine}${highlightLine} Play Venn with Friends:`;
+        const result = await shareOrCopy({
+            title: 'Venn with Friends',
+            text,
+            url: previewUrl,
+        });
+        if (result.method === 'dismissed' || result.method === 'failed') return;
+        trackEvent('gallery_share_copy', { hasToken: Boolean(collision.shareToken), method: result.method });
+        setShareCopiedId(collision.id);
+        setTimeout(() => setShareCopiedId(null), 2000);
     };
 
     const buildGalleryShareData = (collision) => {
@@ -354,23 +353,11 @@ export function Gallery() {
             if (!url) return;
             trackEvent('gallery_friend_judge_invite', { collisionId: collision.id });
             const text = 'Score my Venn connection — open the link and give it 1–10.';
-            try {
-                if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-                    await navigator.share({ title: 'Judge my Venn connection', text, url });
-                    haptic('success');
-                    setJudgeInviteCopiedId(collision.id);
-                    setTimeout(() => setJudgeInviteCopiedId(null), 2500);
-                    return;
-                }
-            } catch (err) {
-                if (err?.name === 'AbortError') return;
-            }
-            if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(url);
-                haptic('success');
-                setJudgeInviteCopiedId(collision.id);
-                setTimeout(() => setJudgeInviteCopiedId(null), 2500);
-            }
+            const result = await shareOrCopy({ title: 'Judge my Venn connection', text, url });
+            if (result.method === 'dismissed' || result.method === 'failed') return;
+            haptic('success');
+            setJudgeInviteCopiedId(collision.id);
+            setTimeout(() => setJudgeInviteCopiedId(null), 2500);
         } finally {
             setJudgeInviteLoadingId(null);
         }
@@ -391,7 +378,10 @@ export function Gallery() {
                         <select
                             id="gallery-sort"
                             value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
+                            onChange={(e) => {
+                                setSortBy(e.target.value);
+                                setPayoffFilter((current) => (current === 'judged' ? current : 'custom'));
+                            }}
                             className="game-input py-2.5 text-sm min-h-[44px]"
                             aria-label="Sort gallery"
                         >
@@ -440,20 +430,18 @@ export function Gallery() {
                             <div className="text-white/45 text-xs mt-1">Scores 8+ are treated as reshare-worthy highlights.</div>
                         </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="gallery-payoff-filters" role="group" aria-label="Gallery filters">
                         {[
-                            { id: 'all', label: t('gallery.allSaved') },
-                            { id: 'week', label: t('gallery.bestOfWeek') },
-                            { id: 'daily', label: t('gallery.dailyChallenges') },
-                            { id: 'judged', label: t('gallery.withFriendFeedback') },
-                            { id: 'highlights', label: t('gallery.highlights') },
+                            { id: 'best', label: t('gallery.payoffBest') },
+                            { id: 'recent', label: t('gallery.payoffRecent') },
+                            { id: 'judged', label: t('gallery.payoffJudged') },
                         ].map((option) => (
                             <button
                                 key={option.id}
                                 type="button"
-                                onClick={() => setFeedbackFilter(option.id)}
-                                aria-pressed={feedbackFilter === option.id}
-                                className={`game-segment ${feedbackFilter === option.id ? 'game-segment-selected' : ''}`}
+                                onClick={() => setPayoffFilter(option.id)}
+                                aria-pressed={payoffFilter === option.id}
+                                className={`game-segment ${payoffFilter === option.id ? 'game-segment-selected' : ''}`}
                             >
                                 {option.label}
                             </button>
@@ -488,14 +476,8 @@ export function Gallery() {
                     )}
                     {!loadingJudgements && sorted.length === 0 && (
                         <p className="text-white/40 text-sm mb-4" role="status">
-                            {feedbackFilter === 'judged'
+                            {payoffFilter === 'judged'
                                 ? 'No friend feedback yet. Share a round for judging to fill this view.'
-                                : feedbackFilter === 'highlights'
-                                ? 'No highlights yet. Score 8+ to build your best-of archive.'
-                                : feedbackFilter === 'daily'
-                                ? t('gallery.emptyDaily')
-                                : feedbackFilter === 'week'
-                                ? t('gallery.emptyWeek')
                                 : mediaFilter !== 'all'
                                 ? `No ${getMediaModeLabel(mediaFilter).toLowerCase()} connections saved yet.`
                                 : 'No saved connections match this filter yet.'}
@@ -520,7 +502,7 @@ export function Gallery() {
                     </div>
                     {shareCopiedId && (
                         <p className="mt-4 text-center text-emerald-300 text-sm" role="status">
-                            Share text copied.
+                            {LINK_COPIED_MESSAGE}
                         </p>
                     )}
                     {selectedCollision && (
@@ -593,7 +575,7 @@ export function Gallery() {
                                         onClick={() => handleCopyShare(selectedCollision)}
                                         className="wordle-button wordle-primary flex-1 min-h-[44px]"
                                     >
-                                        {shareCopiedId === selectedCollision.id ? 'Copied!' : 'Copy Share Text'}
+                                        {shareCopiedId === selectedCollision.id ? LINK_COPIED_MESSAGE : 'Share'}
                                     </button>
                                     <button
                                         type="button"

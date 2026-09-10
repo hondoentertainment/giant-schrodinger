@@ -162,10 +162,10 @@ export default function SocialShareButtons({ shareData, imageUrl, onToast }) {
                 <button
                     onClick={handleCopy}
                     className={`${BUTTON_BASE} ${copied ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/80'}`}
-                    title={copied ? 'Copied!' : 'Copy share text'}
+                    title={copied ? 'Link copied' : 'Copy share text'}
                 >
                     {copied ? <CheckIcon /> : <CopyIcon />}
-                    <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy'}</span>
+                    <span className="hidden sm:inline">{copied ? 'Link copied' : 'Copy'}</span>
                 </button>
 
                 {/* Download image */}

@@ -120,6 +120,11 @@ describe('Gallery', () => {
     holdJudgementResolve = false;
     _pendingJudgementResolve = null;
     mockSetGameState.mockClear();
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    });
   });
 
   it('renders gallery heading', async () => {
@@ -224,7 +229,7 @@ describe('Gallery', () => {
 
     render(<Gallery />);
 
-    const copyButton = await screen.findByRole('button', { name: /Copy share/i });
+    const copyButton = await screen.findByRole('button', { name: /^Share$/i });
     await user.click(copyButton);
 
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Friend Judge: Alice gave it 10/10'));
@@ -339,6 +344,25 @@ describe('Gallery', () => {
     card.focus();
     await user.keyboard('{Enter}');
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('surfaces Best, Recent, and Judged payoff filters', async () => {
+    const user = userEvent.setup();
+    mockCollisions = [
+      { id: 'low', submission: 'Low score one', score: 2, timestamp: Date.now(), imageUrl: 'https://example.com/low.jpg' },
+      { id: 'high', submission: 'High score one', score: 10, timestamp: Date.now() - 10_000, imageUrl: 'https://example.com/high.jpg' },
+    ];
+    render(<Gallery />);
+    const filters = await screen.findByRole('group', { name: /Gallery filters/i });
+    expect(within(filters).getByRole('button', { name: /Best/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(filters).getByRole('button', { name: /Recent/i })).toBeInTheDocument();
+    expect(within(filters).getByRole('button', { name: /Judged/i })).toBeInTheDocument();
+
+    const list = screen.getByRole('list', { name: /your connection gallery/i });
+    expect(within(list).getAllByRole('article')[0].getAttribute('aria-label')).toMatch(/High score one/);
+
+    await user.click(within(filters).getByRole('button', { name: /Recent/i }));
+    expect(within(list).getAllByRole('article')[0].getAttribute('aria-label')).toMatch(/Low score one/);
   });
 
   it('filters gallery by media type', async () => {

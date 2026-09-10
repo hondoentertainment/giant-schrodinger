@@ -11,7 +11,7 @@ import { getCollisions } from '../../services/storage';
 import { getDailyRitualShareCard } from '../../services/dailyRitualShare';
 import { createShareCard, dataURLtoFile, downloadFusionImage } from '../../services/socialShare';
 import { isBackendEnabled } from '../../lib/supabase';
-import { Wifi, WifiOff, HelpCircle, Image, Film, Music, Laugh, CalendarDays, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
+import { Wifi, WifiOff, Image, Film, Music, Laugh, CalendarDays, Pencil, Unlock, Trophy, Award, Palette, ShoppingBag, Brain, Shield, Link, BarChart3 } from 'lucide-react';
 import { haptic } from '../../lib/haptics';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { UnlockModal } from '../../components/UnlockModal';
@@ -28,6 +28,9 @@ import { consumeAutostartDaily, markAutostartDaily, peekAutostartDaily } from '.
 import { parseSiteShortcut } from '../../lib/siteIdentity';
 import { extractRoomCode, normalizeJoinInput } from '../../lib/roomCode';
 import { useTranslation } from '../../hooks/useTranslation';
+import { toggleMute, isMuted } from '../../services/sounds';
+import { LINK_COPIED_MESSAGE, shareOrCopy } from '../../lib/shareOrCopy';
+import { getSessionPlayCta, SessionNextActions } from '../summary/SessionNextActions';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -154,6 +157,7 @@ export function Lobby() {
         beginRound,
         advanceRound,
         endSession,
+        isDailyChallenge,
     } = useGame();
     const { hostRoom, joinRoomByCode } = useRoom();
 
@@ -196,6 +200,8 @@ export function Lobby() {
     const userRef = useRef(user);
     userRef.current = user;
     const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+    const [soundMuted, setSoundMuted] = useState(() => isMuted());
+    const [sessionShareCopied, setSessionShareCopied] = useState(false);
     const [siteShortcut, setSiteShortcut] = useState(() => (
         typeof window === 'undefined' ? null : parseSiteShortcut(window.location.hash)
     ));
@@ -312,15 +318,29 @@ export function Lobby() {
         localStorage.setItem('vwf_show_all_features', String(nextValue));
     };
 
-    const handleInvite = () => {
+    const handleInvite = async () => {
         const url = window.location.origin + window.location.pathname;
-        const msg = `Play Venn with Friends with me! ${url}`;
-        if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(msg);
-            haptic('light');
+        const result = await shareOrCopy({
+            title: 'Venn with Friends',
+            text: 'Play Venn with Friends with me:',
+            url,
+        });
+        if (result.method === 'dismissed' || result.method === 'failed') return;
+        haptic('light');
+        if (result.copied) {
             setInviteCopied(true);
             setTimeout(() => setInviteCopied(false), 2500);
         }
+    };
+
+    const handleThemeChange = (id) => {
+        const nextTheme = getThemeById(id);
+        setThemeId(id);
+        if (user) login({ ...user, themeId: id, gradient: nextTheme?.gradient });
+    };
+
+    const handleSoundToggle = () => {
+        setSoundMuted(toggleMute());
     };
 
     const commitProfile = (autostartDaily) => {
@@ -468,6 +488,36 @@ export function Lobby() {
             return;
         }
         beginDailyChallenge();
+    };
+
+    const sessionWrapCta = getSessionPlayCta({ isDailyChallenge, dailyPlayed });
+    const bestSessionRound = sessionResults.reduce(
+        (best, result) => ((result.score || 0) > (best?.score || 0) ? result : best),
+        null
+    );
+
+    const handleSessionPlayAgain = () => {
+        startSession(3, sessionWrapCta.startDaily);
+        beginRound();
+    };
+
+    const handleSessionShareBest = async () => {
+        const url = window.location.origin + window.location.pathname;
+        const line = bestSessionRound?.submission
+            ? `My best Venn: "${bestSessionRound.submission}" (${bestSessionRound.score}/10). Play with me:`
+            : `Play Venn with Friends with me:`;
+        const result = await shareOrCopy({ title: 'Venn with Friends', text: line, url });
+        if (result.method === 'dismissed' || result.method === 'failed') return;
+        haptic('success');
+        if (result.copied) {
+            setSessionShareCopied(true);
+            setTimeout(() => setSessionShareCopied(false), 2500);
+        }
+    };
+
+    const handleSessionInvite = async () => {
+        await handleInvite();
+        setShowMultiplayer(true);
     };
 
     const openEditProfile = () => {
@@ -792,6 +842,47 @@ export function Lobby() {
                                     )}
 
                                     <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                                        <div className="game-section-label mb-2">Theme</div>
+                                        <div className="flex gap-2 justify-between flex-wrap" role="group" aria-label="Theme">
+                                            {getAvailableThemes().map((availableTheme) => {
+                                                const locked = !isThemeUnlocked(availableTheme.id, stats);
+                                                return (
+                                                    <button
+                                                        key={availableTheme.id}
+                                                        type="button"
+                                                        onClick={() => !locked && handleThemeChange(availableTheme.id)}
+                                                        disabled={locked}
+                                                        aria-pressed={themeId === availableTheme.id}
+                                                        aria-label={locked ? `${availableTheme.label} — locked` : availableTheme.label}
+                                                        className={`w-10 h-10 min-w-[40px] min-h-[40px] rounded-full bg-gradient-to-br ${availableTheme.gradient} transition-all relative
+                                                            ${locked ? 'opacity-40 cursor-not-allowed grayscale' : ''}
+                                                            ${themeId === availableTheme.id ? 'ring-2 ring-white scale-110 shadow-lg' : 'opacity-50 hover:opacity-100'}
+                                                        `}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                        <p className="mt-2 text-center text-white/45 text-xs">{theme.label}</p>
+                                    </div>
+
+                                    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <div className="game-section-label mb-1">Sound</div>
+                                                <p className="text-white/45 text-[11px]">Clicks, ticks, and score stingers.</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleSoundToggle}
+                                                aria-pressed={!soundMuted}
+                                                className={`game-choice min-h-[40px] px-4 text-xs font-semibold ${!soundMuted ? 'game-choice-selected' : ''}`}
+                                            >
+                                                {soundMuted ? 'Muted' : 'On'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                                         <div className="game-section-label mb-2">Who scores solo rounds?</div>
                                         <div className="grid grid-cols-2 gap-2 mb-2">
                                             <button
@@ -845,20 +936,9 @@ export function Lobby() {
                                         <button
                                             onClick={handleInvite}
                                             className="text-sm text-white/50 hover:text-white underline min-h-[40px]"
-                                            aria-label={inviteCopied ? 'Link copied to clipboard' : 'Invite friends to play'}
+                                            aria-label={inviteCopied ? LINK_COPIED_MESSAGE : 'Invite friends to play'}
                                         >
-                                            {inviteCopied ? 'Copied!' : 'Invite friends'}
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setOnboardingDismissCallback(() => () => setShowOnboarding(false));
-                                                setShowOnboarding(true);
-                                            }}
-                                            className="text-sm text-white/50 hover:text-white underline flex items-center gap-1 min-h-[40px]"
-                                            aria-label="How it works"
-                                        >
-                                            <HelpCircle className="w-4 h-4" />
-                                            How it works
+                                            {inviteCopied ? LINK_COPIED_MESSAGE : 'Invite friends'}
                                         </button>
                                         <button
                                             onClick={() => setShowUnlockModal(true)}
@@ -870,6 +950,22 @@ export function Lobby() {
                                         </button>
                                     </div>
 
+                                    <details className="rounded-xl border border-white/10 bg-white/[0.03] text-left">
+                                        <summary className="cursor-pointer list-none px-3 py-2.5 text-xs text-white/40 min-h-[44px] flex items-center justify-between">
+                                            <span>Experimental Labs</span>
+                                            <span>Local preview</span>
+                                        </summary>
+                                        <div className="px-3 pb-3 space-y-2 border-t border-white/10 pt-2">
+                                            <p className="text-[11px] text-white/35">
+                                                Ranked, shop, tournaments, and other experiments. Not the core game.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={handleShowAllFeatures}
+                                                className="w-full text-sm text-white/40 hover:text-white underline min-h-[44px]"
+                                            >
+                                                {showAllFeatures ? 'Hide Labs' : 'Show Labs'}
+                                            </button>
                                     {showFeatureNav && (
                                         <div className="grid grid-cols-2 gap-2">
                                             <button
@@ -958,18 +1054,8 @@ export function Lobby() {
                                             </button>
                                         </div>
                                     )}
-
-                                    <button
-                                        onClick={handleShowAllFeatures}
-                                        className="w-full text-sm text-white/40 hover:text-white underline min-h-[44px]"
-                                    >
-                                        {showAllFeatures ? 'Hide Labs' : 'Labs'}
-                                    </button>
-                                    {showAllFeatures && (
-                                        <p className="text-center text-[11px] text-white/35">
-                                            Local preview — not the core game.
-                                        </p>
-                                    )}
+                                        </div>
+                                    </details>
                                 </div>
                             </details>
                         </>
@@ -1070,11 +1156,22 @@ export function Lobby() {
 
                     {sessionId && roundComplete && roundNumber === totalRounds && (
                         <div className="mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
-                            <div className="text-2xl mb-1">🎉</div>
-                            <div className="text-white font-semibold">Session complete!</div>
-                            <div className="text-white/70 text-sm mt-1">
-                                Average score: <span className="text-amber-400 font-bold">{(sessionScore / sessionResults.length).toFixed(1)}</span>/10
-                            </div>
+                            <div className="text-white font-semibold mb-1">Session complete</div>
+                            {sessionResults.length > 0 && (
+                                <p className="text-white/55 text-xs mb-3">
+                                    {sessionScore} pts · best {bestSessionRound?.score ?? '—'}/10
+                                </p>
+                            )}
+                            <SessionNextActions
+                                playLabel={sessionWrapCta.label}
+                                playHint={sessionWrapCta.hint}
+                                shareCopied={sessionShareCopied}
+                                inviteCopied={inviteCopied}
+                                onPlay={handleSessionPlayAgain}
+                                onShare={handleSessionShareBest}
+                                onInvite={handleSessionInvite}
+                                showShare={Boolean(bestSessionRound?.submission)}
+                            />
                         </div>
                     )}
 

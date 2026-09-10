@@ -226,6 +226,7 @@ describe('Reveal', () => {
             expect(toastMocks.success).toHaveBeenCalled();
         });
         expect(await screen.findByRole('button', { name: /link copied|friend judge link copied/i })).toBeInTheDocument();
+        expect(toastMocks.success).toHaveBeenCalledWith('Link copied');
     });
 
     it('prefers navigator.share for friend-judge invites when available', async () => {
@@ -263,6 +264,7 @@ describe('Reveal', () => {
         expect(screen.getAllByText(/Send this 8\/10 to a friend/i).length).toBeGreaterThanOrEqual(1);
         expect(screen.getAllByRole('button', { name: /send to a friend to judge/i }).length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText(/Strong line — send it to a friend to judge/i)).toBeInTheDocument();
+        expect(screen.getByTestId('reveal-sticky-share')).toHaveTextContent(/Share this 8\/10/i);
         expect(screen.getByText(/Saved to your gallery/i)).toBeInTheDocument();
         expect(screen.getByText(/Continue to round 2/i)).toBeInTheDocument();
     });
@@ -297,6 +299,20 @@ describe('Reveal', () => {
 
         expect(await screen.findByText(/Scoring offline — quick self-score/i, {}, { timeout: 3000 })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Submit Score/i })).toBeInTheDocument();
+    });
+
+    it('keeps the sticky share prompt dismissible without blocking Next round', async () => {
+        const user = userEvent.setup();
+        render(<Reveal submission={mockSubmission} assets={mockAssets} />);
+
+        const nextBtn = await screen.findByRole('button', { name: /Next Round/i }, { timeout: 3000 });
+        const sticky = await screen.findByTestId('reveal-sticky-share');
+        expect(nextBtn).toBeInTheDocument();
+        expect(sticky).toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: /Dismiss share prompt/i }));
+        expect(screen.queryByTestId('reveal-sticky-share')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Next Round/i })).toBeInTheDocument();
     });
 
     it('holds the fusion frame while rendering, then mounts the labelled image', async () => {

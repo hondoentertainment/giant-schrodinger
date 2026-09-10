@@ -5,6 +5,7 @@ import { scoreSubmission, generateFusionImage } from '../../services/gemini';
 import { saveCollision, updateCollision } from '../../services/storage';
 import { getMilestones, getStats, recordPlay } from '../../services/stats';
 import { createJudgeShareLinks } from '../../services/share';
+import { LINK_COPIED_MESSAGE, shareOrCopy } from '../../lib/shareOrCopy';
 import { getThemeById } from '../../data/themes';
 import { normalizeMediaType, getCollisionMediaMode, getEffectiveRoundMediaType } from '../../lib/mediaType';
 import { getDailyChallenge } from '../../services/dailyChallenge';
@@ -39,6 +40,7 @@ export function Reveal({ submission, assets }) {
     const [retryTrigger, setRetryTrigger] = useState(0);
     const [secondChanceUsed, setSecondChanceUsed] = useState(false);
     const [scoringOffline, setScoringOffline] = useState(false);
+    const [stickyShareDismissed, setStickyShareDismissed] = useState(false);
     const savedRef = useRef(false);
     const friendSharedRef = useRef(false);
     const scoringMode = user?.scoringMode || 'human';
@@ -335,39 +337,25 @@ export function Reveal({ submission, assets }) {
         const shareText = Number.isFinite(highlightScore)
             ? `Score my ${highlightScore}/10 Venn — open the link and give it 1–10.`
             : 'Score my Venn connection — open the link and give it 1–10.';
-        try {
-            if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-                await navigator.share({
-                    title: 'Judge my Venn connection',
-                    text: shareText,
-                    url,
-                });
-                friendSharedRef.current = true;
-                reportAppEvent('friend_judge_share_completed', { method: 'share_sheet' });
-                haptic('success');
-                setShareCopied(true);
-                toast.success('Share sheet opened — send it to a friend!');
-                setTimeout(() => setShareCopied(false), 2500);
-                return;
-            }
-        } catch (err) {
-            if (err?.name === 'AbortError') {
-                reportAppEvent('friend_judge_share_dismissed', { method: 'share_sheet' });
-                return;
-            }
+        const shareResult = await shareOrCopy({
+            title: 'Judge my Venn connection',
+            text: shareText,
+            url,
+        });
+        if (shareResult.method === 'dismissed') {
+            reportAppEvent('friend_judge_share_dismissed', { method: 'share_sheet' });
+            return;
         }
-
-        if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(url);
-            friendSharedRef.current = true;
-            reportAppEvent('friend_judge_share_completed', { method: 'clipboard' });
-            haptic('success');
-            setShareCopied(true);
-            toast.success('Link copied — send to a friend and they\'ll score your connection!');
-            setTimeout(() => setShareCopied(false), 2500);
-        } else {
+        if (shareResult.method === 'failed') {
             toast.error('Could not copy link — try again');
+            return;
         }
+        friendSharedRef.current = true;
+        reportAppEvent('friend_judge_share_completed', { method: shareResult.method });
+        haptic('success');
+        setShareCopied(true);
+        toast.success(shareResult.copied ? LINK_COPIED_MESSAGE : 'Share sheet opened — send it to a friend!');
+        setTimeout(() => setShareCopied(false), 2500);
     };
 
     const handleHumanScore = (e) => {
@@ -845,6 +833,37 @@ export function Reveal({ submission, assets }) {
                         <AchievementProgress score={displayScore} stats={statsSnapshot} />
                     </div>
                 </div>
+
+                {showFriendJudgePrompt && !stickyShareDismissed && (
+                    <div
+                        className="reveal-share-sticky"
+                        data-testid="reveal-sticky-share"
+                        role="status"
+                    >
+                        <p className="min-w-0 flex-1 text-sm font-semibold text-amber-50">
+                            Share this {displayScore}/10
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                consumeJudgeChain();
+                                handleShareForJudging();
+                            }}
+                            disabled={!canShareForJudging}
+                            className="wordle-button wordle-primary min-h-[40px] px-4 text-sm disabled:opacity-50"
+                        >
+                            {shareCopied ? LINK_COPIED_MESSAGE : 'Share'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setStickyShareDismissed(true)}
+                            className="min-h-[40px] min-w-[40px] text-white/55 hover:text-white"
+                            aria-label="Dismiss share prompt"
+                        >
+                            ×
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
