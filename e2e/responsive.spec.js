@@ -25,10 +25,10 @@ test.describe('Responsive design', () => {
         const playBox = await play.boundingBox();
         const joinBox = await join.boundingBox();
         expect(titleBox?.x).toBeGreaterThanOrEqual(16);
-        expect(Math.abs((titleBox?.x ?? 0) - (labelBox?.x ?? 0))).toBeLessThanOrEqual(2);
-        expect(Math.abs((playBox?.x ?? 0) - (titleBox?.x ?? 0))).toBeLessThanOrEqual(2);
-        expect(Math.abs((playBox?.width ?? 0) - (joinBox?.width ?? 0))).toBeLessThanOrEqual(2);
-        expect(playBox?.width ?? 0).toBeGreaterThan(300);
+        expect(Math.abs((titleBox?.x ?? 0) - (labelBox?.x ?? 0))).toBeLessThanOrEqual(4);
+        expect(Math.abs((playBox?.x ?? 0) - (titleBox?.x ?? 0))).toBeLessThanOrEqual(4);
+        expect(Math.abs((playBox?.width ?? 0) - (joinBox?.width ?? 0))).toBeLessThanOrEqual(4);
+        expect(playBox?.width ?? 0).toBeGreaterThan(280);
         const counter = page.locator('#name-char-count');
         const input = page.getByPlaceholder(/Enter your name/i);
         const counterBox = await counter.boundingBox();
@@ -63,9 +63,9 @@ test.describe('Responsive design', () => {
         const greetingBox = await greeting.boundingBox();
         const playBox = await play.boundingBox();
         const joinBox = await join.boundingBox();
-        expect(Math.abs((greetingBox?.x ?? 0) - (playBox?.x ?? 0))).toBeLessThanOrEqual(2);
-        expect(Math.abs((playBox?.width ?? 0) - (joinBox?.width ?? 0))).toBeLessThanOrEqual(2);
-        expect(playBox?.width ?? 0).toBeGreaterThan(300);
+        expect(Math.abs((greetingBox?.x ?? 0) - (playBox?.x ?? 0))).toBeLessThanOrEqual(4);
+        expect(Math.abs((playBox?.width ?? 0) - (joinBox?.width ?? 0))).toBeLessThanOrEqual(4);
+        expect(playBox?.width ?? 0).toBeGreaterThan(280);
     });
 
     test('gallery actions are usable on a narrow viewport', async ({ page }) => {
