@@ -875,6 +875,7 @@ export function Lobby() {
                                                 type="button"
                                                 onClick={handleSoundToggle}
                                                 aria-pressed={!soundMuted}
+                                                aria-label={soundMuted ? 'Sound muted' : 'Sound on'}
                                                 className={`game-choice min-h-[40px] px-4 text-xs font-semibold ${!soundMuted ? 'game-choice-selected' : ''}`}
                                             >
                                                 {soundMuted ? 'Muted' : 'On'}

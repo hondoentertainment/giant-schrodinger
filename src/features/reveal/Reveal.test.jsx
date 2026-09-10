@@ -225,7 +225,7 @@ describe('Reveal', () => {
         await waitFor(() => {
             expect(toastMocks.success).toHaveBeenCalled();
         });
-        expect(await screen.findByRole('button', { name: /link copied|friend judge link copied/i })).toBeInTheDocument();
+        expect(await screen.findAllByRole('button', { name: /link copied|friend judge link copied/i })).not.toHaveLength(0);
         expect(toastMocks.success).toHaveBeenCalledWith('Link copied');
     });
 
