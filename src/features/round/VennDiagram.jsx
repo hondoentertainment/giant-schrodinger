@@ -599,10 +599,50 @@ function VennCircle({ asset, side, colorblindMode, colors }) {
     );
 }
 
-// Lens (vesica) where the two circles overlap, in the 200x110 viewBox used below.
-// Circles: r=54, cy=55, cx=54 (left) and cx=146 (right) -> intersection points at
-// x=100, y=55 +/- sqrt(54^2 - 46^2) ~= 28.28.
-const LENS_PATH = 'M 100 26.72 A 54 54 0 0 1 100 83.28 A 54 54 0 0 1 100 26.72 Z';
+// Lens (vesica) where the two circles overlap.
+// Desktop (54% circles, viewBox 200x110): r=54, cy=55, cx=54/146
+//   intersection y = 55 +/- sqrt(54^2 - 46^2) ~= 28.28
+// Mobile (60% circles, viewBox 200x120): r=60, cy=60, cx=60/140
+//   intersection y = 60 +/- sqrt(60^2 - 40^2) ~= 44.72
+const LENS_PATH_DESKTOP = 'M 100 26.72 A 54 54 0 0 1 100 83.28 A 54 54 0 0 1 100 26.72 Z';
+const LENS_PATH_MOBILE = 'M 100 15.28 A 60 60 0 0 1 100 104.72 A 60 60 0 0 1 100 15.28 Z';
+
+function VennLens({ id, viewBox, path, cy, radius, overlap, className }) {
+    return (
+        <svg
+            className={`absolute inset-0 w-full h-full pointer-events-none z-[5] ${className}`}
+            viewBox={viewBox}
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            data-testid={`venn-lens-${id}`}
+        >
+            <defs>
+                <radialGradient
+                    id={`venn-lens-fill-${id}`}
+                    gradientUnits="userSpaceOnUse"
+                    cx="100"
+                    cy={cy}
+                    r={radius}
+                >
+                    <stop offset="0%" stopColor={overlap} stopOpacity="0.42" />
+                    <stop offset="65%" stopColor={overlap} stopOpacity="0.16" />
+                    <stop offset="100%" stopColor={overlap} stopOpacity="0.05" />
+                </radialGradient>
+            </defs>
+            <g className="venn-lens-glow">
+                <path d={path} fill={`url(#venn-lens-fill-${id})`} />
+                <path
+                    d={path}
+                    fill="none"
+                    stroke={overlap}
+                    strokeOpacity="0.55"
+                    strokeWidth="0.9"
+                    vectorEffect="non-scaling-stroke"
+                />
+            </g>
+        </svg>
+    );
+}
 
 // ── Main Venn Diagram ──
 export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAsset, mediaLoading = false }) {
@@ -650,7 +690,7 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
             </div>
 
             {/* Circles */}
-            <div key={roundKey} className="relative w-full aspect-[2/1.1] flex justify-center items-center">
+            <div key={roundKey} className="relative w-full aspect-[2/1.2] sm:aspect-[2/1.1] flex justify-center items-center">
                 <VennCircle
                     asset={leftAsset}
                     side="left"
@@ -664,38 +704,24 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                     colors={COLORS}
                 />
 
-                {/* Glowing lens where the circles overlap */}
-                <svg
-                    className="absolute inset-0 w-full h-full pointer-events-none z-[5]"
+                <VennLens
+                    id="mobile"
+                    viewBox="0 0 200 120"
+                    path={LENS_PATH_MOBILE}
+                    cy="60"
+                    radius="42"
+                    overlap={COLORS.overlap}
+                    className="sm:hidden"
+                />
+                <VennLens
+                    id="desktop"
                     viewBox="0 0 200 110"
-                    preserveAspectRatio="none"
-                    aria-hidden="true"
-                >
-                    <defs>
-                        <radialGradient
-                            id="venn-lens-fill"
-                            gradientUnits="userSpaceOnUse"
-                            cx="100"
-                            cy="55"
-                            r="34"
-                        >
-                            <stop offset="0%" stopColor={COLORS.overlap} stopOpacity="0.42" />
-                            <stop offset="65%" stopColor={COLORS.overlap} stopOpacity="0.16" />
-                            <stop offset="100%" stopColor={COLORS.overlap} stopOpacity="0.05" />
-                        </radialGradient>
-                    </defs>
-                    <g className="venn-lens-glow">
-                        <path d={LENS_PATH} fill="url(#venn-lens-fill)" />
-                        <path
-                            d={LENS_PATH}
-                            fill="none"
-                            stroke={COLORS.overlap}
-                            strokeOpacity="0.55"
-                            strokeWidth="0.9"
-                            vectorEffect="non-scaling-stroke"
-                        />
-                    </g>
-                </svg>
+                    path={LENS_PATH_DESKTOP}
+                    cy="55"
+                    radius="34"
+                    overlap={COLORS.overlap}
+                    className="hidden sm:block"
+                />
 
                 {/* One-shot flash as the circles collide on entry */}
                 <div

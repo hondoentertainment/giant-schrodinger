@@ -94,6 +94,8 @@ describe('VennDiagram', () => {
 
         expect(screen.getAllByText('Concept')).toHaveLength(2);
         expect(screen.getByText('the overlap')).toBeInTheDocument();
+        expect(screen.getByTestId('venn-lens-mobile')).toHaveAttribute('viewBox', '0 0 200 120');
+        expect(screen.getByTestId('venn-lens-desktop')).toHaveAttribute('viewBox', '0 0 200 110');
         expect(screen.getAllByText('Cat').length).toBeGreaterThanOrEqual(2);
         expect(screen.getAllByText('Dog').length).toBeGreaterThanOrEqual(2);
     });

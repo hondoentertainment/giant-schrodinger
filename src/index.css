@@ -27,6 +27,8 @@
   --game-radius-xl: 28px;
   --game-radius-pill: 9999px;
   --game-gutter: 1.25rem;
+  --game-pad-left: max(var(--game-gutter), env(safe-area-inset-left, 0px));
+  --game-pad-right: max(var(--game-gutter), env(safe-area-inset-right, 0px));
   --game-play-max: 28rem;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
   line-height: 1.47;
@@ -106,14 +108,14 @@
 
   .wordle-topbar {
     @apply sticky top-0 z-30 mb-1 flex w-full items-center justify-center;
-    width: calc(100% + (2 * var(--game-gutter)));
-    margin-left: calc(0px - var(--game-gutter));
-    margin-right: calc(0px - var(--game-gutter));
+    width: calc(100% + var(--game-pad-left) + var(--game-pad-right));
+    margin-left: calc(0px - var(--game-pad-left));
+    margin-right: calc(0px - var(--game-pad-right));
     padding:
       max(0.4rem, env(safe-area-inset-top))
-      max(var(--game-gutter), env(safe-area-inset-right))
+      var(--game-pad-right)
       0.45rem
-      max(var(--game-gutter), env(safe-area-inset-left));
+      var(--game-pad-left);
     background: rgba(7, 7, 10, 0.72);
     backdrop-filter: saturate(180%) blur(20px);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
@@ -122,8 +124,8 @@
 
   .game-main {
     @apply relative z-10 flex w-full max-w-5xl flex-1 min-h-0 flex-col items-center overflow-y-auto overflow-x-hidden;
-    padding-left: max(var(--game-gutter), env(safe-area-inset-left));
-    padding-right: max(var(--game-gutter), env(safe-area-inset-right));
+    padding-left: var(--game-pad-left);
+    padding-right: var(--game-pad-right);
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
     padding-top: 0.25rem;
   }
@@ -761,18 +763,6 @@
     padding: 22px 20px 18px;
   }
 
-  .game-reveal-stack {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .game-reveal-extra {
-    order: 3;
-  }
-
-  .game-reveal-actions {
-    order: 2;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -629,6 +629,26 @@ export function Reveal({ submission, assets }) {
                     </div>
                 </div>
 
+                <div className="game-reveal-actions flex flex-col gap-2.5 justify-center items-stretch w-full mb-6">
+                    <button
+                        onClick={handleNext}
+                        className="wordle-button wordle-primary w-full min-h-[49px] text-base"
+                    >
+                        {isFinalRound ? 'See Results' : shareCopied ? 'Keep playing →' : 'Next round'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            consumeJudgeChain();
+                            handleShareForJudging();
+                        }}
+                        disabled={!canShareForJudging}
+                        className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50"
+                    >
+                        {shareCopied ? "They're scoring it — keep playing" : 'Share with a friend'}
+                    </button>
+                </div>
+
                 <div className="game-reveal-extra text-center w-full">
                     <FusionFrame
                         image={fusionImage}
@@ -799,26 +819,6 @@ export function Reveal({ submission, assets }) {
                     <div className="mb-6 flex justify-center">
                         <AchievementProgress score={displayScore} stats={statsSnapshot} />
                     </div>
-                </div>
-
-                <div className="game-reveal-actions flex flex-col gap-2.5 justify-center items-stretch w-full">
-                    <button
-                        onClick={handleNext}
-                        className="wordle-button wordle-primary w-full min-h-[49px] text-base"
-                    >
-                        {isFinalRound ? 'See Results' : shareCopied ? 'Keep playing →' : 'Next round'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            consumeJudgeChain();
-                            handleShareForJudging();
-                        }}
-                        disabled={!canShareForJudging}
-                        className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50"
-                    >
-                        {shareCopied ? "They're scoring it — keep playing" : 'Share with a friend'}
-                    </button>
                 </div>
             </div>
         </div>
