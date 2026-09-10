@@ -153,6 +153,12 @@
     border-radius: var(--game-radius-pill);
   }
 
+  .game-timer--compact.game-timer--paused {
+    min-width: 6.5rem;
+    min-height: auto;
+    padding: 0.3rem 0.7rem;
+  }
+
   .lobby-gate-card {
     width: 100%;
   }
@@ -493,6 +499,26 @@
     border-color: rgba(255, 214, 10, 0.35);
     color: var(--game-warning);
     animation: timerPulse 1s ease-in-out infinite;
+  }
+
+  .game-timer--paused {
+    flex-direction: column;
+    gap: 0.1rem;
+    min-height: auto;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .game-timer-hint {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+    line-height: 1.2;
+    text-align: center;
+    max-width: 5.6rem;
   }
 
   .game-section-label {

@@ -26,7 +26,7 @@ import { trackEvent } from '../../services/analytics';
 import { getCurrentWeeklyEvent, getTimeUntilNextWeek, formatWeeklyCountdown } from '../../services/weeklyEvents';
 import { consumeAutostartDaily, markAutostartDaily, peekAutostartDaily } from '../../lib/firstSession';
 import { parseSiteShortcut } from '../../lib/siteIdentity';
-import { extractRoomCode } from '../../lib/roomCode';
+import { extractRoomCode, normalizeJoinInput } from '../../lib/roomCode';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
@@ -495,20 +495,22 @@ export function Lobby() {
         setMpLoadingAction(null);
     };
 
+    const normalizedJoinCode = extractRoomCode(joinCode);
+
     const handleJoinRoom = async () => {
-        if (!user?.name || !joinCode.trim()) return;
+        if (!user?.name || !normalizedJoinCode) return;
         setMpLoading(true);
         setMpLoadingAction('join');
-        await joinRoomByCode(joinCode.trim(), user.name, user.avatar || avatar);
+        await joinRoomByCode(normalizedJoinCode, user.name, user.avatar || avatar);
         setMpLoading(false);
         setMpLoadingAction(null);
     };
 
     const handleJoinAsSpectator = async () => {
-        if (!user?.name || !joinCode.trim()) return;
+        if (!user?.name || !normalizedJoinCode) return;
         setMpLoading(true);
         setMpLoadingAction('spectate');
-        await joinRoomByCode(joinCode.trim(), user.name, user.avatar || avatar, { spectator: true });
+        await joinRoomByCode(normalizedJoinCode, user.name, user.avatar || avatar, { spectator: true });
         setMpLoading(false);
         setMpLoadingAction(null);
     };
@@ -1020,7 +1022,7 @@ export function Lobby() {
                                         autoCapitalize="characters"
                                         spellCheck={false}
                                         value={joinCode}
-                                        onChange={(e) => setJoinCode(extractRoomCode(e.target.value))}
+                                        onChange={(e) => setJoinCode(normalizeJoinInput(e.target.value))}
                                         onPaste={(e) => {
                                             const pasted = e.clipboardData?.getData('text') || '';
                                             const extracted = extractRoomCode(pasted);
@@ -1029,14 +1031,14 @@ export function Lobby() {
                                                 setJoinCode(extracted);
                                             }
                                         }}
-                                        placeholder="Paste room code"
-                                        maxLength={6}
-                                        className="game-input w-full min-h-[56px] text-xl text-center tracking-[0.35em] font-bold uppercase"
+                                        placeholder="Paste room code or invite link"
+                                        maxLength={200}
+                                        className="game-input w-full min-h-[56px] text-xl text-center tracking-[0.2em] font-bold uppercase"
                                         aria-label="Room code"
                                     />
                                     <button
                                         onClick={handleJoinRoom}
-                                        disabled={mpLoading || !backendReady || joinCode.trim().length < 4}
+                                        disabled={mpLoading || !backendReady || normalizedJoinCode.length < 4}
                                         className="wordle-button w-full min-h-[49px] disabled:opacity-50 disabled:cursor-not-allowed"
                                         aria-busy={mpLoading && mpLoadingAction === 'join'}
                                         aria-label={mpLoading && mpLoadingAction === 'join' ? 'Joining room...' : 'Join room'}
@@ -1044,7 +1046,7 @@ export function Lobby() {
                                         {mpLoading && mpLoadingAction === 'join' ? 'Joining...' : 'Join room'}
                                     </button>
                                 </div>
-                                {joinCode.trim().length >= 4 && (
+                                {normalizedJoinCode.length >= 4 && (
                                     <button
                                         type="button"
                                         onClick={handleJoinAsSpectator}

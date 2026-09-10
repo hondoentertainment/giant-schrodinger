@@ -138,11 +138,22 @@ describe('Round', () => {
 
     it('pauses the first-round timer until the first keystroke', () => {
         render(<Round onSubmit={mockOnSubmit} />);
-        expect(screen.getByText(/Timer starts when you type/i)).toBeInTheDocument();
+        expect(screen.getByText(/Starts when you type/i)).toBeInTheDocument();
         act(() => {
             vi.advanceTimersByTime(3000);
         });
         expect(screen.getAllByText('1:00').length).toBeGreaterThan(0);
+    });
+
+    it('starts the first-round timer after the first keystroke', async () => {
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        render(<Round onSubmit={mockOnSubmit} />);
+        await user.type(screen.getByPlaceholderText(FIRST_ROUND_PLACEHOLDER), 'a');
+        expect(screen.queryByText(/Starts when you type/i)).not.toBeInTheDocument();
+        act(() => {
+            vi.advanceTimersByTime(1000);
+        });
+        expect(screen.getAllByText('0:59').length).toBeGreaterThan(0);
     });
 
     it('text input accepts user submission', async () => {

@@ -407,6 +407,17 @@ describe('Lobby', () => {
         });
     });
 
+    it('extracts a room code from a typed invite URL', async () => {
+        const user = userEvent.setup();
+        mockUser = loggedInUser;
+        mockBackendEnabled = true;
+        render(<Lobby />);
+        await user.click(screen.getByRole('button', { name: /Play with Friends/i }));
+        const input = screen.getByLabelText(/Room code/i);
+        await user.type(input, 'https://giant-schrodinger.vercel.app/?join=ABCD');
+        expect(input).toHaveValue('ABCD');
+    });
+
     it('offers Watch the Game after a room code is entered', async () => {
         const user = userEvent.setup();
         mockUser = loggedInUser;

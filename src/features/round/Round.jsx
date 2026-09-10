@@ -229,10 +229,10 @@ export function Round({ onSubmit }) {
                             Time&apos;s up
                         </div>
                     ) : (
-                        <div className={`game-timer game-timer--compact ${timerArmed && timer < 10 ? 'game-timer--urgent' : ''}`}>
-                            {formatRoundClock(timer)}
+                        <div className={`game-timer game-timer--compact ${timerArmed && timer < 10 ? 'game-timer--urgent' : ''} ${!timerArmed ? 'game-timer--paused' : ''}`}>
+                            <span>{formatRoundClock(timer)}</span>
                             {!timerArmed && (
-                                <span className="sr-only">Timer starts when you type</span>
+                                <span className="game-timer-hint">Starts when you type</span>
                             )}
                         </div>
                     )}
