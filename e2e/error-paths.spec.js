@@ -126,6 +126,7 @@ test.describe('error paths — theme builder', () => {
         await openLobbyAsLoggedInUser(page, 'ThemeTester');
 
         await page.locator('summary', { hasText: 'Progress & settings' }).click();
+        await page.getByText('Experimental Labs').click();
         await page.getByRole('button', { name: /Creator/i }).click();
 
         await expect(page.getByRole('heading', { name: /Theme Builder/i })).toBeVisible({ timeout: 5000 });
