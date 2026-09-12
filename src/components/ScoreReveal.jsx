@@ -17,7 +17,6 @@ export function ScoreReveal({ score, max = 10, label, className = '' }) {
         if (prefersReduced) {
             setDisplay(target);
             setDone(true);
-            haptic('success');
             return undefined;
         }
 
@@ -27,12 +26,12 @@ export function ScoreReveal({ score, max = 10, label, className = '' }) {
             frame += 1;
             const next = Math.min(target, Math.round((frame / steps) * target));
             setDisplay(next);
-            haptic(next >= target ? 'success' : 'light');
             if (next >= target) {
                 clearInterval(interval);
                 setDone(true);
+                haptic('success');
             }
-        }, 55);
+        }, 40);
 
         return () => clearInterval(interval);
     }, [target]);

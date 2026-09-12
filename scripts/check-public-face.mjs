@@ -59,6 +59,15 @@ async function main() {
         ok('sitemap.xml');
     }
 
+    for (const path of ['/privacy.html', '/terms.html']) {
+        const page = await fetchText(`${productionUrl}${path}`);
+        if (!page.response.ok || !page.text.includes('Venn with Friends')) {
+            fail(`${path} is missing or not public`);
+        } else {
+            ok(path);
+        }
+    }
+
     const ogImage = await fetch(`${productionUrl}/og-image.png`, { method: 'GET' });
     const ogType = ogImage.headers.get('content-type') || '';
     if (!ogImage.ok || !ogType.includes('image/png')) {

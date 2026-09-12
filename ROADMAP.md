@@ -1,9 +1,9 @@
 # Venn with Friends Roadmap
 
-**Last updated:** August 29, 2026  
+**Last updated:** September 12, 2026  
 **Source of truth for product intent:** [PRD.md](PRD.md)
 
-This roadmap turns the PRD into an implementation plan. Soft-launch gate is cleared. Seasonal content, weekly recap, Venn visuals, and vendor-split bundles are shipped. Observability/media sinks still need API keys.
+This roadmap turns the PRD into an implementation plan. Soft-launch gate is cleared. Redesign v2, mobile alignment, and UX rounds #16/#17 are on main. The top-game sprint adds a Capacitor iOS shell (unsigned), premium feel, and install/share hardening. Observability/media sinks and Apple signing still need the owner.
 
 ## Current Product Status
 
@@ -19,6 +19,7 @@ This roadmap turns the PRD into an implementation plan. Soft-launch gate is clea
 | Progression / retention | Shipped | Streaks, next-unlock progress, daily share CTA |
 | Ranked / shop / tournaments | Local preview | Device-only; `LocalPreviewBadge` |
 | Production readiness | Soft-launch candidate | Hosted rehearsal + launch gate passed; Vercel + Pages auto-deploy. PostHog/Sentry/Pexels/Giphy keys still missing |
+| Native iOS shell | In-repo, unsigned | Capacitor `com.hondoentertainment.vennwithfriends`; TestFlight is owner-held. See [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) |
 
 ## Phase status summary
 
@@ -32,6 +33,7 @@ This roadmap turns the PRD into an implementation plan. Soft-launch gate is clea
 | 6 Gallery, Identity, Retention | **Complete enough for launch** |
 | 8 Content Expansion | **Shipped enough for launch** — seasonal theme/pack rotation + weekly recap; media APIs optional |
 | 9–10 Accounts / Community | **Later** |
+| Soft-launch UX + top-game shell | **Shipped in code** — #16 ease-of-use, #17 wrap/share/gallery, Capacitor/PWA/haptics sprint |
 
 ---
 
@@ -106,7 +108,7 @@ Shipped:
 5. Weekly recap share card in gallery
 6. Short first-session onboarding (one example + play)
 
-Next (post soft-launch): enable PostHog/Sentry/Pexels/Giphy with real keys; accounts; graduate local-preview modes only if intentional.
+Next (post soft-launch): enable PostHog/Sentry/Pexels/Giphy with real keys; owner TestFlight; accounts; graduate local-preview modes only if intentional. See [TOP_GAME_CHECKLIST.md](TOP_GAME_CHECKLIST.md).
 
 ---
 
@@ -128,9 +130,10 @@ They remain playable for fun on-device. Do not remove them; do not market them a
 
 Wait until soft-launch learnings settle:
 
-- Native mobile apps ([MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) is aspirational)
+- App Store / TestFlight submit (shell is ready; signing is owner-held — [store/OWNER_STEPS.md](store/OWNER_STEPS.md))
 - Monetization / Stripe
 - Heavy account infrastructure (Phase 9)
 - Large-scale public matchmaking
 - Public community gallery / Party Mode UI
 - Net-new game modes unrelated to the connection mechanic
+- Advertising Labs (ranked / shop / tournaments) as cloud features

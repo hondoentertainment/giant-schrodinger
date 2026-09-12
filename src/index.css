@@ -948,13 +948,14 @@
 
 .phase-enter {
   opacity: 0;
-  transform: translateY(10px) scale(0.98);
+  transform: translate3d(0, 8px, 0);
 }
 
 .phase-enter-active {
   opacity: 1;
-  transform: translateY(0) scale(1);
-  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1), transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translate3d(0, 0, 0);
+  transition: opacity 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
 }
 
 .phase-exit {
@@ -963,7 +964,23 @@
 
 .phase-exit-active {
   opacity: 0;
-  transition: opacity 180ms ease-in;
+  transition: opacity 90ms linear;
+}
+
+.first-session-celebrate__mark {
+  display: inline-block;
+  animation: first-session-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes first-session-pop {
+  0% { transform: scale(0.72) rotate(-8deg); opacity: 0; }
+  60% { transform: scale(1.08) rotate(3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.capacitor-native body,
+.capacitor-native #root {
+  min-height: 100dvh;
 }
 
 @keyframes shake {

@@ -8,6 +8,7 @@ import { getStats, getStreakStatus } from '../../services/stats';
 import { getDailyChallengeHistory, getDailyChallengeSummary, hasDailyChallengeBeenPlayed } from '../../services/dailyChallenge';
 import { PWAInstallBanner } from '../../components/PWAInstallBanner';
 import { haptic } from '../../lib/haptics';
+import { playConfetti } from '../../services/sounds';
 import { trackEvent } from '../../services/analytics';
 import { LINK_COPIED_MESSAGE, shareOrCopy } from '../../lib/shareOrCopy';
 import { markFirstSessionCelebrated, shouldCelebrateFirstSession } from '../../lib/firstSession';
@@ -100,7 +101,11 @@ export function SessionSummary() {
     }, [totalRounds, sessionScore, isDailyChallenge, streakStatus, isFirstSessionComplete]);
 
     useEffect(() => {
-        if (isFirstSessionComplete) markFirstSessionCelebrated();
+        if (!isFirstSessionComplete) return undefined;
+        markFirstSessionCelebrated();
+        haptic('success');
+        playConfetti();
+        return undefined;
     }, [isFirstSessionComplete]);
 
     useEffect(() => {
@@ -226,8 +231,8 @@ export function SessionSummary() {
         <div className="w-full max-w-xl flex flex-col items-center animate-spring-in mx-auto">
             <div className="wordle-card p-6 sm:p-8 w-full">
                 {isFirstSessionComplete ? (
-                    <div className="text-center mb-6">
-                        <div className="text-4xl mb-3" role="img" aria-label="Celebration">🎉</div>
+                    <div className="first-session-celebrate text-center mb-6">
+                        <div className="first-session-celebrate__mark text-4xl mb-3" role="img" aria-label="Celebration">🎉</div>
                         <h2 className="text-2xl font-display font-bold text-white mb-2">First session in the books</h2>
                         <p className="text-white/60 text-sm">
                             You wrote {sessionResults.length} line{sessionResults.length === 1 ? '' : 's'}. That&apos;s the whole game.
@@ -281,6 +286,12 @@ export function SessionSummary() {
                     showInvite={!isFirstSessionComplete}
                     singleCta={isFirstSessionComplete ? preferShareOnFirstSession : false}
                 />
+
+                {isFirstSessionComplete && (
+                    <div className="mt-6">
+                        <PWAInstallBanner forceRounds={playerStats.totalRounds} />
+                    </div>
+                )}
 
                 {!isFirstSessionComplete && (
                     <>

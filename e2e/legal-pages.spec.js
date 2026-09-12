@@ -24,4 +24,11 @@ test.describe('Legal pages', () => {
         await page.getByRole('button', { name: /^Terms$/i }).click();
         await expect(page.getByRole('heading', { name: /Terms of Use/i })).toBeVisible();
     });
+
+    test('public privacy and terms HTML exist for store review', async ({ page }) => {
+        await page.goto('/giant-schrodinger/privacy.html');
+        await expect(page.getByRole('heading', { name: /Privacy Policy/i })).toBeVisible();
+        await page.goto('/giant-schrodinger/terms.html');
+        await expect(page.getByRole('heading', { name: /Terms of Use/i })).toBeVisible();
+    });
 });

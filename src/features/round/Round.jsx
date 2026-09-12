@@ -11,6 +11,7 @@ import { getStats, isThemeUnlocked } from '../../services/stats';
 import { haptic } from '../../lib/haptics';
 import { trackEvent } from '../../services/analytics';
 import { playSubmitSound, playTickSound, playUrgentTick } from '../../services/sounds';
+import { MuteToggle } from '../../components/MuteToggle';
 
 const FIRST_ROUND_EXAMPLE = 'e.g. a green roommate that sets the vibe';
 
@@ -224,6 +225,8 @@ export function Round({ onSubmit }) {
                             Round {roundNumber} of {totalRounds}
                         </div>
                     </div>
+                    <div className="flex items-center gap-2">
+                        <MuteToggle compact />
                     {showTimeUp ? (
                         <div className="game-timer game-timer--compact game-timer--urgent" role="status" aria-live="polite">
                             Time&apos;s up
@@ -236,6 +239,7 @@ export function Round({ onSubmit }) {
                             )}
                         </div>
                     )}
+                    </div>
                 </div>
                 <div className="flex gap-1.5 sm:gap-2" aria-label={`Round progress: ${roundNumber} of ${totalRounds}`}>
                     {Array.from({ length: totalRounds }).map((_, index) => (

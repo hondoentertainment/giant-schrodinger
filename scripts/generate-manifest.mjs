@@ -12,7 +12,9 @@ export function generateManifest(basePath) {
         description: 'Connect two concepts with one witty phrase. Challenge your friends!',
         start_url: normalizedBase,
         scope: normalizedBase,
+        id: `${normalizedBase}#venn`,
         display: 'standalone',
+        display_override: ['standalone', 'minimal-ui', 'browser'],
         background_color: '#0a0118',
         theme_color: '#07070a',
         orientation: 'portrait',
@@ -22,6 +24,12 @@ export function generateManifest(basePath) {
         icons: [
             {
                 src: `${normalizedBase}icon-192.png`,
+                sizes: '192x192',
+                type: 'image/png',
+                purpose: 'any',
+            },
+            {
+                src: `${normalizedBase}apple-touch-icon.png`,
                 sizes: '192x192',
                 type: 'image/png',
                 purpose: 'any',

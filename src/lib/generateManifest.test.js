@@ -6,6 +6,9 @@ describe('generateManifest', () => {
         const manifest = generateManifest('/');
         expect(manifest.start_url).toBe('/');
         expect(manifest.scope).toBe('/');
+        expect(manifest.display).toBe('standalone');
+        expect(manifest.display_override).toContain('standalone');
+        expect(manifest.icons.some((icon) => icon.src === '/apple-touch-icon.png')).toBe(true);
         expect(manifest.icons.some((icon) => icon.src === '/icon-192.png')).toBe(true);
         expect(manifest.shortcuts.map((item) => item.name)).toEqual(["Today's pair", 'Play with friends']);
         expect(manifest.shortcuts.map((item) => item.url)).toEqual(['/#daily', '/#friends']);

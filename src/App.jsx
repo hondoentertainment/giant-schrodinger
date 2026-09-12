@@ -42,6 +42,7 @@ import { initMediaHints } from './lib/initMediaHints'
 import { processOfflineQueue, getQueueCount } from './services/offlineQueue'
 import { scoreSubmission } from './services/gemini'
 import { initPWAInstall } from './lib/pwaInstall'
+import { initNativeShell } from './lib/nativeShell'
 
 function LoadingFallback() {
     return (
@@ -116,7 +117,7 @@ function PhaseTransition({ children, phase, screenKey }) {
                     scrollMainToTop();
                 });
             });
-        }, 150);
+        }, 90);
         return () => clearTimeout(timer);
     }, [phase, screenKey]);
 
@@ -314,8 +315,13 @@ function GameContent() {
 function App() {
     useEffect(() => {
         const cleanup = initErrorMonitoring();
+        let unbindNative = () => {};
+        initNativeShell().then((teardown) => {
+            if (typeof teardown === 'function') unbindNative = teardown;
+        });
         return () => {
             if (typeof cleanup === 'function') cleanup();
+            unbindNative();
             teardownAnalytics();
         };
     }, []);

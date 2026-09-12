@@ -1,29 +1,5 @@
 import { test, expect } from '@playwright/test';
-
-async function createProfile(page, name = 'VisualPlayer') {
-    await page.goto('/');
-    await page.getByPlaceholder(/Enter your name/i).fill(name);
-    await page.getByRole('button', { name: /Join Lobby/i }).click();
-    await expect(page.getByText(new RegExp(`Hey ${name}`, 'i'))).toBeVisible({ timeout: 5000 });
-    const back = page.getByRole('button', { name: /Back to solo play/i });
-    if (await back.isVisible().catch(() => false)) await back.click();
-}
-
-async function dismissOnboarding(page) {
-    const onboardingButton = page.getByRole('button', { name: /Got it, let's play/i });
-    if (await onboardingButton.count()) {
-        await onboardingButton.click();
-    }
-}
-
-async function startRound(page) {
-    await dismissOnboarding(page);
-    await page.getByRole('button', { name: /Start First Round|Start solo session|Practice Run|Solo Session/i }).click();
-    await dismissOnboarding(page);
-    const roundInput = page.getByPlaceholder(/What connects these two|e\.g\. a green roommate/i);
-    await expect(roundInput).toBeVisible({ timeout: 10000 });
-    return roundInput;
-}
+import { createProfile, dismissOnboarding, startSoloRound } from './helpers';
 
 test.describe('Visual smoke', () => {
     // Playwright requires object-destructured fixtures in hook signatures.
@@ -38,13 +14,14 @@ test.describe('Visual smoke', () => {
     test('lobby screen snapshot', async ({ page }) => {
         await createProfile(page);
         await dismissOnboarding(page);
-        await expect(page.locator('.wordle-card').first()).toBeVisible();
+        await expect(page.getByRole('button', { name: /Play today's pair/i })).toBeVisible();
+        await expect(page.getByRole('button', { name: /Sound on|Sound muted/i })).toBeVisible();
         await expect(page).toHaveScreenshot('lobby.png', { maxDiffPixelRatio: 0.08 });
     });
 
     test('round screen snapshot', async ({ page }) => {
         await createProfile(page);
-        await startRound(page);
+        await startSoloRound(page);
         await expect(page).toHaveScreenshot('round.png', { maxDiffPixelRatio: 0.08 });
     });
 
