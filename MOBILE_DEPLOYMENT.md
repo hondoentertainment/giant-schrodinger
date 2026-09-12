@@ -1,32 +1,64 @@
-# Mobile Deployment Guide for Venn with Friends
+# Mobile Deployment — Venn with Friends
 
-> **Status: aspirational / deferred.** Native packaging is a PRD non-goal until hosted web multiplayer is proven. This guide is a preparation checklist, not a claim that Capacitor or store builds are shipped in-repo today. Prefer the live web app (Vercel / GitHub Pages) for production.
+> **Status (September 2026):** Capacitor iOS shell is **in-repo**. Web remains the production game on [Vercel](https://giant-schrodinger.vercel.app/). Xcode archive, signing, and TestFlight are **owner-held** — see [store/OWNER_STEPS.md](store/OWNER_STEPS.md). CI never uses Apple credentials.
+
+## What is real today
+
+| Piece | Status |
+|---|---|
+| PWA (manifest, icons, service worker, Add to Home Screen tip) | Shipped on web |
+| Public privacy / terms | `https://giant-schrodinger.vercel.app/privacy.html` and `terms.html` |
+| Capacitor config (`appId` `com.hondoentertainment.vennwithfriends`, `webDir` `dist`) | [capacitor.config.json](capacitor.config.json) |
+| iOS platform + `npm run ios:sync` | In-repo; sync on a Mac |
+| Safe-area / status bar / keyboard / external-link policy | Web CSS + `src/lib/nativeShell.js` |
+| Icon + splash kit | [store/ios/](store/ios/) |
+| Store listing copy | [store/STORE_LISTING.md](store/STORE_LISTING.md) |
+| Android TWA / Play | Still PWABuilder (below); not a native project in this repo |
+| TestFlight / App Store submit | Owner-only |
+
+## iOS: Capacitor (current)
+
+Requires Node 22 and, for archive, a Mac with Xcode and CocoaPods.
+
+```bash
+npm ci
+npm run ios:assets    # regenerate store/ios PNGs if the brand mark changes
+npm run ios:sync      # vite build && npx cap sync ios
+npx cap open ios      # Mac only
+```
+
+First-time Mac clone if `ios/` is missing or stale:
+
+```bash
+npx cap add ios
+npm run ios:sync
+```
+
+`ios:sync` copies `dist/` into the Xcode web dir. It does not require an Apple ID. Do not add a `cap sync` hook to the Vercel `build` script.
+
+WKWebView policy (already wired):
+
+- Status bar dark on `#07070a`, overlays webview; CSS uses `env(safe-area-inset-*)`
+- Keyboard resize mode `body` so the phrase field stays visible
+- Splash uses `#0a0118` and hides from JS after boot
+- http(s) hosts outside Vercel / Supabase open in the system browser
+- Haptics use Vibration API on web and `@capacitor/haptics` in the native shell
 
 ## Android: PWABuilder (Trusted Web Activity)
 
-### Steps
+Still the Android path. Native Android is not in this repo.
 
 1. Visit https://www.pwabuilder.com
-2. Enter the app URL: `https://hondoentertainment.github.io/giant-schrodinger/`
-3. PWABuilder will analyze the PWA and generate a report
-4. Click **Package for stores** > **Android**
-5. Configure the TWA options:
-   - Package name: `com.hondoentertainment.vennwithfriends`
-   - App name: Venn with Friends
-   - Launcher name: Venn
-   - Version code: 1
-   - Version name: 1.0.0
-   - Host: `hondoentertainment.github.io`
-   - Start URL: `/giant-schrodinger/`
-   - Theme color: `#1a0533`
-   - Background color: `#0a0118`
-   - Navigation color: `#1a0533`
-6. Download the generated APK/AAB
-7. Sign the AAB with your upload key for Google Play
+2. Enter `https://giant-schrodinger.vercel.app/`
+3. Package for stores → Android
+4. Package name: `com.hondoentertainment.vennwithfriends`
+5. App name: Venn with Friends · Launcher: Venn
+6. Host: `giant-schrodinger.vercel.app` · Start URL: `/`
+7. Theme `#07070a` · Background `#0a0118`
 
 ### Digital Asset Links
 
-Add `/.well-known/assetlinks.json` to your hosting:
+Add `/.well-known/assetlinks.json` on Vercel after you have a signing cert fingerprint:
 
 ```json
 [{
@@ -39,167 +71,36 @@ Add `/.well-known/assetlinks.json` to your hosting:
 }]
 ```
 
-## iOS: Capacitor Setup
+## Store listing
 
-### Initial Setup
+Use [store/STORE_LISTING.md](store/STORE_LISTING.md). Do not advertise daily global leaderboards, IAP, or Labs modes.
 
-```bash
-npm install @capacitor/core @capacitor/cli
-npx cap init "Venn with Friends" com.hondoentertainment.vennwithfriends --web-dir dist
-npm install @capacitor/ios
-npx cap add ios
-```
+## Privacy
 
-### Build and Deploy
+Required for both stores. Live URLs:
 
-```bash
-npm run build
-npx cap sync ios
-npx cap open ios
-```
+- https://giant-schrodinger.vercel.app/privacy.html
+- https://giant-schrodinger.vercel.app/terms.html
 
-This opens the project in Xcode where you can configure signing and submit to the App Store.
+In-app footer still opens the same copy.
 
-### Capacitor Configuration (`capacitor.config.ts`)
+## Testing checklist
 
-```typescript
-import { CapacitorConfig } from '@capacitor/cli';
+### Web / PWA
+- [ ] First launch shows today's pair as the hero
+- [ ] Audio mute is the speaker control next to Edit profile
+- [ ] After the first session, a dismissible Add to Home Screen tip may appear (Chrome install prompt or iOS Share instructions)
+- [ ] Friend-judge and daily share previews still resolve (`og-tags` + `og-image.png`)
 
-const config: CapacitorConfig = {
-  appId: 'com.hondoentertainment.vennwithfriends',
-  appName: 'Venn with Friends',
-  webDir: 'dist',
-  server: {
-    androidScheme: 'https'
-  }
-};
+### iOS (TestFlight — owner)
+- [ ] App loads on first launch
+- [ ] Safe area insets respected
+- [ ] Keyboard does not obscure the phrase field
+- [ ] Status bar styling is dark
+- [ ] Haptics on Lock it in and score reveal
+- [ ] External links leave the webview
 
-export default config;
-```
-
-## Required Assets
-
-### Icons
-
-| Size     | Usage                        | Format |
-|----------|------------------------------|--------|
-| 192x192  | Android adaptive icon, PWA   | PNG    |
-| 512x512  | Google Play, PWA splash      | PNG    |
-| 1024x1024| App Store (iOS)              | PNG    |
-| 48x48    | Android notification icon    | PNG    |
-| 72x72    | Android launcher (mdpi)      | PNG    |
-| 96x96    | Android launcher (hdpi)      | PNG    |
-| 144x144  | Android launcher (xxhdpi)    | PNG    |
-| 180x180  | iOS app icon                 | PNG    |
-
-All icons must be square, without transparency for iOS.
-
-### Splash Screens
-
-| Device          | Size       |
-|-----------------|------------|
-| iPhone SE       | 640x1136   |
-| iPhone 8        | 750x1334   |
-| iPhone 8 Plus   | 1242x2208  |
-| iPhone X/XS/11  | 1125x2436  |
-| iPhone 14 Pro Max| 1290x2796 |
-| iPad            | 1536x2048  |
-| iPad Pro 12.9   | 2048x2732  |
-| Android phone   | 1080x1920  |
-| Android tablet  | 1200x1920  |
-
-Use dark gradient background (`#1a0533` to `#0a0118`) with centered app logo.
-
-## Store Listing Metadata
-
-### Template
-
-- **App Name**: Venn with Friends
-- **Subtitle** (iOS, 30 chars): Creative word game with friends
-- **Short Description** (Google Play, 80 chars): Connect two random concepts with one clever phrase. Score big with wit and logic.
-- **Full Description**:
-  > Venn with Friends is the ultimate creative word game. Each round, you are given two random concepts and must find the perfect phrase that connects them both. Get scored on wit, logic, originality, and clarity.
-  >
-  > Features:
-  > - Solo and multiplayer modes
-  > - Daily challenges with global leaderboards
-  > - AI-powered scoring with detailed breakdowns
-  > - Achievements and progression system
-  > - Custom theme builder
-  > - Tournament and async chain modes
-  >
-  > Challenge your friends and see who has the sharpest mind!
-
-- **Category**: Games > Word
-- **Keywords**: word game, creative, puzzle, friends, multiplayer, trivia, brain teaser
-- **Content Rating**: Everyone / 4+
-
-### Screenshots Needed
-
-| Platform    | Count | Sizes                                      |
-|-------------|-------|---------------------------------------------|
-| iPhone 6.7" | 3-10  | 1290x2796                                   |
-| iPhone 6.5" | 3-10  | 1284x2778 or 1242x2688                      |
-| iPad 12.9"  | 3-10  | 2048x2732                                   |
-| Android     | 2-8   | 1080x1920 (min 320px, max 3840px per side)  |
-
-Recommended screenshot content:
-1. Lobby / home screen
-2. Active gameplay round
-3. Score reveal with AI commentary
-4. Leaderboard
-5. Daily challenge
-6. Multiplayer room
-
-## Privacy Policy Requirements
-
-A privacy policy is **required** for both App Store and Google Play. It must cover:
-
-- What data is collected (username, scores, gameplay data)
-- How data is stored (localStorage, Supabase)
-- Third-party services used (Supabase, AI scoring API)
-- Data retention and deletion policies
-- Contact information for privacy inquiries
-- COPPA compliance statement (if targeting children)
-- GDPR compliance (for EU users)
-
-Host the privacy policy at a public URL, e.g.:
-`https://hondoentertainment.github.io/giant-schrodinger/privacy-policy.html`
-
-## Testing Checklist
-
-### General
-- [ ] App loads correctly on first launch
-- [ ] All game modes function (solo, multiplayer, daily challenge)
-- [ ] Scoring and AI evaluation work correctly
-- [ ] Audio plays and mute toggle works
-- [ ] Haptic feedback works on supported devices
-
-### Android (TWA)
-- [ ] App installs from Google Play (or sideloaded AAB)
-- [ ] No browser chrome visible (verified TWA)
-- [ ] Digital Asset Links validated
-- [ ] Back button navigation works correctly
-- [ ] Push notifications work (if implemented)
-- [ ] App survives process death and restores state
-
-### iOS (Capacitor)
-- [ ] App installs via TestFlight
-- [ ] Safe area insets are respected (notch, home indicator)
-- [ ] Keyboard does not obscure input fields
-- [ ] Status bar styling is correct
-- [ ] App handles background/foreground transitions
-- [ ] No WebKit-specific rendering issues
-
-### Performance
-- [ ] Initial load time under 3 seconds on 4G
-- [ ] Smooth animations (60fps) on mid-range devices
-- [ ] Memory usage stays reasonable over extended play
-- [ ] Offline mode works for cached content
-
-### Store Compliance
-- [ ] Privacy policy URL is accessible
-- [ ] App metadata meets character limits
-- [ ] Screenshots match current app UI
-- [ ] Content rating questionnaire completed
-- [ ] No use of restricted permissions without justification
+### Store compliance
+- [ ] Privacy and terms URLs load without the JS app
+- [ ] Screenshots match current UI (not Labs)
+- [ ] Review notes say no login / no IAP

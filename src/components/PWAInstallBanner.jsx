@@ -1,19 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { canInstallPWA, installPWA } from '../lib/pwaInstall';
+import {
+    canInstallPWA,
+    dismissPwaTip,
+    homeScreenTipCopy,
+    installPWA,
+    shouldOfferHomeScreenTip,
+} from '../lib/pwaInstall';
 import { haptic } from '../lib/haptics';
 import { getStats } from '../services/stats';
 
 const MIN_ROUNDS_BEFORE_PROMPT = 1;
 
-export function PWAInstallBanner({ className = '' }) {
+export function PWAInstallBanner({ className = '', forceRounds } = {}) {
     const [visible, setVisible] = useState(false);
     const [installing, setInstalling] = useState(false);
+    const [copy, setCopy] = useState(() => homeScreenTipCopy());
 
     useEffect(() => {
         const check = () => {
-            const dismissed = localStorage.getItem('vwf_pwa_dismissed') === 'true';
-            const hasPlayed = getStats().totalRounds >= MIN_ROUNDS_BEFORE_PROMPT;
-            setVisible(canInstallPWA() && !dismissed && hasPlayed);
+            const roundsPlayed = forceRounds ?? getStats().totalRounds;
+            const offer = shouldOfferHomeScreenTip({
+                roundsPlayed,
+                minRounds: MIN_ROUNDS_BEFORE_PROMPT,
+            });
+            setVisible(offer);
+            if (offer) setCopy(homeScreenTipCopy());
         };
         check();
         window.addEventListener('pwa-installable', check);
@@ -22,23 +33,25 @@ export function PWAInstallBanner({ className = '' }) {
             window.removeEventListener('pwa-installable', check);
             window.removeEventListener('storage', check);
         };
-    }, []);
+    }, [forceRounds]);
 
     if (!visible) return null;
 
     const handleInstall = async () => {
+        if (!canInstallPWA()) return;
         setInstalling(true);
         haptic('medium');
         const ok = await installPWA();
         setInstalling(false);
         if (ok) {
             haptic('success');
+            dismissPwaTip();
             setVisible(false);
         }
     };
 
     const handleDismiss = () => {
-        localStorage.setItem('vwf_pwa_dismissed', 'true');
+        dismissPwaTip();
         setVisible(false);
     };
 
@@ -49,17 +62,19 @@ export function PWAInstallBanner({ className = '' }) {
                     <span className="text-lg">📲</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold text-sm">Add Venn to your home screen</p>
-                    <p className="text-white/50 text-xs mt-1">Launch like a native game — faster loads and full-screen play.</p>
+                    <p className="text-white font-semibold text-sm">{copy.title}</p>
+                    <p className="text-white/50 text-xs mt-1">{copy.body}</p>
                     <div className="flex flex-wrap gap-2 mt-3">
-                        <button
-                            type="button"
-                            onClick={handleInstall}
-                            disabled={installing}
-                            className="wordle-button wordle-primary text-sm min-h-[44px] px-4 py-2"
-                        >
-                            {installing ? 'Installing…' : 'Install'}
-                        </button>
+                        {copy.action && (
+                            <button
+                                type="button"
+                                onClick={handleInstall}
+                                disabled={installing}
+                                className="wordle-button wordle-primary text-sm min-h-[44px] px-4 py-2"
+                            >
+                                {installing ? 'Installing…' : copy.action}
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={handleDismiss}

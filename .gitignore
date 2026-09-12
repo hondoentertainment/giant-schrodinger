@@ -53,6 +53,19 @@ output/
 # Vercel
 .vercel/
 
+# Capacitor / Xcode (sync output + user signing — never Apple secrets)
+ios/App/Pods/
+ios/App/App/public/
+ios/App/DerivedData/
+ios/capacitor-cordova-ios-plugins/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcworkspace/xcuserdata/
+*.xcuserstate
+*.p8
+*.p12
+*.mobileprovision
+AuthKey_*.p8
+
 # Temporary files
 *.tmp
 *.temp

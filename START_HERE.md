@@ -1,6 +1,6 @@
 # START HERE — Quick Start Guide
 
-**Last updated:** July 14, 2026
+**Last updated:** September 12, 2026
 
 ## Install, Configure, Run, Play
 
@@ -77,6 +77,8 @@ npm run lint              # ESLint
 | [PRD.md](PRD.md) | Product requirements + feature registry |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design, RPCs, persistence |
 | [ROADMAP.md](ROADMAP.md) | Implementation phase status |
+| [TOP_GAME_CHECKLIST.md](TOP_GAME_CHECKLIST.md) | Soft-launch engineering vs owner-held |
+| [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) | Capacitor iOS + PWA |
 | [JUDGE_MODEL.md](JUDGE_MODEL.md) | Scoring mode decisions |
 | [SETUP.md](SETUP.md) | Environment variables and backend setup |
 | [SETUP_BACKEND.md](SETUP_BACKEND.md) | Launch-gate backend checklist |

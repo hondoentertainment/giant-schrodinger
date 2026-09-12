@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "ios:assets": "node scripts/generate-ios-assets.mjs",
+    "ios:sync": "npm run build && npx cap sync ios",
+    "ios:open": "npx cap open ios",
     "build:e2e": "vite build --mode e2e",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
@@ -43,6 +46,14 @@
     "test:e2e:mobile": "playwright test --project=\"Mobile Safari\""
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/keyboard": "^8.0.5",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
     "@google/genai": "^1.40.0",
     "@supabase/supabase-js": "^2.95.3",
     "clsx": "^2.1.0",
@@ -52,6 +63,7 @@
     "tailwind-merge": "^2.2.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@playwright/test": "^1.49.0",
     "@sentry/vite-plugin": "^3.6.1",
     "@testing-library/jest-dom": "^6.6.3",

@@ -84,6 +84,9 @@ const soundMocks = vi.hoisted(() => ({
     playSubmitSound: vi.fn(),
     playTickSound: vi.fn(),
     playUrgentTick: vi.fn(),
+    playClick: vi.fn(),
+    isMuted: () => false,
+    toggleMute: vi.fn(() => true),
 }));
 
 vi.mock('../../services/sounds', () => soundMocks);

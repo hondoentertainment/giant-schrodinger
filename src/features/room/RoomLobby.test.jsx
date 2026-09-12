@@ -132,6 +132,13 @@ describe('RoomLobby', () => {
         expect(screen.getByRole('button', { name: /Need one more writer/i })).toBeDisabled();
     });
 
+    it('makes Start the round the host CTA once two writers are seated', () => {
+        render(<RoomLobby />);
+        expect(screen.getByRole('button', { name: /Start the round — Start Game/i })).toBeEnabled();
+        expect(screen.getByText(/Ready to start/i)).toBeInTheDocument();
+        expect(screen.getByText(/2 writers here/i)).toBeInTheDocument();
+    });
+
     it('lets the host turn on pass-the-phone', async () => {
         const user = userEvent.setup();
         render(<RoomLobby />);

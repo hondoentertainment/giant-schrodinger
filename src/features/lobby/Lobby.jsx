@@ -28,9 +28,9 @@ import { consumeAutostartDaily, markAutostartDaily, peekAutostartDaily } from '.
 import { parseSiteShortcut } from '../../lib/siteIdentity';
 import { extractRoomCode, normalizeJoinInput } from '../../lib/roomCode';
 import { useTranslation } from '../../hooks/useTranslation';
-import { toggleMute, isMuted } from '../../services/sounds';
 import { LINK_COPIED_MESSAGE, shareOrCopy } from '../../lib/shareOrCopy';
 import { getSessionPlayCta, SessionNextActions } from '../summary/SessionNextActions';
+import { MuteToggle } from '../../components/MuteToggle';
 
 const AVATARS = ['👽', '🎨', '🧠', '👾', '🤖', '🔮', '🎪', '🎭', '🎯', '⭐', '🏆', '🔥'];
 
@@ -200,7 +200,6 @@ export function Lobby() {
     const userRef = useRef(user);
     userRef.current = user;
     const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
-    const [soundMuted, setSoundMuted] = useState(() => isMuted());
     const [sessionShareCopied, setSessionShareCopied] = useState(false);
     const [siteShortcut, setSiteShortcut] = useState(() => (
         typeof window === 'undefined' ? null : parseSiteShortcut(window.location.hash)
@@ -337,10 +336,6 @@ export function Lobby() {
         const nextTheme = getThemeById(id);
         setThemeId(id);
         if (user) login({ ...user, themeId: id, gradient: nextTheme?.gradient });
-    };
-
-    const handleSoundToggle = () => {
-        setSoundMuted(toggleMute());
     };
 
     const commitProfile = (autostartDaily) => {
@@ -633,14 +628,17 @@ export function Lobby() {
                                     : `Streak ${profileSummary.currentStreak || 0} · Best ${profileSummary.bestScore != null ? profileSummary.bestScore : '—'} · ${profileSummary.savedCount ?? profileSummary.highlightCount ?? 0} saved`}
                             </p>
                         </div>
-                        <button
-                            onClick={openEditProfile}
-                            className="shrink-0 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 min-w-[40px] min-h-[40px] flex items-center justify-center max-sm:opacity-55"
-                            aria-label="Edit profile"
-                            title="Edit profile"
-                        >
-                            <Pencil className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                            <MuteToggle compact />
+                            <button
+                                onClick={openEditProfile}
+                                className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 min-w-[40px] min-h-[40px] flex items-center justify-center max-sm:opacity-55"
+                                aria-label="Edit profile"
+                                title="Edit profile"
+                            >
+                                <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
                     </div>
                     {profileSummary.streakAtRisk && (
                         <div className="mb-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-amber-100 text-xs text-left">
@@ -673,6 +671,11 @@ export function Lobby() {
                                     {dailyShareCopied ? 'Shared!' : 'Share card'}
                                 </button>
                             </div>
+                            {dailyChallenge.pair && (
+                                <p className="mt-1.5 text-[15px] font-semibold leading-snug text-white">
+                                    {dailyChallenge.pair.left} × {dailyChallenge.pair.right}
+                                </p>
+                            )}
                             {dailyChallenge.weekTitle && (
                                 <p className="mt-1 text-amber-100/75 text-xs font-semibold">{dailyChallenge.weekTitle}</p>
                             )}
@@ -866,21 +869,10 @@ export function Lobby() {
                                     </div>
 
                                     <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div>
-                                                <div className="game-section-label mb-1">Sound</div>
-                                                <p className="text-white/45 text-[11px]">Clicks, ticks, and score stingers.</p>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={handleSoundToggle}
-                                                aria-pressed={!soundMuted}
-                                                aria-label={soundMuted ? 'Sound muted' : 'Sound on'}
-                                                className={`game-choice min-h-[40px] px-4 text-xs font-semibold ${!soundMuted ? 'game-choice-selected' : ''}`}
-                                            >
-                                                {soundMuted ? 'Muted' : 'On'}
-                                            </button>
-                                        </div>
+                                        <div className="game-section-label mb-1">Sound</div>
+                                        <p className="text-white/45 text-[11px]">
+                                            Clicks, ticks, and score stingers. Mute is the speaker icon next to Edit profile.
+                                        </p>
                                     </div>
 
                                     <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
@@ -958,7 +950,7 @@ export function Lobby() {
                                         </summary>
                                         <div className="px-3 pb-3 space-y-2 border-t border-white/10 pt-2">
                                             <p className="text-[11px] text-white/35">
-                                                Ranked, shop, tournaments, and other experiments. Not the core game.
+                                                Device-only experiments — ranked, shop, tournaments. Not cloud features, not the App Store game.
                                             </p>
                                             <button
                                                 type="button"
@@ -1065,6 +1057,11 @@ export function Lobby() {
                     {/* Multiplayer panel */}
                     {showMultiplayer && (
                         <div className="animate-in slide-in-from-bottom-4 duration-300">
+                            {dailyChallenge?.pair && (
+                                <p className="mb-3 text-center text-xs text-white/45">
+                                    Today&apos;s pair: <span className="text-white/70 font-semibold">{dailyChallenge.pair.left} × {dailyChallenge.pair.right}</span>
+                                </p>
+                            )}
                             <div className="flex flex-col items-center gap-1 mb-4 text-white/60 text-sm">
                                 {backendReady ? (
                                     <><Wifi className="w-4 h-4 text-emerald-400" /> Connected</>

@@ -1,10 +1,19 @@
 # Next Steps
 
-**Last updated:** September 2, 2026 (public-face leftover)
+**Last updated:** September 12, 2026 (top-game sprint)
 
-This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**.
+This file is a chronological work log. For current product priorities, use **[PRD.md](PRD.md)** and **[ROADMAP.md](ROADMAP.md)**. For live launch blockers, use **[PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)**. Owner vs engineering: **[TOP_GAME_CHECKLIST.md](TOP_GAME_CHECKLIST.md)**.
 
-## Current (September 2, 2026)
+## Current (September 12, 2026)
+
+Top-game engineering sprint (still no invented keys, no Phase 9 / Stripe):
+
+- Capacitor iOS shell in-repo (`com.hondoentertainment.vennwithfriends`); `npm run ios:sync` then owner Xcode archive
+- Public `privacy.html` / `terms.html`; store copy in `store/`
+- Header mute, haptics, first-session celebrate, iOS Add to Home Screen tip
+- Labs stay buried; ranked/shop/tournaments still local preview
+
+## Prior (September 2, 2026)
 
 Public-face leftover (still no invented keys):
 

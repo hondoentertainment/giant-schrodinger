@@ -450,9 +450,10 @@ describe('Lobby', () => {
         const user = userEvent.setup();
         mockUser = loggedInUser;
         render(<Lobby />);
+        expect(screen.getByRole('button', { name: /Sound on|Sound muted/i })).toBeInTheDocument();
         await user.click(screen.getByText('Progress & settings'));
         expect(screen.getByRole('group', { name: /Theme/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Sound on|Sound muted/i })).toBeInTheDocument();
+        expect(screen.getByText(/speaker icon next to Edit profile/i)).toBeInTheDocument();
         expect(screen.getByText(/Who scores solo rounds/i)).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /^Labs$/i })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /^Ranked/i })).not.toBeInTheDocument();

@@ -1,6 +1,8 @@
 /**
  * Lightweight haptic feedback for key actions.
- * Uses navigator.vibrate when available (most mobile browsers).
+ * Prefers navigator.vibrate on the web; on Capacitor iOS the Vibration API
+ * is a no-op, so we call `Capacitor.Plugins.Haptics` when the bridge exists.
+ * Never throws. Does not import @capacitor/haptics (keeps the web bundle lean).
  */
 
 const PATTERNS = {
@@ -10,12 +12,37 @@ const PATTERNS = {
     error: [50, 30, 50],
 };
 
+function nativeHaptics(win = typeof window !== 'undefined' ? window : undefined) {
+    if (!win?.Capacitor?.isNativePlatform?.()) return null;
+    return win.Capacitor.Plugins?.Haptics || null;
+}
+
+async function nativeHaptic(pattern) {
+    const Haptics = nativeHaptics();
+    if (!Haptics) return;
+    try {
+        if (pattern === 'success') {
+            await Haptics.notification?.({ type: 'SUCCESS' });
+            return;
+        }
+        if (pattern === 'error') {
+            await Haptics.notification?.({ type: 'ERROR' });
+            return;
+        }
+        await Haptics.impact?.({
+            style: pattern === 'medium' ? 'MEDIUM' : 'LIGHT',
+        });
+    } catch {
+        // ignore
+    }
+}
+
 /**
- * Trigger haptic feedback. No-op if API unavailable.
+ * Trigger haptic feedback. No-op if no engine is available.
  * @param {'light'|'medium'|'success'|'error'} [pattern='light']
  */
 export function haptic(pattern = 'light') {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
         const ms = PATTERNS[pattern] ?? PATTERNS.light;
         try {
             navigator.vibrate(ms);
@@ -23,4 +50,5 @@ export function haptic(pattern = 'light') {
             // ignore
         }
     }
+    void nativeHaptic(pattern);
 }

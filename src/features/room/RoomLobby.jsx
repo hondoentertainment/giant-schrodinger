@@ -146,7 +146,9 @@ export function RoomLobby() {
                 <p className="text-white/50 text-sm mb-3">
                     {passThePhone
                         ? 'Pass this phone. Each writer gets 30 seconds, then we reveal on this screen.'
-                        : 'Share this code. Pass one phone around, or everyone stays on their own. The round starts when the host hits Go.'}
+                        : seatedPlayers.length >= 2
+                            ? 'Everyone needed is here. Host starts when the group is ready.'
+                            : 'Share this code. Pass one phone around, or everyone stays on their own. The round starts when the host hits Start.'}
                 </p>
                 <button
                     type="button"
@@ -157,8 +159,14 @@ export function RoomLobby() {
                     {inviteShared ? 'Invite ready!' : seatedPlayers.length < 2 ? 'Share invite — get the next writer' : 'Share invite'}
                 </button>
                 <div className="mt-4 p-4 rounded-[22px] bg-white/[0.05] border border-white/[0.08] text-left text-sm text-white/55">
-                    <div className="font-semibold text-white/80 mb-1">How to invite</div>
-                    <p>Share the link, or add a name on this phone. The first writer starts as soon as two people are in.</p>
+                    <div className="font-semibold text-white/80 mb-1">
+                        {seatedPlayers.length >= 2 ? 'Ready to start' : 'How to invite'}
+                    </div>
+                    <p>
+                        {seatedPlayers.length >= 2
+                            ? `${seatedPlayers.length} writers here. Host taps Start the round — 3, 2, 1.`
+                            : 'Share the link, or add a name on this phone. The first writer starts as soon as two people are in.'}
+                    </p>
                 </div>
             </div>
 
@@ -288,8 +296,16 @@ export function RoomLobby() {
                 )}
                 {!isHost && !isSpectator && (
                     <div className="text-center py-4 px-4 rounded-[22px] bg-white/[0.05] border border-white/[0.08]">
-                        <p className="text-white/70 font-medium mb-1">Waiting for the host to start</p>
-                        <p className="text-white/40 text-xs">The host can start once everyone has joined</p>
+                        <p className="text-white/70 font-medium mb-1">
+                            {seatedPlayers.length < 2
+                                ? 'Waiting for one more writer'
+                                : `Waiting for ${seatedPlayers.find((player) => player.is_host)?.player_name || 'the host'} to start`}
+                        </p>
+                        <p className="text-white/40 text-xs">
+                            {seatedPlayers.length < 2
+                                ? 'Share the code or add a name on the host phone'
+                                : 'The host starts the round when everyone is ready'}
+                        </p>
                     </div>
                 )}
                 {isSpectator && (

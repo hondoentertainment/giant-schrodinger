@@ -55,6 +55,7 @@ vi.mock('../../components/PWAInstallBanner', () => ({
 }));
 
 vi.mock('../../lib/haptics', () => ({ haptic: vi.fn() }));
+vi.mock('../../services/sounds', () => ({ playConfetti: vi.fn() }));
 vi.mock('../../services/analytics', () => ({ trackEvent: vi.fn() }));
 
 const shareOrCopy = vi.fn(async () => ({ method: 'clipboard', copied: true }));

@@ -15,6 +15,9 @@ describe('public site assets', () => {
         expect(read('public/og-image.png').subarray(0, 4)).toEqual(pngMagic);
         expect(read('public/icon-192.png').subarray(0, 4)).toEqual(pngMagic);
         expect(read('public/icon-512.png').subarray(0, 4)).toEqual(pngMagic);
+        expect(read('public/apple-touch-icon.png').subarray(0, 4)).toEqual(pngMagic);
+        expect(read('store/ios/AppIcon-1024.png').subarray(0, 4)).toEqual(pngMagic);
+        expect(read('store/ios/splash-2732.png').subarray(0, 4)).toEqual(pngMagic);
     });
 
     it('publishes Vercel canonical tags, robots, and sitemap', () => {
@@ -30,7 +33,16 @@ describe('public site assets', () => {
 
         const sitemap = read('public/sitemap.xml').toString('utf8');
         expect(sitemap).toContain('https://giant-schrodinger.vercel.app/');
+        expect(sitemap).toContain('https://giant-schrodinger.vercel.app/privacy.html');
+        expect(sitemap).toContain('https://giant-schrodinger.vercel.app/terms.html');
         expect(sitemap).not.toContain('github.io');
+
+        const privacy = read('public/privacy.html').toString('utf8');
+        const terms = read('public/terms.html').toString('utf8');
+        expect(privacy).toContain('Privacy Policy');
+        expect(privacy).toContain('support@hondoentertainment.com');
+        expect(terms).toContain('Terms of Use');
+        expect(terms).toMatch(/not in-app purchases/i);
 
         const ogTags = read('supabase/functions/og-tags/index.ts').toString('utf8');
         expect(ogTags).toContain('og-image.png');

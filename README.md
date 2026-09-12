@@ -54,9 +54,11 @@ Full registry: [PRD.md §2](PRD.md).
    ```
    Open http://localhost:5173/giant-schrodinger/
 
+   iOS wrapper (Mac): `npm run ios:sync` then `npx cap open ios`. See [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md).
+
 4. Validate:
    ```bash
-   npm run test              # 688 unit tests
+   npm run test              # unit tests (see vitest output)
    npm run test:e2e:desktop  # 11 Playwright specs
    npm run build
    npm run verify:release    # lint + unit + e2e + build
@@ -86,6 +88,7 @@ Server-only secrets (edge functions, not `VITE_*`): `GEMINI_API_KEY`, `PEXELS_AP
 - **Ranked, shop, and tournaments** are local-preview modes until cloud sync is scoped.
 - **Party Mode** and **community gallery** are not user-facing products (see PRD).
 - **Hosted rehearsal** remains the launch gate — [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md).
+- **iOS App Store** — Capacitor shell is in-repo; signing/TestFlight are owner-held ([MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md), [TOP_GAME_CHECKLIST.md](TOP_GAME_CHECKLIST.md)).
 
 ## Project Structure
 
@@ -122,4 +125,6 @@ discord-bot/    optional standalone Discord package
 | [EXPECTED_BEHAVIORS.md](EXPECTED_BEHAVIORS.md) | QA expected behavior |
 | [TESTING_SETUP_SUMMARY.md](TESTING_SETUP_SUMMARY.md) | Test inventory |
 | [DISCORD_BOT.md](DISCORD_BOT.md) | Discord integration |
-| [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) | Future app-store prep (aspirational) |
+| [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) | Capacitor iOS shell + PWA; TestFlight is owner-held |
+| [store/STORE_LISTING.md](store/STORE_LISTING.md) / [store/OWNER_STEPS.md](store/OWNER_STEPS.md) | App Store copy and signing steps |
+| [TOP_GAME_CHECKLIST.md](TOP_GAME_CHECKLIST.md) | Engineering done vs owner-held (PostHog, Sentry, Apple) |
