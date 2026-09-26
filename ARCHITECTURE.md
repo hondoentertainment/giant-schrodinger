@@ -91,7 +91,7 @@ Room human ──► cast_room_vote ──► finalize_room_votes ──► shar
 | `cast_room_vote` / `finalize_room_votes` / `advance_room_state` | Authoritative voting |
 | `report_content` / `list_content_reports` / `update_content_report_status` | Moderation |
 
-Realtime publication includes `rooms`, `room_players`, `room_submissions`.
+Realtime publication includes `rooms`, `room_players`, `room_submissions`, and `room_votes`.
 
 ### Edge functions
 

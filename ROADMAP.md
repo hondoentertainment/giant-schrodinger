@@ -126,7 +126,7 @@ Shipped in code:
 
 Owner steps (no keys in git):
 
-1. Apply `supabase/migrations/20260926000017_cloud_player_progress.sql` (also appended to `supabase/schema.sql`).
+1. Apply `supabase/migrations/20260926000017_cloud_player_progress.sql` and `supabase/migrations/20260926000018_align_schema_snapshot.sql` (both are in `supabase/schema.sql`). New projects can paste `schema.sql` once instead. The alignment file drops old anon write policies; room and share writes stay on the RPCs.
 2. Supabase Auth → URL configuration: allow `https://giant-schrodinger.vercel.app` and local dev. Enable Email and, if you want the button, Google.
 3. Set edge secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Set Vercel `VITE_STRIPE_PUBLISHABLE_KEY`.
 4. Deploy `create-checkout-session` and `stripe-webhook` (`npm run deploy:edge-functions`). Webhook URL: `https://YOUR_PROJECT_REF.supabase.co/functions/v1/stripe-webhook`.

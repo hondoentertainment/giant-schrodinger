@@ -86,7 +86,7 @@ Server-only secrets (edge functions, not `VITE_*`): `GEMINI_API_KEY`, `PEXELS_AP
 
 Solo play does not require an account. To turn on cross-device sync and web purchases:
 
-1. Apply `supabase/schema.sql` or, on an existing project, `supabase/migrations/20260926000017_cloud_player_progress.sql`.
+1. Apply `supabase/schema.sql` on a new project. On an existing project, apply `supabase/migrations/20260926000017_cloud_player_progress.sql` and `supabase/migrations/20260926000018_align_schema_snapshot.sql` instead of pasting the whole file again. The alignment migration adds room votes and token columns, allows room status `results`, and drops the old anon write policies so room and share writes stay on the RPCs.
 2. In Supabase Auth, allow the site URL and enable Email (magic link). Enable Google only if you want that button.
 3. Set `VITE_STRIPE_PUBLISHABLE_KEY` on Vercel. Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` as Supabase edge secrets. Do not commit them.
 4. Deploy functions, then point a Stripe webhook at `https://YOUR_PROJECT_REF.supabase.co/functions/v1/stripe-webhook` for `checkout.session.completed`.

@@ -38,7 +38,7 @@ Engineering vs owner-held work. Phase 9 accounts, cloud Labs for signed-in playe
 | **5–10 playtesters** | TestFlight or the live web URL; watch first-session → share → room |
 | **Digital Asset Links fingerprint** | Needed only if you ship a Play TWA |
 | **Supabase Auth providers** | Email magic link redirect URLs; Google only if you enable that provider |
-| **Phase 9 migration** | Apply `supabase/migrations/20260926000017_cloud_player_progress.sql` |
+| **Phase 9 migrations** | Apply `supabase/migrations/20260926000017_cloud_player_progress.sql` and `supabase/migrations/20260926000018_align_schema_snapshot.sql` (or paste `supabase/schema.sql` on a new project) |
 | **Stripe** | `VITE_STRIPE_PUBLISHABLE_KEY` on Vercel; `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` on the edge function; webhook `checkout.session.completed` |
 | **Apple IAP** | Required later for App Store / TestFlight purchases. Web Stripe does not cover the iOS shell |
 

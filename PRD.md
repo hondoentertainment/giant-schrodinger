@@ -55,7 +55,7 @@ Repo name / GitHub Pages base path: `giant-schrodinger`. Product name in UI and 
 | Discord bot | **Optional integration** | Discord + Supabase edge | See [DISCORD_BOT.md](DISCORD_BOT.md) |
 | Party Mode service | **Not user-facing** | — | `partyMode.js` has tests only; no lobby route |
 | Community / public gallery | **Not shipped** | — | Gallery is personal history only |
-| Cloud accounts / cross-device sync | **In progress (Phase 9)** | Supabase Auth | Optional. Guests play without signing in. Migration `20260926000017_cloud_player_progress.sql` |
+| Cloud accounts / cross-device sync | **In progress (Phase 9)** | Supabase Auth | Optional. Guests play without signing in. Migrations `20260926000017_cloud_player_progress.sql` and `20260926000018_align_schema_snapshot.sql` |
 | Native mobile apps | **Deferred** | — | See [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) |
 
 #### 2.2 Environment-dependent behavior
@@ -180,7 +180,7 @@ Build Venn with Friends into a replayable social creativity game that is:
 
 #### Medium term (1–3 months)
 
-- Apply the Phase 9 migration, Auth providers, and Stripe webhook on the hosted project
+- Apply Phase 9 migrations `20260926000017` and `20260926000018` (or `schema.sql` on a new project), Auth providers, and the Stripe webhook on the hosted project
 - Community features only if they reinforce the core share loop (Phase 10)
 
 ---

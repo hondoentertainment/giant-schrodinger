@@ -35,7 +35,7 @@ Supabase powers:
 Steps:
 
 1. Create a project at [supabase.com](https://supabase.com)
-2. Run `supabase/schema.sql` in the Supabase SQL editor. Existing projects that already applied an older schema should run `supabase/migrations/20260926000017_cloud_player_progress.sql` instead of pasting the whole file again. Then enable Email (and optional Google) under Authentication, and add the site URL to the redirect allow list.
+2. Run `supabase/schema.sql` in the Supabase SQL editor. Existing projects that already applied an older schema should run `supabase/migrations/20260926000017_cloud_player_progress.sql` and `supabase/migrations/20260926000018_align_schema_snapshot.sql` instead of pasting the whole file again. The second file matches the snapshot: room votes, token columns, room status `results`, and no anon write policies (writes stay on the RPCs). Then enable Email (and optional Google) under Authentication, and add the site URL to the redirect allow list.
 3. Copy the project URL and anon key from Settings > API
 4. Add them to `.env`:
 
@@ -48,6 +48,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
    - `rooms`
    - `room_players`
    - `room_submissions`
+   - `room_votes`
 
 ### Rerun note
 
@@ -56,6 +57,7 @@ If you already added tables to `supabase_realtime`, these statements in `supabas
 - `alter publication supabase_realtime add table rooms;`
 - `alter publication supabase_realtime add table room_players;`
 - `alter publication supabase_realtime add table room_submissions;`
+- `alter publication supabase_realtime add table room_votes;`
 
 If that happens, skip those lines and run the rest of the schema.
 
