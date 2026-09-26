@@ -6,7 +6,9 @@ This file is a chronological work log. For current product priorities, use **[PR
 
 ## Current (September 12, 2026)
 
-Top-game engineering sprint (still no invented keys, no Phase 9 / Stripe):
+Phase 9 is in progress in the repo (optional accounts, cloud Labs, web Stripe). Still no invented keys. Apple IAP is not in this build.
+
+Top-game engineering sprint (historical — September 12, 2026):
 
 - Capacitor iOS shell in-repo (`com.hondoentertainment.vennwithfriends`); `npm run ios:sync` then owner Xcode archive
 - Public `privacy.html` / `terms.html`; store copy in `store/`

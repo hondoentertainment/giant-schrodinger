@@ -2,6 +2,8 @@
  * Shared localStorage helpers for JSON serialization.
  */
 
+import { markProgressDirty, SYNC_STORAGE_KEYS } from './progressEvents';
+
 export function loadJSON(key, fallback) {
   try {
     const stored = localStorage.getItem(key);
@@ -14,6 +16,7 @@ export function loadJSON(key, fallback) {
 export function saveJSON(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    if (SYNC_STORAGE_KEYS.has(key)) markProgressDirty();
   } catch {
     // Storage full or unavailable — silently ignore.
   }

@@ -1,3 +1,5 @@
+import { markProgressDirty } from '../lib/progressEvents';
+
 // Storage service for managing game collisions/history
 const STORAGE_KEY = 'venn_collisions';
 
@@ -31,6 +33,7 @@ export function saveCollision(collision) {
     
     collisions.unshift(collisionWithId); // Add to beginning (newest first)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(collisions));
+    markProgressDirty();
     
     return collisionWithId;
   } catch (error) {
@@ -53,6 +56,7 @@ export function updateCollision(id, patch) {
     const updated = { ...collisions[index], ...patch, id };
     collisions[index] = updated;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(collisions));
+    markProgressDirty();
     return updated;
   } catch (error) {
     console.warn('Failed to update collision:', error);
@@ -70,6 +74,7 @@ export function deleteCollision(id) {
     const collisions = getCollisions();
     const filtered = collisions.filter(c => c.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    markProgressDirty();
     return true;
   } catch (error) {
     console.warn('Failed to delete collision:', error);
@@ -84,6 +89,7 @@ export function deleteCollision(id) {
 export function clearCollisions() {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    markProgressDirty();
     return true;
   } catch (error) {
     console.warn('Failed to clear collisions:', error);

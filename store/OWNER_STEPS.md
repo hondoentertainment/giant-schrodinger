@@ -49,5 +49,5 @@ Use [STORE_LISTING.md](STORE_LISTING.md). Demo account: none. Reviewer plays as 
 
 - Put `ASC_API_KEY`, certificates, or profiles in GitHub secrets for this sprint
 - Run `xcodebuild` on Linux CI
-- Claim ranked / shop / IAP as shipping features
+- Treat web Stripe as App Store IAP. TestFlight purchases need Apple In-App Purchase later
 - Rewrite the game in SwiftUI

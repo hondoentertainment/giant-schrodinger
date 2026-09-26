@@ -4,7 +4,7 @@ import { getBattlePass, getBattlePassProgress, claimBattlePassReward, getBalance
 
 const PREMIUM_PRICE = '$4.99';
 
-export function BattlePassPanel({ onBalanceChange, toast }) {
+export function BattlePassPanel({ onBalanceChange, toast, purchasesUnavailable = false, onBuyPremium }) {
   const [battlePass, setBattlePass] = useState(() => getBattlePass());
   const [progress, setProgress] = useState(() => getBattlePassProgress());
 
@@ -170,8 +170,13 @@ export function BattlePassPanel({ onBalanceChange, toast }) {
               <div className="text-[11px] text-gray-400">Get exclusive rewards every 3 tiers</div>
             </div>
           </div>
-          <button className="px-4 py-2 rounded-xl text-sm font-bold bg-gradient-to-r from-yellow-500 to-orange-500 text-black hover:from-yellow-400 hover:to-orange-400 transition-all">
-            {PREMIUM_PRICE}
+          <button
+            type="button"
+            disabled={purchasesUnavailable}
+            onClick={() => onBuyPremium?.()}
+            className="px-4 py-2 rounded-xl text-sm font-bold bg-gradient-to-r from-yellow-500 to-orange-500 text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {purchasesUnavailable ? 'Purchases unavailable' : PREMIUM_PRICE}
           </button>
         </div>
       )}

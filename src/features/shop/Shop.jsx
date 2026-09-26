@@ -5,7 +5,8 @@ import { Coins, ShoppingBag, Sparkles, Crown, Star, Check, Lock, CreditCard, Gif
 import { CheckoutModal } from './CheckoutModal';
 import { BattlePassPanel } from './BattlePassPanel';
 import { GameScreenShell } from '../../components/GameScreenShell';
-import { LocalPreviewBadge } from '../../components/LocalPreviewBadge';
+import { LabsModeBadge } from '../../components/LabsModeBadge';
+import { isStripeEnabled, redirectToCheckout } from '../../lib/stripe';
 import { EmptyState } from '../../components/EmptyState';
 import { haptic } from '../../lib/haptics';
 
@@ -95,7 +96,7 @@ export function Shop({ onBack }) {
       backLabel="Back to lobby"
       badge={(
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-          <LocalPreviewBadge />
+          <LabsModeBadge mode="shop" />
           <div className="game-hud-chip text-amber-200">
             <Coins size={16} className="text-amber-300" />
             <span className="font-bold tabular-nums">{balance.toLocaleString()}</span>
@@ -240,6 +241,11 @@ export function Shop({ onBack }) {
         <BattlePassPanel
           onBalanceChange={setBalance}
           toast={toast}
+          purchasesUnavailable={!isStripeEnabled()}
+          onBuyPremium={async () => {
+            const result = await redirectToCheckout('battle_pass');
+            if (!result.ok) toast.error(result.error || 'Purchases unavailable');
+          }}
         />
 
         {/* Seasonal Bundle Section */}

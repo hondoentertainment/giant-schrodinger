@@ -163,7 +163,7 @@ export function JudgeRound({ payload, onDone }) {
                     Your friend will see your {score}/10.
                 </p>
                 <div className="w-full max-w-md rounded-[22px] border border-white/10 bg-white/[0.04] p-4 text-left">
-                    <p className="text-white/45 text-xs uppercase tracking-wider mb-2">Want a turn?</p>
+                    <p className="text-white/45 text-xs uppercase tracking-wider mb-2">Write your own pair</p>
                     <div className="w-full mb-3">
                         <VennDiagram
                             leftAsset={displayAssets?.left || effectivePayload.assets.left}

@@ -28,7 +28,7 @@
   <main>
     <p class="meta"><a href="./">Venn with Friends</a> · Privacy Policy</p>
     <h1>Privacy Policy</h1>
-    <p class="meta">Last updated: September 12, 2026</p>
+    <p class="meta">Last updated: September 26, 2026</p>
     <p>
       Venn with Friends is a creative word game from Hondo Entertainment.
       This page is the public privacy policy for the web app
@@ -39,12 +39,16 @@
     <p>
       Gameplay progress lives locally in your browser or WKWebView storage:
       profile, gallery, achievements, mute preference, and settings.
-      The iOS app does not add a separate account database.
+      The iOS wrapper uses the same optional Supabase account as the web app. It does not add a second database. Guest play still works with no account.
     </p>
     <h2>What we store on our servers</h2>
     <p>
       When you enable Supabase-backed features, shared rounds, judgements,
       multiplayer rooms, and content reports may be stored in our database.
+      If you choose to sign in, your email and synced progress (profile, streaks,
+      gallery, ranked rating, shop inventory, tournaments) are stored on that account.
+      Guest play does not require an account. Web coin or battle-pass purchases,
+      when Stripe is configured, are processed by Stripe.
       Custom uploads go to Supabase Storage when backend services are enabled.
       Do not upload content you do not have rights to share.
     </p>

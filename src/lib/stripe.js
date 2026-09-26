@@ -1,16 +1,59 @@
-const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+import { supabase } from './supabase';
+import { STRIPE_SKUS, getStripeSku } from '../../supabase/functions/_shared/stripeFulfillment.js';
 
-export function isStripeEnabled() { return !!STRIPE_KEY; }
+export { STRIPE_SKUS, getStripeSku };
 
-export async function createCheckoutSession(itemId, priceInCents) {
-  if (!isStripeEnabled()) return { error: 'Stripe not configured' };
-  // In production, this would call a Supabase Edge Function
-  // For now, return a mock session
-  return { sessionId: `mock_session_${Date.now()}`, itemId, price: priceInCents };
+const PURCHASES_UNAVAILABLE = 'Purchases unavailable';
+
+export function isStripeEnabled(env = import.meta.env) {
+    return Boolean(env?.VITE_STRIPE_PUBLISHABLE_KEY);
 }
 
-export const PRICE_TIERS = [
-  { id: 'tier_small', label: '100 Coins', price: 199, coins: 100 },
-  { id: 'tier_medium', label: '500 Coins', price: 499, coins: 500, badge: 'Best Value' },
-  { id: 'tier_large', label: '1200 Coins', price: 999, coins: 1200, badge: 'Most Popular' },
-];
+export const PRICE_TIERS = Object.values(STRIPE_SKUS)
+    .filter((sku) => sku.kind === 'coins')
+    .map((sku) => ({
+        id: sku.id,
+        label: sku.label,
+        price: sku.unitAmount,
+        coins: sku.coins,
+        badge: sku.badge,
+    }));
+
+/**
+ * Start Stripe Checkout for a known SKU.
+ * Without keys, or without a signed-in session, this never reports a completed purchase.
+ */
+export async function createCheckoutSession(skuId, deps = {}) {
+    const env = deps.env || import.meta.env;
+    const client = deps.client === undefined ? supabase : deps.client;
+    const sku = getStripeSku(skuId);
+    if (!sku) return { ok: false, error: 'Unknown item.' };
+    if (!isStripeEnabled(env) || !client) {
+        return { ok: false, unavailable: true, error: PURCHASES_UNAVAILABLE };
+    }
+
+    const sessionResult = deps.getSession
+        ? await deps.getSession()
+        : await client.auth.getSession();
+    const session = sessionResult?.data?.session || sessionResult?.session || null;
+    if (!session) {
+        return { ok: false, needsAccount: true, error: 'Sign in to purchase.' };
+    }
+
+    const returnUrl = deps.returnUrl
+        || (typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '');
+    const invoke = deps.invoke || ((body) => client.functions.invoke('create-checkout-session', { body }));
+    const { data, error } = await invoke({ sku: sku.id, returnUrl });
+    if (error || !data?.url) {
+        return { ok: false, unavailable: true, error: data?.error || PURCHASES_UNAVAILABLE };
+    }
+    return { ok: true, url: data.url };
+}
+
+export async function redirectToCheckout(skuId) {
+    const result = await createCheckoutSession(skuId);
+    if (result.ok && result.url && typeof window !== 'undefined') {
+        window.location.assign(result.url);
+    }
+    return result;
+}
