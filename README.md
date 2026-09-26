@@ -31,7 +31,7 @@ A creative party game where players connect two prompts with one witty phrase. S
 | Room vote scoring | No | N/A | Yes | `cast_room_vote` / `finalize_room_votes` |
 | Spectator mode | No | N/A | Yes | Watch the Game from Play with Friends, or `?join=CODE&watch=1` |
 | Content reports | No | N/A | Yes | Lightweight moderation dashboard |
-| Ranked / shop / tournaments | Local preview | N/A | N/A | Device-only until cloud sync (Phase 9) |
+| Ranked / shop / tournaments | Local preview for guests | N/A | Signed-in cloud save | Your account only — not a public ladder |
 
 Full registry: [PRD.md §2](PRD.md).
 
@@ -78,14 +78,27 @@ Full registry: [PRD.md §2](PRD.md).
 | `VITE_GEMINI_API_KEY` | Client/dev AI judging and fusion images | Optional |
 | `VITE_ALLOW_CLIENT_GEMINI` | Force client Gemini when Supabase configured | Debug only |
 | `VITE_SENTRY_DSN` / `VITE_POSTHOG_KEY` | Production telemetry | Optional |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Enables web checkout buttons | Optional. Without it, shop stays browsable and checkout is disabled |
 
-Server-only secrets (edge functions, not `VITE_*`): `GEMINI_API_KEY`, `PEXELS_API_KEY`, `GIPHY_API_KEY`, `APP_URL`. See [.env.example](.env.example) and [.github/SECRETS.template.md](.github/SECRETS.template.md).
+Server-only secrets (edge functions, not `VITE_*`): `GEMINI_API_KEY`, `PEXELS_API_KEY`, `GIPHY_API_KEY`, `APP_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. See [.env.example](.env.example) and [.github/SECRETS.template.md](.github/SECRETS.template.md).
+
+### Accounts and Stripe (owner)
+
+Solo play does not require an account. To turn on cross-device sync and web purchases:
+
+1. Apply `supabase/schema.sql` or, on an existing project, `supabase/migrations/20260926000017_cloud_player_progress.sql`.
+2. In Supabase Auth, allow the site URL and enable Email (magic link). Enable Google only if you want that button.
+3. Set `VITE_STRIPE_PUBLISHABLE_KEY` on Vercel. Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` as Supabase edge secrets. Do not commit them.
+4. Deploy functions, then point a Stripe webhook at `https://YOUR_PROJECT_REF.supabase.co/functions/v1/stripe-webhook` for `checkout.session.completed`.
+
+Without those keys the shop still opens. Checkout buttons say **Purchases unavailable** and never report a completed purchase. iOS App Store builds need Apple IAP later; this wiring is web Stripe for Vercel.
 
 ## Known Live Limitations
 
 - **Multiplayer and durable friend judging** need Supabase env vars and `supabase/schema.sql` applied.
 - **AI scoring** needs Gemini (client or edge); otherwise mock scoring and curated fusion images.
-- **Ranked, shop, and tournaments** are local-preview modes until cloud sync is scoped.
+- **Ranked, shop, and tournaments** sync for signed-in players after the Phase 9 migration. Guests stay on-device. They are not a public global ladder.
+- **Web Stripe** stays off until `VITE_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` are set. Apple IAP is not in this build.
 - **Party Mode** and **community gallery** are not user-facing products (see PRD).
 - **Hosted rehearsal** remains the launch gate — [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md).
 - **iOS App Store** — Capacitor shell is in-repo; signing/TestFlight are owner-held ([MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md), [TOP_GAME_CHECKLIST.md](TOP_GAME_CHECKLIST.md)).

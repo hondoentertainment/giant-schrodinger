@@ -21,3 +21,11 @@ port = 54323
 
 [functions]
 # Edge functions live in supabase/functions/
+
+# Checkout verifies the user JWT inside the function.
+# The webhook is called by Stripe and has no Supabase JWT.
+[functions.create-checkout-session]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false

@@ -5,6 +5,7 @@ import { Layout } from './components/Layout'
 import { ToastProvider } from './context/ToastContext'
 import { ToastContainer } from './components/Toast'
 import { GameProvider, useGame } from './context/GameContext'
+import { AccountProvider } from './context/AccountContext'
 import { RoomProvider, useRoom } from './context/RoomContext'
 // Core flow - eagerly loaded
 import { Lobby } from './features/lobby/Lobby'
@@ -330,11 +331,13 @@ function App() {
         <ErrorBoundary>
             <ToastProvider>
                 <GameProvider>
+                    <AccountProvider>
                     <RoomProvider>
                         <GameContent />
                         <OfflineQueueHandler />
                         <ToastContainer />
                     </RoomProvider>
+                    </AccountProvider>
                 </GameProvider>
             </ToastProvider>
         </ErrorBoundary>

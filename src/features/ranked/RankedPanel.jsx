@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LocalPreviewBadge } from '../../components/LocalPreviewBadge';
+import { LabsModeBadge } from '../../components/LabsModeBadge';
+import { useAccount } from '../../context/AccountContext';
 import {
   getPlayerRating,
   getRankTier,
@@ -12,6 +13,7 @@ import {
 } from '../../services/ranked';
 
 export function RankedPanel() {
+  const account = useAccount();
   const [decayInfo, setDecayInfo] = useState(null);
   const [seasonReset, setSeasonReset] = useState(null);
   const [archive, setArchive] = useState([]);
@@ -40,7 +42,7 @@ export function RankedPanel() {
     <div className="w-full max-w-md mx-auto flex flex-col items-center px-4">
       <div className="flex items-center gap-2 mb-4">
         <h2 className="text-2xl font-display font-bold text-white">Ranked</h2>
-        <LocalPreviewBadge />
+        <LabsModeBadge mode="ranked" />
       </div>
 
       {seasonReset && (
@@ -73,6 +75,11 @@ export function RankedPanel() {
         <div className="text-white/40 text-sm mt-1">
           {playerData.wins}W - {playerData.losses}L
         </div>
+        <p className="text-white/40 text-xs mt-2">
+          {account.cloudLabs
+            ? 'Saved to your account. This is your rating, not a public ladder.'
+            : 'Saved on this device only.'}
+        </p>
       </div>
 
       {!placementDone && (

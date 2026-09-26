@@ -1,5 +1,6 @@
 import { getCollisions } from './storage';
 import { getJudgementForCollision } from './judgements';
+import { markProgressDirty } from '../lib/progressEvents';
 
 const STORAGE_KEY = 'vwf_stats';
 const MILESTONES = [
@@ -99,6 +100,7 @@ export function recordPlay(score = null, options = {}) {
     }
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    markProgressDirty();
     return { stats: updated, newlyUnlocked };
 }
 

@@ -14,12 +14,14 @@ import {
 } from '../../services/tournaments';
 import { trackEvent } from '../../services/analytics';
 import { Trophy, Users, ChevronRight, Plus, Crown } from 'lucide-react';
-import { LocalPreviewBadge } from '../../components/LocalPreviewBadge';
+import { LabsModeBadge } from '../../components/LabsModeBadge';
+import { useAccount } from '../../context/AccountContext';
 import { GameScreenShell } from '../../components/GameScreenShell';
 import { EmptyState } from '../../components/EmptyState';
 
 export function TournamentLobby({ onBack }) {
     const { user } = useGame();
+    const account = useAccount();
     const { toast } = useToast();
     const [view, setView] = useState('list'); // list | detail | create | history
     const [tournaments, setTournaments] = useState([]);
@@ -103,7 +105,7 @@ export function TournamentLobby({ onBack }) {
                 backLabel="Back to lobby"
                 badge={(
                     <div className="flex gap-2 shrink-0 items-center flex-wrap justify-end">
-                        <LocalPreviewBadge />
+                        <LabsModeBadge mode="tournament" />
                         <button type="button" onClick={() => setView('history')} className="wordle-button text-xs min-h-[40px] px-3">History</button>
                         <button type="button" onClick={() => setView('create')} className="wordle-button wordle-primary text-xs min-h-[40px] px-3" aria-label="Create tournament">
                             <Plus size={16} />
@@ -111,6 +113,11 @@ export function TournamentLobby({ onBack }) {
                     </div>
                 )}
             >
+                <p className="text-xs text-white/45 mb-3 text-left">
+                    {account.cloudLabs
+                        ? 'Brackets you create are saved to your account. This is not a global tournament field.'
+                        : 'On this device only until you sign in. These are not public tournaments.'}
+                </p>
                 {isWeekend && (
                     <button type="button" onClick={handleWeekendTournament} className="w-full mb-4 p-4 rounded-[22px] game-highlight-banner hover:bg-amber-500/15 transition-all text-center border-amber-500/25">
                         <div className="text-2xl mb-1">🏆</div>

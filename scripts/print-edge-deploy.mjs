@@ -11,7 +11,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 const configPath = resolve(root, 'supabase', 'config.toml');
 
-const FUNCTIONS = ['resolve-image', 'resolve-meme', 'score-submission', 'og-tags', 'discord-bot'];
+const FUNCTIONS = [
+  'resolve-image',
+  'resolve-meme',
+  'score-submission',
+  'og-tags',
+  'discord-bot',
+  'create-checkout-session',
+  'stripe-webhook',
+];
 
 function run(label, command, args, { optional = false } = {}) {
   console.log(`\n▶ ${label}`);
@@ -63,6 +71,7 @@ Set secrets (or run npm run configure:edge-secrets):
   APP_URL=https://giant-schrodinger.vercel.app
   ALLOWED_ORIGINS=https://giant-schrodinger.vercel.app
   DISCORD_PUBLIC_KEY (optional, for discord-bot signature verify)
+  STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET (shop checkout + entitlement webhook)
 
 Then re-run: npm run deploy:edge-functions
 `);

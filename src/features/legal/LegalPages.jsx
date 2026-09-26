@@ -6,11 +6,12 @@ export function PrivacyPolicy({ onBack }) {
     return (
         <GameScreenShell onBack={onBack} title="Privacy Policy" icon={Shield} backLabel="Back">
             <div className="space-y-4 text-sm text-white/75 leading-relaxed">
-                <p><strong className="text-white">Last updated:</strong> September 12, 2026</p>
+                <p><strong className="text-white">Last updated:</strong> September 26, 2026</p>
                 <p>
                     Venn with Friends stores gameplay progress locally in your browser (profile, gallery,
                     achievements, and settings). When you enable Supabase-backed features, shared rounds,
                     judgements, multiplayer rooms, and content reports may be stored in our database.
+                    An optional account also stores your email and synced progress. Guest play does not require one.
                 </p>
                 <p>
                     Optional telemetry (Sentry, PostHog) and analytics events help us monitor crashes and
@@ -38,14 +39,14 @@ export function TermsOfUse({ onBack }) {
     return (
         <GameScreenShell onBack={onBack} title="Terms of Use" icon={Shield} backLabel="Back">
             <div className="space-y-4 text-sm text-white/75 leading-relaxed">
-                <p><strong className="text-white">Last updated:</strong> September 12, 2026</p>
+                <p><strong className="text-white">Last updated:</strong> September 26, 2026</p>
                 <p>
                     By using Venn with Friends you agree to play respectfully and not submit illegal, harassing,
                     or infringing content. User submissions remain your responsibility.
                 </p>
                 <p>
-                    Ranked, shop, and tournament modes may run in local preview until cloud sync is enabled.
-                    Scores and purchases in preview mode are device-local only.
+                    Signed-in ranked, shop, and tournament progress saves to your account and is not a public ladder.
+                    Guests stay on this device. Web Stripe purchases work only when configured. App Store builds need Apple IAP.
                 </p>
                 <p>
                     We may rate-limit or remove content reported through the in-app report flow. Abuse of AI,

@@ -1,6 +1,6 @@
 # Venn with Friends Roadmap
 
-**Last updated:** September 12, 2026  
+**Last updated:** September 26, 2026  
 **Source of truth for product intent:** [PRD.md](PRD.md)
 
 This roadmap turns the PRD into an implementation plan. Soft-launch gate is cleared. Redesign v2, mobile alignment, and UX rounds #16/#17 are on main. The top-game sprint adds a Capacitor iOS shell (unsigned), premium feel, and install/share hardening. Observability/media sinks and Apple signing still need the owner.
@@ -17,7 +17,7 @@ This roadmap turns the PRD into an implementation plan. Soft-launch gate is clea
 | Realtime multiplayer | Shipped | Rooms, vote recovery, reconnect, pending-voter UX |
 | Moderation (lightweight) | Shipped | Content reports + dashboard |
 | Progression / retention | Shipped | Streaks, next-unlock progress, daily share CTA |
-| Ranked / shop / tournaments | Local preview | Device-only; `LocalPreviewBadge` |
+| Ranked / shop / tournaments | Cloud for signed-in players | Guests stay device-only. Not a public global ladder. Stripe web checkout when keys exist |
 | Production readiness | Soft-launch candidate | Hosted rehearsal + launch gate passed; Vercel + Pages auto-deploy. PostHog/Sentry/Pexels/Giphy keys still missing |
 | Native iOS shell | In-repo, unsigned | Capacitor `com.hondoentertainment.vennwithfriends`; TestFlight is owner-held. See [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) |
 
@@ -32,7 +32,7 @@ This roadmap turns the PRD into an implementation plan. Soft-launch gate is clea
 | 5 Share Loop Optimization | **Complete enough for launch** |
 | 6 Gallery, Identity, Retention | **Complete enough for launch** |
 | 8 Content Expansion | **Shipped enough for launch** — seasonal theme/pack rotation + weekly recap; media APIs optional |
-| 9–10 Accounts / Community | **Later** |
+| 9 Accounts & cloud progress | **In this PR** — optional Supabase Auth, per-domain sync, cloud Labs, Stripe Checkout. Owner still applies the migration, Auth providers, and Stripe secrets |
 | Soft-launch UX + top-game shell | **Shipped in code** — #16 ease-of-use, #17 wrap/share/gallery, Capacitor/PWA/haptics sprint |
 
 ---
@@ -112,28 +112,33 @@ Next (post soft-launch): enable PostHog/Sentry/Pexels/Giphy with real keys; owne
 
 ---
 
-## Deferred / local-preview product decision (July 15, 2026)
+## Phase 9: Accounts, cloud Labs, and web Stripe
 
-Until Phase 9 cloud sync ships, these modes stay **local-preview only** (device progress, `LocalPreviewBadge` in lobby + screens):
+**Status: in this PR — owner deploy still required**
 
-| Mode | Decision |
-|---|---|
-| Ranked / Elo | Stay local-preview — do not imply global ladders |
-| Shop / battle pass | Stay local-preview — no Stripe |
-| Tournaments | Stay local-preview |
-| Async challenge chains | Stay local-preview |
-| AI Battle / AI Settings | Stay local-preview / experimental |
+Shipped in code:
 
-They remain playable for fun on-device. Do not remove them; do not market them as cloud-synced competitive features.
+1. Optional Supabase Auth (email magic link and Google OAuth). Create Profile → Play today's pair still works with no account.
+2. `player_progress` synced for profile, streaks/unlocks, gallery, ranked Elo, shop inventory, tournaments, achievements, and daily history.
+3. Merge rule: **cloud wins per domain when both sides have data**. Empty cloud domains keep local progress and upload. While signed in, this device pushes the snapshot (last write wins). `stripe_entitlements` is server-owned.
+4. Signed-in Labs (ranked, shop, tournaments) drop the device-only badge. Copy says the data is the player's account, not a public ladder. Guests keep local preview. AI Battle, AI Settings, and challenge links stay device-only.
+5. Stripe Checkout + webhook for coin packs and the $4.99 battle pass. Missing keys disable checkout with "Purchases unavailable". No fake purchase-complete state.
 
-## Deferred
+Owner steps (no keys in git):
 
-Wait until soft-launch learnings settle:
+1. Apply `supabase/migrations/20260926000017_cloud_player_progress.sql` (also appended to `supabase/schema.sql`).
+2. Supabase Auth → URL configuration: allow `https://giant-schrodinger.vercel.app` and local dev. Enable Email and, if you want the button, Google.
+3. Set edge secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Set Vercel `VITE_STRIPE_PUBLISHABLE_KEY`.
+4. Deploy `create-checkout-session` and `stripe-webhook` (`npm run deploy:edge-functions`). Webhook URL: `https://YOUR_PROJECT_REF.supabase.co/functions/v1/stripe-webhook`.
+5. Stripe Dashboard → webhook event `checkout.session.completed`.
+
+App Store / TestFlight builds still need Apple IAP later. This PR is web Stripe for Vercel only.
+
+## Still deferred
 
 - App Store / TestFlight submit (shell is ready; signing is owner-held — [store/OWNER_STEPS.md](store/OWNER_STEPS.md))
-- Monetization / Stripe
-- Heavy account infrastructure (Phase 9)
-- Large-scale public matchmaking
+- Apple In-App Purchase for the iOS shell
+- Large-scale public matchmaking and a real global ladder
 - Public community gallery / Party Mode UI
 - Net-new game modes unrelated to the connection mechanic
-- Advertising Labs (ranked / shop / tournaments) as cloud features
+- Advertising Labs as a worldwide competitive field

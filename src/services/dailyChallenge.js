@@ -1,5 +1,6 @@
 import { getAvailableThemes, MEDIA_TYPES } from '../data/themes';
 import { getDailyEditorialPair, getWeeklyEpisode } from '../data/curatedPairs';
+import { markProgressDirty } from '../lib/progressEvents';
 
 const DAILY_STORAGE_KEY = 'vwf_daily';
 
@@ -123,6 +124,7 @@ export function markDailyChallengeComplete(score) {
             DAILY_STORAGE_KEY,
             JSON.stringify({ date: today, score, history })
         );
+        markProgressDirty();
     } catch {
         // Silently fail
     }

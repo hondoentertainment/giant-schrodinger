@@ -102,7 +102,7 @@ describe('JudgeRound', () => {
         expect(await screen.findByRole('heading', { name: /Judgment sent/i })).toBeInTheDocument();
         expect(screen.getByTestId('venn-diagram')).toBeInTheDocument();
         expect(screen.getByText(/They wrote/i)).toBeInTheDocument();
-        expect(screen.getByText(/Want a turn/i)).toBeInTheDocument();
+        expect(screen.getByText(/Write your own pair/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Write your own line for this pair/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Play today's pair/i })).toBeInTheDocument();
     });

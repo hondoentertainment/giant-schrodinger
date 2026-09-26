@@ -1,6 +1,6 @@
 # Top-game checklist
 
-Engineering vs owner-held work for the soft-launch “feels like a top game” bar. No Phase 9 accounts, no Stripe, no fake cloud Labs.
+Engineering vs owner-held work. Phase 9 accounts, cloud Labs for signed-in players, and web Stripe are in the repo. Owner still applies the migration, Auth providers, and Stripe secrets. Do not invent keys. Do not advertise a public global ladder.
 
 ## Engineering — done in this sprint
 
@@ -15,7 +15,7 @@ Engineering vs owner-held work for the soft-launch “feels like a top game” b
 | Obvious mute | Header + round speaker control (`MuteToggle`) |
 | First-session celebration timing + A2HS tip | `SessionSummary`, `PWAInstallBanner` |
 | Today's pair as cold-start hero | Create Profile, lobby, friends panel, daily-complete card |
-| Labs stay buried + labeled device-only | Lobby Experimental Labs |
+| Optional accounts + cloud Labs + web Stripe | `AccountPanel`, `player_progress`, Stripe edge functions |
 | PWA manifest + apple-touch + iOS Home Screen tip | `scripts/generate-manifest.mjs`, `index.html` |
 | Friend-judge / daily OG paths unchanged | `og-tags`, `createJudgeShareLinks`, `og-image.png` |
 | Waiting-room Start clarity | `RoomLobby` |
@@ -37,13 +37,16 @@ Engineering vs owner-held work for the soft-launch “feels like a top game” b
 | **App Store screenshots + review** | Capture on a real device; listing draft is ready |
 | **5–10 playtesters** | TestFlight or the live web URL; watch first-session → share → room |
 | **Digital Asset Links fingerprint** | Needed only if you ship a Play TWA |
+| **Supabase Auth providers** | Email magic link redirect URLs; Google only if you enable that provider |
+| **Phase 9 migration** | Apply `supabase/migrations/20260926000017_cloud_player_progress.sql` |
+| **Stripe** | `VITE_STRIPE_PUBLISHABLE_KEY` on Vercel; `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` on the edge function; webhook `checkout.session.completed` |
+| **Apple IAP** | Required later for App Store / TestFlight purchases. Web Stripe does not cover the iOS shell |
 
-Do not invent or commit API keys. Soft launch is valid without PostHog/Sentry/Pexels/Giphy.
+Do not invent or commit API keys. Soft launch is valid without PostHog/Sentry/Pexels/Giphy/Stripe. Guests can play without an account.
 
 ## Explicitly out of scope
 
-- Phase 9 cloud accounts
-- Stripe / IAP
 - Public community gallery or Party Mode UI
 - SwiftUI rewrite
-- Advertising Labs as real cloud features
+- A public global ranked ladder or worldwide tournament field
+- Apple In-App Purchase in this PR

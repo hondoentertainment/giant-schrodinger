@@ -19,7 +19,10 @@ import { CustomImagesManager } from '../../components/CustomImagesManager';
 import { getCustomImages } from '../../services/customImages';
 import { ServiceStatusCard } from '../../components/ServiceStatusCard';
 import { PWAInstallBanner } from '../../components/PWAInstallBanner';
-import { LocalPreviewBadge } from '../../components/LocalPreviewBadge';
+import { LabsModeBadge } from '../../components/LabsModeBadge';
+import { AccountPanel } from '../../components/AccountPanel';
+import { useAccount } from '../../context/AccountContext';
+import { getReturnNudge } from '../../lib/returnNudge';
 import { NotificationBanner } from '../../components/NotificationBanner';
 import { isE2EMockRoomEnabled } from '../../lib/e2eMockRoom';
 import { trackEvent } from '../../services/analytics';
@@ -159,6 +162,7 @@ export function Lobby() {
         endSession,
         isDailyChallenge,
     } = useGame();
+    const account = useAccount();
     const { hostRoom, joinRoomByCode } = useRoom();
 
     const [name, setName] = useState(user?.name || '');
@@ -297,17 +301,11 @@ export function Lobby() {
             });
         }
     }, [weeklyEvent, isFirstSession]);
-    const welcomeMessage = useMemo(() => {
-        if (!user || !stats.lastPlayedDate || stats.totalRounds === 0) return null;
-        const lastPlayed = new Date(`${stats.lastPlayedDate}T00:00:00`);
-        if (Number.isNaN(lastPlayed.getTime())) return null;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const daysAway = Math.round((today - lastPlayed) / (24 * 60 * 60 * 1000));
-        if (daysAway <= 0) return `Welcome back, ${user.name}. Your streak is active today.`;
-        if (daysAway === 1) return `Welcome back, ${user.name}. Keep yesterday's momentum going.`;
-        return `Welcome back, ${user.name}. Fresh prompts are waiting.`;
-    }, [stats.lastPlayedDate, stats.totalRounds, user]);
+    const welcomeMessage = useMemo(() => getReturnNudge({
+        name: user?.name,
+        lastPlayedDate: stats.lastPlayedDate,
+        totalRounds: stats.totalRounds,
+    })?.message || null, [stats.lastPlayedDate, stats.totalRounds, user?.name]);
     const showFeatureNav = showAllFeatures;
     const showAdvancedModes = showAllFeatures;
 
@@ -803,6 +801,7 @@ export function Lobby() {
                                     <span className="text-white/35 text-xs hidden group-open:inline">Hide</span>
                                 </summary>
                                 <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-3">
+                                    <AccountPanel variant="settings" />
                                     {!isFirstSession && stats.totalRounds > 0 && (
                                         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                                             <div className="game-section-label mb-2">{tr('lobby.yourProgress')}</div>
@@ -946,11 +945,15 @@ export function Lobby() {
                                     <details className="rounded-xl border border-white/10 bg-white/[0.03] text-left">
                                         <summary className="cursor-pointer list-none px-3 py-2.5 text-xs text-white/40 min-h-[44px] flex items-center justify-between">
                                             <span>Experimental Labs</span>
-                                            <span>Local preview</span>
+                                            <span>{account.cloudLabs ? 'Your account' : 'Local preview'}</span>
                                         </summary>
                                         <div className="px-3 pb-3 space-y-2 border-t border-white/10 pt-2">
                                             <p className="text-[11px] text-white/35">
-                                                Device-only experiments — ranked, shop, tournaments. Not cloud features, not the App Store game.
+                                                {account.cloudLabs
+                                                    ? 'Ranked, shop, and tournaments save to your account. This is your data, not a public global ladder. AI experiments stay on this device.'
+                                                    : account.authAvailable
+                                                        ? 'Guests keep ranked, shop, and tournaments on this device. Sign in under Progress & settings to save them to your account. Not a public ladder.'
+                                                        : 'On this device only until accounts are configured. Not a public ladder, and not the App Store game.'}
                                             </p>
                                             <button
                                                 type="button"
@@ -988,7 +991,7 @@ export function Lobby() {
                                             >
                                                 <ShoppingBag className="w-4 h-4" />
                                                 Shop
-                                                <LocalPreviewBadge />
+                                                <LabsModeBadge mode="shop" />
                                             </button>
                                         </div>
                                     )}
@@ -1001,7 +1004,7 @@ export function Lobby() {
                                             >
                                                 <Shield className="w-4 h-4" />
                                                 Ranked
-                                                <LocalPreviewBadge />
+                                                <LabsModeBadge mode="ranked" />
                                             </button>
                                             <button
                                                 onClick={() => {
@@ -1012,7 +1015,7 @@ export function Lobby() {
                                             >
                                                 <Brain className="w-4 h-4" />
                                                 AI Battle
-                                                <LocalPreviewBadge />
+                                                <LabsModeBadge mode="ai-battle" />
                                             </button>
                                             <button
                                                 onClick={() => setGameState('TOURNAMENT')}
@@ -1020,7 +1023,7 @@ export function Lobby() {
                                             >
                                                 <Trophy className="w-4 h-4" />
                                                 Tournament
-                                                <LocalPreviewBadge />
+                                                <LabsModeBadge mode="tournament" />
                                             </button>
                                             <button
                                                 onClick={() => setGameState('ASYNC_CHAINS')}
@@ -1028,7 +1031,7 @@ export function Lobby() {
                                             >
                                                 <Link className="w-4 h-4" />
                                                 Challenge Links
-                                                <LocalPreviewBadge />
+                                                <LabsModeBadge mode="async" />
                                             </button>
                                             <button
                                                 onClick={() => setGameState('AI_SETTINGS')}
@@ -1036,7 +1039,7 @@ export function Lobby() {
                                             >
                                                 <Brain className="w-4 h-4" />
                                                 AI Settings
-                                                <LocalPreviewBadge />
+                                                <LabsModeBadge mode="ai-settings" />
                                             </button>
                                             <button
                                                 onClick={() => setGameState('ANALYTICS')}
@@ -1260,6 +1263,12 @@ export function Lobby() {
                 >
                     Play today&apos;s pair
                 </button>
+                <details className="text-left">
+                    <summary className="cursor-pointer list-none py-2 text-[13px] text-white/55 font-semibold min-h-[44px] flex items-center">
+                        Optional account
+                    </summary>
+                    <AccountPanel variant="gate" />
+                </details>
                 <button
                     type="button"
                     disabled={!name.trim()}

@@ -51,7 +51,7 @@ Production URL: https://giant-schrodinger.vercel.app
 | Server AI scoring | Edge deployed | Live Gemini path exercised in friend-judge flow |
 | OG previews | Edge redeployed | Richer title/description/site_name |
 | Analytics inserts | **Live** | Anon INSERT allowed; reads locked down |
-| Ranked / shop / tournaments | Local preview only | Product decision locked until Phase 9 |
+| Ranked / shop / tournaments | Code supports account sync | Guests stay device-only. Hosted project still needs migration `20260926000017` before cloud Labs are live |
 | Observability dashboards | Optional | Needs PostHog/Sentry project keys |
 
 ## Current Launch Gate

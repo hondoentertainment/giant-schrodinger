@@ -18,6 +18,7 @@ Configure these in **GitHub → Settings → Secrets and variables → Actions**
 | `VITE_SENTRY_DSN` | Vercel | Client error monitoring |
 | `VITE_POSTHOG_KEY` | Vercel | Product analytics |
 | `VITE_POSTHOG_HOST` | Vercel | PostHog ingest host |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Vercel | Enables web checkout. Omit to keep purchases unavailable |
 
 ## Supabase Edge Function secrets (dashboard only — never `VITE_*`)
 
@@ -30,6 +31,8 @@ Configure these in **GitHub → Settings → Secrets and variables → Actions**
 | `ALLOWED_ORIGINS` | Comma-separated extra CORS origins |
 | `SUPABASE_URL` | `og-tags` RPC lookups |
 | `SUPABASE_ANON_KEY` | `og-tags` RPC lookups |
+| `STRIPE_SECRET_KEY` | `create-checkout-session` |
+| `STRIPE_WEBHOOK_SECRET` | `stripe-webhook` signature check. Dashboard endpoint: `https://YOUR_PROJECT_REF.supabase.co/functions/v1/stripe-webhook` (`checkout.session.completed`) |
 
 ## CI-only (Sentry releases)
 

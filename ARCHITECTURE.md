@@ -102,13 +102,17 @@ Realtime publication includes `rooms`, `room_players`, `room_submissions`.
 | `resolve-meme` | Giphy lookup | `GIPHY_API_KEY` |
 | `og-tags` | Share preview HTML | `APP_URL` |
 | `discord-bot` | Slash commands | Discord tokens |
+| `create-checkout-session` | Stripe Checkout for coin packs and battle pass | `STRIPE_SECRET_KEY` |
+| `stripe-webhook` | Grants entitlements after `checkout.session.completed` | `STRIPE_WEBHOOK_SECRET`, service role |
 
 ## Persistence model
 
 | Data | Default store | Cloud when configured |
 |---|---|---|
-| Profile, unlocks, streaks | localStorage | Phase 9 (deferred) |
-| Gallery collisions | localStorage | Enriched by judgements |
+| Profile, unlocks, streaks | localStorage | `player_progress` when signed in |
+| Gallery collisions | localStorage | `player_progress.gallery` when signed in (data URLs stripped) |
+| Ranked / shop / tournaments | localStorage for guests | `player_progress` for signed-in players. Not a public ladder |
+| Stripe receipts | — | `player_progress.stripe_entitlements` via service-role webhook only |
 | Friend judgements | localStorage fallback | `shared_rounds` + `judgements` |
 | Room state / votes | — | Supabase authoritative |
 | Content reports | — | Supabase |

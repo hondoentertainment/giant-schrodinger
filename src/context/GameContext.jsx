@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { markDailyChallengeComplete } from '../services/dailyChallenge';
 import { trackDailyChallenge, trackRoundComplete, trackEvent } from '../services/analytics';
 import { reportAppEvent } from '../lib/telemetry';
 import { getAssetKey } from '../services/assetSelection';
 import { normalizeMediaType } from '../lib/mediaType';
+import { markProgressDirty } from '../lib/progressEvents';
 
 const GameContext = createContext();
 
@@ -95,6 +96,7 @@ export function GameProvider({ children }) {
     useEffect(() => {
         if (user) {
             localStorage.setItem('vwf_user', JSON.stringify(user));
+            markProgressDirty();
         }
     }, [user]);
 
@@ -115,6 +117,17 @@ export function GameProvider({ children }) {
         });
         setGameState('LOBBY');
     };
+
+    const syncProfile = useCallback((profile) => {
+        if (!profile?.name) return;
+        setUser((current) => ({
+            ...(current || {}),
+            ...profile,
+            name: profile.name,
+            avatar: profile.avatar || current?.avatar || '🎯',
+            mediaType: normalizeMediaType(profile.mediaType || current?.mediaType),
+        }));
+    }, []);
 
     const startSession = (rounds = 3, daily = false) => {
         const arc = buildSessionArc(rounds);
@@ -246,6 +259,7 @@ export function GameProvider({ children }) {
             value={{
                 user,
                 login,
+                syncProfile,
                 logout,
                 gameState,
                 setGameState,

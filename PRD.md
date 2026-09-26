@@ -1,6 +1,6 @@
 # Venn with Friends — Product Requirements Document
 
-**Last updated:** August 29, 2026  
+**Last updated:** September 26, 2026  
 **Canonical companions:** [ROADMAP.md](ROADMAP.md) · [JUDGE_MODEL.md](JUDGE_MODEL.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [README.md](README.md)
 
 ---
@@ -46,23 +46,23 @@ Repo name / GitHub Pages base path: `giant-schrodinger`. Product name in UI and 
 | Theme builder | **Shipped** | None | Share themes via URL hash |
 | PWA / offline page | **Shipped** | None | SW v2 |
 | i18n (EN / ES) | **Shipped** | None | |
-| Ranked / Elo | **Local preview** | None | Device-only; `LocalPreviewBadge` |
-| Shop / battle pass | **Local preview** | None | No Stripe wired |
-| Tournaments | **Local preview** | None | Bracket UI, device-only |
+| Ranked / Elo | **Cloud for signed-in players** | Supabase Auth + migration | Guests stay device-only. Personal rating, not a public ladder |
+| Shop / battle pass | **Cloud inventory; Stripe optional** | Stripe keys for real checkout | Without keys: browsable, purchases unavailable. Coin spending still local/synced as inventory |
+| Tournaments | **Cloud for signed-in players** | Supabase Auth | The player's brackets, not a global field |
 | Async chains | **Local preview** | None | |
 | AI Battle / AI Settings | **Local preview** | Optional Gemini | |
 | Leaderboard | **Local** | None | localStorage daily/weekly, not global |
 | Discord bot | **Optional integration** | Discord + Supabase edge | See [DISCORD_BOT.md](DISCORD_BOT.md) |
 | Party Mode service | **Not user-facing** | — | `partyMode.js` has tests only; no lobby route |
 | Community / public gallery | **Not shipped** | — | Gallery is personal history only |
-| Cloud accounts / cross-device sync | **Deferred (Phase 9)** | — | Backend `users` migration exists; UI is local-first |
+| Cloud accounts / cross-device sync | **In progress (Phase 9)** | Supabase Auth | Optional. Guests play without signing in. Migration `20260926000017_cloud_player_progress.sql` |
 | Native mobile apps | **Deferred** | — | See [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md) |
 
 #### 2.2 Environment-dependent behavior
 
 | Without keys | With Gemini | With Supabase |
 |---|---|---|
-| Full solo loop, mock scoring, curated fusion art, local gallery | Live AI scores + generated fusion images | Realtime rooms, durable friend judgements, room voting, content reports |
+| Full solo loop, mock scoring, curated fusion art, local gallery, guest Labs | Live AI scores + generated fusion images | Realtime rooms, durable friend judgements, room voting, content reports, optional account sync |
 | Multiplayer unavailable | Same as left + better solo AI | Optional server-side scoring via edge function |
 
 #### 2.3 Strengths
@@ -78,7 +78,8 @@ Repo name / GitHub Pages base path: `giant-schrodinger`. Product name in UI and 
 - Soft-launch gate is **cleared** — see [PRODUCTION_TEST_REPORT.md](PRODUCTION_TEST_REPORT.md)
 - Observability still needs real keys: `VITE_SENTRY_DSN` / `VITE_POSTHOG_KEY` on Vercel (code already wired)
 - Media richness still needs edge secrets: `PEXELS_API_KEY` / `GIPHY_API_KEY`
-- Local-preview modes (ranked, shop, tournaments) must stay labeled until cloud sync is scoped
+- Signed-in Labs sync after the owner applies the Phase 9 migration. Until then, sync fails open and the device copy remains
+- Stripe stays disabled until publishable, secret, and webhook keys are set. Apple IAP is still required for App Store purchases
 - Party Mode UI and public community gallery remain non-goals
 - Custom domain skipped; canonical prod is `https://giant-schrodinger.vercel.app`
 
@@ -127,11 +128,9 @@ Build Venn with Friends into a replayable social creativity game that is:
 
 ### 6. Non-Goals for the Near Term
 
-- Native mobile apps (Capacitor / TWA guides remain aspirational)
-- Large-scale public matchmaking
-- Full cloud accounts with cross-device sync (Phase 9)
+- Apple IAP and App Store submission (web Stripe does not cover TestFlight)
+- Large-scale public matchmaking or a global ladder
 - UGC marketplaces or heavy community feeds
-- Monetization / Stripe before retention and reliability are proven
 - Shipping Party Mode or community gallery UI until explicitly scoped
 
 **Clarification:** Lightweight content reporting and a moderation dashboard *are* in scope for safety (shipped). That is not the same as a community marketplace.
@@ -177,11 +176,11 @@ Build Venn with Friends into a replayable social creativity game that is:
 
 - Read PostHog funnels once keys land (`first_round_complete`, `high_score_share_prompt_shown`, `friend_judge_share_created`)
 - Keep gallery useful as personal archive + judged-round context
-- Keep local-preview modes labeled
+- Keep guest Labs labeled device-only. Signed-in ranked, shop, and tournaments are account data, not a public ladder
 
 #### Medium term (1–3 months)
 
-- Optional accounts / cloud sync (Phase 9) only after launch proof
+- Apply the Phase 9 migration, Auth providers, and Stripe webhook on the hosted project
 - Community features only if they reinforce the core share loop (Phase 10)
 
 ---
@@ -255,7 +254,7 @@ Instrument via existing telemetry bridge (`vwf:telemetry` / optional PostHog + S
 | 6 | Canonical AI / manual / friend / room_vote model | **Done** — see JUDGE_MODEL.md |
 | 7 | Align all docs with this PRD (remove Party Mode / community gallery claims) | **Done** (July 14, 2026) |
 | 8 | Rotate/fix Gemini key on Vercel if `API_KEY_INVALID` | **Done / mitigated** — live AI path exercised in friend-judge rehearsal |
-| 9 | Local-preview mode decision (ranked/shop/tournaments/async) | **Done** — stay local until Phase 9 |
+| 9 | Accounts, cloud Labs, web Stripe | **In this PR** — optional sign-in, cloud-wins sync, Checkout + webhook. Owner migration and keys still required |
 
 ---
 
@@ -271,7 +270,7 @@ Instrument via existing telemetry bridge (`vwf:telemetry` / optional PostHog + S
 #### Still open
 
 - Long-term identity: party game vs daily creativity app vs shareable social prompt toy?
-- Which local-preview modes (ranked, shop, tournaments, async) graduate to cloud after Phase 9?
+- Ranked, shop, and tournaments graduate for signed-in players (account data, not a public ladder). Async chains and AI labs stay device-only.
 - When (if ever) to ship a public/community gallery without diluting the lightweight core?
 
 ---
@@ -281,7 +280,7 @@ Instrument via existing telemetry bridge (`vwf:telemetry` / optional PostHog + S
 | Layer | Choice |
 |---|---|
 | Client | React 18, Vite, Tailwind CSS, Lucide |
-| State | `GameContext` (solo/profile), `RoomContext` (multiplayer) |
+| State | `GameContext` (solo/profile), `AccountContext` (optional auth + sync), `RoomContext` (multiplayer) |
 | Backend | Supabase (Realtime, Postgres RPCs, Storage, Edge Functions) |
 | AI | Google Gemini (`score-submission` edge preferred in prod; client fallback gated) |
 | Media | Pexels / Giphy via edge functions; Picsum / curated fallbacks |

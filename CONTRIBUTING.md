@@ -36,7 +36,7 @@ npm run launch:gate
 
 - Match existing React patterns in `src/features/` and `src/services/`
 - Prefer local-first solo behavior; gate cloud calls behind configured Supabase
-- Label device-only experiments with `LocalPreviewBadge` until cloud sync is intentional
+- Label guest-only and still-local Labs with `LocalPreviewBadge`. Signed-in ranked, shop, and tournaments use the account badge and must not claim a public ladder
 - Do not claim Party Mode or community gallery in UI/docs unless those surfaces exist
 - Keep [PRD.md](PRD.md) feature registry and [README.md](README.md) status matrix in sync when changing live-service requirements
 

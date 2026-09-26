@@ -35,7 +35,7 @@ Supabase powers:
 Steps:
 
 1. Create a project at [supabase.com](https://supabase.com)
-2. Run `supabase/schema.sql` in the Supabase SQL editor
+2. Run `supabase/schema.sql` in the Supabase SQL editor. Existing projects that already applied an older schema should run `supabase/migrations/20260926000017_cloud_player_progress.sql` instead of pasting the whole file again. Then enable Email (and optional Google) under Authentication, and add the site URL to the redirect allow list.
 3. Copy the project URL and anon key from Settings > API
 4. Add them to `.env`:
 
