@@ -47,6 +47,13 @@ describe('memeResolve service', () => {
                 imageSource: 'local',
                 url: 'data:image/svg+xml,abc',
             })).toBe(true);
+            expect(needsMemeApiResolve({
+                type: MEDIA_TYPES.MEME,
+                label: 'Big Brain',
+                searchQuery: 'thinking face',
+                imageSource: 'local',
+                url: '/art/plates/sunday-scaries-lamp.jpg',
+            })).toBe(true);
         });
 
         it('skips user-uploaded data urls', () => {

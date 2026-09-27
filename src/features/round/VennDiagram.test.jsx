@@ -109,7 +109,7 @@ describe('VennDiagram', () => {
         const cat = screen.getByAltText('Cat');
         expect(cat).toHaveAttribute('fetchpriority', 'high');
         expect(cat).toHaveAttribute('decoding', 'async');
-        expect(cat.getAttribute('src')).toMatch(/^data:image\/svg\+xml,/);
+        expect(cat.getAttribute('src')).toMatch(/\/art\/plates\/.+\.jpg$/);
         expect(cat.getAttribute('src')).not.toContain('unsplash');
         expect(screen.getAllByRole('status', { name: /Loading (Cat|Dog)/ })).toHaveLength(2);
 
@@ -119,7 +119,7 @@ describe('VennDiagram', () => {
         expect(dog).toHaveAttribute('sizes');
         fireEvent.error(dog);
         const fallback = screen.getByAltText('Dog');
-        expect(fallback.getAttribute('src')).toMatch(/^data:image\/svg\+xml,/);
+        expect(fallback.getAttribute('src')).toMatch(/\/art\/plates\/.+\.jpg$/);
         expect(fallback.getAttribute('src')).not.toContain('picsum');
         fireEvent.error(fallback);
         expect(screen.queryByAltText('Dog')).not.toBeInTheDocument();

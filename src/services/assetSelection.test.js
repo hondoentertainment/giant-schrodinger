@@ -79,8 +79,8 @@ describe('assetSelection', () => {
         it('builds bundled concept art instead of remote hotlinks', () => {
             const theme = getThemeById('neon');
             const [asset] = buildThemeAssets(theme, 1, MEDIA_TYPES.IMAGE, { seed: 1, preferDiverse: false });
-            expect(asset.url.startsWith('data:image/svg+xml,')).toBe(true);
-            expect(asset.fallbackUrl.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(asset.url).toMatch(/\/art\/plates\/.+\.jpg$/);
+            expect(asset.fallbackUrl).toMatch(/\/art\/plates\/.+\.jpg$/);
             expect(asset.url).not.toMatch(/unsplash|picsum/);
             expect(asset.imageSource).toBe('local');
         });
@@ -164,7 +164,7 @@ describe('assetSelection', () => {
             }]);
 
             expect(resolved[0].type).toBe(MEDIA_TYPES.MEME);
-            expect(resolved[0].url.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(resolved[0].url).toMatch(/\/art\/plates\/.+\.jpg$/);
             expect(resolved[0].url).not.toContain('unsplash');
             expect(resolved[1].url).toBe('https://videos.pexels.com/a.mp4');
         });
