@@ -64,7 +64,8 @@
   --game-pink: #bf5af2;
   --game-text: #e8e8ed;
   --game-text-secondary: #a8a8b3;
-  --game-text-tertiary: rgba(168, 168, 179, 0.72);
+  /* Solid so muted hints stay ≥4.5:1 on surface-highest (#2A2A36). */
+  --game-text-tertiary: #9a9aa4;
   --game-blur: 40px;
   --game-radius-sm: 14px;
   --game-radius-md: 16px;
@@ -480,13 +481,14 @@
 
   .wordle-primary {
     border-color: transparent;
-    background: var(--game-accent);
+    /* Slightly deeper than --game-accent so white label text clears 4.5:1. */
+    background: #0a6edb;
     color: var(--game-on-primary);
     box-shadow: 0 10px 24px -14px rgba(10, 132, 255, 0.85);
   }
 
   .wordle-primary:hover:not(:disabled) {
-    background: var(--game-accent-hover);
+    background: #1070d4;
     box-shadow: 0 12px 28px -14px rgba(10, 132, 255, 0.9);
   }
 
@@ -603,12 +605,14 @@
     background: transparent;
   }
 
-  .game-progress-dot--done {
+  .game-progress-dot--done,
+  .game-progress-track .game-progress-dot--done {
     background: var(--game-success);
     box-shadow: none;
   }
 
-  .game-progress-dot--current {
+  .game-progress-dot--current,
+  .game-progress-track .game-progress-dot--current {
     background: var(--game-accent);
     box-shadow: none;
   }
@@ -627,7 +631,8 @@
     border-radius: var(--game-radius-pill);
   }
 
-  .game-timer--urgent {
+  .game-timer--urgent,
+  .game-timer.game-timer--compact.game-timer--urgent {
     background: linear-gradient(180deg, rgba(255, 214, 10, 0.25), rgba(255, 159, 10, 0.15));
     border-color: rgba(255, 214, 10, 0.35);
     color: var(--game-warning);

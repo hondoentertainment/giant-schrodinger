@@ -808,8 +808,8 @@ export function Lobby() {
                             >
                                 <summary className="cursor-pointer list-none px-4 py-3 text-sm text-white/70 font-semibold flex items-center justify-between min-h-[44px]">
                                     <span>Progress &amp; settings</span>
-                                    <span className="text-white/35 text-xs group-open:hidden">Show</span>
-                                    <span className="text-white/35 text-xs hidden group-open:inline">Hide</span>
+                                    <span className="text-xs text-[var(--game-text-tertiary)] group-open:hidden">Show</span>
+                                    <span className="text-xs text-[var(--game-text-tertiary)] hidden group-open:inline">Hide</span>
                                 </summary>
                                 <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-3">
                                     <AccountPanel variant="settings" />
@@ -1241,7 +1241,7 @@ export function Lobby() {
                         />
                         <span
                             id="name-char-count"
-                            className={`absolute right-4 top-1/2 -translate-y-1/2 text-[13px] tabular-nums ${name.length >= 10 ? 'text-amber-400' : 'text-white/35'}`}
+                            className={`absolute right-4 top-1/2 -translate-y-1/2 text-[13px] tabular-nums ${name.length >= 10 ? 'text-amber-400' : 'text-[var(--game-text-tertiary)]'}`}
                             aria-live="polite"
                         >
                             {name.length}/12
