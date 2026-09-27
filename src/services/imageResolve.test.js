@@ -36,7 +36,7 @@ describe('imageResolve service', () => {
                 photographer: 'Ada',
             });
             expect(result.url).toContain('images.pexels.com');
-            expect(result.fallbackUrl.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(result.fallbackUrl).toMatch(/\/art\/plates\/.+\.jpg$/);
             expect(result.source).toBe('pexels');
             expect(result.photographer).toBe('Ada');
         });
@@ -59,7 +59,7 @@ describe('imageResolve service', () => {
     describe('resolveImageUrl', () => {
         it('uses bundled concept art when backend is disabled', async () => {
             const result = await resolveImageUrl('Neon City');
-            expect(result.url.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(result.url).toMatch(/\/art\/plates\/.+\.jpg$/);
             expect(result.source).toBe('local');
             expect(result.url).not.toContain('picsum');
             expect(getCachedImageUrl('Neon City')).toBeNull();
@@ -93,7 +93,7 @@ describe('imageResolve service', () => {
             }));
             expect(getCachedImageUrl('old')).toBeNull();
             const result = await resolveImageUrl('old');
-            expect(result.url.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(result.url).toMatch(/\/art\/plates\/.+\.jpg$/);
         });
     });
 
@@ -110,7 +110,7 @@ describe('imageResolve service', () => {
 
             const results = await resolveImageUrls(['cached concept', 'new concept']);
             expect(results['cached concept'].url).toBe('https://example.com/cached.jpg');
-            expect(results['new concept'].url.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(results['new concept'].url).toMatch(/\/art\/plates\/.+\.jpg$/);
             expect(results['new concept'].url).not.toContain('picsum');
         });
     });

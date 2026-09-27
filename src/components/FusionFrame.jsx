@@ -103,11 +103,15 @@ export function FusionFrame({
     const [level, setLevel] = useState(0); // 0 = url, 1 = fallbackUrl, 2 = text card
     const [loaded, setLoaded] = useState(false);
 
+    const artOptions = { role: 'fusion', id: image?.id };
     const primaryUrl = image?.url
-        ? reliableImageUrl(image.url, submission || leftLabel || 'fusion')
+        ? reliableImageUrl(image.url, submission || leftLabel || 'fusion', artOptions)
         : null;
     const fallbackCandidate = image?.fallbackUrl
-        ? reliableImageUrl(image.fallbackUrl, `${submission || leftLabel || 'fusion'}-fallback`, { variant: 'fallback' })
+        ? reliableImageUrl(image.fallbackUrl, `${submission || leftLabel || 'fusion'}-fallback`, {
+            ...artOptions,
+            variant: 'fallback',
+        })
         : null;
     const fallbackUrl = fallbackCandidate && fallbackCandidate !== primaryUrl ? fallbackCandidate : null;
 
@@ -155,7 +159,7 @@ export function FusionFrame({
                         key={src}
                         src={src}
                         alt={alt}
-                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out ${
+                        className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-out ${
                             loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.04]'
                         }`}
                         referrerPolicy="no-referrer"

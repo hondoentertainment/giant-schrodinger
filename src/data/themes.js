@@ -484,6 +484,23 @@ export const THEMES = [
     },
 ];
 
+for (const theme of THEMES) {
+    if (!Array.isArray(theme.fusionImages)) continue;
+    theme.fusionImages = theme.fusionImages.map((image) => {
+        const art = buildLocalConceptImage(image.label || image.id, {
+            id: image.id,
+            categories: image.categories,
+            role: 'fusion',
+        });
+        return {
+            ...image,
+            url: art,
+            fallbackUrl: art,
+            imageSource: 'local',
+        };
+    });
+}
+
 // Seasonal themes only surface during their calendar window.
 export function getAvailableThemes(date = new Date()) {
     return THEMES.filter((theme) => !theme.seasonal || isInSeason(theme.seasonId, date));
@@ -691,7 +708,8 @@ function labelSimilarity(leftLabel, rightLabel) {
 }
 
 function pairSimilarityScore(left, right) {
-    return categoryOverlap(left, right) * 3 + labelSimilarity(left?.label, right?.label);
+    const samePlate = left?.url && left.url === right?.url ? 24 : 0;
+    return samePlate + categoryOverlap(left, right) * 3 + labelSimilarity(left?.label, right?.label);
 }
 
 function pickDiversePair(pool, rng) {
@@ -722,12 +740,13 @@ function filterExcludedAssets(pool, excludeIds = []) {
     return filtered.length >= 2 ? filtered : pool;
 }
 
-function dedupeAssetsByUrl(pool) {
-    const byUrl = new Map();
+function dedupeAssetsByIdentity(pool) {
+    const seen = new Map();
     for (const asset of pool) {
-        if (!byUrl.has(asset.url)) byUrl.set(asset.url, asset);
+        const key = asset.id || `${asset.label || ''}::${asset.url || ''}`;
+        if (!seen.has(key)) seen.set(key, asset);
     }
-    return [...byUrl.values()];
+    return [...seen.values()];
 }
 
 export function buildMemesVideosAssets(theme, options = {}) {
@@ -735,20 +754,20 @@ export function buildMemesVideosAssets(theme, options = {}) {
     const rng = seededRandom(seed);
     const themeId = theme?.id || 'default';
 
-    let memePool = dedupeAssetsByUrl([
+    let memePool = dedupeAssetsByIdentity([
         ...(MEME_ASSETS[themeId] || []),
         ...(MEME_ASSETS.default || []),
     ]);
-    let videoPool = dedupeAssetsByUrl(VIDEO_ASSETS[themeId] || VIDEO_ASSETS.neon || []);
+    let videoPool = dedupeAssetsByIdentity(VIDEO_ASSETS[themeId] || VIDEO_ASSETS.neon || []);
 
     memePool = filterExcludedAssets(memePool, excludeIds);
     videoPool = filterExcludedAssets(videoPool, excludeIds);
 
     if (memePool.length === 0) {
-        memePool = dedupeAssetsByUrl(MEME_ASSETS.default || []);
+        memePool = dedupeAssetsByIdentity(MEME_ASSETS.default || []);
     }
     if (videoPool.length === 0) {
-        videoPool = dedupeAssetsByUrl(VIDEO_ASSETS.neon || []);
+        videoPool = dedupeAssetsByIdentity(VIDEO_ASSETS.neon || []);
     }
 
     const pickFromPool = (pool, type, side, avoidKey = null) => {
@@ -806,11 +825,7 @@ export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE
     }
 
     if (pool && pool.length > 0) {
-        const byUrl = new Map();
-        for (const a of pool) {
-            if (!byUrl.has(a.url)) byUrl.set(a.url, a);
-        }
-        let unique = [...byUrl.values()];
+        let unique = dedupeAssetsByIdentity(pool);
 
         // Supplement with cached AI concepts when the pool is small or mostly excluded
         if (mediaType === MEDIA_TYPES.IMAGE && unique.length - count < 6) {

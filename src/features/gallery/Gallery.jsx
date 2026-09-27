@@ -46,8 +46,12 @@ function getJudgeModeLabel(collision) {
 
 function galleryImagePair(collision) {
     const seed = collision?.submission || collision?.id || 'gallery';
-    const imageUrl = reliableImageUrl(collision?.imageUrl, seed);
-    const fallbackCandidate = reliableImageUrl(collision?.fallbackImageUrl, `${seed}-fallback`, { variant: 'fallback' });
+    const artOptions = { role: 'fusion', id: collision?.id };
+    const imageUrl = reliableImageUrl(collision?.imageUrl, seed, artOptions);
+    const fallbackCandidate = reliableImageUrl(collision?.fallbackImageUrl, `${seed}-fallback`, {
+        ...artOptions,
+        variant: 'fallback',
+    });
     return {
         imageUrl,
         fallbackUrl: fallbackCandidate !== imageUrl ? fallbackCandidate : imageUrl,
@@ -156,7 +160,7 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
                     src={imageUrl}
                     alt={collision.submission}
                     loading={String(imageUrl).startsWith('data:') ? 'eager' : 'lazy'}
-                    className={`w-full h-full object-cover transition-opacity duration-300 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
+                    className={`w-full h-full object-cover object-center transition-opacity duration-300 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
                     referrerPolicy="no-referrer"
                     data-fallback={fallbackUrl}
                     onLoad={() => setImageStatus('loaded')}

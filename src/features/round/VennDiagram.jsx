@@ -42,7 +42,7 @@ function VennMeme({ asset }) {
             <img
                 src={src}
                 alt={asset.label}
-                className={`w-full h-full object-contain transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`w-full h-full ${showGiphyAttribution ? 'object-contain' : 'object-cover object-center'} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
                 referrerPolicy="no-referrer"
                 onLoad={handleLoad}
                 onError={() => {
@@ -111,7 +111,7 @@ function VennImage({ asset }) {
     }
 
     return (
-        <div className="relative overflow-hidden w-full h-full">
+        <div className="relative overflow-hidden w-full h-full bg-[#120a24]">
             <MediaLoadingShell blurUrl={blurUrl} loaded={loaded} label={asset.label} />
             <img
                 src={src}
@@ -452,7 +452,7 @@ function VennAudio({ asset }) {
                 <img
                     src={coverSrc}
                     alt={asset.label}
-                    className={`absolute inset-0 w-full h-full object-cover brightness-50 transition-opacity duration-500 ${coverLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    className={`absolute inset-0 w-full h-full object-cover object-center brightness-50 transition-opacity duration-500 ${coverLoaded ? 'opacity-100' : 'opacity-0'}`}
                     onLoad={() => setCoverLoaded(true)}
                     onError={handleCoverError}
                     referrerPolicy="no-referrer"

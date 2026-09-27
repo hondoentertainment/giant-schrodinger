@@ -219,11 +219,11 @@ export function JudgeRound({ payload, onDone }) {
             />
 
             {effectivePayload.imageUrl && (
-                <div className="w-full max-w-xl mt-6 rounded-[22px] overflow-hidden border border-white/10 wordle-card !p-0 relative">
+                <div className="relative w-full max-w-sm mx-auto mt-6 aspect-square rounded-[22px] overflow-hidden border border-white/10 bg-[#120a24] shadow-2xl ring-1 ring-white/15">
                     <img
-                        src={reliableImageUrl(effectivePayload.imageUrl, effectivePayload.submission || 'fusion')}
+                        src={reliableImageUrl(effectivePayload.imageUrl, effectivePayload.submission || 'fusion', { role: 'fusion' })}
                         alt="Fusion created from this connection"
-                        className="w-full max-h-80 object-cover"
+                        className="absolute inset-0 w-full h-full object-cover object-center"
                         referrerPolicy="no-referrer"
                         loading="lazy"
                         decoding="async"
