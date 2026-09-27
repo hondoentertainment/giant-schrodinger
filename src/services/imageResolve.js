@@ -1,5 +1,9 @@
 import { isBackendEnabled } from '../lib/supabase';
-import { buildPicsumFallback } from '../lib/imageUrls';
+import {
+    buildLocalConceptImage,
+    isBrittleImageUrl,
+    isPexelsPhotoUrl,
+} from '../lib/conceptArt';
 
 const RESOLVE_IMAGE_URL = import.meta.env.VITE_SUPABASE_URL
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/resolve-image`
@@ -7,6 +11,7 @@ const RESOLVE_IMAGE_URL = import.meta.env.VITE_SUPABASE_URL
 
 const CACHE_KEY = 'vwf_image_resolve_cache';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const RESOLVE_TIMEOUT_MS = 4000;
 
 function normalizeQuery(query) {
     return String(query || '').trim().toLowerCase();
@@ -31,6 +36,39 @@ function saveCache(cache) {
     }
 }
 
+function localImage(query, options = {}) {
+    const url = buildLocalConceptImage(query, options);
+    return {
+        url,
+        fallbackUrl: url,
+        source: 'local',
+        photographer: null,
+    };
+}
+
+/**
+ * Accept a Pexels photo. Anything else, including Picsum and Unsplash, becomes bundled art.
+ */
+export function normalizeResolvedImage(query, data, options = {}) {
+    if (data?.source === 'pexels' && isPexelsPhotoUrl(data.url)) {
+        return {
+            url: data.url,
+            fallbackUrl: buildLocalConceptImage(query, options),
+            source: 'pexels',
+            photographer: data.photographer || null,
+        };
+    }
+    if (data?.url && !isBrittleImageUrl(data.url) && data.source !== 'picsum' && data.source !== 'local') {
+        return {
+            url: data.url,
+            fallbackUrl: isBrittleImageUrl(data.fallbackUrl) ? buildLocalConceptImage(query, options) : (data.fallbackUrl || buildLocalConceptImage(query, options)),
+            source: data.source || 'cache',
+            photographer: data.photographer || null,
+        };
+    }
+    return localImage(query, options);
+}
+
 function readCachedEntry(query) {
     const key = normalizeQuery(query);
     if (!key) return null;
@@ -39,18 +77,15 @@ function readCachedEntry(query) {
     const entry = cache[key];
     if (!entry || !entry.url) return null;
     if (Date.now() - (entry.timestamp || 0) > CACHE_TTL_MS) return null;
+    if (isBrittleImageUrl(entry.url) || entry.source === 'picsum') return null;
 
-    return {
-        url: entry.url,
-        fallbackUrl: entry.fallbackUrl || buildPicsumFallback(query),
-        source: entry.source || 'cache',
-        photographer: entry.photographer || null,
-    };
+    return normalizeResolvedImage(query, entry);
 }
 
 function writeCachedEntry(query, payload) {
     const key = normalizeQuery(query);
-    if (!key || !payload?.url) return;
+    if (!key || !payload?.url || isBrittleImageUrl(payload.url)) return;
+    if (payload.source !== 'pexels' && !isPexelsPhotoUrl(payload.url)) return;
 
     const cache = loadCache();
     cache[key] = {
@@ -68,56 +103,52 @@ export function isPicsumUrl(url) {
     return typeof url === 'string' && url.includes('picsum.photos');
 }
 
-function buildLocalFallback(query) {
-    const fallbackUrl = buildPicsumFallback(query);
-    return {
-        url: fallbackUrl,
-        fallbackUrl,
-        source: 'picsum',
-        photographer: null,
-    };
+function timeoutSignal(ms) {
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+        return AbortSignal.timeout(ms);
+    }
+    return undefined;
+}
+
+async function postResolve(body) {
+    return fetch(RESOLVE_IMAGE_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify(body),
+        signal: timeoutSignal(RESOLVE_TIMEOUT_MS),
+    });
 }
 
 async function fetchResolvedImage(query, orientation = 'squarish') {
     if (!RESOLVE_IMAGE_URL || !isBackendEnabled()) {
-        return buildLocalFallback(query);
+        return localImage(query);
     }
 
     let response;
     try {
-        response = await fetch(RESOLVE_IMAGE_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({ query, orientation }),
-        });
+        response = await postResolve({ query, orientation });
     } catch {
-        return buildLocalFallback(query);
+        return localImage(query);
     }
 
     if (!response.ok) {
-        return buildLocalFallback(query);
+        return localImage(query);
     }
 
     try {
         const data = await response.json();
-        if (!data?.url) return buildLocalFallback(query);
-        return {
-            url: data.url,
-            fallbackUrl: data.fallbackUrl || buildPicsumFallback(query),
-            source: data.source || 'pexels',
-            photographer: data.photographer || null,
-        };
+        return normalizeResolvedImage(query, data);
     } catch {
-        return buildLocalFallback(query);
+        return localImage(query);
     }
 }
 
 export async function resolveImageUrl(query, options = {}) {
     const trimmed = String(query || '').trim();
-    if (!trimmed) return buildLocalFallback('placeholder');
+    if (!trimmed) return localImage('placeholder');
 
     const cached = readCachedEntry(trimmed);
     if (cached) return cached;
@@ -145,19 +176,15 @@ export async function resolveImageUrls(queries, options = {}) {
 
     if (RESOLVE_IMAGE_URL && isBackendEnabled() && pending.length > 1) {
         try {
-            const response = await fetch(RESOLVE_IMAGE_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-                },
-                body: JSON.stringify({ queries: pending, orientation: options.orientation || 'squarish' }),
+            const response = await postResolve({
+                queries: pending,
+                orientation: options.orientation || 'squarish',
             });
 
             if (response.ok) {
                 const data = await response.json();
                 for (const query of pending) {
-                    const entry = data?.results?.[query] || buildLocalFallback(query);
+                    const entry = normalizeResolvedImage(query, data?.results?.[query]);
                     writeCachedEntry(query, entry);
                     results[query] = entry;
                 }
@@ -175,27 +202,51 @@ export async function resolveImageUrls(queries, options = {}) {
     return results;
 }
 
+function stillNeedsRemoteUpgrade(asset) {
+    if (!asset?.label) return false;
+    if (asset.type === 'meme' || asset.type === 'video' || asset.type === 'audio') return false;
+    if (asset.imageSource === 'pexels' || isPexelsPhotoUrl(asset.url)) return false;
+    return asset.imageSource === 'local' || isBrittleImageUrl(asset.url) || isPicsumUrl(asset.url) || !asset.url;
+}
+
+function rewriteBrittleAsset(asset) {
+    if (!asset) return asset;
+    const local = buildLocalConceptImage(asset.label || asset.id || 'concept', {
+        id: asset.id,
+        categories: asset.categories,
+    });
+    const next = { ...asset };
+    if (!next.url || isBrittleImageUrl(next.url)) {
+        next.url = local;
+        next.imageSource = 'local';
+    }
+    if (!next.fallbackUrl || isBrittleImageUrl(next.fallbackUrl)) {
+        next.fallbackUrl = next.url.startsWith('data:') ? next.url : local;
+    }
+    return next;
+}
+
 export async function resolveAssetsImages(assets) {
     if (!Array.isArray(assets) || assets.length === 0) return assets;
 
-    const labels = assets
-        .filter((asset) => asset?.label && (isPicsumUrl(asset.url) || !asset.url))
+    const upgradeLabels = assets
+        .filter((asset) => stillNeedsRemoteUpgrade(asset))
         .map((asset) => asset.label);
 
-    if (labels.length === 0) return assets;
-
-    const resolved = await resolveImageUrls(labels);
+    const canUpgrade = Boolean(RESOLVE_IMAGE_URL && isBackendEnabled() && upgradeLabels.length > 0);
+    const resolved = canUpgrade ? await resolveImageUrls(upgradeLabels) : null;
 
     return assets.map((asset) => {
-        if (!asset?.label) return asset;
-        const match = resolved[asset.label];
-        if (!match) return asset;
-
+        const rewritten = rewriteBrittleAsset(asset);
+        if (!canUpgrade || !asset?.label || asset.type === 'meme') return rewritten;
+        const match = resolved?.[asset.label];
+        if (!match || match.source !== 'pexels' || !isPexelsPhotoUrl(match.url)) return rewritten;
         return {
-            ...asset,
-            url: match.url || asset.url,
-            fallbackUrl: match.fallbackUrl || asset.fallbackUrl || buildPicsumFallback(asset.label),
-            imageSource: match.source,
+            ...rewritten,
+            url: match.url,
+            fallbackUrl: rewritten.url || match.fallbackUrl,
+            imageSource: 'pexels',
+            photographer: match.photographer || null,
         };
     });
 }

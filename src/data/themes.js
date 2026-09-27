@@ -1,11 +1,11 @@
 import { getSupplementalConcepts } from '../services/conceptGenerator';
 import { getCachedImageUrl } from '../services/imageResolve';
-import { buildPicsumFallback, IMG_WIDTH } from '../lib/imageUrls';
+import { buildLocalConceptImage, isBrittleImageUrl, isPexelsPhotoUrl } from '../lib/conceptArt';
 import { isInSeason } from '../services/seasonalRotation';
 
 const DEFAULT_KEYWORDS = ["abstract art", "texture", "colorful pattern", "surreal", "dreamscape"];
 
-// Re-export for existing imports
+// Re-export for existing imports. The name is historical; the URL is local art.
 export { buildPicsumFallback } from '../lib/imageUrls';
 
 // ── Media type constants ──
@@ -17,18 +17,16 @@ export const MEDIA_TYPES = {
     MEMES_VIDEOS: 'memes_videos',
 };
 
-export function buildUnsplashUrl(id, width = IMG_WIDTH) {
-    return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${width}&h=${width}&crop=entropy&q=85`;
-}
-
 function createImage({ id, label, fallback, categories = [] }) {
+    const art = buildLocalConceptImage(fallback || label, { id, categories });
     return {
         id,
         label,
         type: MEDIA_TYPES.IMAGE,
-        url: buildUnsplashUrl(id),
-        fallbackUrl: buildPicsumFallback(fallback || label),
+        url: art,
+        fallbackUrl: art,
         categories,
+        imageSource: 'local',
     };
 }
 
@@ -52,14 +50,19 @@ function createVideo({ id, label, url, fallbackUrl, posterUrl }) {
 }
 
 function createAudio({ id, label, url, fallbackUrl, coverUrl, coverFallbackUrl }) {
+    const art = buildLocalConceptImage(label, { id });
+    const safeCover = coverUrl && !isBrittleImageUrl(coverUrl) ? coverUrl : art;
+    const safeCoverFallback = coverFallbackUrl && !isBrittleImageUrl(coverFallbackUrl)
+        ? coverFallbackUrl
+        : safeCover;
     return {
         id,
         label,
         type: MEDIA_TYPES.AUDIO,
         url,
         fallbackUrl: fallbackUrl || url,
-        coverUrl: coverUrl || '',
-        coverFallbackUrl: coverFallbackUrl || '',
+        coverUrl: safeCover,
+        coverFallbackUrl: safeCoverFallback,
     };
 }
 
@@ -589,48 +592,48 @@ export const MEME_ASSETS = {
 // ── Audio assets (royalty-free Pixabay audio) ──
 const AUDIO_ASSETS = {
     neon: [
-        createAudio({ id: "neon-a1", label: "Synthwave Pulse", url: "https://cdn.pixabay.com/audio/2022/10/25/audio_33fbc1a816.mp3", coverUrl: "https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("synthwave") }),
-        createAudio({ id: "neon-a2", label: "Night Circuit", url: "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3", coverUrl: "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("circuit") }),
-        createAudio({ id: "neon-a3", label: "Electric Dream", url: "https://cdn.pixabay.com/audio/2023/07/11/audio_e07e8e4014.mp3", coverUrl: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("electric") }),
-        createAudio({ id: "neon-a4", label: "Vapor Trail", url: "https://cdn.pixabay.com/audio/2023/10/07/audio_7605c31ee4.mp3", coverUrl: "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("vapor") }),
+        createAudio({ id: "neon-a1", label: "Synthwave Pulse", url: "https://cdn.pixabay.com/audio/2022/10/25/audio_33fbc1a816.mp3" }),
+        createAudio({ id: "neon-a2", label: "Night Circuit", url: "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3" }),
+        createAudio({ id: "neon-a3", label: "Electric Dream", url: "https://cdn.pixabay.com/audio/2023/07/11/audio_e07e8e4014.mp3" }),
+        createAudio({ id: "neon-a4", label: "Vapor Trail", url: "https://cdn.pixabay.com/audio/2023/10/07/audio_7605c31ee4.mp3" }),
     ],
     nature: [
-        createAudio({ id: "nature-a1", label: "Birdsong Dawn", url: "https://cdn.pixabay.com/audio/2022/03/15/audio_48ad24fcc1.mp3", coverUrl: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("birdsong") }),
-        createAudio({ id: "nature-a2", label: "Rain on Leaves", url: "https://cdn.pixabay.com/audio/2022/09/01/audio_1e1ccc5a68.mp3", coverUrl: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("rain") }),
-        createAudio({ id: "nature-a3", label: "Creek Flow", url: "https://cdn.pixabay.com/audio/2022/02/07/audio_b9bc1cd118.mp3", coverUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("creek") }),
-        createAudio({ id: "nature-a4", label: "Forest Wind", url: "https://cdn.pixabay.com/audio/2021/08/08/audio_2237a35222.mp3", coverUrl: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("wind") }),
+        createAudio({ id: "nature-a1", label: "Birdsong Dawn", url: "https://cdn.pixabay.com/audio/2022/03/15/audio_48ad24fcc1.mp3" }),
+        createAudio({ id: "nature-a2", label: "Rain on Leaves", url: "https://cdn.pixabay.com/audio/2022/09/01/audio_1e1ccc5a68.mp3" }),
+        createAudio({ id: "nature-a3", label: "Creek Flow", url: "https://cdn.pixabay.com/audio/2022/02/07/audio_b9bc1cd118.mp3" }),
+        createAudio({ id: "nature-a4", label: "Forest Wind", url: "https://cdn.pixabay.com/audio/2021/08/08/audio_2237a35222.mp3" }),
     ],
     "retro-tech": [
-        createAudio({ id: "retro-a1", label: "8-Bit Quest", url: "https://cdn.pixabay.com/audio/2022/07/11/audio_5e3920e34e.mp3", coverUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("8bit") }),
-        createAudio({ id: "retro-a2", label: "Dial-Up Memory", url: "https://cdn.pixabay.com/audio/2023/04/27/audio_10fdd3bd12.mp3", coverUrl: "https://images.unsplash.com/photo-1453928582365-b6ad33cbcf64?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("dialup") }),
-        createAudio({ id: "retro-a3", label: "Arcade Coin", url: "https://cdn.pixabay.com/audio/2022/03/10/audio_a2f4a71ed3.mp3", coverUrl: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("arcade") }),
-        createAudio({ id: "retro-a4", label: "Synth Boot", url: "https://cdn.pixabay.com/audio/2022/11/22/audio_a1e4feb4d0.mp3", coverUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("synth") }),
+        createAudio({ id: "retro-a1", label: "8-Bit Quest", url: "https://cdn.pixabay.com/audio/2022/07/11/audio_5e3920e34e.mp3" }),
+        createAudio({ id: "retro-a2", label: "Dial-Up Memory", url: "https://cdn.pixabay.com/audio/2023/04/27/audio_10fdd3bd12.mp3" }),
+        createAudio({ id: "retro-a3", label: "Arcade Coin", url: "https://cdn.pixabay.com/audio/2022/03/10/audio_a2f4a71ed3.mp3" }),
+        createAudio({ id: "retro-a4", label: "Synth Boot", url: "https://cdn.pixabay.com/audio/2022/11/22/audio_a1e4feb4d0.mp3" }),
     ],
     ocean: [
-        createAudio({ id: "ocean-a1", label: "Whale Song", url: "https://cdn.pixabay.com/audio/2022/06/07/audio_37e8fe8dfa.mp3", coverUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("whale") }),
-        createAudio({ id: "ocean-a2", label: "Shore Break", url: "https://cdn.pixabay.com/audio/2022/01/20/audio_bdb6ea6b4a.mp3", coverUrl: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("shore") }),
-        createAudio({ id: "ocean-a3", label: "Deep Sonar", url: "https://cdn.pixabay.com/audio/2023/01/17/audio_a69b706cfe.mp3", coverUrl: "https://images.unsplash.com/photo-1544551763-77a2d1f5b107?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("sonar") }),
-        createAudio({ id: "ocean-a4", label: "Harbor Bell", url: "https://cdn.pixabay.com/audio/2022/03/09/audio_18e1cacb98.mp3", coverUrl: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("harbor") }),
+        createAudio({ id: "ocean-a1", label: "Whale Song", url: "https://cdn.pixabay.com/audio/2022/06/07/audio_37e8fe8dfa.mp3" }),
+        createAudio({ id: "ocean-a2", label: "Shore Break", url: "https://cdn.pixabay.com/audio/2022/01/20/audio_bdb6ea6b4a.mp3" }),
+        createAudio({ id: "ocean-a3", label: "Deep Sonar", url: "https://cdn.pixabay.com/audio/2023/01/17/audio_a69b706cfe.mp3" }),
+        createAudio({ id: "ocean-a4", label: "Harbor Bell", url: "https://cdn.pixabay.com/audio/2022/03/09/audio_18e1cacb98.mp3" }),
     ],
     sunset: [
-        createAudio({ id: "sunset-a1", label: "Golden Strings", url: "https://cdn.pixabay.com/audio/2022/08/31/audio_419263b458.mp3", coverUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("strings") }),
-        createAudio({ id: "sunset-a2", label: "Dusk Piano", url: "https://cdn.pixabay.com/audio/2023/09/04/audio_5546f7cbb7.mp3", coverUrl: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("piano") }),
-        createAudio({ id: "sunset-a3", label: "Amber Hum", url: "https://cdn.pixabay.com/audio/2022/11/21/audio_c2c0d49e31.mp3", coverUrl: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("amber") }),
-        createAudio({ id: "sunset-a4", label: "Twilight Chimes", url: "https://cdn.pixabay.com/audio/2022/05/13/audio_257112240f.mp3", coverUrl: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("chimes") }),
+        createAudio({ id: "sunset-a1", label: "Golden Strings", url: "https://cdn.pixabay.com/audio/2022/08/31/audio_419263b458.mp3" }),
+        createAudio({ id: "sunset-a2", label: "Dusk Piano", url: "https://cdn.pixabay.com/audio/2023/09/04/audio_5546f7cbb7.mp3" }),
+        createAudio({ id: "sunset-a3", label: "Amber Hum", url: "https://cdn.pixabay.com/audio/2022/11/21/audio_c2c0d49e31.mp3" }),
+        createAudio({ id: "sunset-a4", label: "Twilight Chimes", url: "https://cdn.pixabay.com/audio/2022/05/13/audio_257112240f.mp3" }),
     ],
     cosmic: [
-        createAudio({ id: "cosmic-a1", label: "Orbital Hum", url: "https://cdn.pixabay.com/audio/2023/10/07/audio_7605c31ee4.mp3", coverUrl: "https://images.unsplash.com/photo-1446776811778-41c0a76bedc3?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("orbital") }),
-        createAudio({ id: "cosmic-a2", label: "Deep Space Drone", url: "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3", coverUrl: "https://images.unsplash.com/photo-1462336644104-8d3737fb0d3c?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("space") }),
+        createAudio({ id: "cosmic-a1", label: "Orbital Hum", url: "https://cdn.pixabay.com/audio/2023/10/07/audio_7605c31ee4.mp3" }),
+        createAudio({ id: "cosmic-a2", label: "Deep Space Drone", url: "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3" }),
     ],
     kitchen: [
-        createAudio({ id: "kitchen-a1", label: "Sizzle Loop", url: "https://cdn.pixabay.com/audio/2022/03/10/audio_a2f4a71ed3.mp3", coverUrl: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("sizzle") }),
-        createAudio({ id: "kitchen-a2", label: "Kettle Whistle", url: "https://cdn.pixabay.com/audio/2022/05/13/audio_257112240f.mp3", coverUrl: "https://images.unsplash.com/photo-1504754525036-673b8c4b5c7e?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("kettle") }),
+        createAudio({ id: "kitchen-a1", label: "Sizzle Loop", url: "https://cdn.pixabay.com/audio/2022/03/10/audio_a2f4a71ed3.mp3" }),
+        createAudio({ id: "kitchen-a2", label: "Kettle Whistle", url: "https://cdn.pixabay.com/audio/2022/05/13/audio_257112240f.mp3" }),
     ],
     mystery: [
-        createAudio({ id: "mystery-a1", label: "???", url: "https://cdn.pixabay.com/audio/2023/03/27/audio_24cba72520.mp3", coverUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("mystery1") }),
-        createAudio({ id: "mystery-a2", label: "???", url: "https://cdn.pixabay.com/audio/2022/10/02/audio_4e0a0e4394.mp3", coverUrl: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("mystery2") }),
-        createAudio({ id: "mystery-a3", label: "???", url: "https://cdn.pixabay.com/audio/2023/06/15/audio_3cdce93c1f.mp3", coverUrl: "https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("mystery3") }),
-        createAudio({ id: "mystery-a4", label: "???", url: "https://cdn.pixabay.com/audio/2022/09/28/audio_1da2d8dfbd.mp3", coverUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80", coverFallbackUrl: buildPicsumFallback("mystery4") }),
+        createAudio({ id: "mystery-a1", label: "???", url: "https://cdn.pixabay.com/audio/2023/03/27/audio_24cba72520.mp3" }),
+        createAudio({ id: "mystery-a2", label: "???", url: "https://cdn.pixabay.com/audio/2022/10/02/audio_4e0a0e4394.mp3" }),
+        createAudio({ id: "mystery-a3", label: "???", url: "https://cdn.pixabay.com/audio/2023/06/15/audio_3cdce93c1f.mp3" }),
+        createAudio({ id: "mystery-a4", label: "???", url: "https://cdn.pixabay.com/audio/2022/09/28/audio_1da2d8dfbd.mp3" }),
     ],
 };
 
@@ -819,17 +822,23 @@ export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE
                         id: `ai-${seed}-${concept.left.label}`,
                         label: concept.left.label,
                         type: MEDIA_TYPES.IMAGE,
-                        url: concept.left.url,
-                        fallbackUrl: buildPicsumFallback(concept.left.label),
+                        url: isBrittleImageUrl(concept.left.url)
+                            ? buildLocalConceptImage(concept.left.label, { id: `ai-${concept.left.label}` })
+                            : concept.left.url,
+                        fallbackUrl: buildLocalConceptImage(concept.left.label, { id: `ai-${concept.left.label}` }),
                         categories: concept.left.categories,
+                        imageSource: isPexelsPhotoUrl(concept.left.url) ? 'pexels' : 'local',
                     });
                     unique.push({
                         id: `ai-${seed}-${concept.right.label}`,
                         label: concept.right.label,
                         type: MEDIA_TYPES.IMAGE,
-                        url: concept.right.url,
-                        fallbackUrl: buildPicsumFallback(concept.right.label),
+                        url: isBrittleImageUrl(concept.right.url)
+                            ? buildLocalConceptImage(concept.right.label, { id: `ai-${concept.right.label}` })
+                            : concept.right.url,
+                        fallbackUrl: buildLocalConceptImage(concept.right.label, { id: `ai-${concept.right.label}` }),
                         categories: concept.right.categories,
+                        imageSource: isPexelsPhotoUrl(concept.right.url) ? 'pexels' : 'local',
                     });
                 }
             } catch {
@@ -854,12 +863,15 @@ export function buildThemeAssets(theme, count = 2, mediaType = MEDIA_TYPES.IMAGE
     const chosen = keywords.slice(0, count);
     return chosen.map((keyword, index) => {
         const cached = getCachedImageUrl(keyword);
+        const local = buildLocalConceptImage(keyword, { id: `${theme?.id || "theme"}-${seed}-${index}` });
+        const remote = cached && isPexelsPhotoUrl(cached.url) ? cached.url : null;
         return {
             id: `${theme?.id || "theme"}-${seed}-${index}`,
             label: keyword,
             type: MEDIA_TYPES.IMAGE,
-            url: cached?.url || buildPicsumFallback(`${keyword}-${seed + index}`),
-            fallbackUrl: cached?.fallbackUrl || buildPicsumFallback(keyword),
+            url: remote || (cached?.url && !isBrittleImageUrl(cached.url) ? cached.url : local),
+            fallbackUrl: local,
+            imageSource: remote ? 'pexels' : 'local',
         };
     });
 }

@@ -20,26 +20,32 @@ function saveConcepts(concepts) {
 
 async function attachResolvedImages(pairs) {
   const { resolveImageUrls } = await import('./imageResolve');
-  const { buildPicsumFallback } = await import('../lib/imageUrls');
+  const { buildLocalConceptImage, isBrittleImageUrl } = await import('../lib/conceptArt');
 
   const labels = pairs.flatMap((pair) => [pair.left, pair.right]);
   const resolved = await resolveImageUrls(labels);
 
+  const safeUrl = (value, label) => (
+    value && !isBrittleImageUrl(value) ? value : buildLocalConceptImage(label)
+  );
+
   return pairs.map((pair) => {
-    const left = resolved[pair.left] || { url: buildPicsumFallback(pair.left), fallbackUrl: buildPicsumFallback(pair.left) };
-    const right = resolved[pair.right] || { url: buildPicsumFallback(pair.right), fallbackUrl: buildPicsumFallback(pair.right) };
+    const left = resolved[pair.left] || {};
+    const right = resolved[pair.right] || {};
+    const leftArt = buildLocalConceptImage(pair.left);
+    const rightArt = buildLocalConceptImage(pair.right);
 
     return {
       left: {
         label: pair.left,
-        url: left.url,
-        fallbackUrl: left.fallbackUrl || buildPicsumFallback(pair.left),
+        url: safeUrl(left.url, pair.left),
+        fallbackUrl: leftArt,
         categories: ['ai-generated'],
       },
       right: {
         label: pair.right,
-        url: right.url,
-        fallbackUrl: right.fallbackUrl || buildPicsumFallback(pair.right),
+        url: safeUrl(right.url, pair.right),
+        fallbackUrl: rightArt,
         categories: ['ai-generated'],
       },
     };

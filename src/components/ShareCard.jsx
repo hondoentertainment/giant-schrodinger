@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { formatAssetForShare } from '../lib/mediaType';
+import { reliableImageUrl } from '../lib/conceptArt';
 
 const CARD_WIDTH = 800;
 const CARD_HEIGHT = 420;
@@ -102,8 +103,9 @@ const ShareCard = React.memo(function ShareCard({
             return;
         }
 
+        const src = reliableImageUrl(fusionImageUrl, submission || 'share');
         const img = new Image();
-        img.crossOrigin = 'anonymous';
+        if (!src.startsWith('data:')) img.crossOrigin = 'anonymous';
 
         img.onload = () => {
             const canvas = canvasRef.current;
@@ -159,8 +161,8 @@ const ShareCard = React.memo(function ShareCard({
             drawCard();
         };
 
-        img.src = fusionImageUrl;
-    }, [fusionImageUrl, drawCard, drawText, onGenerated]);
+        img.src = src;
+    }, [fusionImageUrl, submission, drawCard, drawText, onGenerated]);
 
     return (
         <div className="w-full flex flex-col items-center gap-3">

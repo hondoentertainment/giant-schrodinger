@@ -4,6 +4,7 @@ import { getAssetMediaLabel } from '../../services/assetSelection';
 import { isGiphyUrl } from '../../services/memeResolve';
 import { getYoutubeEmbedUrl, getYoutubeVideoIdFromAsset } from '../../lib/youtube';
 import { buildResponsiveSrcSet, getGiphyPreviewUrl, buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
+import { isBrittleImageUrl, reliableImageUrl } from '../../lib/conceptArt';
 import { MediaLoadingShell } from '../../components/MediaLoadingShell';
 import { useTranslation } from '../../hooks/useTranslation';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
@@ -13,10 +14,18 @@ function VennMeme({ asset }) {
     const [loaded, setLoaded] = useState(false);
     const [useFallback, setUseFallback] = useState(false);
     const [useFullRes, setUseFullRes] = useState(!getGiphyPreviewUrl(asset.url));
-    const previewUrl = asset.previewUrl || getGiphyPreviewUrl(asset.url);
-    const primaryUrl = useFullRes ? asset.url : (previewUrl || asset.url);
-    const src = useFallback && asset.fallbackUrl ? asset.fallbackUrl : primaryUrl;
-    const blurUrl = asset.blurUrl || (useFallback ? null : buildBlurPlaceholderUrl(asset.fallbackUrl));
+    const safeUrl = reliableImageUrl(asset.url, asset.label || asset.id || 'meme', { id: asset.id, categories: asset.categories });
+    const safeFallback = reliableImageUrl(asset.fallbackUrl, `${asset.label || asset.id || 'meme'}-fallback`, {
+        id: asset.id,
+        categories: asset.categories,
+        variant: 'fallback',
+    });
+    const previewUrl = asset.previewUrl || getGiphyPreviewUrl(safeUrl);
+    const primaryUrl = useFullRes ? safeUrl : (previewUrl || safeUrl);
+    const src = useFallback && safeFallback && safeFallback !== primaryUrl ? safeFallback : primaryUrl;
+    const blurUrl = !isBrittleImageUrl(asset.blurUrl) && asset.blurUrl
+        ? asset.blurUrl
+        : (useFallback ? null : buildBlurPlaceholderUrl(safeFallback));
     const showGiphyAttribution = asset.memeSource === 'giphy' || isGiphyUrl(asset.url);
 
     const handleLoad = () => {
@@ -37,7 +46,7 @@ function VennMeme({ asset }) {
                 referrerPolicy="no-referrer"
                 onLoad={handleLoad}
                 onError={() => {
-                    if (!useFallback && asset.fallbackUrl && src !== asset.fallbackUrl) {
+                    if (!useFallback && safeFallback && src !== safeFallback) {
                         setUseFallback(true);
                         setLoaded(false);
                         return;
@@ -70,11 +79,22 @@ function VennImage({ asset }) {
     const [fallbackLevel, setFallbackLevel] = useState(0);
     // 0 = primary, 1 = fallback URL, 2 = gradient card
 
-    const src = fallbackLevel === 0 ? asset.url : asset.fallbackUrl;
-    const blurUrl = asset.blurUrl || buildBlurPlaceholderUrl(src);
+    const primary = reliableImageUrl(asset.url, asset.label || asset.id || 'concept', {
+        id: asset.id,
+        categories: asset.categories,
+    });
+    const fallbackCandidate = reliableImageUrl(asset.fallbackUrl, `${asset.label || asset.id || 'concept'}-fallback`, {
+        id: asset.id,
+        categories: asset.categories,
+        variant: 'fallback',
+    });
+    const fallback = fallbackCandidate !== primary ? fallbackCandidate : null;
+    const src = fallbackLevel === 0 ? primary : fallback;
+    const blurSource = !isBrittleImageUrl(asset.blurUrl) ? asset.blurUrl : null;
+    const blurUrl = blurSource || buildBlurPlaceholderUrl(src);
 
     const handleError = () => {
-        if (fallbackLevel === 0 && asset.fallbackUrl) {
+        if (fallbackLevel === 0 && fallback) {
             setFallbackLevel(1);
             setLoaded(false);
         } else {
@@ -82,7 +102,7 @@ function VennImage({ asset }) {
         }
     };
 
-    if (fallbackLevel >= 2) {
+    if (fallbackLevel >= 2 || !src) {
         return (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-800 text-white text-2xl font-bold p-4 text-center">
                 {asset.label || 'Mystery Concept'}
@@ -401,14 +421,21 @@ function VennAudio({ asset }) {
     };
 
     const handleCoverError = (event) => {
-        const fallback = asset.coverFallbackUrl;
+        const fallback = asset.coverFallbackUrl
+            ? reliableImageUrl(asset.coverFallbackUrl, `${asset.label || asset.id || 'cover'}-fallback`, { id: asset.id, variant: 'fallback' })
+            : '';
         if (fallback && event.currentTarget.src !== fallback) {
             event.currentTarget.src = fallback;
-            event.currentTarget.onerror = null;
         }
+        event.currentTarget.onerror = null;
     };
 
-    const coverBlurUrl = asset.coverUrl ? (asset.coverBlurUrl || buildBlurPlaceholderUrl(asset.coverUrl)) : null;
+    const coverSrc = asset.coverUrl
+        ? reliableImageUrl(asset.coverUrl, asset.label || asset.id || 'cover', { id: asset.id })
+        : '';
+    const coverBlurUrl = coverSrc && !isBrittleImageUrl(asset.coverBlurUrl)
+        ? (asset.coverBlurUrl || buildBlurPlaceholderUrl(coverSrc))
+        : null;
 
     return (
         <div className="w-full h-full relative flex flex-col items-center justify-center">
@@ -421,9 +448,9 @@ function VennAudio({ asset }) {
                     referrerPolicy="no-referrer"
                 />
             )}
-            {asset.coverUrl && (
+            {coverSrc && (
                 <img
-                    src={asset.coverUrl}
+                    src={coverSrc}
                     alt={asset.label}
                     className={`absolute inset-0 w-full h-full object-cover brightness-50 transition-opacity duration-500 ${coverLoaded ? 'opacity-100' : 'opacity-0'}`}
                     onLoad={() => setCoverLoaded(true)}
@@ -434,7 +461,7 @@ function VennAudio({ asset }) {
                     draggable={false}
                 />
             )}
-            {!asset.coverUrl && (
+            {!coverSrc && (
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 to-pink-900/60" />
             )}
 

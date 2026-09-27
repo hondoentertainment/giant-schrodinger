@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { buildBlurPlaceholderUrl } from '../lib/mediaLoad';
+import { reliableImageUrl } from '../lib/conceptArt';
 
 const LEFT_COLOR = '#a855f7';
 const RIGHT_COLOR = '#6366f1';
@@ -102,8 +103,13 @@ export function FusionFrame({
     const [level, setLevel] = useState(0); // 0 = url, 1 = fallbackUrl, 2 = text card
     const [loaded, setLoaded] = useState(false);
 
-    const primaryUrl = image?.url || null;
-    const fallbackUrl = image?.fallbackUrl && image.fallbackUrl !== primaryUrl ? image.fallbackUrl : null;
+    const primaryUrl = image?.url
+        ? reliableImageUrl(image.url, submission || leftLabel || 'fusion')
+        : null;
+    const fallbackCandidate = image?.fallbackUrl
+        ? reliableImageUrl(image.fallbackUrl, `${submission || leftLabel || 'fusion'}-fallback`, { variant: 'fallback' })
+        : null;
+    const fallbackUrl = fallbackCandidate && fallbackCandidate !== primaryUrl ? fallbackCandidate : null;
 
     useEffect(() => {
         setLevel(0);

@@ -76,11 +76,13 @@ describe('assetSelection', () => {
             expect(labels.has('Neon Alley') && labels.has('Neon Street')).toBe(false);
         });
 
-        it('builds square entropy-cropped unsplash urls', () => {
+        it('builds bundled concept art instead of remote hotlinks', () => {
             const theme = getThemeById('neon');
             const [asset] = buildThemeAssets(theme, 1, MEDIA_TYPES.IMAGE, { seed: 1, preferDiverse: false });
-            expect(asset.url).toContain('h=1080');
-            expect(asset.url).toContain('crop=entropy');
+            expect(asset.url.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(asset.fallbackUrl.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(asset.url).not.toMatch(/unsplash|picsum/);
+            expect(asset.imageSource).toBe('local');
         });
     });
 
@@ -161,7 +163,9 @@ describe('assetSelection', () => {
                 url: 'https://videos.pexels.com/a.mp4',
             }]);
 
-            expect(resolved[0].url).toBe(memeAsset.url);
+            expect(resolved[0].type).toBe(MEDIA_TYPES.MEME);
+            expect(resolved[0].url.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(resolved[0].url).not.toContain('unsplash');
             expect(resolved[1].url).toBe('https://videos.pexels.com/a.mp4');
         });
 
@@ -169,12 +173,13 @@ describe('assetSelection', () => {
             const assets = [{
                 type: MEDIA_TYPES.IMAGE,
                 label: 'Forest',
-                url: 'https://images.unsplash.com/photo-abc?w=1080&h=1080',
-                fallbackUrl: 'https://images.unsplash.com/photo-abc?w=1080&h=1080',
+                url: 'https://images.pexels.com/photos/123/pexels-photo-123.jpeg?w=1080',
+                fallbackUrl: 'https://images.pexels.com/photos/123/pexels-photo-123.jpeg?w=1080',
             }];
 
             const resolved = await resolveSelectedAssets(assets);
-            expect(resolved[0].blurUrl).toContain('blur=10');
+            expect(resolved[0].blurUrl).toContain('w=32');
+            expect(resolved[0].blurUrl).toContain('blur=2');
         });
     });
 

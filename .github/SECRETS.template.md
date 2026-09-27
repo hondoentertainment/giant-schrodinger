@@ -25,8 +25,8 @@ Configure these in **GitHub → Settings → Secrets and variables → Actions**
 | Secret | Purpose |
 |--------|---------|
 | `GEMINI_API_KEY` | `score-submission` server-side AI scoring |
-| `PEXELS_API_KEY` | `resolve-image` stock photos |
-| `GIPHY_API_KEY` | `resolve-meme` GIF lookup |
+| `PEXELS_API_KEY` | Optional. `resolve-image` stock photos. Bundled concept art is used when unset |
+| `GIPHY_API_KEY` | Optional. `resolve-meme` GIF lookup. Bundled concept art is used when unset |
 | `APP_URL` | OG previews + CORS allowlist seed |
 | `ALLOWED_ORIGINS` | Comma-separated extra CORS origins |
 | `SUPABASE_URL` | `og-tags` RPC lookups |

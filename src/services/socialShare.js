@@ -1,5 +1,6 @@
 import { formatAssetForShare } from '../lib/mediaType';
 import { LINK_COPIED_MESSAGE } from '../lib/shareOrCopy';
+import { reliableImageUrl } from '../lib/conceptArt';
 
 const TWITTER_BASE_URL = 'https://twitter.com/intent/tweet';
 const FACEBOOK_BASE_URL = 'https://www.facebook.com/sharer/sharer.php';
@@ -101,12 +102,13 @@ export function resolveSharePageUrl(shareData = {}) {
 }
 
 function loadImage(imageUrl) {
+  const src = reliableImageUrl(imageUrl, 'share');
   return new Promise((resolve, reject) => {
     const image = new Image();
-    image.crossOrigin = 'anonymous';
+    if (!src.startsWith('data:')) image.crossOrigin = 'anonymous';
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error('Image failed to load'));
-    image.src = imageUrl;
+    image.src = src;
   });
 }
 

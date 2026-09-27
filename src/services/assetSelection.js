@@ -1,5 +1,7 @@
 import { buildThemeAssets, MEDIA_TYPES } from '../data/themes';
 import { normalizeMediaType } from '../lib/mediaType';
+import { isBrittleImageUrl } from '../lib/conceptArt';
+import { isBackendEnabled } from '../lib/supabase';
 import {
     enrichAssetForDisplay,
     preloadMediaAsset,
@@ -210,10 +212,19 @@ function mergeResolvedAsset(original, imageResult, memeResult) {
     });
 }
 
+function needsImageApi(asset) {
+    if (!asset?.label) return false;
+    if (asset.type === MEDIA_TYPES.MEME || asset.type === MEDIA_TYPES.VIDEO || asset.type === MEDIA_TYPES.AUDIO) {
+        return false;
+    }
+    if (isBrittleImageUrl(asset.url) || isPicsumUrl(asset.url) || !asset.url) return true;
+    return asset.imageSource === 'local' && isBackendEnabled();
+}
+
 export async function resolveSelectedAssets(assets) {
     if (!Array.isArray(assets) || assets.length === 0) return assets;
 
-    const needsImageResolve = assets.some((asset) => asset?.label && isPicsumUrl(asset?.url));
+    const needsImageResolve = assets.some(needsImageApi);
     const needsMemeResolve = assets.some(needsMemeApiResolve);
 
     if (!needsImageResolve && !needsMemeResolve) {

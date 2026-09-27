@@ -1,6 +1,7 @@
 import { MEDIA_TYPES } from '../data/themes';
 import { getYoutubeThumbnailUrl, getYoutubeVideoIdFromAsset } from './youtube';
 import { isGiphyUrl } from '../services/memeResolve';
+import { buildLocalConceptImage, isBrittleImageUrl } from './conceptArt';
 
 const preloadCache = new Map();
 
@@ -8,12 +9,7 @@ const preloadCache = new Map();
  * Tiny blurred placeholder URL for progressive image loading.
  */
 export function buildBlurPlaceholderUrl(url, width = 32) {
-    if (!url || typeof url !== 'string') return null;
-
-    if (url.includes('unsplash.com')) {
-        const base = url.replace(/w=\d+/g, `w=${width}`).replace(/h=\d+/g, `h=${width}`);
-        return base.includes('blur=') ? base : `${base}${base.includes('?') ? '&' : '?'}blur=10`;
-    }
+    if (!url || typeof url !== 'string' || isBrittleImageUrl(url)) return null;
 
     if (url.includes('images.pexels.com')) {
         const separator = url.includes('?') ? '&' : '?';
@@ -21,10 +17,6 @@ export function buildBlurPlaceholderUrl(url, width = 32) {
             return url.replace(/w=\d+/g, `w=${width}`) + `${separator}auto=compress&blur=2`;
         }
         return `${url}${separator}auto=compress&w=${width}&blur=2`;
-    }
-
-    if (url.includes('picsum.photos')) {
-        return url.replace(/\/(\d+)\/(\d+)(?:\?|$)/, `/${width}/${width}`);
     }
 
     if (url.includes('img.youtube.com')) {
@@ -51,18 +43,10 @@ export function getGiphyPreviewUrl(gifUrl) {
 }
 
 /**
- * Responsive srcset for Unsplash and Pexels still images.
+ * Responsive srcset for Pexels still images.
  */
 export function buildResponsiveSrcSet(url) {
-    if (!url) return undefined;
-
-    if (url.includes('unsplash.com')) {
-        const id = url.match(/photo-([^?]+)/)?.[1];
-        if (!id) return undefined;
-        return [400, 640, 1080].map((w) =>
-            `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${w}&crop=entropy&q=85 ${w}w`
-        ).join(', ');
-    }
+    if (!url || isBrittleImageUrl(url)) return undefined;
 
     if (url.includes('images.pexels.com') && !url.includes('/videos/')) {
         const base = url.split('?')[0];
@@ -74,31 +58,54 @@ export function buildResponsiveSrcSet(url) {
     return undefined;
 }
 
+function replaceBrittleMedia(asset) {
+    const enriched = { ...asset };
+    const local = buildLocalConceptImage(asset.label || asset.id || 'concept', {
+        id: asset.id,
+        categories: asset.categories,
+    });
+
+    if (!enriched.url || isBrittleImageUrl(enriched.url)) {
+        if (enriched.type !== MEDIA_TYPES.VIDEO && enriched.type !== MEDIA_TYPES.AUDIO) {
+            enriched.url = local;
+            enriched.imageSource = enriched.imageSource === 'pexels' ? 'pexels' : 'local';
+        }
+    }
+    if (enriched.type !== MEDIA_TYPES.VIDEO && enriched.type !== MEDIA_TYPES.AUDIO) {
+        if (!enriched.fallbackUrl || isBrittleImageUrl(enriched.fallbackUrl)) {
+            enriched.fallbackUrl = enriched.url?.startsWith('data:') ? enriched.url : local;
+        }
+    }
+    if (isBrittleImageUrl(enriched.coverUrl)) enriched.coverUrl = local;
+    if (isBrittleImageUrl(enriched.coverFallbackUrl)) enriched.coverFallbackUrl = enriched.coverUrl || local;
+    if (isBrittleImageUrl(enriched.posterUrl)) enriched.posterUrl = local;
+    return enriched;
+}
+
 export function enrichAssetForDisplay(asset) {
     if (!asset) return asset;
 
-    const enriched = { ...asset };
+    const enriched = replaceBrittleMedia(asset);
     const youtubeId = getYoutubeVideoIdFromAsset(asset);
 
     if (youtubeId && !enriched.posterUrl) {
         enriched.posterUrl = getYoutubeThumbnailUrl(youtubeId);
     }
 
-    if (asset.type === MEDIA_TYPES.MEME) {
-        const preview = getGiphyPreviewUrl(asset.url);
+    if (enriched.type === MEDIA_TYPES.MEME) {
+        const preview = getGiphyPreviewUrl(enriched.url);
         if (preview) enriched.previewUrl = preview;
     }
 
-    const primary = asset.url || asset.fallbackUrl;
+    const primary = enriched.url || enriched.fallbackUrl;
     enriched.blurUrl = buildBlurPlaceholderUrl(primary)
-        || buildBlurPlaceholderUrl(asset.fallbackUrl)
         || buildBlurPlaceholderUrl(enriched.posterUrl);
 
     return enriched;
 }
 
 export function preloadImageUrl(url, { priority = false } = {}) {
-    if (!url || url.startsWith('data:')) return Promise.resolve('skipped');
+    if (!url || url.startsWith('data:') || isBrittleImageUrl(url)) return Promise.resolve('skipped');
     if (import.meta.env?.MODE === 'test') return Promise.resolve('skipped');
 
     const cached = preloadCache.get(url);
