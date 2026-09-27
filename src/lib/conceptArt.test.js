@@ -9,6 +9,7 @@ import {
     FUSION_PLATES,
     buildLocalConceptImage,
     buildPicsumFallback,
+    conceptObjectPosition,
     isBrittleImageUrl,
     isBundledConceptArtUrl,
     isPexelsPhotoUrl,
@@ -53,9 +54,25 @@ describe('concept art', () => {
             role: 'fusion',
             variant: 'fallback',
         });
-        expect(FUSION_PLATES.some((plate) => fusion.endsWith(plate))).toBe(true);
+        expect(fusion).toMatch(/fusion-scaries-sparkler\.jpg$/);
+        expect(fallback).toMatch(/fusion-scaries-sparkler-wide\.jpg$/);
         expect(fallback).not.toBe(fusion);
-        expect(FUSION_PLATES.some((plate) => fallback.endsWith(plate))).toBe(true);
+    });
+
+    it('pins Sunday scaries and the leftover sparkler to their stills', () => {
+        expect(buildLocalConceptImage('Sunday scaries', { id: 'pair-left' }))
+            .toMatch(/sunday-scaries-lamp\.jpg$/);
+        expect(buildLocalConceptImage('Sunday scaries', { id: 'pair-left', variant: 'fallback' }))
+            .toMatch(/sunday-scaries-close\.jpg$/);
+        expect(buildLocalConceptImage('A leftover sparkler', { id: 'pair-right' }))
+            .toMatch(/leftover-sparkler-hand\.jpg$/);
+        expect(reliableImageUrl('/art/plates/leftover-sparkler-room.jpg', 'Sunday scaries', { label: 'Sunday scaries' }))
+            .toMatch(/sunday-scaries-lamp\.jpg$/);
+        expect(reliableImageUrl('https://images.pexels.com/photos/1/pexels-photo-1.jpeg', 'Sunday scaries'))
+            .toContain('images.pexels.com');
+        expect(conceptObjectPosition('/art/plates/sunday-scaries-lamp.jpg')).toBe('center 42%');
+        expect(conceptObjectPosition('/art/plates/leftover-sparkler-hand.jpg')).toBe('center 58%');
+        expect(conceptObjectPosition('/art/plates/fusion-scaries-sparkler.jpg')).toBe('center 46%');
     });
 
     it('keeps the old fallback name pointed at local art', () => {

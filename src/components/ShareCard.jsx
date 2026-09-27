@@ -103,7 +103,7 @@ const ShareCard = React.memo(function ShareCard({
             return;
         }
 
-        const src = reliableImageUrl(fusionImageUrl, submission || 'share');
+        const src = reliableImageUrl(fusionImageUrl, submission || 'share', { role: 'fusion', label: submission });
         const img = new Image();
         if (!src.startsWith('data:')) img.crossOrigin = 'anonymous';
 

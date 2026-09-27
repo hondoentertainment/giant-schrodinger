@@ -10,7 +10,7 @@ import { haptic } from '../../lib/haptics';
 import { playSubmitSound } from '../../services/sounds';
 import { markJudgeChain, setForcedPair } from '../../lib/forcedPair';
 import { trackEvent } from '../../services/analytics';
-import { reliableImageUrl } from '../../lib/conceptArt';
+import { conceptObjectPosition, reliableImageUrl } from '../../lib/conceptArt';
 
 const SCORE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -223,7 +223,8 @@ export function JudgeRound({ payload, onDone }) {
                     <img
                         src={reliableImageUrl(effectivePayload.imageUrl, effectivePayload.submission || 'fusion', { role: 'fusion' })}
                         alt="Fusion created from this connection"
-                        className="absolute inset-0 w-full h-full object-cover object-center"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        style={{ objectPosition: conceptObjectPosition('fusion-scaries-sparkler') }}
                         referrerPolicy="no-referrer"
                         loading="lazy"
                         decoding="async"

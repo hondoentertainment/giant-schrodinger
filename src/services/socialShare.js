@@ -102,7 +102,7 @@ export function resolveSharePageUrl(shareData = {}) {
 }
 
 function loadImage(imageUrl) {
-  const src = reliableImageUrl(imageUrl, 'share');
+  const src = reliableImageUrl(imageUrl, 'share', { role: 'fusion' });
   return new Promise((resolve, reject) => {
     const image = new Image();
     if (!src.startsWith('data:')) image.crossOrigin = 'anonymous';

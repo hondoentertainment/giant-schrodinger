@@ -4,7 +4,7 @@ import { getAssetMediaLabel } from '../../services/assetSelection';
 import { isGiphyUrl } from '../../services/memeResolve';
 import { getYoutubeEmbedUrl, getYoutubeVideoIdFromAsset } from '../../lib/youtube';
 import { buildResponsiveSrcSet, getGiphyPreviewUrl, buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
-import { isBrittleImageUrl, reliableImageUrl } from '../../lib/conceptArt';
+import { conceptObjectPosition, isBrittleImageUrl, reliableImageUrl } from '../../lib/conceptArt';
 import { MediaLoadingShell } from '../../components/MediaLoadingShell';
 import { useTranslation } from '../../hooks/useTranslation';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
@@ -42,7 +42,8 @@ function VennMeme({ asset }) {
             <img
                 src={src}
                 alt={asset.label}
-                className={`w-full h-full ${showGiphyAttribution ? 'object-contain' : 'object-cover object-center'} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`w-full h-full ${showGiphyAttribution ? 'object-contain' : 'object-cover'} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                style={showGiphyAttribution ? undefined : { objectPosition: conceptObjectPosition(src) }}
                 referrerPolicy="no-referrer"
                 onLoad={handleLoad}
                 onError={() => {
@@ -118,9 +119,10 @@ function VennImage({ asset }) {
                 srcSet={buildResponsiveSrcSet(src)}
                 sizes="(max-width: 640px) 400px, (max-width: 1024px) 640px, 1080px"
                 alt={asset.label}
-                className={`w-full h-full object-cover object-center transition-all duration-700 ease-out ${
+                className={`w-full h-full object-cover transition-all duration-700 ease-out ${
                     loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.03]'
                 }`}
+                style={{ objectPosition: conceptObjectPosition(src) }}
                 referrerPolicy="no-referrer"
                 onError={handleError}
                 onLoad={() => setLoaded(true)}
@@ -559,16 +561,19 @@ function ConceptCaption({ label, align = 'left', accentColor, assetType }) {
 function VennCircle({ asset, side, colorblindMode, colors }) {
     const assetType = asset?.type || MEDIA_TYPES.IMAGE;
     const isAudio = assetType === MEDIA_TYPES.AUDIO;
-    const isMeme = assetType === MEDIA_TYPES.MEME;
     const isLeft = side === 'left';
     const accentColor = isLeft ? colors.left : colors.right;
     const patternId = isLeft ? 'pattern-left' : 'pattern-right';
 
-    const sideTint = colorblindMode
-        ? `linear-gradient(to ${isLeft ? 'right' : 'left'}, ${accentColor}20, transparent 55%)`
-        : isAudio
-            ? `linear-gradient(to ${isLeft ? 'right' : 'left'}, ${isLeft ? 'rgba(168,85,247,0.12)' : 'rgba(236,72,153,0.12)'}, transparent 55%)`
-            : 'none';
+    const sideTint = assetType === MEDIA_TYPES.IMAGE
+        ? (colorblindMode
+            ? `linear-gradient(to ${isLeft ? 'right' : 'left'}, ${accentColor}14, transparent 28%)`
+            : 'none')
+        : colorblindMode
+            ? `linear-gradient(to ${isLeft ? 'right' : 'left'}, ${accentColor}20, transparent 55%)`
+            : isAudio
+                ? `linear-gradient(to ${isLeft ? 'right' : 'left'}, ${isLeft ? 'rgba(168,85,247,0.12)' : 'rgba(236,72,153,0.12)'}, transparent 55%)`
+                : 'none';
 
     return (
         <div
@@ -585,18 +590,18 @@ function VennCircle({ asset, side, colorblindMode, colors }) {
         >
             <VennMedia asset={asset} />
 
-            {/* Subtle edge vignette — keeps images visible in the center */}
-            <div
-                className={`absolute inset-0 pointer-events-none rounded-full ${
-                    isAudio
-                        ? isLeft
-                            ? 'bg-gradient-to-t from-purple-900/50 via-transparent to-black/10'
-                            : 'bg-gradient-to-t from-fuchsia-900/50 via-transparent to-black/10'
-                        : isMeme
-                            ? 'bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.5)_100%)]'
-                        : 'bg-[radial-gradient(circle_at_center,transparent_55%,rgba(0,0,0,0.35)_100%)]'
-                }`}
-            />
+            {/* Photos stay uncovered. Memes and audio keep a light edge so letterboxing reads as a circle. */}
+            {assetType !== MEDIA_TYPES.IMAGE && (
+                <div
+                    className={`absolute inset-0 pointer-events-none rounded-full ${
+                        isAudio
+                            ? isLeft
+                                ? 'bg-gradient-to-t from-purple-900/50 via-transparent to-black/10'
+                                : 'bg-gradient-to-t from-fuchsia-900/50 via-transparent to-black/10'
+                            : 'bg-[radial-gradient(circle_at_center,transparent_78%,rgba(0,0,0,0.22)_100%)]'
+                    }`}
+                />
+            )}
 
             {sideTint !== 'none' && (
                 <div className="absolute inset-0 pointer-events-none rounded-full" style={{ background: sideTint }} />

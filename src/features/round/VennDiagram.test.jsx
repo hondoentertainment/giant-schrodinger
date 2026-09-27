@@ -125,4 +125,33 @@ describe('VennDiagram', () => {
         expect(screen.queryByAltText('Dog')).not.toBeInTheDocument();
         expect(screen.getByText('Dog', { selector: 'div' })).toBeInTheDocument();
     });
+
+    it('shows Sunday scaries and the sparkler without a heavy photo vignette', () => {
+        const { container } = render(
+            <VennDiagram
+                leftAsset={{
+                    id: 'sunday-scaries-sparkler-left',
+                    label: 'Sunday scaries',
+                    type: MEDIA_TYPES.IMAGE,
+                    url: '/art/plates/leftover-sparkler-room.jpg',
+                }}
+                rightAsset={{
+                    id: 'sunday-scaries-sparkler-right',
+                    label: 'A leftover sparkler',
+                    type: MEDIA_TYPES.IMAGE,
+                    url: '/art/plates/sunday-scaries-window.jpg',
+                }}
+            />
+        );
+
+        const sunday = screen.getByAltText('Sunday scaries');
+        const sparkler = screen.getByAltText('A leftover sparkler');
+        expect(sunday.getAttribute('src')).toMatch(/sunday-scaries-lamp\.jpg$/);
+        expect(sunday.className).toContain('object-cover');
+        expect(sunday.style.objectPosition).toBe('center 42%');
+        expect(sparkler.getAttribute('src')).toMatch(/leftover-sparkler-hand\.jpg$/);
+        expect(sparkler.style.objectPosition).toBe('center 58%');
+        expect(container.innerHTML).not.toContain('rgba(0,0,0,0.35)');
+        expect(container.innerHTML).not.toContain('rgba(0,0,0,0.5)');
+    });
 });
