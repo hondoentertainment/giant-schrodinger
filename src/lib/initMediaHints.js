@@ -1,5 +1,4 @@
 const MEDIA_ORIGINS = [
-    'https://images.unsplash.com',
     'https://images.pexels.com',
     'https://videos.pexels.com',
     'https://media.giphy.com',

@@ -39,6 +39,24 @@ describe('memeResolve service', () => {
             })).toBe(true);
         });
 
+        it('still looks up bundled concept-art placeholders', () => {
+            expect(needsMemeApiResolve({
+                type: MEDIA_TYPES.MEME,
+                label: 'Big Brain',
+                searchQuery: 'thinking face',
+                imageSource: 'local',
+                url: 'data:image/svg+xml,abc',
+            })).toBe(true);
+        });
+
+        it('skips user-uploaded data urls', () => {
+            expect(needsMemeApiResolve({
+                type: MEDIA_TYPES.MEME,
+                label: 'Mine',
+                url: 'data:image/png;base64,abc',
+            })).toBe(false);
+        });
+
         it('skips already resolved giphy assets', () => {
             expect(needsMemeApiResolve({
                 type: MEDIA_TYPES.MEME,

@@ -14,10 +14,10 @@ describe('mediaLoad', () => {
         _resetMediaPreloadCacheForTests();
     });
 
-    it('builds unsplash blur placeholders', () => {
-        const url = 'https://images.unsplash.com/photo-123?w=1080&h=1080';
-        expect(buildBlurPlaceholderUrl(url)).toContain('w=32');
-        expect(buildBlurPlaceholderUrl(url)).toContain('blur=10');
+    it('does not request unsplash or picsum placeholders', () => {
+        expect(buildBlurPlaceholderUrl('https://images.unsplash.com/photo-123?w=1080&h=1080')).toBeNull();
+        expect(buildBlurPlaceholderUrl('https://picsum.photos/seed/a/1080/1080')).toBeNull();
+        expect(buildResponsiveSrcSet('https://images.unsplash.com/photo-abc123?w=1080')).toBeUndefined();
     });
 
     it('builds pexels blur placeholders', () => {
@@ -32,8 +32,8 @@ describe('mediaLoad', () => {
             .toBe('https://media.giphy.com/media/abc123/200w.gif');
     });
 
-    it('builds unsplash srcset', () => {
-        const srcset = buildResponsiveSrcSet('https://images.unsplash.com/photo-abc123?w=1080');
+    it('builds pexels srcset', () => {
+        const srcset = buildResponsiveSrcSet('https://images.pexels.com/photos/123/pexels-photo-123.jpeg');
         expect(srcset).toContain('400w');
         expect(srcset).toContain('1080w');
     });

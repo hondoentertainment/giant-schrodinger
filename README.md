@@ -80,7 +80,7 @@ Full registry: [PRD.md §2](PRD.md).
 | `VITE_SENTRY_DSN` / `VITE_POSTHOG_KEY` | Production telemetry | Optional |
 | `VITE_STRIPE_PUBLISHABLE_KEY` | Enables web checkout buttons | Optional. Without it, shop stays browsable and checkout is disabled |
 
-Server-only secrets (edge functions, not `VITE_*`): `GEMINI_API_KEY`, `PEXELS_API_KEY`, `GIPHY_API_KEY`, `APP_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. See [.env.example](.env.example) and [.github/SECRETS.template.md](.github/SECRETS.template.md).
+Concept, fusion, and gallery images load from bundled art with no API key, so solo play stays usable without an account. Server-only secrets (edge functions, not `VITE_*`): `GEMINI_API_KEY`, `PEXELS_API_KEY`, `GIPHY_API_KEY`, `APP_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. `PEXELS_API_KEY` and `GIPHY_API_KEY` are optional: when set on the Supabase edge functions they upgrade stills and memes. Without them the bundled art remains. See [.env.example](.env.example) and [.github/SECRETS.template.md](.github/SECRETS.template.md).
 
 ### Accounts and Stripe (owner)
 

@@ -10,6 +10,7 @@ import { haptic } from '../../lib/haptics';
 import { playSubmitSound } from '../../services/sounds';
 import { markJudgeChain, setForcedPair } from '../../lib/forcedPair';
 import { trackEvent } from '../../services/analytics';
+import { reliableImageUrl } from '../../lib/conceptArt';
 
 const SCORE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -220,7 +221,7 @@ export function JudgeRound({ payload, onDone }) {
             {effectivePayload.imageUrl && (
                 <div className="w-full max-w-xl mt-6 rounded-[22px] overflow-hidden border border-white/10 wordle-card !p-0 relative">
                     <img
-                        src={effectivePayload.imageUrl}
+                        src={reliableImageUrl(effectivePayload.imageUrl, effectivePayload.submission || 'fusion')}
                         alt="Fusion created from this connection"
                         className="w-full max-h-80 object-cover"
                         referrerPolicy="no-referrer"

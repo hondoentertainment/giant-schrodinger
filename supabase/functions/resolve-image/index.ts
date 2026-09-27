@@ -13,12 +13,13 @@ const PEXELS_SEARCH_URL = "https://api.pexels.com/v1/search";
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX = 120;
 
-function buildPicsumFallback(query: string): string {
-  const slug = String(query || "placeholder")
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
-  return `https://picsum.photos/seed/${slug || "venn"}/1080/1080`;
+function localImageResult() {
+  return {
+    url: null,
+    fallbackUrl: null,
+    photographer: null,
+    source: "local",
+  };
 }
 
 function pickPhotoUrl(photo: {
@@ -98,20 +99,11 @@ serve(async (req: Request) => {
     for (const query of queries) {
       try {
         const { url, photographer } = await searchPexels(query, orientation);
-        const fallbackUrl = buildPicsumFallback(query);
-        results[query] = {
-          url: url || fallbackUrl,
-          fallbackUrl,
-          photographer,
-          source: url ? "pexels" : "picsum",
-        };
+        results[query] = url
+          ? { url, fallbackUrl: null, photographer, source: "pexels" }
+          : localImageResult();
       } catch {
-        results[query] = {
-          url: buildPicsumFallback(query),
-          fallbackUrl: buildPicsumFallback(query),
-          photographer: null,
-          source: "picsum",
-        };
+        results[query] = localImageResult();
       }
     }
 
@@ -125,22 +117,20 @@ serve(async (req: Request) => {
 
   try {
     const { url, photographer } = await searchPexels(query, orientation);
-    const fallbackUrl = buildPicsumFallback(query);
+    if (!url) {
+      return jsonResponse(req, localImageResult());
+    }
 
     return jsonResponse(req, {
-      url: url || fallbackUrl,
-      fallbackUrl,
+      url,
+      fallbackUrl: null,
       photographer,
-      source: url ? "pexels" : "picsum",
+      source: "pexels",
     });
   } catch (err) {
     console.error("resolve-image failed:", err);
-    const fallbackUrl = buildPicsumFallback(query);
     return jsonResponse(req, {
-      url: fallbackUrl,
-      fallbackUrl,
-      photographer: null,
-      source: "picsum",
+      ...localImageResult(),
       error: "Image lookup failed",
     });
   }

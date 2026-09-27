@@ -5,9 +5,10 @@ vi.mock('../lib/supabase', () => ({
     supabase: null,
 }));
 
-import { buildPicsumFallback } from '../lib/imageUrls';
+import { buildLocalConceptImage, isBrittleImageUrl } from '../lib/conceptArt';
 import {
     getCachedImageUrl,
+    normalizeResolvedImage,
     resolveImageUrl,
     resolveImageUrls,
     isPicsumUrl,
@@ -26,20 +27,73 @@ describe('imageResolve service', () => {
         });
     });
 
-    describe('resolveImageUrl', () => {
-        it('falls back to picsum when backend is disabled', async () => {
-            const result = await resolveImageUrl('Neon City');
-            expect(result.url).toContain('picsum.photos');
-            expect(result.source).toBe('picsum');
+    describe('normalizeResolvedImage', () => {
+        it('keeps pexels photos and uses bundled art as the fallback', () => {
+            const result = normalizeResolvedImage('Neon City', {
+                url: 'https://images.pexels.com/photos/1/pexels-photo-1.jpeg',
+                fallbackUrl: 'https://picsum.photos/seed/neon/1080/1080',
+                source: 'pexels',
+                photographer: 'Ada',
+            });
+            expect(result.url).toContain('images.pexels.com');
+            expect(result.fallbackUrl.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(result.source).toBe('pexels');
+            expect(result.photographer).toBe('Ada');
         });
 
-        it('reads from cache on subsequent lookups', async () => {
-            const first = await resolveImageUrl('Forest Mist');
+        it('drops picsum and unsplash results', () => {
+            const picsum = normalizeResolvedImage('Forest', {
+                url: 'https://picsum.photos/seed/forest/1080/1080',
+                source: 'picsum',
+            });
+            const unsplash = normalizeResolvedImage('Forest', {
+                url: 'https://images.unsplash.com/photo-1?w=1080',
+                source: 'unsplash',
+            });
+            expect(picsum.source).toBe('local');
+            expect(isBrittleImageUrl(picsum.url)).toBe(false);
+            expect(unsplash.url).toBe(buildLocalConceptImage('Forest'));
+        });
+    });
+
+    describe('resolveImageUrl', () => {
+        it('uses bundled concept art when backend is disabled', async () => {
+            const result = await resolveImageUrl('Neon City');
+            expect(result.url.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(result.source).toBe('local');
+            expect(result.url).not.toContain('picsum');
+            expect(getCachedImageUrl('Neon City')).toBeNull();
+        });
+
+        it('reads a cached provider image on subsequent lookups', async () => {
+            localStorage.setItem('vwf_image_resolve_cache', JSON.stringify({
+                'forest mist': {
+                    url: 'https://images.pexels.com/photos/9/pexels-photo-9.jpeg',
+                    fallbackUrl: 'https://picsum.photos/seed/forest/1080/1080',
+                    source: 'pexels',
+                    timestamp: Date.now(),
+                },
+            }));
+
             const cached = getCachedImageUrl('Forest Mist');
-            expect(cached?.url).toBe(first.url);
+            expect(cached?.url).toContain('images.pexels.com');
+            expect(cached?.fallbackUrl).not.toContain('picsum');
 
             const second = await resolveImageUrl('Forest Mist');
-            expect(second.url).toBe(first.url);
+            expect(second.url).toBe(cached.url);
+        });
+
+        it('ignores cached picsum hotlinks', async () => {
+            localStorage.setItem('vwf_image_resolve_cache', JSON.stringify({
+                old: {
+                    url: 'https://picsum.photos/seed/old/1080/1080',
+                    source: 'picsum',
+                    timestamp: Date.now(),
+                },
+            }));
+            expect(getCachedImageUrl('old')).toBeNull();
+            const result = await resolveImageUrl('old');
+            expect(result.url.startsWith('data:image/svg+xml,')).toBe(true);
         });
     });
 
@@ -48,7 +102,7 @@ describe('imageResolve service', () => {
             localStorage.setItem('vwf_image_resolve_cache', JSON.stringify({
                 'cached concept': {
                     url: 'https://example.com/cached.jpg',
-                    fallbackUrl: buildPicsumFallback('cached concept'),
+                    fallbackUrl: buildLocalConceptImage('cached concept'),
                     source: 'cache',
                     timestamp: Date.now(),
                 },
@@ -56,7 +110,8 @@ describe('imageResolve service', () => {
 
             const results = await resolveImageUrls(['cached concept', 'new concept']);
             expect(results['cached concept'].url).toBe('https://example.com/cached.jpg');
-            expect(results['new concept'].url).toContain('picsum.photos');
+            expect(results['new concept'].url.startsWith('data:image/svg+xml,')).toBe(true);
+            expect(results['new concept'].url).not.toContain('picsum');
         });
     });
 });

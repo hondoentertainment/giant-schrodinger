@@ -11,6 +11,7 @@ import { createJudgeShareLinks, getOgShareUrl } from '../../services/share';
 import { LINK_COPIED_MESSAGE, shareOrCopy } from '../../lib/shareOrCopy';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
+import { reliableImageUrl } from '../../lib/conceptArt';
 import { flagContent } from '../../services/moderation';
 import { MEDIA_TYPES } from '../../data/themes';
 import { getJudgeModeFromCollision } from '../../lib/judgeMode';
@@ -43,23 +44,46 @@ function getJudgeModeLabel(collision) {
     return getJudgeModeFromCollision(collision);
 }
 
+function galleryImagePair(collision) {
+    const seed = collision?.submission || collision?.id || 'gallery';
+    const imageUrl = reliableImageUrl(collision?.imageUrl, seed);
+    const fallbackCandidate = reliableImageUrl(collision?.fallbackImageUrl, `${seed}-fallback`, { variant: 'fallback' });
+    return {
+        imageUrl,
+        fallbackUrl: fallbackCandidate !== imageUrl ? fallbackCandidate : imageUrl,
+    };
+}
+
 function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyShare, onSaveCard }) {
     const [imageStatus, setImageStatus] = useState('loading');
     const [isVisible, setIsVisible] = useState(false);
     const ref = useRef(null);
-    const fallbackUrl = collision.fallbackImageUrl || 'https://picsum.photos/seed/venn-fallback/800/800';
-    const blurUrl = buildBlurPlaceholderUrl(collision.imageUrl) || buildBlurPlaceholderUrl(fallbackUrl);
+    const { imageUrl, fallbackUrl } = galleryImagePair(collision);
+    const blurUrl = buildBlurPlaceholderUrl(imageUrl) || buildBlurPlaceholderUrl(fallbackUrl);
 
     useEffect(() => {
         const el = ref.current;
-        if (!el) return;
+        if (!el) return undefined;
+        // display:contents wrappers have no box, so IntersectionObserver never
+        // fires on them. The article is the element that actually lays out.
+        if (typeof IntersectionObserver === 'undefined') {
+            setIsVisible(true);
+            return undefined;
+        }
         const observer = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) setIsVisible(true);
             },
-            { rootMargin: '100px', threshold: 0.01 }
+            { rootMargin: '200px', threshold: 0.01 }
         );
         observer.observe(el);
+        const rect = el.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const alreadyNear = rect.width > 0 && rect.height > 0
+            && rect.bottom > -200 && rect.top < viewportHeight + 200
+            && rect.right > -200 && rect.left < viewportWidth + 200;
+        if (alreadyNear) setIsVisible(true);
         return () => observer.disconnect();
     }, []);
 
@@ -93,11 +117,11 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
 
     return (
         <div
-            ref={ref}
             role="listitem"
             className="contents"
         >
         <article
+            ref={ref}
             className="group relative aspect-square rounded-[22px] overflow-hidden border border-white/10 bg-white/[0.04] backdrop-blur-sm transition-transform hover:scale-[1.02] focus-within:scale-[1.02] focus-within:ring-2 focus-within:ring-game-accent focus-within:outline-none shadow-game-card cursor-pointer"
             tabIndex={0}
             aria-label={`Connection: "${collision.submission}". Score ${collision.score} out of 10. ${displayDate}.${fj ? ` Judged by ${fj.judgeName || fj.judge_name || 'a friend'}: ${fj.score}/10.` : ''} Open details.`}
@@ -129,9 +153,9 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
             )}
             {isVisible && (
                 <img
-                    src={collision.imageUrl}
+                    src={imageUrl}
                     alt={collision.submission}
-                    loading="lazy"
+                    loading={String(imageUrl).startsWith('data:') ? 'eager' : 'lazy'}
                     className={`w-full h-full object-cover transition-opacity duration-300 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
                     referrerPolicy="no-referrer"
                     data-fallback={fallbackUrl}
@@ -308,7 +332,7 @@ export function Gallery() {
             mediaLabel: getMediaModeLabel(mediaType),
             promptPair: getPromptPairLabel(collision),
             previewUrl: collision.shareToken ? getOgShareUrl(collision.shareToken) : undefined,
-            imageUrl: collision.imageUrl || collision.fallbackImageUrl,
+            imageUrl: galleryImagePair(collision).imageUrl,
             surface: 'gallery',
         };
     };
@@ -344,7 +368,7 @@ export function Gallery() {
             const links = await createJudgeShareLinks({
                 assets: { left: collision.assets.left, right: collision.assets.right },
                 submission: collision.submission,
-                imageUrl: collision.imageUrl || collision.fallbackImageUrl,
+                imageUrl: galleryImagePair(collision).imageUrl,
                 shareFrom: 'A friend',
                 collisionId: collision.id || null,
                 judgeMode: 'friend',
@@ -552,7 +576,7 @@ export function Gallery() {
                                 <div className="mb-4">
                                     <SocialShareButtons
                                         shareData={buildGalleryShareData(selectedCollision)}
-                                        imageUrl={selectedCollision.imageUrl || selectedCollision.fallbackImageUrl}
+                                        imageUrl={galleryImagePair(selectedCollision).imageUrl}
                                     />
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-3">

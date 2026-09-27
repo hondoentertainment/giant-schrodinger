@@ -81,8 +81,11 @@ export function isResolvedMemeUrl(url) {
 
 export function needsMemeApiResolve(asset) {
     if (asset?.type !== MEDIA_TYPES.MEME) return false;
-    if (typeof asset?.url === 'string' && asset.url.startsWith('data:')) return false;
     if (isResolvedMemeUrl(asset?.url)) return false;
+    // User uploads are already the meme. Bundled concept art is only a placeholder.
+    if (typeof asset?.url === 'string' && asset.url.startsWith('data:') && asset.imageSource !== 'local') {
+        return false;
+    }
     return Boolean(getMemeSearchQuery(asset));
 }
 
