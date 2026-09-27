@@ -226,14 +226,31 @@ function GameContent() {
     const showBrandHeader = gameState !== 'ROUND' && gameState !== 'REVEAL'
         && !(isMultiplayer && roomPhase && roomPhase !== 'lobby');
     const headerEl = showBrandHeader ? (
-        <div className="wordle-topbar sticky top-0 z-30 mb-1 flex w-full justify-center">
+        <div className="wordle-topbar sticky top-0 z-30 mb-1 flex w-full items-center justify-center">
             <h1 className="flex items-center gap-2.5 text-center">
                 <GameLogoMark />
                 <span className="flex flex-col items-start leading-none">
-                    <span className="font-display text-lg sm:text-xl font-bold tracking-tight text-white">Venn</span>
-                    <span className="text-[0.65rem] sm:text-[0.7rem] font-medium text-white/45">with Friends</span>
+                    <span className="font-display text-lg sm:text-xl font-semibold tracking-tight text-[var(--game-text)]">Venn</span>
+                    <span className="text-[0.65rem] sm:text-[0.7rem] font-medium text-[var(--game-text-secondary)]">with Friends</span>
                 </span>
             </h1>
+            <div className="wordle-topbar-legal">
+                <button
+                    type="button"
+                    onClick={() => setGameState('PRIVACY')}
+                    className="min-h-[44px] px-2 hover:text-[var(--game-text)]"
+                >
+                    Privacy
+                </button>
+                <span aria-hidden="true">·</span>
+                <button
+                    type="button"
+                    onClick={() => setGameState('TERMS')}
+                    className="min-h-[44px] px-2 hover:text-[var(--game-text)]"
+                >
+                    Terms
+                </button>
+            </div>
         </div>
     ) : (
         <h1 className="sr-only">Venn with Friends</h1>

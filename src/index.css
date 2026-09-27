@@ -2,33 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Inter latin subsets (SIL Open Font License), self-hosted so CSP font-src stays 'self'. */
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin-800.woff2') format('woff2');
+}
+
 :root {
   --game-bg: #07070a;
-  --game-bg-elevated: #12121a;
-  --game-surface: rgba(255, 255, 255, 0.06);
-  --game-surface-hover: rgba(255, 255, 255, 0.1);
-  --game-border: rgba(255, 255, 255, 0.12);
-  --game-border-strong: rgba(255, 255, 255, 0.2);
+  --game-bg-elevated: #121218;
+  --game-surface: #1a1a22;
+  --game-surface-hover: #22222c;
+  --game-surface-high: #22222c;
+  --game-surface-highest: #2a2a36;
+  --game-border: #2c2c38;
+  --game-border-strong: #3a3a48;
   --game-accent: #0a84ff;
   --game-accent-hover: #409cff;
+  --game-primary-container: #003870;
+  --game-on-primary: #ffffff;
   --game-success: #30d158;
   --game-success-dim: rgba(48, 209, 88, 0.18);
   --game-warning: #ffd60a;
   --game-warning-dim: rgba(255, 214, 10, 0.16);
   --game-orange: #ff9f0a;
   --game-pink: #bf5af2;
-  --game-text: rgba(255, 255, 255, 0.92);
-  --game-text-secondary: rgba(255, 255, 255, 0.56);
-  --game-text-tertiary: rgba(255, 255, 255, 0.36);
+  --game-text: #e8e8ed;
+  --game-text-secondary: #a8a8b3;
+  --game-text-tertiary: rgba(168, 168, 179, 0.72);
   --game-blur: 40px;
-  --game-radius-sm: 12px;
+  --game-radius-sm: 14px;
   --game-radius-md: 16px;
   --game-radius-lg: 22px;
   --game-radius-xl: 28px;
   --game-radius-pill: 9999px;
-  --game-gutter: 1.25rem;
+  --game-gutter: 1rem;
   --game-play-max: 28rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
   line-height: 1.47;
   font-weight: 400;
   color-scheme: dark;
@@ -42,7 +87,8 @@
   }
 
   body {
-    @apply text-white overflow-hidden antialiased;
+    @apply overflow-hidden antialiased;
+    color: var(--game-text);
     background: var(--game-bg);
     height: 100dvh;
     -webkit-font-smoothing: antialiased;
@@ -67,7 +113,8 @@
   }
 
   .game-ambient-orb {
-    @apply absolute rounded-full blur-3xl opacity-40 animate-ambient-drift;
+    @apply absolute rounded-full blur-3xl animate-ambient-drift;
+    opacity: 0.22;
   }
 
   .game-ambient-orb--blue {
@@ -75,7 +122,7 @@
     height: min(52vw, 420px);
     top: -12%;
     left: -10%;
-    background: radial-gradient(circle, rgba(10, 132, 255, 0.55) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(10, 132, 255, 0.28) 0%, transparent 70%);
   }
 
   .game-ambient-orb--purple {
@@ -83,7 +130,7 @@
     height: min(44vw, 360px);
     top: 18%;
     right: -12%;
-    background: radial-gradient(circle, rgba(191, 90, 242, 0.4) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(191, 90, 242, 0.2) 0%, transparent 70%);
     animation-delay: -6s;
   }
 
@@ -92,15 +139,15 @@
     height: min(38vw, 300px);
     bottom: -8%;
     left: 28%;
-    background: radial-gradient(circle, rgba(100, 210, 255, 0.28) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(100, 210, 255, 0.12) 0%, transparent 70%);
     animation-delay: -12s;
   }
 
   .wordle-shell {
     @apply relative flex h-[100dvh] min-h-0 w-full flex-col items-center overflow-hidden;
     background:
-      radial-gradient(ellipse 120% 80% at 50% -20%, rgba(10, 132, 255, 0.12), transparent 55%),
-      radial-gradient(ellipse 80% 50% at 100% 50%, rgba(191, 90, 242, 0.08), transparent 50%),
+      radial-gradient(ellipse 120% 80% at 50% -20%, rgba(10, 132, 255, 0.06), transparent 55%),
+      radial-gradient(ellipse 80% 50% at 100% 50%, rgba(191, 90, 242, 0.04), transparent 50%),
       var(--game-bg);
   }
 
@@ -147,10 +194,14 @@
 
   .game-timer--compact {
     min-width: 4.4rem;
-    min-height: 2.25rem;
-    padding: 0.4rem 0.9rem;
-    font-size: 1.05rem;
+    min-height: 2.75rem;
+    padding: 0.4rem 0.95rem;
+    font-size: 1rem;
+    font-weight: 600;
     border-radius: var(--game-radius-pill);
+    background: var(--game-surface-high);
+    border: 1px solid var(--game-border);
+    color: var(--game-text);
   }
 
   .game-timer--compact.game-timer--paused {
@@ -164,8 +215,10 @@
   }
 
   .game-score-hero .game-score-hero__value {
-    font-size: 5rem;
-    line-height: 1;
+    font-size: 4.5rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
   }
 
   .game-score-hero .game-score-hero__max {
@@ -176,9 +229,13 @@
   }
 
   .game-logo-mark {
-    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-xl;
-    background: linear-gradient(145deg, rgba(10, 132, 255, 0.35), rgba(191, 90, 242, 0.35));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 8px 24px -8px rgba(10, 132, 255, 0.5);
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full;
+    background: linear-gradient(145deg, rgba(10, 132, 255, 0.45), rgba(191, 90, 242, 0.4));
+    box-shadow: none;
+  }
+
+  .wordle-topbar-legal {
+    display: none;
   }
 
   details > summary {
@@ -190,11 +247,11 @@
   }
 
   .glass-panel {
-    @apply overflow-hidden border backdrop-blur-xl;
-    background: linear-gradient(165deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.04) 100%);
+    @apply overflow-hidden border;
+    background: var(--game-surface);
     border-color: var(--game-border);
-    border-radius: var(--game-radius-xl);
-    box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    box-shadow: none;
   }
 
   .game-tab-row {
@@ -232,11 +289,11 @@
   }
 
   .wordle-card {
-    @apply overflow-hidden border backdrop-blur-xl;
-    background: linear-gradient(165deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.04) 100%);
+    @apply overflow-hidden border;
+    background: var(--game-surface);
     border-color: var(--game-border);
     border-radius: var(--game-radius-xl);
-    box-shadow: var(--game-card-shadow, 0 24px 48px -24px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08));
+    box-shadow: 0 18px 40px -28px rgba(0, 0, 0, 0.65);
   }
 
   .game-hero-card {
@@ -247,21 +304,21 @@
 
   .game-daily-card {
     @apply w-full p-4 text-left;
-    background: rgba(255, 214, 10, 0.1);
-    border: 1px solid rgba(255, 214, 10, 0.28);
-    border-radius: var(--game-radius-xl);
+    background: var(--game-surface);
+    border: 1px solid rgba(255, 214, 10, 0.3);
+    border-radius: 20px;
   }
 
   .game-daily-card--inset {
-    padding: 14px;
-    border-radius: 18px;
-    background: rgba(255, 159, 10, 0.12);
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--game-surface-high);
   }
 
   .game-quick-chip {
-    @apply inline-flex flex-1 items-center justify-center min-h-[40px] px-3 py-3 text-[13px] font-semibold transition-colors;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    @apply inline-flex flex-1 items-center justify-center min-h-[44px] px-3 py-3 text-[13px] font-semibold transition-colors;
+    background: var(--game-surface-high);
+    border: 1px solid var(--game-border);
     border-radius: var(--game-radius-pill);
     color: var(--game-text-secondary);
   }
@@ -284,28 +341,60 @@
   }
 
   .lobby-overflow-item {
-    @apply min-h-[44px] px-1 text-sm text-white/45 underline-offset-2 hover:text-white hover:underline;
+    @apply inline-flex min-h-[44px] items-center justify-center px-4 text-sm font-medium no-underline;
+    background: var(--game-surface-high);
+    border: 1px solid var(--game-border);
+    border-radius: var(--game-radius-pill);
+    color: var(--game-text-secondary);
+  }
+
+  .lobby-overflow-item:hover {
+    color: var(--game-text);
+    background: var(--game-surface-highest);
   }
 
   .game-avatar-choice {
-    @apply flex items-center justify-center min-w-[44px] min-h-[44px] h-11 w-11 shrink-0 text-xl transition-all;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1.5px solid rgba(255, 255, 255, 0.12);
-    border-radius: var(--game-radius-pill);
+    @apply flex items-center justify-center shrink-0 text-xl transition-all;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    background: var(--game-surface-high);
+    border: 2px solid transparent;
+    border-radius: 14px;
     color: var(--game-text);
   }
 
   .game-avatar-choice:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--game-surface-highest);
   }
 
   .game-avatar-choice--selected {
-    background: var(--game-success-dim);
-    border-color: rgba(48, 209, 88, 0.65);
+    background: var(--game-primary-container);
+    border-color: var(--game-accent);
   }
 
   .game-input--accent {
-    border-color: rgba(10, 132, 255, 0.55);
+    border-color: var(--game-accent);
+    background: var(--game-bg-elevated);
+  }
+
+  .game-stat-chip {
+    @apply inline-flex min-h-[36px] items-center rounded-full px-3.5 text-[13px] font-medium;
+    background: var(--game-surface-high);
+    border: 1px solid var(--game-border);
+    color: var(--game-text);
+  }
+
+  .game-stat-chip--accent {
+    background: var(--game-primary-container);
+    border-color: transparent;
+    color: var(--game-on-primary);
+  }
+
+  .game-link-quiet {
+    color: var(--game-accent);
+    font-weight: 600;
   }
 
   .lobby-gate-split {
@@ -368,22 +457,21 @@
   }
 
   .wordle-button {
-    @apply inline-flex items-center justify-center px-5 py-3 font-semibold transition-all duration-200;
+    @apply inline-flex items-center justify-center px-5 py-3 font-semibold transition-colors duration-200;
     min-height: 52px;
     border-radius: var(--game-radius-pill, 9999px);
-    background: var(--game-surface);
+    background: var(--game-surface-high);
     border: 1px solid var(--game-border);
     color: var(--game-text);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    box-shadow: none;
   }
 
   .wordle-button:hover:not(:disabled) {
-    background: var(--game-surface-hover);
-    transform: scale(1.02);
+    background: var(--game-surface-highest);
   }
 
   .wordle-button:active:not(:disabled) {
-    transform: scale(0.98);
+    transform: scale(0.99);
   }
 
   .wordle-button:disabled {
@@ -391,27 +479,27 @@
   }
 
   .wordle-primary {
-    border-color: rgba(10, 132, 255, 0.5);
-    background: linear-gradient(180deg, #409cff 0%, #0a84ff 100%);
-    color: #fff;
-    box-shadow: 0 12px 32px -8px rgba(10, 132, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    border-color: transparent;
+    background: var(--game-accent);
+    color: var(--game-on-primary);
+    box-shadow: 0 10px 24px -14px rgba(10, 132, 255, 0.85);
   }
 
   .wordle-primary:hover:not(:disabled) {
-    background: linear-gradient(180deg, #5cadff 0%, #2490ff 100%);
-    box-shadow: 0 16px 36px -8px rgba(10, 132, 255, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    background: var(--game-accent-hover);
+    box-shadow: 0 12px 28px -14px rgba(10, 132, 255, 0.9);
   }
 
   .game-input {
-    @apply w-full px-5 py-4 text-lg font-medium;
+    @apply w-full px-5 py-4 text-base font-medium;
     /* Shadow-only: transition-all also animates border-color / outline-offset
        on autofocus and fails Lighthouse non-composited-animations. */
     transition: box-shadow 200ms ease;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--game-border);
-    border-radius: var(--game-radius-lg);
+    background: var(--game-bg-elevated);
+    border: 2px solid var(--game-border);
+    border-radius: var(--game-radius-md);
     color: var(--game-text);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    box-shadow: none;
   }
 
   .game-input::placeholder {
@@ -421,15 +509,16 @@
   .game-input:focus,
   .game-input:focus-visible {
     outline: none;
-    border-color: rgba(10, 132, 255, 0.65);
-    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    border-color: var(--game-accent);
+    box-shadow: none;
   }
 
   .game-input-hero {
-    @apply game-input text-center text-2xl font-semibold;
+    @apply game-input text-center text-base font-medium;
     border-radius: var(--game-radius-pill, 9999px);
-    padding-top: 1.15rem;
-    padding-bottom: 1.15rem;
+    min-height: 52px;
+    padding-top: 0.9rem;
+    padding-bottom: 0.9rem;
     scroll-margin-bottom: 6rem;
   }
 
@@ -472,26 +561,70 @@
     color: var(--game-text-secondary);
   }
 
+  .game-progress-track {
+    display: flex;
+    gap: 3px;
+    height: 8px;
+    align-items: stretch;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--game-surface-highest);
+  }
+
+  .game-progress-labels {
+    display: flex;
+    margin-top: 8px;
+  }
+
+  .game-progress-labels span {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--game-text-tertiary);
+  }
+
+  .game-progress-labels span.is-done {
+    color: var(--game-success);
+  }
+
+  .game-progress-labels span.is-current {
+    color: var(--game-text);
+  }
+
   .game-progress-dot {
-    @apply h-1.5 sm:h-2.5 flex-1 rounded-full transition-all duration-300;
-    background: rgba(255, 255, 255, 0.1);
+    @apply h-1.5 flex-1 rounded-full transition-colors duration-300;
+    background: var(--game-surface-highest);
+  }
+
+  .game-progress-track .game-progress-dot {
+    height: 8px;
+    border-radius: 999px;
+    background: transparent;
   }
 
   .game-progress-dot--done {
-    background: linear-gradient(90deg, var(--game-success), #34c759);
-    box-shadow: 0 0 12px rgba(48, 209, 88, 0.45);
+    background: var(--game-success);
+    box-shadow: none;
   }
 
   .game-progress-dot--current {
-    background: linear-gradient(90deg, var(--game-accent), #64d2ff);
-    box-shadow: 0 0 14px rgba(10, 132, 255, 0.5);
+    background: var(--game-accent);
+    box-shadow: none;
   }
 
   .game-timer {
     @apply flex min-h-[56px] min-w-[72px] items-center justify-center rounded-2xl px-4 text-xl font-bold tabular-nums;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(12px);
+    background: var(--game-surface-high);
+    border: 1px solid var(--game-border);
+    color: var(--game-text);
+  }
+
+  .game-timer.game-timer--compact {
+    background: var(--game-surface-high);
+    border-color: var(--game-border);
+    color: var(--game-text);
+    border-radius: var(--game-radius-pill);
   }
 
   .game-timer--urgent {
@@ -522,8 +655,10 @@
   }
 
   .game-section-label {
-    @apply text-xs font-semibold uppercase tracking-[0.14em];
-    color: var(--game-text-tertiary);
+    @apply text-[13px] font-medium;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--game-text-secondary);
   }
 
   .game-mp-shell {
@@ -668,11 +803,86 @@
 }
 
 .score-reveal--done {
-  text-shadow: 0 0 24px rgba(10, 132, 255, 0.35);
+  text-shadow: none;
 }
 
 .score-reveal--hot.score-reveal--done {
-  text-shadow: 0 0 28px rgba(255, 214, 10, 0.55), 0 0 48px rgba(255, 79, 216, 0.28);
+  text-shadow: 0 0 22px rgba(255, 214, 10, 0.22);
+}
+
+.game-score-card {
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(255, 214, 10, 0.16), transparent 58%),
+    linear-gradient(180deg, rgba(255, 214, 10, 0.06), transparent 42%),
+    var(--game-surface);
+  border: 1px solid rgba(255, 214, 10, 0.22);
+  border-radius: 28px;
+  padding: 28px 16px 18px;
+}
+
+.game-score-overline {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--game-warning);
+}
+
+.game-metric-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.game-metric-chip {
+  min-height: 56px;
+  border-radius: 14px;
+  background: var(--game-surface-high);
+  border: 1px solid var(--game-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+}
+
+.game-metric-chip strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--game-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.game-metric-chip span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--game-text-secondary);
+}
+
+.game-stage-card {
+  background: var(--game-bg-elevated);
+  border: 1px solid var(--game-border);
+  border-radius: 24px;
+  padding: 16px 8px 12px;
+}
+
+.game-stage-label {
+  max-width: 46%;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.game-stage-label--left {
+  color: var(--game-accent);
+}
+
+.game-stage-label--right {
+  color: var(--game-pink);
 }
 
 /* ── Venn diagram game visuals ── */
@@ -780,9 +990,41 @@
   .game-play-col--wide {
     max-width: 42rem;
   }
+}
 
-  .game-score-hero .game-score-hero__value {
-    font-size: 4.5rem;
+@media (min-width: 1024px) {
+  .wordle-topbar {
+    justify-content: space-between;
+  }
+
+  .wordle-topbar-legal {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--game-text-secondary);
+    font-size: 13px;
+  }
+
+  .legal-footer {
+    display: none;
+  }
+
+  .game-avatar-choice {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .lobby-gate-copy h2 {
+    font-size: 44px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.12;
+  }
+
+  .game-main {
+    max-width: 90rem;
   }
 }
 
@@ -798,41 +1040,34 @@
   }
 
   .lobby-gate-card {
-    background: rgba(18, 18, 26, 0.94);
+    background: var(--game-surface);
     border-radius: 28px;
     padding: 22px 20px 18px;
   }
 
   .lobby-overflow-trigger {
-    @apply inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-xl font-semibold text-white/70;
-    display: inline-flex;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: none;
   }
 
   .lobby-overflow-menu {
-    display: none;
-    position: absolute;
-    right: 0;
-    top: calc(100% + 0.35rem);
-    z-index: 30;
-    width: min(16rem, calc(100vw - 2rem));
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    padding: 0.4rem;
-    background: rgba(18, 18, 26, 0.96);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 18px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-  }
-
-  .lobby-overflow-menu.is-open {
     display: flex;
+    position: static;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
   }
 
   .lobby-overflow-item {
-    @apply w-full justify-start rounded-xl px-3 text-left no-underline;
+    width: auto;
+    justify-content: center;
+    text-align: center;
   }
 }
 

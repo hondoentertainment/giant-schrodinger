@@ -98,12 +98,12 @@ function DailyPairCard({ dailyChallenge, dailySummary, variant = 'lobby' }) {
         return (
             <div className="game-daily-card game-daily-card--inset mb-4">
                 {weekTitle && (
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--game-warning)]">
+                    <p className="text-[12px] font-medium text-[var(--game-warning)]">
                         {weekTitle}
                     </p>
                 )}
                 {pairLine && (
-                    <p className="mt-1.5 text-[15px] font-semibold leading-snug text-white">
+                    <p className="mt-1.5 text-base font-semibold leading-snug text-[var(--game-text)]">
                         {pairLine}
                     </p>
                 )}
@@ -115,7 +115,7 @@ function DailyPairCard({ dailyChallenge, dailySummary, variant = 'lobby' }) {
     return (
         <div className="game-daily-card">
             <div className="flex items-center justify-between gap-3 text-[var(--game-warning)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.11em]">Daily pair</p>
+                <p className="text-[12px] font-medium">Daily pair</p>
                 <p className="text-xs font-medium">1.5× bonus</p>
             </div>
             {pairLine && (
@@ -617,14 +617,25 @@ export function Lobby() {
                     )}
                     <div className="mb-4 flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <h2 className="text-[32px] leading-none font-display font-bold tracking-tight text-white truncate sm:text-2xl sm:leading-tight">
+                            <h2 className="text-[28px] leading-tight font-display font-semibold tracking-tight text-[var(--game-text)] truncate">
                                 Hey {user.name} {user.avatar}
                             </h2>
-                            <p className="mt-2 text-[13px] text-white/55">
-                                {sessionId
-                                    ? `Round ${roundNumber} of ${totalRounds} · ${sessionScore} pts`
-                                    : `Streak ${profileSummary.currentStreak || 0} · Best ${profileSummary.bestScore != null ? profileSummary.bestScore : '—'} · ${profileSummary.savedCount ?? profileSummary.highlightCount ?? 0} saved`}
-                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                <span className={`game-stat-chip ${(profileSummary.currentStreak || 0) > 0 ? 'game-stat-chip--accent' : ''}`}>
+                                    Streak {profileSummary.currentStreak || 0}
+                                </span>
+                                <span className="game-stat-chip">
+                                    Best {profileSummary.bestScore != null ? profileSummary.bestScore : '—'}
+                                </span>
+                                <span className="game-stat-chip">
+                                    {profileSummary.savedCount ?? profileSummary.highlightCount ?? 0} saved
+                                </span>
+                            </div>
+                            {sessionId && (
+                                <p className="mt-2 text-[13px] text-[var(--game-text-secondary)]">
+                                    {`Round ${roundNumber} of ${totalRounds} · ${sessionScore} pts`}
+                                </p>
+                            )}
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
                             <MuteToggle compact />
@@ -711,7 +722,7 @@ export function Lobby() {
 
                     {/* Primary / secondary CTAs — Redesign v2 hierarchy */}
                     {!showMultiplayer && (
-                        <div className="flex flex-col gap-2.5 w-full">
+                        <div className="flex flex-col gap-3 w-full">
                             {!dailyPlayed && (
                                 <button
                                     type="button"
@@ -1199,17 +1210,17 @@ export function Lobby() {
     return (
         <div className="lobby-gate-split animate-spring-in">
             <div className="lobby-gate-copy">
-                <h2 className="text-[40px] font-display font-bold leading-[1.18] tracking-tight text-white">
+                <h2 className="text-[40px] font-display font-semibold leading-[1.15] tracking-tight text-[var(--game-text)]">
                     Two prompts. One line. The overlap is the joke.
                 </h2>
-                <p className="mt-4 max-w-[480px] text-base leading-relaxed text-white/55">
-                    Start with a name and avatar, then play today&apos;s pair.
+                <p className="mt-5 max-w-[28rem] text-base leading-relaxed text-[var(--game-text-secondary)]">
+                    Start with a name and avatar, then play today&apos;s pair or jump into a friends room.
                 </p>
             </div>
         <div className="w-full max-w-md lg:max-w-none wordle-card lobby-gate-card p-5 pt-[22px] sm:p-6">
             {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
-            <h2 className="text-[28px] font-display font-bold tracking-tight text-white">Create Profile</h2>
-            <p className="text-white/55 text-sm mt-2 mb-3.5">Type a name. Then write one line.</p>
+            <h2 className="text-[28px] font-display font-semibold tracking-tight text-[var(--game-text)]">Create Profile</h2>
+            <p className="text-[var(--game-text-secondary)] text-base mt-2 mb-4">Type a name. Then write one line.</p>
             {(dailyChallenge.weekTitle || dailyChallenge.pair) && (
                 <DailyPairCard dailyChallenge={dailyChallenge} variant="gate" />
             )}
@@ -1256,6 +1267,7 @@ export function Lobby() {
                     </div>
                 </section>
 
+                <div className="flex flex-col gap-3">
                 <button
                     type="submit"
                     disabled={!name.trim()}
@@ -1263,30 +1275,24 @@ export function Lobby() {
                 >
                     Play today&apos;s pair
                 </button>
-                <details className="text-left">
-                    <summary className="cursor-pointer list-none py-2 text-[13px] text-white/55 font-semibold min-h-[44px] flex items-center">
-                        Optional account
-                    </summary>
-                    <AccountPanel variant="gate" />
-                </details>
                 <button
                     type="button"
                     disabled={!name.trim()}
                     onClick={handleJoinFriends}
-                    className="flex w-full items-center justify-center text-sm text-white/55 hover:text-white underline disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ minHeight: 44 }}
+                    className="wordle-button w-full min-h-[52px] text-base disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Playing with friends? — Join Lobby"
                 >
-                    Playing with friends?
+                    Join Lobby
                 </button>
+                </div>
 
                 <details
                     className="text-left"
                     onToggle={(event) => setMoreOptionsOpen(event.currentTarget.open)}
                 >
-                    <summary className="cursor-pointer list-none px-0.5 py-2 text-[13px] text-white/55 font-semibold min-h-[44px] flex items-center justify-between gap-3">
-                        <span>More options</span>
-                        <span className="text-white/35 text-xs font-normal">Theme, scoring, media</span>
+                    <summary className="cursor-pointer list-none px-0.5 py-2 text-[15px] min-h-[44px] flex items-center justify-between gap-3">
+                        <span className="game-link-quiet">More options</span>
+                        <span className="text-[var(--game-text-secondary)] text-[13px] font-normal">Theme, scoring, media</span>
                     </summary>
                     {moreOptionsOpen && (
                     <div className="px-0 pb-2 space-y-4 border-t border-white/10 pt-3">
@@ -1495,6 +1501,12 @@ export function Lobby() {
                 </section>
                     </div>
                     )}
+                </details>
+                <details className="text-left">
+                    <summary className="cursor-pointer list-none py-2 text-[13px] text-[var(--game-text-secondary)] font-medium min-h-[44px] flex items-center">
+                        Optional account
+                    </summary>
+                    <AccountPanel variant="gate" />
                 </details>
             </form>
         </div>
