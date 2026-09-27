@@ -11,7 +11,7 @@ import { createJudgeShareLinks, getOgShareUrl } from '../../services/share';
 import { LINK_COPIED_MESSAGE, shareOrCopy } from '../../lib/shareOrCopy';
 import SocialShareButtons from '../../components/SocialShareButtons';
 import { buildBlurPlaceholderUrl } from '../../lib/mediaLoad';
-import { reliableImageUrl } from '../../lib/conceptArt';
+import { conceptObjectPosition, reliableImageUrl } from '../../lib/conceptArt';
 import { flagContent } from '../../services/moderation';
 import { MEDIA_TYPES } from '../../data/themes';
 import { getJudgeModeFromCollision } from '../../lib/judgeMode';
@@ -160,7 +160,8 @@ function LazyImage({ collision, displayJudgement, isHighlight, onSelect, onCopyS
                     src={imageUrl}
                     alt={collision.submission}
                     loading={String(imageUrl).startsWith('data:') ? 'eager' : 'lazy'}
-                    className={`w-full h-full object-cover object-center transition-opacity duration-300 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
+                    className={`w-full h-full object-cover transition-opacity duration-300 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
+                    style={{ objectPosition: conceptObjectPosition(imageUrl) }}
                     referrerPolicy="no-referrer"
                     data-fallback={fallbackUrl}
                     onLoad={() => setImageStatus('loaded')}

@@ -1,6 +1,6 @@
 import { buildThemeAssets, MEDIA_TYPES } from '../data/themes';
 import { normalizeMediaType } from '../lib/mediaType';
-import { isBrittleImageUrl } from '../lib/conceptArt';
+import { buildLocalConceptImage, isBrittleImageUrl } from '../lib/conceptArt';
 import { isBackendEnabled } from '../lib/supabase';
 import {
     enrichAssetForDisplay,
@@ -144,9 +144,22 @@ function materializeCuratedPair(pair, theme, mediaType, seed) {
         seed: seed ?? 1,
         preferDiverse: true,
     });
+    const applyLabel = (asset, label, id) => {
+        if (mediaType !== MEDIA_TYPES.IMAGE) {
+            return { ...asset, id, label };
+        }
+        return {
+            ...asset,
+            id,
+            label,
+            url: buildLocalConceptImage(label, { id, label }),
+            fallbackUrl: buildLocalConceptImage(label, { id, label, variant: 'fallback' }),
+            imageSource: 'local',
+        };
+    };
     return [
-        { ...left, id: `${pair.id}-left`, label: pair.left },
-        { ...right, id: `${pair.id}-right`, label: pair.right },
+        applyLabel(left, pair.left, `${pair.id}-left`),
+        applyLabel(right, pair.right, `${pair.id}-right`),
     ];
 }
 

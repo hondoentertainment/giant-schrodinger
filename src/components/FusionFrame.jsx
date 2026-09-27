@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { buildBlurPlaceholderUrl } from '../lib/mediaLoad';
-import { reliableImageUrl } from '../lib/conceptArt';
+import { conceptObjectPosition, reliableImageUrl } from '../lib/conceptArt';
 
 const LEFT_COLOR = '#a855f7';
 const RIGHT_COLOR = '#6366f1';
@@ -159,9 +159,10 @@ export function FusionFrame({
                         key={src}
                         src={src}
                         alt={alt}
-                        className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-out ${
+                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out ${
                             loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.04]'
                         }`}
+                        style={{ objectPosition: conceptObjectPosition(src) }}
                         referrerPolicy="no-referrer"
                         loading="eager"
                         decoding="async"
