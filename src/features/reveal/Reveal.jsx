@@ -613,21 +613,38 @@ export function Reveal({ submission, assets }) {
                     onDismiss={() => setNewlyUnlocked([])}
                 />
             )}
-            <div className="game-play-col game-reveal-stack flex flex-col animate-spring-in">
+            <div className="game-play-col game-reveal-stack flex flex-col gap-4 animate-spring-in">
                 <div className="text-center w-full">
-                    <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--game-warning)]">
-                        {displayScore >= 8 ? 'Nice hit' : scoreBand?.label || 'Puzzle result'}
-                    </p>
-                    <ScoreReveal
-                        score={displayScore}
-                        className="game-score-hero mt-1"
-                    />
-                    <p className="mt-3 text-xs text-white/55">
-                        {result.breakdown
-                            ? `Wit: ${result.breakdown.wit}  ·  Logic: ${result.breakdown.logic}  ·  Originality: ${result.breakdown.originality}  ·  Clarity: ${result.breakdown.clarity}`
-                            : 'Wit  ·  Logic  ·  Originality  ·  Clarity'}
-                    </p>
-                    <div className="glass-panel mt-5 mb-4 px-[18px] py-[18px] text-center">
+                    <div className="game-score-card">
+                        <p className="game-score-overline">
+                            {displayScore >= 8 ? 'Nice hit' : scoreBand?.label || 'Puzzle result'}
+                        </p>
+                        <ScoreReveal
+                            score={displayScore}
+                            className="game-score-hero mt-1"
+                        />
+                        {result.breakdown && (
+                            <div className="game-metric-row" aria-hidden="true">
+                                {[
+                                    ['Wit', result.breakdown.wit],
+                                    ['Logic', result.breakdown.logic],
+                                    ['Originality', result.breakdown.originality],
+                                    ['Clarity', result.breakdown.clarity],
+                                ].map(([label, value]) => (
+                                    <div key={label} className="game-metric-chip">
+                                        <strong>{value}</strong>
+                                        <span>{label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <p className="sr-only">
+                            {result.breakdown
+                                ? `Wit: ${result.breakdown.wit}  ·  Logic: ${result.breakdown.logic}  ·  Originality: ${result.breakdown.originality}  ·  Clarity: ${result.breakdown.clarity}`
+                                : 'Wit:  ·  Logic:  ·  Originality:  ·  Clarity:'}
+                        </p>
+                    </div>
+                    <div className="glass-panel mt-4 mb-1 px-5 py-[18px] text-center">
                         <p className="text-[17px] font-semibold leading-snug text-white">
                             &ldquo;{submission}&rdquo;
                         </p>
@@ -642,7 +659,7 @@ export function Reveal({ submission, assets }) {
                     )}
                 </div>
 
-                <div className="game-reveal-actions flex flex-col gap-2.5 justify-center items-stretch w-full mb-6">
+                <div className="game-reveal-actions flex flex-col gap-3 justify-center items-stretch w-full mb-6">
                     <button
                         onClick={handleNext}
                         className="wordle-button wordle-primary w-full min-h-[49px] text-base"
@@ -659,7 +676,7 @@ export function Reveal({ submission, assets }) {
                         className="wordle-button w-full min-h-[49px] text-base disabled:opacity-50"
                         aria-label={shareCopied ? 'Friend judge link copied!' : 'Send to a friend to judge'}
                     >
-                        {shareCopied ? "They're scoring it — keep playing" : 'Send to a friend to judge'}
+                        {shareCopied ? "They're scoring it — keep playing" : 'Share with a friend'}
                     </button>
                     <div className="flex justify-center gap-5 text-sm">
                         <button

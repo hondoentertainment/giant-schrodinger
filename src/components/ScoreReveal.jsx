@@ -39,7 +39,7 @@ export function ScoreReveal({ score, max = 10, label, className = '' }) {
     return (
         <div className={`score-reveal ${done ? 'score-reveal--done' : ''} ${target >= 9 ? 'score-reveal--hot' : ''} ${className}`.trim()}>
             <div className="flex items-end justify-center">
-                <span className="game-score-hero__value text-4xl font-bold tabular-nums leading-none text-white">
+                <span className="game-score-hero__value text-4xl font-extrabold tabular-nums leading-none text-[var(--game-text)]">
                     {display}
                 </span>
                 <span className="game-score-hero__max text-lg font-semibold tabular-nums leading-none text-white/40">

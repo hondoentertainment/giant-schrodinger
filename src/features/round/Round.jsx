@@ -241,20 +241,38 @@ export function Round({ onSubmit }) {
                     )}
                     </div>
                 </div>
-                <div className="flex gap-1.5 sm:gap-2" aria-label={`Round progress: ${roundNumber} of ${totalRounds}`}>
-                    {Array.from({ length: totalRounds }).map((_, index) => (
-                        <div
-                            key={index}
-                            className={`game-progress-dot ${
-                                index + 1 < roundNumber
-                                    ? 'game-progress-dot--done'
-                                    : index + 1 === roundNumber
-                                    ? 'game-progress-dot--current'
-                                    : ''
-                            }`}
-                            aria-label={`Round ${index + 1}${index + 1 === roundNumber ? ', current' : index + 1 < roundNumber ? ', completed' : ''}`}
-                        />
-                    ))}
+                <div>
+                    <div className="game-progress-track" aria-label={`Round progress: ${roundNumber} of ${totalRounds}`}>
+                        {Array.from({ length: totalRounds }).map((_, index) => (
+                            <div
+                                key={index}
+                                className={`game-progress-dot ${
+                                    index + 1 < roundNumber
+                                        ? 'game-progress-dot--done'
+                                        : index + 1 === roundNumber
+                                        ? 'game-progress-dot--current'
+                                        : ''
+                                }`}
+                                aria-label={`Round ${index + 1}${index + 1 === roundNumber ? ', current' : index + 1 < roundNumber ? ', completed' : ''}`}
+                            />
+                        ))}
+                    </div>
+                    <div className="game-progress-labels" aria-hidden="true">
+                        {Array.from({ length: totalRounds }).map((_, index) => (
+                            <span
+                                key={index}
+                                className={
+                                    index + 1 < roundNumber
+                                        ? 'is-done'
+                                        : index + 1 === roundNumber
+                                        ? 'is-current'
+                                        : ''
+                                }
+                            >
+                                {index + 1}
+                            </span>
+                        ))}
+                    </div>
                 </div>
             </div>
             {!isFirstSession && (
@@ -318,7 +336,7 @@ export function Round({ onSubmit }) {
                             ? 'What connects this meme and video?'
                             : 'What connects these two?'
                     }
-                    className="game-input-hero w-full"
+                    className={`game-input-hero w-full${submission.trim() ? ' game-input--accent' : ''}`}
                     autoFocus
                     onFocus={(event) => event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' })}
                 />

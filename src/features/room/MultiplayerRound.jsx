@@ -199,7 +199,7 @@ export function MultiplayerRound() {
                         {room?.scoring_mode === 'human' ? 'Manual' : 'AI'} Judge
                     </div>
                 </div>
-                <div className="flex gap-2" aria-label={`Round progress: ${room.round_number} of ${room.total_rounds}`}>
+                <div className="game-progress-track" aria-label={`Round progress: ${room.round_number} of ${room.total_rounds}`}>
                     {Array.from({ length: room.total_rounds }).map((_, index) => (
                         <div
                             key={index}
