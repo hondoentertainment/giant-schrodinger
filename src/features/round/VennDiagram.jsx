@@ -711,9 +711,9 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                             cy="55"
                             r="34"
                         >
-                            <stop offset="0%" stopColor={COLORS.overlap} stopOpacity="0.42" />
-                            <stop offset="65%" stopColor={COLORS.overlap} stopOpacity="0.16" />
-                            <stop offset="100%" stopColor={COLORS.overlap} stopOpacity="0.05" />
+                            <stop offset="0%" stopColor={COLORS.overlap} stopOpacity="0.14" />
+                            <stop offset="42%" stopColor={COLORS.overlap} stopOpacity="0.05" />
+                            <stop offset="100%" stopColor={COLORS.overlap} stopOpacity="0" />
                         </radialGradient>
                     </defs>
                     <g className="venn-lens-glow">
@@ -722,7 +722,7 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                             d={LENS_PATH}
                             fill="none"
                             stroke={COLORS.overlap}
-                            strokeOpacity="0.55"
+                            strokeOpacity="0.32"
                             strokeWidth="0.9"
                             vectorEffect="non-scaling-stroke"
                         />
@@ -732,7 +732,7 @@ export const VennDiagram = React.memo(function VennDiagram({ leftAsset, rightAss
                 {/* One-shot flash as the circles collide on entry */}
                 <div
                     className="venn-collide-flash absolute left-1/2 top-1/2 w-16 h-16 sm:w-24 sm:h-24 rounded-full pointer-events-none z-[6] blur-xl"
-                    style={{ backgroundColor: `${COLORS.overlap}66` }}
+                    style={{ backgroundColor: `${COLORS.overlap}24` }}
                     aria-hidden="true"
                 />
 

@@ -1,6 +1,6 @@
 import { buildThemeAssets, MEDIA_TYPES } from '../data/themes';
 import { normalizeMediaType } from '../lib/mediaType';
-import { buildLocalConceptImage, isBrittleImageUrl } from '../lib/conceptArt';
+import { buildLocalConceptImage, isBrittleImageUrl, withDistinctConceptPlates } from '../lib/conceptArt';
 import { isBackendEnabled } from '../lib/supabase';
 import {
     enrichAssetForDisplay,
@@ -144,22 +144,38 @@ function materializeCuratedPair(pair, theme, mediaType, seed) {
         seed: seed ?? 1,
         preferDiverse: true,
     });
-    const applyLabel = (asset, label, id) => {
+    const leftId = `${pair.id}-left`;
+    const rightId = `${pair.id}-right`;
+    const leftLabel = pair.left;
+    const rightLabel = pair.right;
+    const leftUrl = mediaType === MEDIA_TYPES.IMAGE
+        ? buildLocalConceptImage(leftLabel, { id: leftId, label: leftLabel })
+        : null;
+    const rightUrl = mediaType === MEDIA_TYPES.IMAGE
+        ? buildLocalConceptImage(rightLabel, { id: rightId, label: rightLabel, avoid: leftUrl })
+        : null;
+    const applyLabel = (asset, label, id, url, avoidUrl) => {
         if (mediaType !== MEDIA_TYPES.IMAGE) {
             return { ...asset, id, label };
         }
+        const fallbackUrl = buildLocalConceptImage(label, {
+            id,
+            label,
+            variant: 'fallback',
+            avoid: url,
+        });
         return {
             ...asset,
             id,
             label,
-            url: buildLocalConceptImage(label, { id, label }),
-            fallbackUrl: buildLocalConceptImage(label, { id, label, variant: 'fallback' }),
+            url,
+            fallbackUrl: fallbackUrl !== url ? fallbackUrl : avoidUrl,
             imageSource: 'local',
         };
     };
     return [
-        applyLabel(left, pair.left, `${pair.id}-left`),
-        applyLabel(right, pair.right, `${pair.id}-right`),
+        applyLabel(left, leftLabel, leftId, leftUrl, rightUrl),
+        applyLabel(right, rightLabel, rightId, rightUrl, leftUrl),
     ];
 }
 
@@ -185,7 +201,9 @@ export function selectRoundAssets({
     const pool = customPool ?? (useCustomImages ? getCustomImages() : null);
 
     if (curatedPair?.left && curatedPair?.right) {
-        const picked = materializeCuratedPair(curatedPair, theme, resolvedMediaType, selectionSeed);
+        const picked = withDistinctConceptPlates(
+            ...materializeCuratedPair(curatedPair, theme, resolvedMediaType, selectionSeed),
+        );
         trackRecentAssets(picked);
         return picked;
     }
@@ -207,8 +225,9 @@ export function selectRoundAssets({
         });
     }
 
-    trackRecentAssets(picked);
-    return picked;
+    const distinct = withDistinctConceptPlates(picked[0], picked[1]);
+    trackRecentAssets(distinct);
+    return distinct;
 }
 
 function mergeResolvedAsset(original, imageResult, memeResult) {

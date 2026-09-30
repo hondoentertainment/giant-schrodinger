@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { VennDiagram } from './VennDiagram';
 import { MEDIA_TYPES } from '../../data/themes';
+import { conceptPlateUrlsForPair } from '../../lib/conceptArt';
 
 describe('VennDiagram', () => {
     beforeEach(() => {
@@ -153,5 +154,29 @@ describe('VennDiagram', () => {
         expect(sparkler.style.objectPosition).toBe('center 58%');
         expect(container.innerHTML).not.toContain('rgba(0,0,0,0.35)');
         expect(container.innerHTML).not.toContain('rgba(0,0,0,0.5)');
+    });
+
+    it('shows a centered kite and a centered Monday deadline as different plates', () => {
+        const [kiteUrl, deadlineUrl] = conceptPlateUrlsForPair('A tangled kite', 'A Monday deadline', {
+            leftId: 'kite-deadline-left',
+            rightId: 'kite-deadline-right',
+        });
+        const { container } = render(
+            <VennDiagram
+                leftAsset={{ id: 'kite-deadline-left', label: 'A tangled kite', type: MEDIA_TYPES.IMAGE, url: kiteUrl }}
+                rightAsset={{ id: 'kite-deadline-right', label: 'A Monday deadline', type: MEDIA_TYPES.IMAGE, url: deadlineUrl }}
+            />
+        );
+
+        const kite = screen.getByAltText('A tangled kite');
+        const deadline = screen.getByAltText('A Monday deadline');
+        expect(kite.getAttribute('src')).toMatch(/concept-kite\.jpg$/);
+        expect(deadline.getAttribute('src')).toMatch(/concept-deadline\.jpg$/);
+        expect(kite.getAttribute('src')).not.toBe(deadline.getAttribute('src'));
+        expect(kite.style.objectPosition).toBe('center');
+        expect(deadline.style.objectPosition).toBe('center');
+        expect(kite.className).toContain('object-cover');
+        const lens = container.querySelector('#venn-lens-fill stop');
+        expect(lens?.getAttribute('stop-opacity')).toBe('0.14');
     });
 });
