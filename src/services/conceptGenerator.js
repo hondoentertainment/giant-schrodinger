@@ -32,8 +32,8 @@ async function attachResolvedImages(pairs) {
   return pairs.map((pair) => {
     const left = resolved[pair.left] || {};
     const right = resolved[pair.right] || {};
-    const leftArt = buildLocalConceptImage(pair.left);
-    const rightArt = buildLocalConceptImage(pair.right);
+    const leftArt = buildLocalConceptImage(pair.left, { label: pair.left });
+    const rightArt = buildLocalConceptImage(pair.right, { label: pair.right, avoid: leftArt });
 
     return {
       left: {

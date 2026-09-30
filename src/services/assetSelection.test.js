@@ -87,12 +87,33 @@ describe('assetSelection', () => {
     });
 
     describe('selectRoundAssets', () => {
+        it('uses a distinct plate for each prompt in a curated round', () => {
+            const theme = getThemeById('neon');
+            const [left, right] = selectRoundAssets({
+                theme,
+                seed: 1,
+                curatedPair: {
+                    id: 'kite-deadline',
+                    left: 'A tangled kite',
+                    right: 'A Monday deadline',
+                },
+            });
+            expect(left.url).toMatch(/concept-kite\.jpg$/);
+            expect(right.url).toMatch(/concept-deadline\.jpg$/);
+            expect(left.url).not.toBe(right.url);
+            expect(left.fallbackUrl).not.toBe(left.url);
+            expect(right.fallbackUrl).not.toBe(right.url);
+            expect(left.url).not.toMatch(/unsplash|picsum/);
+            expect(right.url).not.toMatch(/unsplash|picsum/);
+        });
+
         it('returns two assets for theme rounds', () => {
             const theme = getThemeById('neon');
             const assets = selectRoundAssets({ theme, seed: 999, roundNumber: 1 });
             expect(assets).toHaveLength(2);
             expect(assets[0].label).toBeTruthy();
             expect(assets[1].label).toBeTruthy();
+            expect(assets[0].url).not.toBe(assets[1].url);
         });
 
         it('returns mixed meme and video types for memes_videos mode', () => {

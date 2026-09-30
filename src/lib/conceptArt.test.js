@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { CURATED_PAIRS } from '../data/curatedPairs';
 import { THEMES, buildThemeAssets, getThemeById, MEDIA_TYPES } from '../data/themes';
 import {
     CONCEPT_ART_SOURCES,
@@ -10,6 +11,7 @@ import {
     buildLocalConceptImage,
     buildPicsumFallback,
     conceptObjectPosition,
+    conceptPlateUrlsForPair,
     isBrittleImageUrl,
     isBundledConceptArtUrl,
     isPexelsPhotoUrl,
@@ -73,6 +75,35 @@ describe('concept art', () => {
         expect(conceptObjectPosition('/art/plates/sunday-scaries-lamp.jpg')).toBe('center 42%');
         expect(conceptObjectPosition('/art/plates/leftover-sparkler-hand.jpg')).toBe('center 58%');
         expect(conceptObjectPosition('/art/plates/fusion-scaries-sparkler.jpg')).toBe('center 46%');
+        expect(conceptObjectPosition('/art/plates/concept-kite.jpg')).toBe('center');
+        expect(conceptObjectPosition('/art/plates/concept-deadline.jpg')).toBe('center');
+    });
+
+    it('gives different prompts different plates, including kite and a Monday deadline', () => {
+        const [kite, deadline] = conceptPlateUrlsForPair('A tangled kite', 'A Monday deadline', {
+            leftId: 'kite-deadline-left',
+            rightId: 'kite-deadline-right',
+        });
+        expect(kite).toMatch(/concept-kite\.jpg$/);
+        expect(deadline).toMatch(/concept-deadline\.jpg$/);
+        expect(kite).not.toBe(deadline);
+        expect(kite).not.toMatch(/unsplash|picsum/);
+        expect(deadline).not.toMatch(/unsplash|picsum/);
+
+        const [lighthouse, inbox] = conceptPlateUrlsForPair('A lonely lighthouse', 'An overflowing inbox');
+        expect(lighthouse).toMatch(/concept-lighthouse\.jpg$/);
+        expect(inbox).toMatch(/concept-inbox\.jpg$/);
+        expect(lighthouse).not.toBe(inbox);
+
+        for (const pair of CURATED_PAIRS) {
+            const [left, right] = conceptPlateUrlsForPair(pair.left, pair.right, {
+                leftId: `${pair.id}-left`,
+                rightId: `${pair.id}-right`,
+            });
+            expect(left, pair.id).not.toBe(right);
+            expect(left).toMatch(/\/art\/plates\/.+\.jpg$/);
+            expect(right).toMatch(/\/art\/plates\/.+\.jpg$/);
+        }
     });
 
     it('keeps the old fallback name pointed at local art', () => {
