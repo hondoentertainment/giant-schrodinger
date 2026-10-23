@@ -81,9 +81,13 @@ describe('conceptGenerator service', () => {
 
         it('returns null when API responds with no JSON array', async () => {
             import.meta.env.VITE_GEMINI_API_KEY = 'fake-key';
-            GoogleGenAI.mockImplementation(() => ({
-                models: { generateContent: vi.fn().mockResolvedValue({ text: 'no json here' }) },
-            }));
+            // Vitest 4 invokes constructor mocks with `new`, so the implementation
+            // has to be a function, not an arrow.
+            GoogleGenAI.mockImplementation(function GoogleGenAI() {
+                return {
+                    models: { generateContent: vi.fn().mockResolvedValue({ text: 'no json here' }) },
+                };
+            });
             const result = await generateConceptPairs('sci-fi', 3);
             expect(result).toBeNull();
         });
@@ -94,11 +98,13 @@ describe('conceptGenerator service', () => {
                 { left: 'Rubber Duck', right: 'Philosophy' },
                 { left: '3AM Taxi', right: 'Religion' },
             ];
-            GoogleGenAI.mockImplementation(() => ({
-                models: {
-                    generateContent: vi.fn().mockResolvedValue({ text: JSON.stringify(pairs) }),
-                },
-            }));
+            GoogleGenAI.mockImplementation(function GoogleGenAI() {
+                return {
+                    models: {
+                        generateContent: vi.fn().mockResolvedValue({ text: JSON.stringify(pairs) }),
+                    },
+                };
+            });
             const result = await generateConceptPairs('weird', 2);
             expect(result).toHaveLength(2);
             expect(result[0].left.label).toBe('Rubber Duck');
@@ -111,9 +117,11 @@ describe('conceptGenerator service', () => {
 
         it('returns null when API throws', async () => {
             import.meta.env.VITE_GEMINI_API_KEY = 'fake-key';
-            GoogleGenAI.mockImplementation(() => ({
-                models: { generateContent: vi.fn().mockRejectedValue(new Error('network')) },
-            }));
+            GoogleGenAI.mockImplementation(function GoogleGenAI() {
+                return {
+                    models: { generateContent: vi.fn().mockRejectedValue(new Error('network')) },
+                };
+            });
             expect(await generateConceptPairs('x', 3)).toBeNull();
         });
     });
