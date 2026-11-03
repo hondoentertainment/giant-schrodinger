@@ -3,7 +3,7 @@ name: Hosted Rehearsal
 on:
   workflow_dispatch:
   push:
-    branches: [ main, cursor/pin-playwright-ubuntu-24-3bfd ]
+    branches: [ main ]
   schedule:
     - cron: '0 15 * * *'
 
