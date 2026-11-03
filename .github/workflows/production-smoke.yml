@@ -5,7 +5,7 @@ on:
   schedule:
     - cron: '0 14 * * *'
   push:
-    branches: [ main ]
+    branches: [ main, cursor/pin-playwright-ubuntu-24-3bfd ]
 
 jobs:
   smoke:
