@@ -9,7 +9,8 @@ on:
 
 jobs:
   smoke:
-    runs-on: ubuntu-latest
+    # ubuntu-latest is Ubuntu 26.04; Playwright 1.58.2 cannot install Chromium there.
+    runs-on: ubuntu-24.04
     env:
       PRODUCTION_URL: ${{ secrets.PRODUCTION_URL || 'https://giant-schrodinger.vercel.app' }}
     steps:
