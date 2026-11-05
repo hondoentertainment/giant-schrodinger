@@ -34,7 +34,8 @@ jobs:
   rehearsal:
     needs: secrets-gate
     if: needs.secrets-gate.outputs.ready == 'true'
-    runs-on: ubuntu-latest
+    # ubuntu-latest is Ubuntu 26.04; Playwright 1.58.2 cannot install Chromium there.
+    runs-on: ubuntu-24.04
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
